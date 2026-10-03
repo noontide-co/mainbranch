@@ -219,14 +219,18 @@ rules:
   at least 30% of its CamelCase/digit segments look generated (a single
   letter, a letter run with no vowel, or a lone digit). Labels are made of
   words, so `UsEuUkCaAuNzApiKeyName2026` and `HTTPSRedirectCheckerProdV2`
-  pass. A short letter-digit code between words counts as a word, so
+  pass. A short letter-digit code between words counts as a word when the
+  rest of the value reads as words (a final version digit is allowed), so
   `CloudflareR2StorageBucket`, `B2BMarketingCampaignOctober2026` and
-  `S3ProductionBucketUsWest2` pass too.
+  `S3ProductionBucketUsWest2` pass too, and a code next to a generated tail
+  is judged letter by letter.
 
 A value is judged whole and word by word. URLs, emails and env references
-stay whole; a URL's query and fragment values and any password are judged
-one by one, so `?campaign=CloudflareR2StorageBucket` passes and a token in
-`?token=` is refused.
+stay whole. Each decoded part of a URL (user name, password, path segments,
+query keys and values, fragment pieces) is split on `:` and `=` and judged
+like a bare value, so `?campaign=CloudflareR2StorageBucket` and
+`/docs/getting-started` pass, and a token in `?token=`, `/token=`,
+`#token:`, a path segment or a user name is refused.
 
 Measured limits of `high_entropy`, 10,000 random values each from
 `random.Random(987)` (the test `test_metadata_high_entropy_miss_rates_match_docs`
@@ -235,8 +239,11 @@ alphanumeric values, 37 of 10,000 (0.37%) 24-character base64-alphabet values
 and 168 of 10,000 (1.68%) 40-character mixed-case values with no digits.
 Values shorter than 24 characters, and all-lowercase or all-uppercase random
 strings, are not judged by entropy at all: hex ids and UUIDs look the same.
-Metadata is a label field, not a secret scanner; pass credentials with
-`--token-stdin`.
+Metadata detection is a heuristic, not complete token detection: a value
+built only from invented pronounceable words around a short code, for
+example `AmoriavenaR2UlenavopiraPavirelona`, reads as a label and passes,
+because it looks like `CloudflareR2StorageBucket`. Metadata is a label
+field, not a secret scanner; pass credentials with `--token-stdin`.
 
 Hex ids, UUIDs, numeric ids, URLs, emails, paths, `op://` references,
 `${VAR}` references and CamelCase labels pass. The key name alone never

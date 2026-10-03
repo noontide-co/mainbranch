@@ -3620,6 +3620,7 @@ def test_metadata_refuses_previous_blind_spots(value: str, rule: str) -> None:
 # A fake 40-character token. Inside a URL it is judged on its own, wherever
 # the URL puts it.
 _URL_FAKE_TOKEN = "Qx7Lm2Pz9Rt4Vb8Nc1Kd6Hs3Wy5Jf0Gt8Rn2Ls4M"
+_URL_PERCENT_TOKEN = "".join(f"%{ord(char):02X}" for char in _URL_FAKE_TOKEN)
 
 
 @pytest.mark.parametrize(
@@ -3630,10 +3631,76 @@ _URL_FAKE_TOKEN = "Qx7Lm2Pz9Rt4Vb8Nc1Kd6Hs3Wy5Jf0Gt8Rn2Ls4M"
         f"note: https://example.invalid/?token={_URL_FAKE_TOKEN}",
         f"https://example.invalid/callback#access_token={_URL_FAKE_TOKEN}",
         f"https://reader:{_URL_FAKE_TOKEN}@example.invalid/",
+        f"https://example.invalid/{_URL_FAKE_TOKEN}",
+        f"https://example.invalid/token={_URL_FAKE_TOKEN}",
+        f"https://example.invalid/{_URL_PERCENT_TOKEN}",
+        f"https://example.invalid/#token:{_URL_FAKE_TOKEN}",
+        f"https://example.invalid/#{_URL_FAKE_TOKEN}",
+        f"https://example.invalid/#{_URL_PERCENT_TOKEN}",
+        f"https://example.invalid/#/access/{_URL_FAKE_TOKEN}",
+        f"https://{_URL_FAKE_TOKEN}@example.invalid/",
+        f"https://{_URL_PERCENT_TOKEN}@example.invalid/",
+        f"https://{_URL_FAKE_TOKEN}:ordinary@example.invalid/",
+        f"https://example.invalid/?{_URL_FAKE_TOKEN}=ordinary",
+        f"https://example.invalid/?token={_URL_PERCENT_TOKEN}",
+        f"https://example.invalid/?token=ordinary&token={_URL_FAKE_TOKEN}",
     ],
 )
 def test_metadata_refuses_token_inside_url(value: str) -> None:
     assert connect_mod.metadata_value_rule(value) == "high_entropy"
+    with pytest.raises(connect_mod.ConnectRefusal) as caught:
+        connect_mod._parse_metadata([f"note={value}"])
+    assert caught.value.rule == "metadata_secret_value"
+    assert connect_mod._safe_status_metadata({"note": value}) == {}
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "https://example.invalid/" + "ghp_" + "a" * 36,
+        "https://" + "ghp_" + "a" * 36 + "@example.invalid/",
+        "https://example.invalid/#" + "ghp_" + "a" * 36,
+    ],
+)
+def test_metadata_refuses_provider_token_inside_url(value: str) -> None:
+    assert connect_mod.metadata_value_rule(value) == "credential_prefix:ghp_"
+    assert connect_mod._safe_status_metadata({"note": value}) == {}
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "https://example.invalid/docs/getting-started",
+        "https://example.invalid/2026/10/launch",
+        "https://owner@example.invalid/",
+        "https://example.invalid/#section-two",
+        "https://example.invalid/?campaign=CloudflareR2StorageBucket",
+    ],
+)
+def test_metadata_url_labels_pass_intake_and_status(value: str) -> None:
+    assert connect_mod._parse_metadata([f"note={value}"]) == {"note": value}
+    assert connect_mod._safe_status_metadata({"note": value}) == {"note": value}
+
+
+# Constructed pronounceable runs around a short code with a generated tail.
+# A code counts as a word only when the rest of the value reads as words.
+# Metadata detection is a heuristic: a value built only from invented
+# pronounceable words still passes (see docs/connect.md).
+@pytest.mark.parametrize("code", ["R2", "B2B", "S3"])
+@pytest.mark.parametrize(
+    ("left", "right"), [("Amoriavena", "Ulenavopira"), ("Evolinaroa", "Pavirelona")]
+)
+def test_metadata_refuses_code_between_words_with_generated_tail(
+    code: str, left: str, right: str
+) -> None:
+    value = left + code + right + "Qe7Lo"
+    assert connect_mod.metadata_value_rule(value) == "high_entropy"
+    assert connect_mod._safe_status_metadata({"note": value}) == {}
+
+
+def test_metadata_invented_words_around_a_code_are_a_known_pass() -> None:
+    """Documented limit: invented pronounceable words read as a label."""
+    assert connect_mod.metadata_value_rule("AmoriavenaR2UlenavopiraPavirelona") == ""
 
 
 def _random_values(alphabet: str, length: int, count: int = 10_000) -> list[str]:

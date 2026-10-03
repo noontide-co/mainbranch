@@ -1056,6 +1056,7 @@ _TOKEN_CHARSET_RE = re.compile(r"^[A-Za-z0-9+/=_.\-]+$")
 _METADATA_CHUNK_SPLIT_RE = re.compile(r"[\s,;]+")
 _METADATA_LABEL_SPLIT_RE = re.compile(r"[:=]")
 _METADATA_URL_START_RE = re.compile(r"(?<![A-Za-z0-9+.\-])[A-Za-z][A-Za-z0-9+.\-]*://")
+_METADATA_URL_PIECE_RE = re.compile(r"[/&?;#@]")
 _METADATA_EMAIL_RE = re.compile(r"^[^@\s:=/]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$")
 METADATA_ENTROPY_MIN_LENGTH = 24
 METADATA_ENTROPY_MIN_BITS = 3.5
@@ -1141,29 +1142,40 @@ def _merge_metadata_codes(segments: list[str]) -> list[str | None]:
     return merged
 
 
+def _segment_is_generated(segment: str) -> bool:
+    if segment.isdigit():
+        return len(segment) == 1
+    return len(segment) == 1 or not any(char in _VOWELS for char in segment)
+
+
 def _generated_segment_share(value: str) -> float:
     """Share of CamelCase/digit segments that do not read as words.
 
     A segment counts as generated when it is a single letter, a letter run
-    with no vowel, or a lone digit. A trailing version such as ``V2`` and a
-    short code between words such as ``R2`` or ``B2B`` count as words.
+    with no vowel, or a lone digit. A trailing version such as ``V2`` counts
+    as a word. A short code between words such as ``R2`` or ``B2B`` counts
+    as a word only when every other segment reads as a word too, apart from
+    a final lone digit (``S3ProductionBucketUsWest2``); a code next to a
+    generated tail ("<words>R2<words>Qe7Lo") is judged letter by letter.
     """
     body = value
     version = _METADATA_VERSION_TAIL_RE.search(value)
     if version:
         body = value[: version.start()]
-    segments = _merge_metadata_codes(_METADATA_SEGMENT_RE.findall(body))
+    raw = _METADATA_SEGMENT_RE.findall(body)
+    segments = _merge_metadata_codes(raw)
+    if None in segments:
+        others = [segment for segment in segments if segment is not None]
+        if others and others[-1].isdigit() and segments[-1] is not None:
+            others = others[:-1]
+        if any(_segment_is_generated(segment) for segment in others):
+            segments = list(raw)
     total = len(segments) + (1 if version else 0)
     if not total:
         return 0.0
-    generated = 0
-    for segment in segments:
-        if segment is None:
-            continue
-        if segment.isdigit():
-            generated += len(segment) == 1
-        elif len(segment) == 1 or not any(char in _VOWELS for char in segment):
-            generated += 1
+    generated = sum(
+        1 for segment in segments if segment is not None and _segment_is_generated(segment)
+    )
     return generated / total
 
 
@@ -1192,10 +1204,13 @@ def _word_secret_rule(word: str) -> str:
 def _metadata_words(value: str) -> list[str]:
     """The words of a metadata value that are judged one by one.
 
-    A URL stays whole and contributes its decoded query and fragment values
-    and any password, so ``?campaign=<label>`` is judged as the label and
-    ``?token=<key>`` as the key. An email or env reference stays whole.
-    Anything else is split on ``:`` and ``=`` so "note: <key>" is caught.
+    A URL stays whole and contributes its decoded parts: user name,
+    password, path segments, query keys and values, and fragment pieces.
+    Each part is split on ``:`` and ``=`` like a bare value, so
+    ``?campaign=<label>`` is judged as the label and ``/token=<key>``,
+    ``#token:<key>`` or ``?token=<key>`` as the key. An email or env
+    reference stays whole. Anything else is split on ``:`` and ``=`` so
+    "note: <key>" is caught.
     """
     words: list[str] = []
     for chunk in _METADATA_CHUNK_SPLIT_RE.split(value):
@@ -1208,13 +1223,26 @@ def _metadata_words(value: str) -> list[str]:
         if url:
             reference = chunk[url.start() :]
             words.append(reference)
-            parsed = urllib.parse.urlsplit(reference)
-            pairs = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
-            pairs += urllib.parse.parse_qsl(parsed.fragment, keep_blank_values=True)
-            words.extend(item for pair in pairs for item in pair if item)
-            if parsed.password:
-                words.append(urllib.parse.unquote(parsed.password))
+            for part in _url_parts(reference):
+                words.extend(word for word in _METADATA_LABEL_SPLIT_RE.split(part) if word)
     return words
+
+
+def _url_parts(reference: str) -> list[str]:
+    """Decoded user name, password, path segments, query and fragment pieces."""
+    try:
+        parsed = urllib.parse.urlsplit(reference)
+        username, password = parsed.username, parsed.password
+    except ValueError:
+        # Unparseable (a bad port or bracket): judge the raw pieces instead.
+        return [urllib.parse.unquote(piece) for piece in _METADATA_URL_PIECE_RE.split(reference)]
+    parts = [username or "", password or ""]
+    parts += parsed.path.split("/")
+    for component in (parsed.query, parsed.fragment):
+        for piece in _METADATA_URL_PIECE_RE.split(component):
+            parts.append(piece)
+            parts.extend(urllib.parse.unquote_plus(item) for item in piece.split("=", 1))
+    return [urllib.parse.unquote(part) for part in parts if part]
 
 
 def metadata_value_rule(value: str) -> str:
