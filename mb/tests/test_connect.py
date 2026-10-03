@@ -19,6 +19,7 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
+from mb import codex as codex_mod
 from mb import connect as connect_mod
 from mb import credential_store as credential_store_mod
 from mb.cli import app
@@ -4137,3 +4138,14 @@ def test_http_get_json_returns_only_named_headers(monkeypatch) -> None:
     assert result["ok"] is True
     assert result["headers"] == {"X-OAuth-Scopes": "repo"}
     assert "someone" not in json.dumps(result)
+
+
+def test_generated_agents_guidance_routes_credentials_to_exec(tmp_path: Path) -> None:
+    """Generated AGENTS.md sends agents to `exec`, never to `token` output."""
+    rendered = codex_mod.render_agents_md(tmp_path, name="Example Co")
+
+    text = " ".join(rendered.split())
+    assert "need a credential -> `mb connect exec <provider> -- <command>`" in text
+    assert "token to stdout" not in text
+    assert "credentials -> `mb connect token`" not in text
+    assert text.count("mb connect token") == text.count("`mb connect token` refuses")

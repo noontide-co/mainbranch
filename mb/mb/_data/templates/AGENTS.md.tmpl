@@ -388,10 +388,11 @@ the operator asks for plumbing.
   business -> `mb pulse init` (deterministic collectors + a judgment skill:
   scorecard, anomalies, exactly ONE recommended action, read-only).
   "Show me the business" ->
-  `mb dashboard open` (local, read-only, never committed). Scripts that read
-  credentials -> `mb connect token` (token to stdout for scripts and agents;
-  never echo the value). Plaintext credentials sitting in agent configs ->
-  `mb connect hygiene` (read-only scan; never prints the value). Reading the
+  `mb dashboard open` (local, read-only, never committed). Commands that
+  need a credential -> `mb connect exec <provider> -- <command>` (the secret
+  goes into that command's environment only, never into output;
+  `mb connect token` refuses terminals and pipes). Plaintext credentials
+  sitting in agent configs -> `mb connect hygiene` (read-only scan; never prints the value). Reading the
   recorded business identity (ad account, pixel, page, sender domain) instead
   of inferring it from live state -> `mb connect identity`. Tools missing from
   the provider list -> `mb connect <id> --custom`. Writing to an external
