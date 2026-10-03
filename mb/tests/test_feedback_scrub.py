@@ -222,6 +222,50 @@ def test_round4_benign_text_is_unchanged(text: str) -> None:
     assert feedback_mod.scrub(text) == text
 
 
+# --- Round 5: YAML headers with comments, tags, anchors ---------------------
+
+YAML_ROUND5_SHAPES = {
+    "literal_with_comment": f"password: | # note\n  {CANARY}\nnext: 1",
+    "folded_strip_with_comment": f"api_key: >- # rotated monthly\n  {CANARY}\n  continued",
+    "next_line_after_comment_line": f"token: # prod\n  # the prod one\n  {CANARY}",
+    "next_line_after_outdented_comment": f"token:\n# the prod one\n  {CANARY}",
+    "str_tag_next_line": f"secret: !!str\n  {CANARY}",
+    "anchor_literal": f"token: &tok |\n  {CANARY}",
+    "list_item_api_key": f"- api_key: | # primary\n    {CANARY}",
+    "nested_list_item_anchor": f"keys:\n  - name: a\n    api_key: &k >-\n      {CANARY}",
+    "tag_and_anchor_block": f"client_secret: !secret &s >+2\n    {CANARY}\n",
+    "verbatim_tag_indent_first": f"password: !<tag:x.test,2026:s> |2-\n   {CANARY}",
+    "blank_and_comment_inside_block": f"password: |\n  a\n\n  # x\n  {CANARY}",
+    "crlf_header_with_comment": f"password: | # note\r\n  {CANARY}\r\nnext: 1",
+    "inline_after_tag": f"password: !!str {CANARY}",
+    "inline_after_anchor": f"token: &tok {CANARY}",
+}
+YAML_ROUND5_BENIGN = [
+    "name: | # the title\n  some prose here\nnext: 1",
+    "description: >- # folded\n  one\n  two",
+    "base: &defaults\n  retries: 3\nservice:\n  <<: *defaults",
+    "label: !!str\n  plain words",
+    "items:\n  # first\n  - a\n  - b",
+]
+
+
+@pytest.mark.parametrize("case", sorted(YAML_ROUND5_SHAPES))
+def test_round5_yaml_case_is_redacted_in_all_four_fields(state: Path, case: str) -> None:
+    for index, value in enumerate(_stored_fields(state, YAML_ROUND5_SHAPES[case])):
+        assert CANARY not in value, (case, index)
+
+
+@pytest.mark.parametrize("text", YAML_ROUND5_BENIGN)
+def test_round5_ordinary_yaml_is_unchanged(text: str) -> None:
+    assert feedback_mod.scrub(text) == text
+
+
+def test_yaml_block_stops_at_the_key_indentation() -> None:
+    scrubbed = feedback_mod.scrub(f"password: | # note\n  {CANARY}\nname: kept")
+    assert CANARY not in scrubbed
+    assert scrubbed.endswith("\nname: kept")
+
+
 # --- Round 4: linear time ----------------------------------------------------
 
 TIMING_FAMILIES = {
@@ -238,6 +282,7 @@ TIMING_FAMILIES = {
     "schemes": "a://" * 1000,
     "header_names": "X-Api-Key: " * 363,
     "yaml_keys": "password:\n" * 400,
+    "yaml_headers": "token: !!str &a |2- # c\n" * 167,
     "path_segments": "/a" * 2000,
     "escaped_spaces": "\\ " * 2000,
     "long_key": "a" * 3999 + ":",

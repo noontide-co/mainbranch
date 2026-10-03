@@ -87,10 +87,17 @@ _HEADER_RE = re.compile(
 SENSITIVE_HEADERS = frozenset(
     {"authorization", "proxy-authorization", "cookie", "set-cookie", "www-authenticate"}
 )
-# A YAML key whose value is a ``|``/``>`` block or sits on the indented lines below.
-_YAML_KEY_RE = re.compile(
-    rf"(?<![A-Za-z0-9_.\-])([\"']?)({_KEY})\1[ \t]*:[ \t]*(?:[|>][-+0-9]*)?[ \t]*\r?$"
+# A YAML ``key:``; ``_YAML_HEADER_TAIL_RE`` decides whether its value is below.
+_YAML_KEY_RE = re.compile(rf"(?<![A-Za-z0-9_.\-])([\"']?)({_KEY})\1[ \t]*:(?=[ \t]|\r?$)")
+# YAML node properties: a tag (``!!str``, ``!foo``, ``!<...>``) or an anchor (``&a``).
+_YAML_PROPERTIES = r"(?:(?:!<[^>\n]*>|![^\s]*|&[^\s]+)(?:[ \t]+|(?=\r?$)))*"
+# What may follow ``key:`` when the value sits on the lines below: properties, a
+# ``|``/``>`` indicator with chomping and indent digits, and a `` # comment``.
+_YAML_HEADER_TAIL_RE = re.compile(
+    rf"[ \t]*{_YAML_PROPERTIES}(?:[|>](?:[1-9][-+]?|[-+][1-9]?)?)?(?:[ \t]+#[^\n]*)?[ \t]*\r?$"
 )
+# Properties before an inline value: ``key: !!str &a value``.
+_YAML_INLINE_PROPERTIES_RE = re.compile(r"(?:(?:!<[^>\n]*>|![^\s]*|&[^\s]+)[ \t]+)+")
 _SEGMENT_RE = re.compile(r"[A-Z]+(?![a-z])|[A-Z]?[a-z]+|\d+")
 # Characters that end a bare (unquoted) value.
 _VALUE_STOP = frozenset(";&,)]}<>|")
@@ -205,7 +212,9 @@ def _redacted_value(value: str) -> str:
     return f"{quote}{REDACTED}{quote}"
 
 
-def _redact_values(text: str, pattern: re.Pattern[str], key_group: int) -> str:
+def _redact_values(
+    text: str, pattern: re.Pattern[str], key_group: int, *, yaml: bool = False
+) -> str:
     out: list[str] = []
     position = 0
     search_from = 0
@@ -217,6 +226,11 @@ def _redact_values(text: str, pattern: re.Pattern[str], key_group: int) -> str:
             search_from = match.end(key_group)
             continue
         start = match.end()
+        if yaml and ":" in match.group(key_group + 1):
+            # ``key: !!str &a value``: the value follows the node properties.
+            properties = _YAML_INLINE_PROPERTIES_RE.match(text, start)
+            if properties:
+                start = properties.end()
         end = value_end(text, start)
         if end == start:
             search_from = match.end()
@@ -269,8 +283,29 @@ def _indent(line: str) -> int:
     return len(line) - len(line.lstrip(" \t"))
 
 
+def _is_yaml_secret_header(line: str) -> bool:
+    """Is ``line`` a secret ``key:`` whose value sits on the indented lines below?
+
+    The key may carry a tag, an anchor, a ``|``/``>`` indicator with chomping
+    and indent digits, and a trailing comment; nothing else may follow it.
+    """
+    for match in _YAML_KEY_RE.finditer(line):
+        if is_secret_key(match.group(2)) and _YAML_HEADER_TAIL_RE.match(line, match.end()):
+            return True
+    return False
+
+
+def _is_comment(line: str) -> bool:
+    return line.lstrip(" \t").startswith("#")
+
+
 def _redact_yaml_blocks(text: str) -> str:
-    """Redact the indented block under a secret YAML key (``key: |`` or ``key:``)."""
+    """Redact every line under a secret YAML key whose value is a block.
+
+    The block is each following line more indented than the key line, with
+    blank and comment lines inside it, up to the first line at the key's
+    indentation or less. A comment line at any indentation does not end it.
+    """
     lines = text.split("\n")
     out: list[str] = []
     index = 0
@@ -278,18 +313,21 @@ def _redact_yaml_blocks(text: str) -> str:
         line = lines[index]
         out.append(line)
         index += 1
-        match = _YAML_KEY_RE.search(line)
-        if match is None or not is_secret_key(match.group(2)):
+        if not _is_yaml_secret_header(line):
             continue
         base = _indent(line)
         end = index
         last_content = index
-        while end < len(lines) and (not lines[end].strip() or _indent(lines[end]) > base):
-            if lines[end].strip():
+        while end < len(lines):
+            current = lines[end]
+            if current.strip() and _indent(current) > base:
                 last_content = end + 1
+            elif current.strip() and not _is_comment(current):
+                break
             end += 1
         if last_content > index:
-            out.append(" " * (base + 2) + REDACTED)
+            ending = "\r" if lines[last_content - 1].endswith("\r") else ""
+            out.append(" " * (base + 2) + REDACTED + ending)
             index = last_content
     return "\n".join(out)
 
@@ -314,7 +352,7 @@ def scrub_secrets(text: str) -> str:
     text = _redact_headers(text)
     for pattern, replacement in _CREDENTIAL_RULES:
         text = pattern.sub(replacement, text)
-    text = _redact_values(text, _PAIR_RE, 2)
+    text = _redact_values(text, _PAIR_RE, 2, yaml=True)
     text = _redact_values(text, _FLAG_RE, 1)
     for token_pattern in (*_TOKEN_RULES, _connect_prefix_re(), TOKEN_RE):
         text = token_pattern.sub(REDACTED, text)

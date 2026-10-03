@@ -49,7 +49,11 @@ Each call appends one JSON line to
     as `X-Api-Key`) loses its whole value to the end of the line, or to the
     closing quote inside `curl -H '...'`: every cookie pair and Digest field.
   - Under a secret YAML key, a `|` or `>` block, or a value on the indented
-    lines below, is redacted as a whole block.
+    lines below, is redacted as a whole block: every following line more
+    indented than the key, with blank and comment lines inside it. The key may
+    carry a tag (`!!str`, `!<...>`), an anchor (`&name`), chomping and indent
+    digits (`|-`, `>+2`) and a trailing `# comment`. A tag or anchor before an
+    inline value does not hide the value.
   - Escaped characters (`\ `, `\;`) are part of a bare value. A secret flag
     (`--password`, `--api-key`, any flag with a secret segment) loses its next
     argument even when it starts with `-` or sits on the next line.
