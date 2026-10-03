@@ -5,9 +5,11 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import stat
 import subprocess
 import sys
+import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -3666,7 +3668,7 @@ def test_rotate_cli_json_never_carries_the_secret(tmp_path: Path, monkeypatch) -
     )
     run, _calls = _fake_op("cf-rotated-token")
     monkeypatch.setattr(connect_mod, "_run_command", run)
-    monkeypatch.setattr(connect_mod.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(shutil, "which", lambda name: f"/usr/bin/{name}")
 
     result = runner.invoke(app, ["connect", "rotate", "cloudflare", "--repo", str(repo), "--json"])
 
@@ -3744,7 +3746,9 @@ def test_rotate_not_connected(tmp_path: Path, monkeypatch) -> None:
     assert caught.value.rule == "rotate_not_connected"
 
 
-def _fake_http(responses: dict[str, tuple[int | None, dict[str, str]]], calls: list[dict]):
+def _fake_http(
+    responses: dict[str, tuple[int | None, dict[str, str]]], calls: list[dict[str, Any]]
+):
     """Answer `_http_get_json` by endpoint family: (http_status or None, headers)."""
 
     def fake(url, headers=None, **kwargs):
@@ -3790,7 +3794,7 @@ def test_registry_includes_github_and_ga4_with_probes() -> None:
 
 def test_stripe_probe_reports_restricted_key_scopes(tmp_path: Path, monkeypatch) -> None:
     _local_secret_env(monkeypatch, tmp_path)
-    calls: list[dict] = []
+    calls: list[dict[str, Any]] = []
     monkeypatch.setattr(
         connect_mod,
         "_http_get_json",
@@ -3836,7 +3840,7 @@ def test_stripe_probe_reports_restricted_key_scopes(tmp_path: Path, monkeypatch)
 
 
 def test_stripe_probe_stops_on_rejected_key(tmp_path: Path, monkeypatch) -> None:
-    calls: list[dict] = []
+    calls: list[dict[str, Any]] = []
     monkeypatch.setattr(
         connect_mod,
         "_http_get_json",
@@ -3853,7 +3857,7 @@ def test_stripe_probe_stops_on_rejected_key(tmp_path: Path, monkeypatch) -> None
 
 
 def test_stripe_probe_unreachable_is_unvalidated(monkeypatch) -> None:
-    calls: list[dict] = []
+    calls: list[dict[str, Any]] = []
     monkeypatch.setattr(connect_mod, "_http_get_json", _fake_http({}, calls))
 
     result = connect_mod._validate_with_provider(
@@ -3866,7 +3870,7 @@ def test_stripe_probe_unreachable_is_unvalidated(monkeypatch) -> None:
 
 def test_github_probe_reports_classic_scopes(tmp_path: Path, monkeypatch) -> None:
     _local_secret_env(monkeypatch, tmp_path)
-    calls: list[dict] = []
+    calls: list[dict[str, Any]] = []
     monkeypatch.setattr(
         connect_mod,
         "_http_get_json",
@@ -3891,7 +3895,7 @@ def test_github_probe_reports_classic_scopes(tmp_path: Path, monkeypatch) -> Non
 
 
 def test_github_probe_fine_grained_explains_permissions(monkeypatch) -> None:
-    calls: list[dict] = []
+    calls: list[dict[str, Any]] = []
     monkeypatch.setattr(
         connect_mod,
         "_http_get_json",
@@ -3920,7 +3924,7 @@ def test_github_custom_connection_keeps_resolving_as_builtin(tmp_path: Path, mon
 
 @pytest.mark.parametrize("property_id", ["", "G-ABC123", "123; drop"])
 def test_ga4_probe_needs_numeric_property_id(property_id: str, monkeypatch) -> None:
-    calls: list[dict] = []
+    calls: list[dict[str, Any]] = []
     monkeypatch.setattr(connect_mod, "_http_get_json", _fake_http({}, calls))
 
     result = connect_mod._validate_with_provider(
@@ -3933,7 +3937,7 @@ def test_ga4_probe_needs_numeric_property_id(property_id: str, monkeypatch) -> N
 
 
 def test_ga4_probe_reads_the_configured_property(monkeypatch) -> None:
-    calls: list[dict] = []
+    calls: list[dict[str, Any]] = []
     monkeypatch.setattr(
         connect_mod,
         "_http_get_json",
@@ -3968,7 +3972,7 @@ def test_http_get_json_returns_only_named_headers(monkeypatch) -> None:
         seen["method"] = request.get_method()
         return FakeResponse()
 
-    monkeypatch.setattr(connect_mod.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
 
     result = connect_mod._http_get_json(
         "https://api.example.test/user",
