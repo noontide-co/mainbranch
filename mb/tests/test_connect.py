@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import email.message
 import hashlib
+import io
 import json
 import os
 import random
@@ -11,6 +13,7 @@ import stat
 import string
 import subprocess
 import sys
+import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -4138,6 +4141,80 @@ def test_http_get_json_returns_only_named_headers(monkeypatch) -> None:
     assert result["ok"] is True
     assert result["headers"] == {"X-OAuth-Scopes": "repo"}
     assert "someone" not in json.dumps(result)
+
+
+def _hostile_headers(secret: str) -> email.message.Message:
+    headers = email.message.Message()
+    headers["X-OAuth-Scopes"] = f"repo, {secret}, read:org, Bearer {secret}"
+    return headers
+
+
+@pytest.mark.parametrize("status", [200, 401])
+def test_github_probe_redacts_secret_reflected_in_scope_header(monkeypatch, status: int) -> None:
+    """A hostile response echoing the request token never reaches output."""
+    secret = "ghp_" + "F4k3" * 9
+
+    class FakeResponse:
+        def __init__(self) -> None:
+            self.status = status
+            self.headers = _hostile_headers(secret)
+
+        def read(self, size: int) -> bytes:
+            return b"{}"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args) -> None:
+            return None
+
+    def fake_urlopen(request, timeout):
+        if status >= 400:
+            raise urllib.error.HTTPError(
+                request.full_url,
+                status,
+                "Unauthorized",
+                _hostile_headers(secret),
+                io.BytesIO(b"{}"),
+            )
+        return FakeResponse()
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    result = connect_mod._validate_with_provider(connect_mod.normalize_provider("github"), secret)
+
+    assert secret not in json.dumps(result)
+    assert result["token_scopes"] == ["repo", "read:org"]
+    assert result["token_scopes_withheld"] == 2
+    if status == 200:
+        assert result["ok"] is True
+        assert "scopes: repo, read:org (2 unrecognized value(s) withheld)" in result["summary"]
+    else:
+        assert result["ok"] is False
+        assert result["state"] == "invalid"
+
+
+def test_http_get_json_redacts_and_caps_returned_headers(monkeypatch) -> None:
+    secret = "f4k3-request-secret-0000"
+
+    def fake_urlopen(request, timeout):
+        headers = email.message.Message()
+        headers["X-OAuth-Scopes"] = f"repo,{secret}," + "x" * 2000
+        raise urllib.error.HTTPError(request.full_url, 403, "Forbidden", headers, io.BytesIO(b""))
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    result = connect_mod._http_get_json(
+        "https://api.example.test/user",
+        {"Authorization": f"Bearer {secret}"},
+        endpoint_family="example",
+        response_headers=("X-OAuth-Scopes",),
+    )
+
+    returned = result["headers"]["X-OAuth-Scopes"]
+    assert secret not in returned
+    assert "<redacted>" in returned
+    assert len(returned) <= connect_mod.RESPONSE_HEADER_MAX_CHARS
 
 
 def test_generated_agents_guidance_routes_credentials_to_exec(tmp_path: Path) -> None:

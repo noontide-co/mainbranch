@@ -1825,8 +1825,13 @@ def _safe_probe_details(validation: dict[str, Any]) -> dict[str, Any]:
     token_scopes = validation.get("token_scopes")
     if isinstance(token_scopes, list):
         details["token_scopes"] = [
-            str(scope) for scope in token_scopes if not metadata_value_rule(str(scope))
+            str(scope)
+            for scope in token_scopes
+            if GITHUB_SCOPE_RE.fullmatch(str(scope)) and not metadata_value_rule(str(scope))
         ]
+    withheld = validation.get("token_scopes_withheld")
+    if isinstance(withheld, int) and not isinstance(withheld, bool):
+        details["token_scopes_withheld"] = withheld
     return details
 
 
@@ -2337,6 +2342,9 @@ def _extract_upstream_errors(
     return codes, messages
 
 
+RESPONSE_HEADER_MAX_CHARS = 512
+
+
 def _http_get_json(
     url: str,
     headers: dict[str, str] | None = None,
@@ -2352,16 +2360,19 @@ def _http_get_json(
     returned.
     """
     request = urllib.request.Request(url, headers=headers or {})
+    secret_values = tuple(_header_secret_candidates(headers))
 
     def picked(raw: Any) -> dict[str, str]:
+        # A response header is provider-controlled text: redact anything the
+        # request sent as a secret and cap its length before handing it back.
         found: dict[str, str] = {}
         for name in response_headers:
             value = raw.get(name) if raw is not None else None
             if value is not None:
-                found[name] = str(value)
+                text = _redact_sensitive_text(value, secret_values)
+                found[name] = text[:RESPONSE_HEADER_MAX_CHARS]
         return found
 
-    secret_values = tuple(_header_secret_candidates(headers))
     upstream: dict[str, Any] = {
         "endpoint_family": endpoint_family,
         "http_status": None,
@@ -2679,7 +2690,12 @@ GITHUB_TOKEN_KINDS: tuple[tuple[str, str], ...] = (
     ("ghs_", "app_installation"),
 )
 # Share-safe probe facts carried from a probe into the recorded validation.
-PROBE_DETAIL_KEYS: tuple[str, ...] = ("scopes", "token_kind", "token_scopes")
+PROBE_DETAIL_KEYS: tuple[str, ...] = (
+    "scopes",
+    "token_kind",
+    "token_scopes",
+    "token_scopes_withheld",
+)
 GITHUB_TOKEN_KIND_NAMES = frozenset({kind for _prefix, kind in GITHUB_TOKEN_KINDS} | {"unknown"})
 GA4_PROPERTY_RE = re.compile(r"^(?:properties/)?(\d{1,20})$")
 
@@ -2744,6 +2760,9 @@ def _github_token_kind(secret: str) -> str:
     return "unknown"
 
 
+GITHUB_SCOPE_RE = re.compile(r"[a-z][a-z_]{0,31}(?::[a-z][a-z_]{0,31})?")
+
+
 def _probe_github(provider: Provider, secret: str) -> dict[str, Any]:
     """Authenticated-user read, plus the scopes GitHub reports for the token."""
     result = _http_get_json(
@@ -2757,16 +2776,23 @@ def _probe_github(provider: Provider, secret: str) -> dict[str, Any]:
     raw_headers = result.get("headers")
     headers: dict[str, Any] = raw_headers if isinstance(raw_headers, dict) else {}
     raw_scopes = headers.get("X-OAuth-Scopes")
-    token_scopes = (
+    reported = (
         [scope.strip() for scope in str(raw_scopes).split(",") if scope.strip()]
         if raw_scopes is not None
         else []
     )
+    # Only scope names in GitHub's own grammar ("repo", "read:org") go into
+    # output and stored validation; anything else is counted, never shown.
+    token_scopes = [scope for scope in reported if GITHUB_SCOPE_RE.fullmatch(scope)]
+    withheld = len(reported) - len(token_scopes)
     probed = {**result, "token_kind": kind, "token_scopes": token_scopes}
+    if withheld:
+        probed["token_scopes_withheld"] = withheld
     if result.get("ok"):
         if raw_scopes is not None:
             listed = ", ".join(token_scopes) or "none"
-            probed["summary"] = f"GitHub token authenticated; scopes: {listed}."
+            note = f" ({withheld} unrecognized value(s) withheld)" if withheld else ""
+            probed["summary"] = f"GitHub token authenticated; scopes: {listed}{note}."
         else:
             probed["summary"] = (
                 "GitHub token authenticated. GitHub does not list a fine-grained or app "
