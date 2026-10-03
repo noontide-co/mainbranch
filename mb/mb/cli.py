@@ -28,6 +28,7 @@ from mb import connect as connect_mod
 from mb import dashboard as dashboard_mod
 from mb import doctor as doctor_mod
 from mb import educational as educational_mod
+from mb import fleet as fleet_mod
 from mb import graph as graph_mod
 from mb import image_rail as image_rail_mod
 from mb import init as init_mod
@@ -100,6 +101,19 @@ site_app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(site_app, name="site")
+
+fleet_app = typer.Typer(
+    name="fleet",
+    help="Read-only status of every site across your hubs.",
+    no_args_is_help=True,
+)
+app.add_typer(fleet_app, name="fleet")
+fleet_hubs_app = typer.Typer(
+    name="hubs",
+    help="Show the hub list mb fleet reads.",
+    no_args_is_help=True,
+)
+fleet_app.add_typer(fleet_hubs_app, name="hubs")
 
 launch_app = typer.Typer(
     name="launch",
@@ -2193,6 +2207,85 @@ def site_check_cmd(
     else:
         site_mod.render_check(result)
     raise typer.Exit(0 if result["ok"] else 1)
+
+
+def _fleet_config_exit(command: str, exc: fleet_mod.FleetConfigError, json_out: bool) -> NoReturn:
+    if json_out:
+        typer.echo(
+            json.dumps(
+                envelope(
+                    {"ok": False, "errors": [str(exc)], "actions": ["edit the hub list"]},
+                    command=command,
+                    schema_name=f"mainbranch.{command.replace('mb ', '').replace(' ', '_')}",
+                ),
+                indent=2,
+            )
+        )
+    else:
+        typer.echo(f"{command}: {exc}", err=True)
+    raise typer.Exit(2) from exc
+
+
+@fleet_app.command("refresh")
+def fleet_refresh_cmd(
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Read every hub, child repo and site, then cache one snapshot. Read-only."""
+    try:
+        result = fleet_mod.refresh()
+    except fleet_mod.FleetConfigError as exc:
+        _fleet_config_exit("mb fleet refresh", exc, json_out)
+    if json_out:
+        typer.echo(
+            json.dumps(
+                envelope(
+                    result, command="mb fleet refresh", schema_name="mainbranch.fleet_refresh"
+                ),
+                indent=2,
+            )
+        )
+    else:
+        fleet_mod.render_refresh(result)
+    raise typer.Exit(0 if result["ok"] else 1)
+
+
+@fleet_app.command("status")
+def fleet_status_cmd(
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Show the cached fleet snapshot: one row per site. Never reads the network."""
+    result = fleet_mod.status()
+    if json_out:
+        typer.echo(
+            json.dumps(
+                envelope(result, command="mb fleet status", schema_name="mainbranch.fleet_status"),
+                indent=2,
+            )
+        )
+    else:
+        fleet_mod.render_status(result)
+    raise typer.Exit(0 if result["ok"] else 1)
+
+
+@fleet_hubs_app.command("list")
+def fleet_hubs_list_cmd(
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """List the hubs in the user-level fleet.toml."""
+    try:
+        result = fleet_mod.hubs_list()
+    except fleet_mod.FleetConfigError as exc:
+        _fleet_config_exit("mb fleet hubs list", exc, json_out)
+    if json_out:
+        typer.echo(
+            json.dumps(
+                envelope(result, command="mb fleet hubs list", schema_name="mainbranch.fleet_hubs"),
+                indent=2,
+            )
+        )
+    else:
+        fleet_mod.render_hubs(result)
+    raise typer.Exit(0)
 
 
 @launch_app.command("check")

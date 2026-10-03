@@ -1750,6 +1750,27 @@ def read_token(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
     }
 
 
+def read_metadata(provider_id: str, repo: str | Path = ".") -> dict[str, str]:
+    """Return a connection's non-secret metadata (for example ``account_id``).
+
+    Resolves the same repo-then-user-scope entry as :func:`read_token`. Returns
+    an empty dict when the provider is not connected.
+    """
+    provider = resolve_provider(provider_id, repo)
+    target = Path(repo).resolve()
+    config = _read_config(target)
+    repo_id = str(config.get("repo_id") or _repo_identity(target)["repo_id"])
+    entry = config["providers"].get(provider.id)
+    if not isinstance(entry, dict):
+        entry = _user_scope_provider_entry(repo_id, provider.id)
+    if not isinstance(entry, dict):
+        return {}
+    metadata = entry.get("metadata")
+    if not isinstance(metadata, dict):
+        return {}
+    return _safe_status_metadata(metadata)
+
+
 def _provider_error_summary(provider_name: str, upstream: dict[str, Any]) -> str:
     status = upstream.get("http_status")
     messages = [str(item) for item in upstream.get("error_messages", []) if str(item)]
