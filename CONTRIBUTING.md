@@ -90,16 +90,6 @@ sidecar output is review input. See
 [the sidecar decision](decisions/2026-05-13-agentic-security-review-sidecars.md)
 and [the supply-chain policy](docs/supply-chain-policy.md).
 
-For Go tools (Phase 2):
-
-```bash
-cd tools/tool-<name>
-go fmt ./...
-go vet ./...
-golangci-lint run
-go test ./...
-```
-
 **No `--no-verify`. No `git commit --no-verify`. No skipping.**
 
 ---
@@ -136,7 +126,7 @@ Specifically:
 Any change to `.claude/skills/*/SKILL.md` or its `references/` should:
 
 1. Review the skill against the bundled skill maintenance rules in [AGENTS.md](AGENTS.md) and the skill line-count/frontmatter gates.
-2. Run skill regression: `test-skills` skill (admin-only) verifies the skill-system invariants.
+2. Run skill validation: `mb skill validate --all --json` verifies the skill-system invariants.
 3. Keep `SKILL.md` under 500 lines (CI gates this). If it grows past, split content into `references/<topic>.md`.
 4. Add or update required frontmatter: `name:`, `description:`, and `loops:`
    using canonical loop slugs (`sense`, `decide`, `ship`, `reflect`). Older
