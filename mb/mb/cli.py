@@ -434,7 +434,10 @@ def ledger_init_cmd(
 
 FEEDBACK_WORDS_ARGUMENT = typer.Argument(
     None,
-    help=("What went wrong, in plain words."),
+    help=(
+        "What went wrong, in plain words. Or `rollup` / `list` / `clear` to read or "
+        "prune the local feedback file."
+    ),
 )
 
 
@@ -446,27 +449,68 @@ def feedback_cmd(
         "--command",
         help="The mb command the feedback is about, for example 'mb connect test'.",
     ),
+    since: str = typer.Option(
+        "",
+        "--since",
+        help="Window for rollup and list: 7d, 12h, 2w or a date. Rollup defaults to 7d.",
+    ),
+    before: str = typer.Option(
+        "", "--before", help="With `clear`, remove entries older than this date."
+    ),
+    kind: str = typer.Option("", "--kind", help="With `list`, show only feedback or refusal."),
+    limit: int = typer.Option(
+        50, "--limit", help="With `list`, newest entries to show; 0 for all."
+    ),
     repo: str = typer.Option(".", "--repo", help="Repo the feedback was written from."),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
-    """Log mb friction to a local file. Nothing is sent."""
+    """Log mb friction to a local file and roll it up for the maintainer. Nothing is sent."""
     args = list(words or [])
-    command = "mb feedback"
+    target = args[0] if args and args[0] in feedback_mod.SUBCOMMANDS else ""
+    command = f"mb feedback {target}".strip()
     schema_name = "mainbranch.feedback.v1"
-    if not args:
-        message = 'say what went wrong, for example: mb feedback "status said X, expected Y"'
+
+    def usage_error(code: str, message: str) -> NoReturn:
         if json_out:
             typer.echo(
                 _json_error_payload(
-                    command=command, schema_name=schema_name, code="empty_feedback", message=message
+                    command=command, schema_name=schema_name, code=code, message=message
                 )
             )
         else:
             typer.echo(f"{command}: {message}", err=True)
         raise typer.Exit(2)
-    result = feedback_mod.record(" ".join(args), command=about or None, repo=repo)
+
+    if target and len(args) > 1:
+        usage_error("unexpected_argument", f"unexpected argument {args[1]!r}")
+    try:
+        if target == "rollup":
+            result = feedback_mod.rollup(since=since or feedback_mod.DEFAULT_SINCE)
+        elif target == "list":
+            if kind and kind not in feedback_mod.KINDS:
+                usage_error("invalid_kind", "--kind must be feedback or refusal")
+            result = feedback_mod.list_entries(since=since or None, kind=kind or None, limit=limit)
+        elif target == "clear":
+            if not before:
+                usage_error("missing_before", "--before <date> is required, for example 2026-10-01")
+            result = feedback_mod.clear(before=before)
+        else:
+            if not args:
+                usage_error(
+                    "empty_feedback",
+                    'say what went wrong, for example: mb feedback "status said X, expected Y"',
+                )
+            result = feedback_mod.record(" ".join(args), command=about or None, repo=repo)
+    except ValueError as exc:
+        usage_error("invalid_date", str(exc))
     if json_out:
         typer.echo(_json_payload(result, command=command, schema_name=schema_name))
+    elif target == "rollup":
+        typer.echo(result["markdown"], nl=False)
+    elif target == "list":
+        feedback_mod.render_list(result)
+    elif target == "clear":
+        feedback_mod.render_clear(result)
     else:
         feedback_mod.render_record(result)
     if not result["ok"]:

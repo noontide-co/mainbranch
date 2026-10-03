@@ -16,18 +16,23 @@ import functools
 import json
 import os
 import re
-from datetime import datetime, timezone
+from collections.abc import Iterator
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 from mb import __version__
-from mb.durable import state_lock
+from mb.durable import atomic_write_text, state_lock
 from mb.freshness import looks_like_business_repo
 
 SCHEMA_VERSION = 1
 FEEDBACK_FILENAME = "feedback.jsonl"
+SUBCOMMANDS = ("rollup", "list", "clear")
+KINDS = ("feedback", "refusal")
 MAX_TEXT_CHARS = 4000
+DEFAULT_SINCE = "7d"
 
+_SINCE_RE = re.compile(r"^\s*(\d+)\s*([hdw])\s*$", re.IGNORECASE)
 # Home directories of any user, in case text quotes another account's path.
 _OTHER_HOME_RE = re.compile(
     r"(?<![\w~])(?:/Users|/home)/[^/\s\"'`]+|[A-Za-z]:\\Users\\[^\\\s\"'`]+"
@@ -183,6 +188,252 @@ def record(
     }
 
 
+def _iter_lines(path: Path) -> Iterator[dict[str, Any] | None]:
+    try:
+        handle = path.open(encoding="utf-8")
+    except FileNotFoundError:
+        return
+    with handle:
+        for raw in handle:
+            if not raw.strip():
+                continue
+            try:
+                item = json.loads(raw)
+            except json.JSONDecodeError:
+                yield None
+                continue
+            yield item if isinstance(item, dict) and isinstance(item.get("time"), str) else None
+
+
+def _parse_time(value: str) -> datetime | None:
+    try:
+        moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return moment
+
+
+def read_entries(path: Path | None = None) -> tuple[list[dict[str, Any]], int]:
+    """Return parsed entries oldest first and the count of unreadable lines."""
+    entries: list[dict[str, Any]] = []
+    skipped = 0
+    for item in _iter_lines(path or feedback_path()):
+        if item is None or _parse_time(item["time"]) is None:
+            skipped += 1
+            continue
+        entries.append(item)
+    entries.sort(key=lambda item: item["time"])
+    return entries, skipped
+
+
+def parse_since(value: str, *, now: datetime | None = None) -> datetime:
+    """Parse ``7d`` / ``12h`` / ``2w`` or an ISO date into a UTC cutoff."""
+    current = now or _now()
+    match = _SINCE_RE.match(value or "")
+    if match:
+        amount = int(match.group(1))
+        unit = match.group(2).lower()
+        delta = {"h": timedelta(hours=amount), "d": timedelta(days=amount)}.get(
+            unit, timedelta(weeks=amount)
+        )
+        return current - delta
+    return _parse_date(value)
+
+
+def _parse_date(value: str) -> datetime:
+    text = (value or "").strip()
+    try:
+        parsed = date.fromisoformat(text)
+    except ValueError:
+        moment = _parse_time(text)
+        if moment is None:
+            raise ValueError(
+                "expected a duration such as 7d, 12h or 2w, or a date such as "
+                f"2026-10-01; got {text!r}"
+            ) from None
+        return moment
+    return datetime(parsed.year, parsed.month, parsed.day, tzinfo=timezone.utc)
+
+
+def _since_filter(entries: list[dict[str, Any]], cutoff: datetime | None) -> list[dict[str, Any]]:
+    if cutoff is None:
+        return entries
+    return [item for item in entries if (_parse_time(item["time"]) or cutoff) >= cutoff]
+
+
+def list_entries(
+    *,
+    since: str | None = None,
+    kind: str | None = None,
+    limit: int = 50,
+    path: Path | None = None,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Return the newest ``limit`` entries, optionally filtered by window and kind."""
+    target = path or feedback_path()
+    entries, skipped = read_entries(target)
+    cutoff = parse_since(since, now=now) if since else None
+    selected = _since_filter(entries, cutoff)
+    if kind:
+        selected = [item for item in selected if item.get("kind") == kind]
+    total = len(selected)
+    if limit > 0:
+        selected = selected[-limit:]
+    return {
+        "ok": True,
+        "path": display_path(target),
+        "since": _iso(cutoff) if cutoff else None,
+        "total": total,
+        "shown": len(selected),
+        "skipped_lines": skipped,
+        "entries": selected,
+        "safe_to_share": True,
+    }
+
+
+def rollup(
+    *,
+    since: str = DEFAULT_SINCE,
+    path: Path | None = None,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Group entries in the window by kind, command and rule, with counts."""
+    target = path or feedback_path()
+    entries, skipped = read_entries(target)
+    cutoff = parse_since(since, now=now)
+    selected = _since_filter(entries, cutoff)
+    groups: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for item in selected:
+        kind = str(item.get("kind") or "feedback")
+        command = str(item.get("command") or "")
+        rule = str(item.get("rule") or "")
+        key = (kind, command, rule)
+        group = groups.setdefault(
+            key,
+            {
+                "kind": kind,
+                "command": command or None,
+                "rule": rule or None,
+                "count": 0,
+                "oldest": item["time"],
+                "newest": item["time"],
+                "repo_kinds": [],
+                "mb_versions": [],
+                "texts": [],
+            },
+        )
+        group["count"] += 1
+        group["oldest"] = min(group["oldest"], item["time"])
+        group["newest"] = max(group["newest"], item["time"])
+        for field, value in (
+            ("repo_kinds", item.get("repo_kind")),
+            ("mb_versions", item.get("mb_version")),
+        ):
+            if value and value not in group[field]:
+                group[field].append(value)
+        text = item.get("text")
+        if text:
+            group["texts"].append(text)
+    ordered = sorted(
+        groups.values(),
+        key=lambda group: (
+            group["kind"] != "refusal",
+            -group["count"],
+            group["command"] or "",
+            group["rule"] or "",
+        ),
+    )
+    result = {
+        "ok": True,
+        "path": display_path(target),
+        "since": _iso(cutoff),
+        "window": since,
+        "total": len(selected),
+        "skipped_lines": skipped,
+        "groups": ordered,
+        "safe_to_share": True,
+    }
+    result["markdown"] = render_rollup_markdown(result)
+    return result
+
+
+def render_rollup_markdown(result: dict[str, Any]) -> str:
+    """Render a rollup as a Markdown draft a maintainer can turn into issues."""
+    lines = [
+        "# mb feedback rollup",
+        "",
+        f"Window: since {result['since']} ({result['window']}). "
+        f"Entries: {result['total']}. Local file: `{result['path']}`. Nothing was sent.",
+    ]
+    if result.get("skipped_lines"):
+        lines.append(f"Unreadable lines skipped: {result['skipped_lines']}.")
+    refusals = [group for group in result["groups"] if group["kind"] == "refusal"]
+    notes = [group for group in result["groups"] if group["kind"] != "refusal"]
+    if not result["groups"]:
+        lines += ["", "No feedback or refusals in this window."]
+        return "\n".join(lines) + "\n"
+    if refusals:
+        lines += [
+            "",
+            "## Refusals",
+            "",
+            "| Rule | Command | Count | Oldest | Newest |",
+            "| --- | --- | ---: | --- | --- |",
+        ]
+        for group in refusals:
+            lines.append(
+                f"| `{group['rule'] or 'unknown'}` | `{group['command'] or '-'}` | "
+                f"{group['count']} | {group['oldest']} | {group['newest']} |"
+            )
+    if notes:
+        lines += ["", "## Feedback"]
+        for group in notes:
+            command = f"`{group['command']}`" if group["command"] else "No command given"
+            lines += [
+                "",
+                f"### {command}: {group['count']} {'entry' if group['count'] == 1 else 'entries'}",
+                "",
+                f"Oldest {group['oldest']}, newest {group['newest']}. "
+                f"Repo kinds: {', '.join(group['repo_kinds']) or 'unknown'}. "
+                f"mb versions: {', '.join(group['mb_versions']) or 'unknown'}.",
+                "",
+            ]
+            lines += [f"- {' '.join(text.split())}" for text in group["texts"]]
+    return "\n".join(lines) + "\n"
+
+
+def clear(*, before: str, path: Path | None = None) -> dict[str, Any]:
+    """Drop entries older than ``before`` (a date or timestamp) and unreadable lines."""
+    target = path or feedback_path()
+    cutoff = _parse_date(before)
+    if not target.exists():
+        return {
+            "ok": True,
+            "path": display_path(target),
+            "before": _iso(cutoff),
+            "removed": 0,
+            "kept": 0,
+            "safe_to_share": True,
+        }
+    with state_lock(target):
+        entries, skipped = read_entries(target)
+        kept = [item for item in entries if (_parse_time(item["time"]) or cutoff) >= cutoff]
+        removed = len(entries) - len(kept)
+        text = "".join(json.dumps(item, ensure_ascii=False, sort_keys=True) + "\n" for item in kept)
+        atomic_write_text(target, text)
+    return {
+        "ok": True,
+        "path": display_path(target),
+        "before": _iso(cutoff),
+        "removed": removed,
+        "removed_unreadable": skipped,
+        "kept": len(kept),
+        "safe_to_share": True,
+    }
+
+
 def render_record(result: dict[str, Any]) -> None:
     if not result["ok"]:
         for error in result["errors"]:
@@ -190,3 +441,25 @@ def render_record(result: dict[str, Any]) -> None:
         return
     print(f"Saved to {result['path']} (local only; nothing was sent).")
     print("Run `mb feedback rollup` to see this week's friction grouped by command.")
+
+
+def render_list(result: dict[str, Any]) -> None:
+    if not result["entries"]:
+        print(f"No feedback in {result['path']}.")
+        return
+    for item in result["entries"]:
+        kind = item.get("kind", "feedback")
+        command = item.get("command") or "-"
+        if kind == "refusal":
+            print(f"{item['time']}  refusal  {command}  rule={item.get('rule') or 'unknown'}")
+        else:
+            print(f"{item['time']}  feedback  {command}  {item.get('text', '')}")
+    if result["shown"] < result["total"]:
+        print(f"Showing the newest {result['shown']} of {result['total']}; use --limit 0 for all.")
+
+
+def render_clear(result: dict[str, Any]) -> None:
+    print(
+        f"Removed {result['removed']} entries before {result['before']}; "
+        f"kept {result['kept']} in {result['path']}."
+    )
