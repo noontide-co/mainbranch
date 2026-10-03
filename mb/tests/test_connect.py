@@ -3792,6 +3792,27 @@ def test_registry_includes_github_and_ga4_with_probes() -> None:
     assert connect_mod.exec_env_name("ga4") == "MB_SECRET"
 
 
+@pytest.mark.parametrize(
+    ("provider_id", "expected"),
+    [
+        ("cloudflare", "CLOUDFLARE_API_TOKEN"),
+        ("stripe", "STRIPE_API_KEY"),
+        ("github", "GITHUB_TOKEN"),
+        ("resend", "RESEND_API_KEY"),
+        ("apify", "APIFY_TOKEN"),
+        ("meta", "ACCESS_TOKEN"),
+        ("postiz", "POSTIZ_API_KEY"),
+        ("transcription", "OPENAI_API_KEY"),
+        ("google", "GOOGLE_OAUTH_TOKEN"),
+        ("ga4", "MB_SECRET"),
+        ("mercury", "MB_SECRET"),
+    ],
+)
+def test_exec_default_env_is_the_providers_own_variable(provider_id: str, expected: str) -> None:
+    assert connect_mod.exec_env_name(provider_id) == expected
+    assert connect_mod.exec_env_name(provider_id, "OVERRIDE") == "OVERRIDE"
+
+
 def test_stripe_probe_reports_restricted_key_scopes(tmp_path: Path, monkeypatch) -> None:
     _local_secret_env(monkeypatch, tmp_path)
     calls: list[dict[str, Any]] = []

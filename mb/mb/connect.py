@@ -1985,12 +1985,14 @@ def read_metadata(provider_id: str, repo: str | Path = ".") -> dict[str, str]:
     return _safe_status_metadata(metadata)
 
 
-# Environment variable `mb connect exec` sets when `--env` is not given. These
-# are the names each provider's own CLI reads; anything else gets MB_SECRET.
+# Variable `mb connect exec` sets when `--env` is not given: the provider's
+# first registered env var, except where that name is not what the provider's
+# own CLI reads (the Stripe CLI reads STRIPE_API_KEY) or does not hold a token
+# (GOOGLE_APPLICATION_CREDENTIALS is a key-file path). Custom providers and
+# providers with no registered env var get MB_SECRET.
 EXEC_DEFAULT_ENV: dict[str, str] = {
-    "cloudflare": "CLOUDFLARE_API_TOKEN",
     "stripe": "STRIPE_API_KEY",
-    "github": "GITHUB_TOKEN",
+    "google": "GOOGLE_OAUTH_TOKEN",
 }
 EXEC_FALLBACK_ENV = "MB_SECRET"
 ENV_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -1998,7 +2000,11 @@ ENV_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 def exec_env_name(provider_id: str, override: str = "") -> str:
     """Name of the variable that carries the secret into the child."""
-    name = override.strip() or EXEC_DEFAULT_ENV.get(provider_id, EXEC_FALLBACK_ENV)
+    registered = provider_map().get(provider_id)
+    default = EXEC_DEFAULT_ENV.get(provider_id) or (
+        registered.env_vars[0] if registered and registered.env_vars else EXEC_FALLBACK_ENV
+    )
+    name = override.strip() or default
     if not ENV_NAME_RE.fullmatch(name):
         _refuse(
             "exec_env_name",

@@ -67,9 +67,12 @@ mb connect exec mercury --env MERCURY_TOKEN -- python3 scripts/import.py
   `128 + signal`, as in a shell. `mb connect exec` itself exits 1 when the
   credential cannot be read, 2 for a refused request, and 127 when the
   command is not found.
-- Default variable names: `CLOUDFLARE_API_TOKEN` for Cloudflare,
-  `STRIPE_API_KEY` for Stripe, `GITHUB_TOKEN` for GitHub, and `MB_SECRET` for
-  every other provider, custom ids included. `--env` overrides it.
+- Default variable: the provider's own, which is its first registered
+  environment variable (`CLOUDFLARE_API_TOKEN`, `GITHUB_TOKEN`,
+  `RESEND_API_KEY`, `APIFY_TOKEN`, Meta's `ACCESS_TOKEN`, and so on). Stripe
+  uses `STRIPE_API_KEY`, which the Stripe CLI reads, and Google uses
+  `GOOGLE_OAUTH_TOKEN`. Custom ids and providers with no registered variable,
+  such as GA4, get `MB_SECRET`. `--env` overrides it.
 - `--repo` selects the business repo, and a user-scoped connection resolves
   from a worktree as it does for `status`.
 

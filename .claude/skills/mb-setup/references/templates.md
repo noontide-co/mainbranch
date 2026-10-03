@@ -703,8 +703,10 @@ secret values, ids, or item names.
    into the keychain while the operator is present, and high-sensitivity
    moments where the operator explicitly wants to be in the loop.
 2. **Keychain via `mb connect` = THE agent path** (reliable, unattended).
-   One-time move from the password manager, piped — never printed. Scripts
-   read back with `mb connect token <provider>`.
+   One-time move from the password manager, piped — never printed. Record
+   the vault reference with `--source op://vault/item/field` so
+   `mb connect rotate <provider>` can re-read it. Scripts use the key through
+   `mb connect exec <provider> -- <command>`; the value never reaches stdout.
 3. **Platform runtime secrets** (e.g. Workers/Pages bindings) are
    write-only — verify by behavior, not read-back.
 4. **Session env file** for anything that must be exported into a shell.

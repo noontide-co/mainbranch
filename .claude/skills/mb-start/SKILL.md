@@ -124,7 +124,7 @@ meaning before suggesting file moves.
 `show`; money-path-overnight worries (real money flowing unattended) →
 `mb canary init`; recurring daily business read → `mb pulse init`; "show me
 the business" → `mb dashboard open`; scripts reading credentials →
-`mb connect token` (never echo values). Full map: mb-help
+`mb connect exec <id> -- <cmd>` (never echo values). Full map: mb-help
 `references/cli-surfaces.md` — business answer first; triggered surfaces stay triggered.
 
 **Books/finance routing:** When the user mentions bookkeeping, books, finance,

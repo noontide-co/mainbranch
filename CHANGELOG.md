@@ -30,8 +30,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - `mb connect exec <provider> [--env NAME] -- <command>` runs one command with
   the stored credential in its environment only. No shell; the secret is never
   printed, logged or returned in JSON; the exit code is the command's own.
-  Default variables: `CLOUDFLARE_API_TOKEN`, `STRIPE_API_KEY`, `GITHUB_TOKEN`,
-  and `MB_SECRET` for every other provider.
+  The default variable is the provider's own (`CLOUDFLARE_API_TOKEN`,
+  `STRIPE_API_KEY`, `GITHUB_TOKEN`, `RESEND_API_KEY`, …), or `MB_SECRET` for
+  custom providers and providers with none. Bundled skills now route
+  credential use to `exec`.
 - `mb connect <provider> --source op://vault/item/field` records where a
   credential lives, and `mb connect rotate <provider>` re-reads it with the
   1Password CLI, stores it and runs the provider probe.
