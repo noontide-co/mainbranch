@@ -403,7 +403,8 @@ def test_every_absolute_path_shape_is_scrubbed_in_every_field(state_home: Path, 
         for field in ("text", "command", "rule"):
             value = str(entry.get(field) or "")
             assert marker not in value, (shape, field, value)
-            assert not value or "~" in value or "<local-path>" in value, (shape, field, value)
+            if field == "text" and entry["kind"] == "feedback":
+                assert "~" in value or "<local-path>" in value, (shape, field, value)
 
 
 def test_path_scrub_keeps_urls_slash_commands_and_home_tilde(
@@ -603,3 +604,44 @@ def test_repo_kind_is_unknown_when_the_classifier_fails(
 )
 def test_scrub_keeps_ordinary_metadata(text: str) -> None:
     assert feedback_mod.scrub(text) == text
+
+
+@pytest.mark.parametrize(
+    ("given", "stored"),
+    [
+        ("mb connect test", "mb connect test"),
+        ("connect test", "mb connect test"),
+        ("mb connect meta --token abc", "mb connect meta"),
+        ("mb status --repo /srv/x/y", "mb status"),
+        ("mb issue draft bug extra words", "mb issue draft bug"),
+        ("mb connect 'quoted'", "mb connect"),
+        ("mb", None),
+        ("--json", None),
+        ("MB STATUS", None),
+        ("", None),
+    ],
+)
+def test_command_is_stored_as_the_command_path_only(
+    state_home: Path, given: str, stored: str | None
+) -> None:
+    result = feedback_mod.record("noted", command=given)
+    assert result["entry"]["command"] == stored
+    assert feedback_mod.record_refusal("connect.config_boundary", given)
+    assert _lines(state_home)[-1]["command"] == stored
+
+
+@pytest.mark.parametrize(
+    ("given", "stored"),
+    [
+        ("connect.config_boundary", "connect.config_boundary"),
+        ("connect:metadata-sensitive_2", "connect:metadata-sensitive_2"),
+        ("Connect.Boundary", "other"),
+        ("rule with spaces", "other"),
+        ("token=abc", "other"),
+        ("x" * 65, "other"),
+        ("", "other"),
+    ],
+)
+def test_rule_is_a_slug_or_other(state_home: Path, given: str, stored: str) -> None:
+    assert feedback_mod.record_refusal(given, "mb connect")
+    assert _lines(state_home)[-1]["rule"] == stored

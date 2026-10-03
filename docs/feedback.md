@@ -18,12 +18,18 @@ Each call appends one JSON line to
 {"command": "mb connect test", "kind": "feedback", "mb_version": "0.5.3", "repo_kind": "hub", "schema": 1, "text": "status said ready but connect test failed", "time": "2026-10-03T12:00:00Z"}
 ```
 
-- `command` is what you passed with `--command`, or `null`.
+- `command` is the `mb` command path only: `mb` plus up to three lowercase
+  command words from `--command`, for example `mb connect test`. It stops at
+  the first token that is not a plain command word (a flag, a value, a path,
+  a quote) and drops everything after it, so `mb connect meta --token ...`
+  is stored as `mb connect meta`. `null` when no command word remains.
 - `repo_kind` is `hub`, `child`, `engine` or `none`, from the same repo
   classifier the launch screen, `mb doctor` and `mb checkpoint` use. It is
   `unknown` only if classification itself fails.
-- `text`, `command` and a refusal's `rule` are scrubbed before they are
-  written. The scrubber is defence in depth, so the default is to redact:
+- `text` is capped at 4,000 characters (then marked ` [truncated]`) and
+  scrubbed before it is written. The cap comes first, so a huge paste is never
+  scanned in full. The scrubber is defence in depth, so the default is to
+  redact:
   - A `key=value`, `key: value`, JSON `"key": "value"` or `--key value` pair is
     redacted when any segment of the key (split on `_`, `-`, `.` and case
     changes) is a secret word: token, secret, password, passwd, pwd,
@@ -38,16 +44,26 @@ Each call appends one JSON line to
     across lines and honouring backslash escapes; adjacent quoted and bare
     fragments (`"a"'b'c`) are one value; an unterminated quote is redacted to
     the end of the field.
+  - A sensitive HTTP header (`Authorization`, `Proxy-Authorization`,
+    `Cookie`, `Set-Cookie`, or a hyphenated header with a secret segment such
+    as `X-Api-Key`) loses its whole value to the end of the line, or to the
+    closing quote inside `curl -H '...'`: every cookie pair and Digest field.
+  - Under a secret YAML key, a `|` or `>` block, or a value on the indented
+    lines below, is redacted as a whole block.
+  - Escaped characters (`\ `, `\;`) are part of a bare value. A secret flag
+    (`--password`, `--api-key`, any flag with a secret segment) loses its next
+    argument even when it starts with `-` or sits on the next line.
   - Bearer and Basic credentials, URL passwords
     (`scheme://user:<redacted>@host`) and provider token families such as
     GitHub's `ghp_`/`ghs_`, Slack, OpenAI and AWS key ids are redacted
     anywhere.
   - Home directory paths become `~`. Every other absolute path becomes
     `<local-path>`: Unix paths (also right after a colon, as in
-    `failed:/srv/...`), `file:///` URLs, Windows drive paths with either
-    slash, UNC shares with either slash, and quoted paths, read with the same
-    quote matching. URLs, relative paths and slash commands such as
-    `/mb-start` are left alone.
+    `failed:/srv/...`, and with escaped spaces), `file:///` URLs, Windows
+    drive paths with either slash, UNC shares with either slash, and quoted
+    paths, read with the same quote matching and allowed to hold spaces and
+    the other quote, even in the first segment. URLs, relative paths and slash
+    commands such as `/mb-start` are left alone.
   - Known limit: a share written as `scheme://server/share` cannot be told
     apart from a URL, so it is left as written. Do not paste one.
 
@@ -61,8 +77,10 @@ The file is created with owner-only permissions. Add `--json` for the shared
 ## Refusals log themselves
 
 When `mb` refuses at a credential or safety boundary, it appends a
-`kind: refusal` line with the rule that fired and the command. It never logs
-the refused value or the refusal message.
+`kind: refusal` line with the rule that fired and the command path (the same
+`mb` plus command words as above). It never logs the refused value or the
+refusal message. `rule` is a slug matching `[a-z0-9][a-z0-9_.:-]{0,63}`;
+anything else is stored as `other`.
 
 ```json
 {"command": "mb connect list", "kind": "refusal", "mb_version": "0.5.3", "repo_kind": "hub", "rule": "connect.config_boundary", "schema": 1, "time": "2026-10-03T12:00:00Z"}

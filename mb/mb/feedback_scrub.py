@@ -77,8 +77,20 @@ ALLOWED_KEYS = frozenset(
 _KEY = r"[A-Za-z_][A-Za-z0-9_.-]*"
 # ``key=value``, ``key: value`` and ``"key": "value"``.
 _PAIR_RE = re.compile(rf"(?<![A-Za-z0-9_.\-])([\"'`]?)({_KEY})\1([ \t]*[:=]=?[ \t]*)")
-# ``--key value`` and ``-key value``.
-_FLAG_RE = re.compile(rf"(?<![\w-])--?({_KEY})([ \t]+)(?=[^\s-])")
+# ``--key value``, ``--key=value`` and ``--key`` with its value on the next
+# line (also after a ``\`` continuation). The value may start with ``-``.
+_FLAG_RE = re.compile(rf"(?<![\w-])--?({_KEY})(?:=|[ \t]*\\?\r?\n[ \t]*|[ \t]+)")
+# ``Name: value`` HTTP headers. ``://`` is a URL, not a header.
+_HEADER_RE = re.compile(
+    r"(?<![A-Za-z0-9-])([A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*)[ \t]*:(?!//)[ \t]*"
+)
+SENSITIVE_HEADERS = frozenset(
+    {"authorization", "proxy-authorization", "cookie", "set-cookie", "www-authenticate"}
+)
+# A YAML key whose value is a ``|``/``>`` block or sits on the indented lines below.
+_YAML_KEY_RE = re.compile(
+    rf"(?<![A-Za-z0-9_.\-])([\"']?)({_KEY})\1[ \t]*:[ \t]*(?:[|>][-+0-9]*)?[ \t]*\r?$"
+)
 _SEGMENT_RE = re.compile(r"[A-Z]+(?![a-z])|[A-Z]?[a-z]+|\d+")
 # Characters that end a bare (unquoted) value.
 _VALUE_STOP = frozenset(";&,)]}<>|")
@@ -86,7 +98,12 @@ _VALUE_STOP = frozenset(";&,)]}<>|")
 _CREDENTIAL_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"(?i)\b((?:basic|bearer)\s+)[A-Za-z0-9+/=._~-]{8,}"), rf"\1{REDACTED}"),
     # scheme://user:password@host
-    (re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://[^\s:/@]+:)[^\s@/]+@"), rf"\1{REDACTED}@"),
+    # A scheme starts at a non-scheme character and is at most 32 long, so a
+    # long ``a.a.a.`` run is not rescanned from every position.
+    (
+        re.compile(r"(?i)(?<![a-z0-9+.-])([a-z][a-z0-9+.-]{0,31}://[^\s:/@]+:)[^\s@/]+@"),
+        rf"\1{REDACTED}@",
+    ),
 )
 _TOKEN_RULES: tuple[re.Pattern[str], ...] = (
     re.compile(
@@ -111,9 +128,18 @@ _WINDOWS_PATH_RE = re.compile(
 # a colon in error prose (``failed:/srv/x/y``). A URL's ``://`` is followed by a
 # second slash, which no path segment starts with, so URLs are untouched; so
 # are relative paths and a lone ``/mb-start`` slash command.
-_UNIX_PATH_RE = re.compile(rf"(?<![\w/.~\\-])/(?:[^\s/\"'`<>|(),;\[\]]+/)+{_PATH_CHARS}*")
-# What a quoted string must start with to be read as a path.
-_QUOTED_PATH_START_RE = re.compile(r"/[^/\s\"'`]+/|[A-Za-z]:[\\/]|\\\\|//|file:///", re.I)
+_UNIX_PATH_RE = re.compile(
+    r"(?<![\w/.~\\-])/(?:(?:\\.|[^\s/\"'`<>|(),;\[\]\\])+/)+"
+    r"(?:\\.|[^\s\"'`<>|(),;\[\]\\])*"
+)
+# What a quoted string must start with to be read as a path. The first Unix
+# segment may hold spaces and the other quote; it ends at ``/``.
+_QUOTED_PATH_START_RE = {
+    quote: re.compile(
+        rf"file:///|[A-Za-z]:[\\/]|\\\\|//|/[^/\n{re.escape(quote)}]+/", re.IGNORECASE
+    )
+    for quote in QUOTES
+}
 
 
 def quoted_end(text: str, start: int) -> int:
@@ -140,14 +166,15 @@ def value_end(text: str, start: int) -> int:
     """Index just past an assignment value starting at ``start``.
 
     Adjacent quoted and bare fragments (``"a"'b'c``) are one value; a bare
-    fragment ends at unquoted whitespace or a separator.
+    fragment ends at unquoted, unescaped whitespace or a separator.
     """
     index = start
     while index < len(text):
         char = text[index]
         if char in QUOTES:
             index = quoted_end(text, index)
-        elif char == "\\" and text[index + 1 : index + 2] == "\n":
+        elif char == "\\":
+            # ``\ ``, ``\;`` and a backslash-newline continue the value.
             index += 2
         elif char.isspace() or char in _VALUE_STOP:
             break
@@ -201,6 +228,72 @@ def _redact_values(text: str, pattern: re.Pattern[str], key_group: int) -> str:
     return "".join(out)
 
 
+def _redact_headers(text: str) -> str:
+    """Redact a sensitive header's whole value: every cookie pair, Digest field.
+
+    The value runs to the end of the line, or to the closing quote when the
+    header sits inside a quoted argument (``curl -H 'Cookie: ...'``).
+    """
+    out: list[str] = []
+    position = 0
+    search_from = 0
+    while True:
+        match = _HEADER_RE.search(text, search_from)
+        if match is None:
+            break
+        name = match.group(1)
+        lowered = name.lower()
+        sensitive = lowered in SENSITIVE_HEADERS or ("-" in name and is_secret_key(name))
+        if not sensitive:
+            search_from = match.end(1)
+            continue
+        opening = match.start(1) - 1
+        while opening >= 0 and text[opening] in " \t":
+            opening -= 1
+        line_end = text.find("\n", match.end())
+        end = len(text) if line_end < 0 else line_end
+        if opening >= 0 and text[opening] in QUOTES:
+            closing = quoted_end(text, opening)
+            closed = text[closing - 1 : closing] == text[opening] and closing - 1 > opening
+            end = closing - 1 if closed else closing
+        if end > match.end():
+            out.append(text[position : match.end()])
+            out.append(REDACTED)
+            position = end
+        search_from = max(end, match.end())
+    out.append(text[position:])
+    return "".join(out)
+
+
+def _indent(line: str) -> int:
+    return len(line) - len(line.lstrip(" \t"))
+
+
+def _redact_yaml_blocks(text: str) -> str:
+    """Redact the indented block under a secret YAML key (``key: |`` or ``key:``)."""
+    lines = text.split("\n")
+    out: list[str] = []
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        out.append(line)
+        index += 1
+        match = _YAML_KEY_RE.search(line)
+        if match is None or not is_secret_key(match.group(2)):
+            continue
+        base = _indent(line)
+        end = index
+        last_content = index
+        while end < len(lines) and (not lines[end].strip() or _indent(lines[end]) > base):
+            if lines[end].strip():
+                last_content = end + 1
+            end += 1
+        if last_content > index:
+            out.append(" " * (base + 2) + REDACTED)
+            index = last_content
+    return "\n".join(out)
+
+
 @functools.cache
 def _connect_prefix_re() -> re.Pattern[str]:
     from mb.connect import CREDENTIAL_VALUE_PREFIXES
@@ -217,6 +310,8 @@ def scrub_secrets(text: str) -> str:
     from mb.connect import _redact_sensitive_text
     from mb.issue import QUERY_SECRET_RE, TOKEN_RE
 
+    text = _redact_yaml_blocks(text)
+    text = _redact_headers(text)
     for pattern, replacement in _CREDENTIAL_RULES:
         text = pattern.sub(replacement, text)
     text = _redact_values(text, _PAIR_RE, 2)
@@ -234,7 +329,7 @@ def _scrub_quoted_paths(text: str) -> str:
     while index < len(text):
         char = text[index]
         opens = char in QUOTES and (index == 0 or not text[index - 1].isalnum())
-        if not opens or not _QUOTED_PATH_START_RE.match(text, index + 1):
+        if not opens or not _QUOTED_PATH_START_RE[char].match(text, index + 1):
             index += 1
             continue
         end = quoted_end(text, index)
@@ -250,8 +345,8 @@ def scrub_paths(text: str) -> str:
     home = str(Path.home())
     if home and home not in {"/", "\\"}:
         text = text.replace(home, "~")
-    text = _FILE_URL_RE.sub(LOCAL_PATH, text)
     text = _scrub_quoted_paths(text)
+    text = _FILE_URL_RE.sub(LOCAL_PATH, text)
     text = _WINDOWS_PATH_RE.sub(LOCAL_PATH, text)
     text = _OTHER_HOME_RE.sub("~", text)
     return _UNIX_PATH_RE.sub(LOCAL_PATH, text)

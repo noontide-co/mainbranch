@@ -133,7 +133,8 @@ def test_secret_case_is_redacted_in_all_four_fields(state: Path, case: str) -> N
 def test_path_case_is_scrubbed_in_all_four_fields(state: Path, case: str) -> None:
     for index, value in enumerate(_stored_fields(state, PATH_SHAPES[case])):
         assert PATH_MARKER not in value, (case, index, value)
-        assert "<local-path>" in value, (case, index, value)
+        if index == 0:  # command and rule are structured, not scrubbed text
+            assert "<local-path>" in value, (case, index, value)
 
 
 @pytest.mark.parametrize("text", BENIGN)
@@ -150,3 +151,132 @@ def test_colon_led_unc_is_a_documented_limit() -> None:
     # ``x://server/share`` cannot be told apart from a URL without context, so
     # it stays as written; docs/feedback.md records this.
     assert feedback_mod.scrub("smb://fileserver/share/x") == "smb://fileserver/share/x"
+
+
+# --- Round 4: realistic leak families in free text -------------------------
+
+YAML_SHAPES = {
+    "literal_block": f"password: |\n  {CANARY}\n  more\nnext: 1",
+    "folded_block_chomp": f"api_key: >-\n  {CANARY}\n  continued",
+    "next_line_plain": f"token:\n  {CANARY}",
+    "indented_keep": f"config:\n  secret_key: |+\n    {CANARY}\n",
+    "list_item_block": f"- auth_token: |\n    line\n    {CANARY}",
+    "quoted_key_block": f'"password": |\n  {CANARY}',
+}
+HEADER_SHAPES = {
+    "digest": f'Authorization: Digest username="u", realm="r", response="{CANARY}"',
+    "cookie_pairs": f"Cookie: theme=dark; sid={CANARY}; csrftoken={CANARY}",
+    "set_cookie": f"Set-Cookie: sid={CANARY}; Path=/; HttpOnly",
+    "proxy_basic": f"Proxy-Authorization: Basic {CANARY}",
+    "custom_secret_header": f"X-Api-Key: abc {CANARY}",
+    "curl_single_quoted_cookie": f"curl -H 'Cookie: a=1; csrf={CANARY}' https://x.test",
+    "curl_double_quoted_digest": f'curl -H "Authorization: Digest response=\\"{CANARY}\\"" x',
+}
+FLAG_SHAPES = {
+    "dash_leading_value": f"--password -{CANARY}",
+    "next_line_value": f"--api-key\n  {CANARY}",
+    "equals_value": f"mb x --client-secret={CANARY}",
+    "continuation_value": f"--auth-token \\\n {CANARY}",
+}
+ESCAPE_SHAPES = {
+    "escaped_space_semicolon": f"password=abc\\ def\\;{CANARY}",
+    "export_escaped_spaces": f"export TOKEN=a\\ b\\ {CANARY}",
+}
+ROUND4_SECRET_SHAPES = {**YAML_SHAPES, **HEADER_SHAPES, **FLAG_SHAPES, **ESCAPE_SHAPES}
+ROUND4_PATH_SHAPES = {
+    "quoted_file_url_space": f'"file:///srv/my dir/{PATH_MARKER}/x"',
+    "quoted_file_url_apostrophe": f'"file:///srv/it\'s dir/{PATH_MARKER}/x"',
+    "quoted_first_segment_space": f'"/my project/{PATH_MARKER}/x"',
+    "quoted_first_segment_apostrophe": f'"/it\'s here/{PATH_MARKER}/x"',
+    "bare_escaped_space": f"/srv/my\\ project/{PATH_MARKER}/x",
+}
+BENIGN_EXTRA = [
+    "Cookie banners are confusing",
+    "the Authorization header was missing",
+    "see `mb connect test` for details",
+    "[docs](https://x.test/a/b)",
+    "status: ready",
+    "Accept: application/json",
+    "Content-Type: text/plain",
+    "mb status --json --repo .",
+    "use --dry-run first",
+    "line one\nline two",
+    "name: |\n  some prose here",
+]
+
+
+@pytest.mark.parametrize("case", sorted(ROUND4_SECRET_SHAPES))
+def test_round4_secret_case_is_redacted_in_all_four_fields(state: Path, case: str) -> None:
+    for index, value in enumerate(_stored_fields(state, ROUND4_SECRET_SHAPES[case])):
+        assert CANARY not in value, (case, index)
+
+
+@pytest.mark.parametrize("case", sorted(ROUND4_PATH_SHAPES))
+def test_round4_path_case_is_scrubbed_in_all_four_fields(state: Path, case: str) -> None:
+    for index, value in enumerate(_stored_fields(state, ROUND4_PATH_SHAPES[case])):
+        assert PATH_MARKER not in value, (case, index, value)
+
+
+@pytest.mark.parametrize("text", BENIGN_EXTRA)
+def test_round4_benign_text_is_unchanged(text: str) -> None:
+    assert feedback_mod.scrub(text) == text
+
+
+# --- Round 4: linear time ----------------------------------------------------
+
+TIMING_FAMILIES = {
+    "dotted_run": "a." * 2000,
+    "double_quotes": '"' * 4000,
+    "single_quotes": "'" * 4000,
+    "backslashes": "\\" * 4000,
+    "slashes": "/" * 4000,
+    "equals": "=" * 4000,
+    "colon_pairs": "a:" * 2000,
+    "secret_assignments": "token=" * 667,
+    "quoted_paths": "'/a" * 1333,
+    "secret_flags": "--token " * 500,
+    "schemes": "a://" * 1000,
+    "header_names": "X-Api-Key: " * 363,
+    "yaml_keys": "password:\n" * 400,
+    "path_segments": "/a" * 2000,
+    "escaped_spaces": "\\ " * 2000,
+    "long_key": "a" * 3999 + ":",
+}
+
+
+@pytest.mark.parametrize("family", sorted(TIMING_FAMILIES))
+def test_scrub_is_fast_on_adversarial_input(family: str) -> None:
+    import time
+
+    text = TIMING_FAMILIES[family]
+    assert len(text) >= 3990
+    started = time.perf_counter()
+    feedback_mod.scrub(text)
+    assert time.perf_counter() - started < 1.0, family
+
+
+def test_record_caps_text_before_scrubbing(state: Path) -> None:
+    import time
+
+    started = time.perf_counter()
+    result = feedback_mod.record("a." * 32000)
+    assert time.perf_counter() - started < 1.0
+    assert result["ok"] is True
+    assert result["entry"]["text"].endswith(" [truncated]")
+    assert len(result["entry"]["text"]) <= feedback_mod.MAX_TEXT_CHARS + len(" [truncated]")
+
+
+def test_truncation_inside_a_quote_still_redacts(state: Path) -> None:
+    filler = "x" * (feedback_mod.MAX_TEXT_CHARS - 20)
+    result = feedback_mod.record(f'{filler} token="{CANARY} and more"')
+    assert CANARY[:8] not in result["entry"]["text"]
+
+
+def test_scanner_is_linear_on_a_long_dotted_run() -> None:
+    import time
+
+    from mb import feedback_scrub
+
+    started = time.perf_counter()
+    feedback_scrub.scrub("a." * 8000)
+    assert time.perf_counter() - started < 1.0

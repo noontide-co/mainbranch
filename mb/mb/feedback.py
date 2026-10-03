@@ -70,14 +70,44 @@ def refusal_logging_enabled() -> bool:
 
 
 def scrub(text: str) -> str:
-    """Redact secrets and absolute paths from ``text`` and cap its length.
+    """Cap ``text`` at ``MAX_TEXT_CHARS``, then redact secrets and absolute paths.
 
-    See ``mb.feedback_scrub`` for the rules: the default is to redact.
+    The cap comes first so a huge input is never scanned in full. A quote cut
+    open by the cap redacts to the end, like any unterminated quote. See
+    ``mb.feedback_scrub`` for the rules: the default is to redact.
     """
-    cleaned = feedback_scrub.scrub(text)
-    if len(cleaned) > MAX_TEXT_CHARS:
-        cleaned = cleaned[:MAX_TEXT_CHARS] + " [truncated]"
-    return cleaned
+    if len(text) <= MAX_TEXT_CHARS:
+        return feedback_scrub.scrub(text)
+    return feedback_scrub.scrub(text[:MAX_TEXT_CHARS]) + " [truncated]"
+
+
+_COMMAND_WORD_RE = re.compile(r"[a-z][a-z0-9-]*")
+_RULE_RE = re.compile(r"[a-z0-9][a-z0-9_.:-]{0,63}")
+MAX_COMMAND_WORDS = 3
+
+
+def command_path(value: str | None) -> str | None:
+    """Keep only the ``mb`` command path: ``mb`` plus up to three plain words.
+
+    Stops at the first token that is not a lowercase command word (a flag, a
+    value, a path, a quote), and drops everything after it, so arguments are
+    never stored. ``None`` when no command word remains.
+    """
+    words: list[str] = []
+    tokens = (value or "").split()
+    if tokens[:1] == ["mb"]:
+        tokens = tokens[1:]
+    for token in tokens[:MAX_COMMAND_WORDS]:
+        if not _COMMAND_WORD_RE.fullmatch(token):
+            break
+        words.append(token)
+    return f"mb {' '.join(words)}" if words else None
+
+
+def rule_slug(value: str | None) -> str:
+    """A refusal rule id such as ``connect.config_boundary``, else ``other``."""
+    rule = value or ""
+    return rule if _RULE_RE.fullmatch(rule) else "other"
 
 
 def repo_kind(repo: str | Path = ".") -> str:
@@ -101,10 +131,6 @@ def _now() -> datetime:
 
 def _iso(moment: datetime) -> str:
     return moment.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def _clean_label(value: str | None) -> str:
-    return scrub(" ".join((value or "").split()))[:200]
 
 
 def _storage_error(code: str, action: str, exc: OSError, target: Path) -> dict[str, Any]:
@@ -162,7 +188,7 @@ def record(
         "kind": "feedback",
         "time": _iso(now or _now()),
         "mb_version": __version__,
-        "command": _clean_label(command) or None,
+        "command": command_path(command),
         "repo_kind": repo_kind(repo),
         "text": body,
     }
@@ -189,6 +215,7 @@ def record_refusal(
     """Append a ``kind: refusal`` line for a credential or safety boundary.
 
     Callers pass the rule that fired and the command, never the refused value.
+    Only the rule slug (else ``other``) and the command path are stored.
     Logging is best effort: it never raises and never changes the refusal.
     ``MB_FEEDBACK_LOG=0`` turns it off. Returns whether a line was written.
     """
@@ -200,8 +227,8 @@ def record_refusal(
             "kind": "refusal",
             "time": _iso(_now()),
             "mb_version": __version__,
-            "command": _clean_label(command) or None,
-            "rule": _clean_label(rule) or "unknown",
+            "command": command_path(command),
+            "rule": rule_slug(rule),
             "repo_kind": repo_kind(repo),
         }
         _append(entry, path or feedback_path())
