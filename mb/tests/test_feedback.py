@@ -410,3 +410,66 @@ def test_path_scrub_keeps_urls_slash_commands_and_home_tilde(
         "run /mb-start, see https://github.com/noontide-co/mainbranch/blob/main/docs/feedback.md "
         "and file://x.test/a/b, and ~/biz/x.md, and/or 1/2"
     )
+
+
+def _good(time: str, text: str) -> bytes:
+    entry = {
+        "schema": 1,
+        "kind": "feedback",
+        "time": time,
+        "mb_version": "0.5.3",
+        "command": "mb status",
+        "repo_kind": "hub",
+        "text": text,
+    }
+    return (json.dumps(entry) + "\n").encode()
+
+
+CORRUPT_LINES = [
+    b"\xff\xfe not utf-8 \x80\n",
+    b'{"time": "2026-10-02T00:00:00Z", "kind": "feedback", "text": 42}\n',
+    b'{"time": "2026-10-02T00:00:00Z", "kind": "feedback", "text": "x", "repo_kind": ["hub"]}\n',
+    b'{"time": "2026-10-02T00:00:00Z", "kind": "feedback", "text": "x", "command": {"a": 1}}\n',
+    b'{"time": "2026-10-02T00:00:00Z", "kind": "telemetry", "text": "x"}\n',
+    b'{"time": 1696000000, "kind": "feedback", "text": "x"}\n',
+    b'{"time": "yesterday", "kind": "feedback", "text": "x"}\n',
+    b'{"time": "2026-10-02T00:00:00Z", "kind": "refusal", "rule": 7}\n',
+    b"[1, 2, 3]\n",
+    b"{not json\n",
+]
+
+
+def test_corrupt_records_are_skipped_and_neighbors_kept(state_home: Path) -> None:
+    path = _log(state_home)
+    path.parent.mkdir(parents=True)
+    path.write_bytes(
+        _good("2026-10-01T00:00:00Z", "before")
+        + b"".join(CORRUPT_LINES)
+        + _good("2026-10-02T00:00:00Z", "after")
+    )
+    listed = runner.invoke(app, ["feedback", "list", "--json"])
+    assert listed.exit_code == 0, listed.output
+    payload = json.loads(listed.stdout)
+    assert [entry["text"] for entry in payload["entries"]] == ["before", "after"]
+    assert payload["skipped_lines"] == len(CORRUPT_LINES)
+    rolled = runner.invoke(app, ["feedback", "rollup", "--since", "2026-09-01", "--json"])
+    assert rolled.exit_code == 0, rolled.output
+    assert json.loads(rolled.stdout)["total"] == 2
+    human = runner.invoke(app, ["feedback", "rollup", "--since", "2026-09-01"])
+    assert human.exit_code == 0 and "- after" in human.stdout
+    cleared = runner.invoke(app, ["feedback", "clear", "--before", "2026-01-01", "--json"])
+    assert cleared.exit_code == 0
+    assert json.loads(cleared.stdout)["removed_unreadable"] == len(CORRUPT_LINES)
+    assert [entry["text"] for entry in _lines(state_home)] == ["before", "after"]
+
+
+def test_record_after_partial_tail_is_still_readable(state_home: Path) -> None:
+    path = _log(state_home)
+    path.parent.mkdir(parents=True)
+    path.write_bytes(_good("2026-10-01T00:00:00Z", "before") + b'{"time": "2026-10-0')
+    result = feedback_mod.record("after the crash")
+    assert result["ok"] is True
+    entries, skipped = feedback_mod.read_entries()
+    assert [entry["text"] for entry in entries] == ["before", "after the crash"]
+    assert skipped == 1
+    assert path.read_bytes().endswith(b"\n")

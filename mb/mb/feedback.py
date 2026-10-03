@@ -187,9 +187,16 @@ def _append(entry: dict[str, Any], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     line = json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n"
     with state_lock(path, timeout=2.0):
-        fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
-        with os.fdopen(fd, "a", encoding="utf-8") as handle:
-            handle.write(line)
+        fd = os.open(path, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o600)
+        with os.fdopen(fd, "r+b") as handle:
+            # A crash mid-write can leave an unterminated fragment; start on a
+            # fresh line so this record does not merge into it.
+            size = handle.seek(0, os.SEEK_END)
+            if size:
+                handle.seek(size - 1)
+                if handle.read(1) != b"\n":
+                    line = "\n" + line
+            handle.write(line.encode("utf-8"))
 
 
 def record(
@@ -273,21 +280,37 @@ def record_refusal(
     return True
 
 
+_OPTIONAL_TEXT_FIELDS = ("command", "rule", "text", "repo_kind", "mb_version")
+
+
+def _decode_line(raw: bytes) -> dict[str, Any] | None:
+    """Decode and validate one line; ``None`` when it is not a usable record."""
+    try:
+        item = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError):
+        return None
+    if not isinstance(item, dict):
+        return None
+    time = item.get("time")
+    if not isinstance(time, str) or _parse_time(time) is None:
+        return None
+    if item.get("kind", "feedback") not in KINDS:
+        return None
+    for field in _OPTIONAL_TEXT_FIELDS:
+        if item.get(field) is not None and not isinstance(item[field], str):
+            return None
+    return item
+
+
 def _iter_lines(path: Path) -> Iterator[dict[str, Any] | None]:
     try:
-        handle = path.open(encoding="utf-8")
+        handle = path.open("rb")
     except FileNotFoundError:
         return
     with handle:
         for raw in handle:
-            if not raw.strip():
-                continue
-            try:
-                item = json.loads(raw)
-            except json.JSONDecodeError:
-                yield None
-                continue
-            yield item if isinstance(item, dict) and isinstance(item.get("time"), str) else None
+            if raw.strip():
+                yield _decode_line(raw)
 
 
 def _parse_time(value: str) -> datetime | None:
@@ -305,7 +328,7 @@ def read_entries(path: Path | None = None) -> tuple[list[dict[str, Any]], int]:
     entries: list[dict[str, Any]] = []
     skipped = 0
     for item in _iter_lines(path or feedback_path()):
-        if item is None or _parse_time(item["time"]) is None:
+        if item is None:
             skipped += 1
             continue
         entries.append(item)
