@@ -3667,6 +3667,52 @@ def test_metadata_refuses_provider_token_inside_url(value: str) -> None:
     assert connect_mod._safe_status_metadata({"note": value}) == {}
 
 
+def _percent(text: str) -> str:
+    """Percent-encode every character, separators included."""
+    return "".join(f"%{ord(char):02X}" for char in text)
+
+
+_URL_GHP_TOKEN = "ghp_" + "a" * 36
+
+
+# Each shape passed intake and stayed visible in status before URL parts
+# were fully decoded before splitting, nested URLs and host labels judged.
+@pytest.mark.parametrize(
+    ("value", "rule"),
+    [
+        (
+            "https://example.invalid/" + _percent("access/" + _URL_GHP_TOKEN),
+            "credential_prefix:ghp_",
+        ),
+        (
+            "https://example.invalid/?next=" + _percent("https://inner.invalid/" + _URL_GHP_TOKEN),
+            "credential_prefix:ghp_",
+        ),
+        ("https://example.invalid/" + _percent(_URL_PERCENT_TOKEN), "high_entropy"),
+        ("https://" + _percent(_URL_PERCENT_TOKEN) + "@example.invalid/", "high_entropy"),
+        (f"https://{_URL_FAKE_TOKEN}.example.invalid/", "high_entropy"),
+        (f"https://{_URL_FAKE_TOKEN}.example.invalid:bad/", "high_entropy"),
+    ],
+)
+def test_metadata_refuses_encoded_nested_and_host_tokens(value: str, rule: str) -> None:
+    assert connect_mod.metadata_value_rule(value) == rule
+    with pytest.raises(connect_mod.ConnectRefusal) as caught:
+        connect_mod._parse_metadata([f"note={value}"])
+    assert caught.value.rule == "metadata_secret_value"
+    assert connect_mod._safe_status_metadata({"note": value}) == {}
+
+
+def test_metadata_url_with_bad_port_is_judged_from_raw_pieces() -> None:
+    assert connect_mod._url_parts("https://example.invalid:bad/docs") == [
+        "https:",
+        "example.invalid:bad",
+        "docs",
+    ]
+    value = "https://example.invalid:bad/docs/getting-started"
+    assert connect_mod._parse_metadata([f"note={value}"]) == {"note": value}
+    assert connect_mod._safe_status_metadata({"note": value}) == {"note": value}
+
+
 @pytest.mark.parametrize(
     "value",
     [
@@ -3675,6 +3721,13 @@ def test_metadata_refuses_provider_token_inside_url(value: str) -> None:
         "https://owner@example.invalid/",
         "https://example.invalid/#section-two",
         "https://example.invalid/?campaign=CloudflareR2StorageBucket",
+        "https://example.invalid/" + _percent("blog/how-we-cut-our-onboarding-time-in-half"),
+        "https://example.invalid/?next=" + _percent("https://inner.invalid/docs/getting-started"),
+        "https://[2001:db8::1]:8443/docs/getting-started",
+        "https://192.0.2.10:8080/status",
+        "https://xn--bcher-kva.example.invalid/docs",
+        "https://a1b2.example.invalid/",
+        "https://shop-eu-west-2.storefront.example.invalid/",
     ],
 )
 def test_metadata_url_labels_pass_intake_and_status(value: str) -> None:

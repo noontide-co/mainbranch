@@ -226,11 +226,15 @@ rules:
   is judged letter by letter.
 
 A value is judged whole and word by word. URLs, emails and env references
-stay whole. Each decoded part of a URL (user name, password, path segments,
-query keys and values, fragment pieces) is split on `:` and `=` and judged
-like a bare value, so `?campaign=CloudflareR2StorageBucket` and
-`/docs/getting-started` pass, and a token in `?token=`, `/token=`,
-`#token:`, a path segment or a user name is refused.
+stay whole. Each part of a URL (user name, password, host labels, path
+segments, query keys and values, fragment pieces) is percent-decoded until
+stable (at most three passes) before it is split, then split on `:` and
+`=` and judged like a bare value; a URL nested in a part is judged the same
+way, up to three levels deep. So `?campaign=CloudflareR2StorageBucket`,
+`/docs/getting-started`, IP addresses and `xn--` host labels pass, and a
+token in `?token=`, `/token=`, `#token:`, a path segment, a user name, a
+host label or behind an encoded `%2F` is refused. A URL that does not
+parse, such as one with a bad port, is judged from its decoded raw pieces.
 
 Measured limits of `high_entropy`, 10,000 random values each from
 `random.Random(987)` (the test `test_metadata_high_entropy_miss_rates_match_docs`

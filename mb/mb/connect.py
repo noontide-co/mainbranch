@@ -1057,6 +1057,9 @@ _METADATA_CHUNK_SPLIT_RE = re.compile(r"[\s,;]+")
 _METADATA_LABEL_SPLIT_RE = re.compile(r"[:=]")
 _METADATA_URL_START_RE = re.compile(r"(?<![A-Za-z0-9+.\-])[A-Za-z][A-Za-z0-9+.\-]*://")
 _METADATA_URL_PIECE_RE = re.compile(r"[/&?;#@]")
+_METADATA_IPV4_RE = re.compile(r"[0-9]{1,3}(?:\.[0-9]{1,3}){3}")
+_METADATA_URL_DECODE_PASSES = 3
+_METADATA_URL_MAX_DEPTH = 3
 _METADATA_EMAIL_RE = re.compile(r"^[^@\s:=/]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$")
 METADATA_ENTROPY_MIN_LENGTH = 24
 METADATA_ENTROPY_MIN_BITS = 3.5
@@ -1228,21 +1231,53 @@ def _metadata_words(value: str) -> list[str]:
     return words
 
 
-def _url_parts(reference: str) -> list[str]:
-    """Decoded user name, password, path segments, query and fragment pieces."""
+def _fully_unquote(text: str) -> str:
+    """Percent-decode until stable, at most ``_METADATA_URL_DECODE_PASSES`` times."""
+    for _ in range(_METADATA_URL_DECODE_PASSES):
+        decoded = urllib.parse.unquote(text)
+        if decoded == text:
+            break
+        text = decoded
+    return text
+
+
+def _url_host_labels(netloc: str) -> list[str]:
+    """Host labels as written (case kept), minus IP addresses and punycode."""
+    host = netloc.rpartition("@")[2]
+    if host.startswith("["):
+        return []
+    host = host.split(":", 1)[0]
+    if _METADATA_IPV4_RE.fullmatch(host):
+        return []
+    return [label for label in host.split(".") if not label.lower().startswith("xn--")]
+
+
+def _url_parts(reference: str, depth: int = 0) -> list[str]:
+    """Decoded user name, password, host labels, path, query and fragment pieces.
+
+    Each component is fully decoded before it is split, so an encoded
+    separator (``%2F``) or a double-encoded token is judged as written. A URL
+    nested inside a component is inspected the same way, up to
+    ``_METADATA_URL_MAX_DEPTH`` levels.
+    """
     try:
         parsed = urllib.parse.urlsplit(reference)
-        username, password = parsed.username, parsed.password
+        # Reading every field validates it: a bad port or bracket raises here.
+        components = [parsed.username or "", parsed.password or ""]
+        _ = (parsed.hostname, parsed.port)
     except ValueError:
-        # Unparseable (a bad port or bracket): judge the raw pieces instead.
-        return [urllib.parse.unquote(piece) for piece in _METADATA_URL_PIECE_RE.split(reference)]
-    parts = [username or "", password or ""]
-    parts += parsed.path.split("/")
-    for component in (parsed.query, parsed.fragment):
-        for piece in _METADATA_URL_PIECE_RE.split(component):
-            parts.append(piece)
-            parts.extend(urllib.parse.unquote_plus(item) for item in piece.split("=", 1))
-    return [urllib.parse.unquote(part) for part in parts if part]
+        # Unparseable: judge the decoded raw pieces instead.
+        return [piece for piece in _METADATA_URL_PIECE_RE.split(_fully_unquote(reference)) if piece]
+    parts = list(_url_host_labels(parsed.netloc))
+    components += [parsed.path, parsed.query, parsed.fragment]
+    for component in components:
+        decoded = _fully_unquote(component)
+        nested = _METADATA_URL_START_RE.search(decoded)
+        if nested and depth < _METADATA_URL_MAX_DEPTH:
+            parts.extend(_url_parts(decoded[nested.start() :], depth + 1))
+            decoded = decoded[: nested.start()]
+        parts.extend(piece for piece in _METADATA_URL_PIECE_RE.split(decoded) if piece)
+    return parts
 
 
 def metadata_value_rule(value: str) -> str:
