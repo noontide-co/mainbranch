@@ -92,7 +92,7 @@ engine plus a folder per client, for example) lists them in an optional
 | --- | --- |
 | `slug` | Lowercase id, unique in the repo. `mb site check --site <slug>` uses it. |
 | `display_name` | Human-readable site name. |
-| `dir` | The site's folder, relative to the repo root (`.` for the root). It must exist and stay inside the repo. |
+| `dir` | Required. The site's folder, relative to the repo root (`.` for the root). It must exist and stay inside the repo, also after following symlinks. |
 | `domains` | Domains the site serves. |
 | `deploy` | `provider` (today `cloudflare-pages`) and `project`, the provider's project name. |
 | `lifecycle` | Same values as the registry: `proposed`, `active`, `paused`, `superseded`, `archived`. |

@@ -479,14 +479,28 @@ def _unsafe_key(key: str) -> bool:
     return bool(SECRET_KEY_RE.search(key) or UNSAFE_KEY_RE.search(key))
 
 
+def _inside_repo(repo: Path | None, rel: Path) -> bool:
+    """True when ``repo / rel`` resolves (symlinks followed) inside ``repo``."""
+    if repo is None:
+        return True
+    try:
+        root = repo.resolve()
+        (root / rel).resolve().relative_to(root)
+    except (OSError, RuntimeError, ValueError):
+        return False
+    return True
+
+
 def normalize_sites(raw: Any, repo: Path | None = None) -> tuple[list[dict[str, Any]], list[str]]:
     """Normalize the optional ``sites`` list of a child descriptor.
 
     One entry per site the repo holds (a repo of client sites, for example):
-    ``slug``, ``display_name``, ``dir`` (relative), ``domains``, ``deploy``
-    (``provider``, ``project``) and ``lifecycle``. Returns the valid entries and
-    a list of public-safe error strings. ``dir`` must exist when ``repo`` is a
-    local checkout; readers over the GitHub API pass ``repo=None``.
+    ``slug``, ``display_name``, ``dir`` (required, relative; ``.`` for the
+    root), ``domains``, ``deploy`` (``provider``, ``project``) and
+    ``lifecycle``. Returns the valid entries and a list of public-safe error
+    strings. When ``repo`` is a local checkout, ``dir`` must exist and resolve
+    inside it with symlinks followed; readers over the GitHub API pass
+    ``repo=None``.
     """
     if raw is None:
         return [], []
@@ -517,15 +531,18 @@ def normalize_sites(raw: Any, repo: Path | None = None) -> tuple[list[dict[str, 
                 entry_errors.append(f"{label}.{key_text} looks sensitive or machine-specific")
             elif key_text not in SITE_KEYS:
                 entry_errors.append(f"{label}.{key_text} is not a known site field")
-        for field in ("display_name", "dir", "lifecycle"):
+        for field in ("display_name", "lifecycle"):
             value = entry.get(field)
             if value is not None and not isinstance(value, str):
                 entry_errors.append(f"{label}.{field} must be a string")
-        dir_text = _string(entry.get("dir")) or "."
-        dir_path = Path(dir_text)
-        if LOCAL_ABSOLUTE_PATH_RE.match(dir_text) or dir_path.is_absolute():
+        dir_raw = entry.get("dir")
+        dir_text = dir_raw.strip() if isinstance(dir_raw, str) else ""
+        dir_path = Path(dir_text or ".")
+        if not dir_text:
+            entry_errors.append(f"{label}.dir must be a non-empty string ('.' for the repo root)")
+        elif LOCAL_ABSOLUTE_PATH_RE.match(dir_text) or dir_path.is_absolute():
             entry_errors.append(f"{label}.dir must be relative to the repo")
-        elif ".." in dir_path.parts:
+        elif ".." in dir_path.parts or not _inside_repo(repo, dir_path):
             entry_errors.append(f"{label}.dir must stay inside the repo")
         elif repo is not None and not (repo / dir_path).is_dir():
             entry_errors.append(f"{label}.dir does not exist")

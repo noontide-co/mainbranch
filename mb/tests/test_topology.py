@@ -941,6 +941,39 @@ def test_descriptor_sites_validation_errors(tmp_path: Path) -> None:
     assert "topology_descriptor_sites_invalid" in codes
 
 
+def test_descriptor_site_dir_is_required_and_contained(tmp_path: Path) -> None:
+    repo = tmp_path / "acme-sites"
+    (repo / "clients" / "alpha").mkdir(parents=True)
+    outside = tmp_path / "elsewhere"
+    outside.mkdir()
+    (repo / "linked").symlink_to(outside, target_is_directory=True)
+    _write_descriptor(
+        repo,
+        {
+            "schema": "mb.child_repo.v0",
+            "role": "site",
+            "sites": [
+                {"slug": "root", "dir": "."},
+                {"slug": "alpha", "dir": "clients/alpha"},
+                {"slug": "escape", "dir": "linked"},
+                {"slug": "nulled", "dir": None},
+                {"slug": "missing"},
+                {"slug": "blank", "dir": "  "},
+                {"slug": "number", "dir": 3},
+            ],
+        },
+    )
+
+    descriptor = topology.read_child_descriptor(repo)
+    errors = "\n".join(descriptor["sites_errors"])
+
+    assert [site["slug"] for site in descriptor["sites"]] == ["root", "alpha"]
+    assert descriptor["sites"][0]["dir"] == "."
+    assert "sites[escape].dir must stay inside the repo" in errors
+    for slug in ("nulled", "missing", "blank", "number"):
+        assert f"sites[{slug}].dir must be a non-empty string" in errors
+
+
 def test_parse_descriptor_text_skips_dir_existence() -> None:
     text = json.dumps(
         {
