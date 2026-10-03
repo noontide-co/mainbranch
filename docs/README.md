@@ -36,6 +36,7 @@ Pick the route that matches what you are doing.
 - [`markdown-link-conventions.md`](markdown-link-conventions.md) — markdown and link rules.
 - [`source-ingestion.md`](source-ingestion.md) — manifest-first privacy rail for transcripts, authenticated sources, and provider exports.
 - [`issue-drafting.md`](issue-drafting.md) — privacy-safe `mb issue` flow.
+- [`feedback.md`](feedback.md) — `mb feedback`: log mb friction and self-logged refusals locally, roll them up weekly.
 - [`session-excavation.md`](session-excavation.md) — turn transcripts, chat exports, and session logs into prioritized public-safe follow-ups.
 
 ### Schemas and contracts

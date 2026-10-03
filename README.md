@@ -447,6 +447,7 @@ build on it, here is the command list.
 | `mb site check` | Local paid-traffic measurement readiness: GTM install, dataLayer events, consent posture, Google Ads metadata, approval gates. |
 | `mb ads meta summary` | Read-only Meta Ads account context through the official Meta CLI path after setup. |
 | `mb issue draft` / `open` | Draft a privacy-scrubbed GitHub issue locally, review it, then submit through `gh`. |
+| `mb feedback` | Log mb friction to a local file; refusals log themselves; `rollup` drafts a weekly summary. Nothing is sent. See [docs/feedback.md](docs/feedback.md). |
 | `mb validate` | Frontmatter and cross-reference checks across business repo files. |
 | `mb graph` | Build a folder graph from links, tags, connected-tool refs, and repo topology. DOT, JSON, and PNG outputs. |
 | `mb suggest links` | Suggest likely connections for a file without editing it. |
