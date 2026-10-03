@@ -707,3 +707,137 @@ def test_no_profile_surface_remains() -> None:
     assert not hasattr(topology, "ROLE_TO_PROFILE")
     assert not hasattr(topology, "resolve_profile")
     assert not hasattr(topology, "child_profile_counts")
+
+
+# ---------------------------------------------------------------------------
+# classify_repo (#984)
+# ---------------------------------------------------------------------------
+
+
+def _write_descriptor(repo: Path, payload: dict[str, object]) -> None:
+    path = repo / ".mainbranch" / "repo.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def test_classify_product_repo_with_hub_shape_is_child(tmp_path: Path) -> None:
+    repo = tmp_path / "app"
+    (repo / "research").mkdir(parents=True)
+    (repo / "CLAUDE.md").write_text("# App\n", encoding="utf-8")
+    _write_descriptor(
+        repo,
+        {
+            "schema": "mb.child_repo.v0",
+            "role": "product",
+            "github_owner": "example-co",
+            "repo_name": "app",
+            "parent": {"github_owner": "example-co", "repo_name": "example"},
+        },
+    )
+
+    result = topology.classify_repo(repo)
+
+    assert result == {
+        "kind": "child",
+        "role": "product",
+        "decided_by": ".mainbranch/repo.json",
+        "reason": "descriptor declares role product",
+    }
+
+
+def test_classify_engine_checkout(tmp_path: Path) -> None:
+    repo = tmp_path / "engine"
+    (repo / "mb" / "mb").mkdir(parents=True)
+    (repo / "mb" / "pyproject.toml").write_text("[project]\n", encoding="utf-8")
+    (repo / "mb" / "mb" / "cli.py").write_text("", encoding="utf-8")
+    (repo / "CLAUDE.md").write_text("# Engine\n", encoding="utf-8")
+    (repo / "decisions").mkdir()
+
+    result = topology.classify_repo(repo)
+
+    assert result["kind"] == "engine"
+    assert result["decided_by"] == "mb/pyproject.toml"
+    assert topology.is_engine_repo(repo)
+
+
+def test_classify_hub_without_registry_uses_older_shape(tmp_path: Path) -> None:
+    repo = tmp_path / "hub"
+    (repo / "core").mkdir(parents=True)
+    (repo / "CLAUDE.md").write_text("# Hub\n", encoding="utf-8")
+
+    result = topology.classify_repo(repo)
+
+    assert result["kind"] == "hub"
+    assert result["decided_by"] == "CLAUDE.md"
+
+
+def test_classify_hub_registry_beats_engine_and_shape(tmp_path: Path) -> None:
+    repo = tmp_path / "hub"
+    repo.mkdir()
+    _write_registry(repo, _valid_registry())
+
+    result = topology.classify_repo(repo)
+
+    assert result["kind"] == "hub"
+    assert result["role"] == "business"
+    assert result["decided_by"] == "core/operations/repo-topology.md"
+
+
+def test_classify_descriptor_without_role_falls_through(tmp_path: Path) -> None:
+    # A repo.json written by another tool (no role, no schema) is not an mb
+    # descriptor, so it must not turn a plain folder into a child.
+    repo = tmp_path / "site"
+    repo.mkdir()
+    _write_descriptor(repo, {"type": "site", "engineRef": "v1.0.0", "slug": "acme"})
+
+    assert topology.classify_repo(repo)["kind"] == "none"
+
+
+def test_classify_descriptor_with_business_role_is_hub(tmp_path: Path) -> None:
+    repo = tmp_path / "hub"
+    repo.mkdir()
+    _write_descriptor(repo, {"schema": "mb.child_repo.v0", "role": "business"})
+
+    result = topology.classify_repo(repo)
+
+    assert result["kind"] == "hub"
+    assert result["decided_by"] == ".mainbranch/repo.json"
+
+
+def test_classify_legacy_site_source_is_child(tmp_path: Path) -> None:
+    repo = tmp_path / "site"
+    (repo / ".mainbranch").mkdir(parents=True)
+    (repo / ".mainbranch" / "source.json").write_text(
+        json.dumps({"offer_path": "core/offers/a/offer.md"}), encoding="utf-8"
+    )
+
+    result = topology.classify_repo(repo)
+
+    assert result["kind"] == "child"
+    assert result["role"] == "site"
+    assert result["decided_by"] == ".mainbranch/source.json"
+
+
+def test_classify_plain_folder_is_none(tmp_path: Path) -> None:
+    assert topology.classify_repo(tmp_path) == {
+        "kind": "none",
+        "role": "",
+        "decided_by": "",
+        "reason": "no Main Branch markers",
+    }
+
+
+def test_looks_like_business_repo_is_hub_only(tmp_path: Path) -> None:
+    from mb.freshness import looks_like_business_repo
+
+    child = tmp_path / "app"
+    (child / "research").mkdir(parents=True)
+    (child / "CLAUDE.md").write_text("# App\n", encoding="utf-8")
+    _write_descriptor(child, {"schema": "mb.child_repo.v0", "role": "product"})
+    hub = tmp_path / "hub"
+    (hub / "decisions").mkdir(parents=True)
+    (hub / "CLAUDE.md").write_text("# Hub\n", encoding="utf-8")
+
+    assert looks_like_business_repo(hub)
+    assert not looks_like_business_repo(child)
+

@@ -37,7 +37,6 @@ from mb import validate as validate_mod
 from mb.engine import install_mode, link_status
 from mb.freshness import (
     format_update_alert,
-    looks_like_business_repo,
     package_update_status,
     version_key,
 )
@@ -2032,7 +2031,10 @@ def _not_business_folder_guard(target: Path, *, mode: str = "plan") -> dict[str,
     )
     # Partially built or broken business folders are exactly what doctor
     # repairs — refuse only a directory with no business markers at all.
-    if looks_like_business_repo(target) or any((target / m).exists() for m in markers):
+    # Hub or child: the descriptor docs promise doctor reports topology drift
+    # inside child repos too, so the classifier accepts both.
+    kind = topology_mod.classify_repo(target)["kind"]
+    if kind in {"hub", "child"} or any((target / m).exists() for m in markers):
         return None
     message = (
         "this is not a Main Branch business folder — run `mb onboard` to "

@@ -222,6 +222,89 @@ def infer_role_from_signals(repo_path: Path) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Repo classifier
+# ---------------------------------------------------------------------------
+
+REPO_KINDS = ("hub", "child", "engine", "none")
+_LEGACY_HUB_DIRS: tuple[str, ...] = ("core", "research", "decisions")
+
+
+def is_engine_repo(repo: Path) -> bool:
+    """True when ``repo`` is a checkout of the Main Branch engine itself."""
+    return (repo / "mb" / "pyproject.toml").is_file() and (repo / "mb" / "mb" / "cli.py").is_file()
+
+
+def _legacy_hub_shape(repo: Path) -> bool:
+    return (repo / "CLAUDE.md").is_file() and (
+        any((repo / name).is_dir() for name in _LEGACY_HUB_DIRS)
+        or (repo / "reference" / "core").exists()
+    )
+
+
+def classify_repo(repo: str | Path) -> dict[str, str]:
+    """Say what kind of Main Branch repo ``repo`` is, and which file decided it.
+
+    Returns ``kind`` (``hub``, ``child``, ``engine`` or ``none``), the declared
+    ``role`` when one exists, ``decided_by`` (a repo-relative path, empty for
+    ``none``) and a short ``reason``. Evidence is checked in a fixed order so
+    every caller agrees:
+
+    1. a valid child descriptor (``.mainbranch/repo.json`` with a known role,
+       or the legacy site ``source.json``);
+    2. the hub registry (``core/operations/repo-topology.md``);
+    3. the engine checkout;
+    4. the older hub shape: ``CLAUDE.md`` plus ``core/``, ``research/`` or
+       ``decisions/``.
+
+    A descriptor beats the older hub shape, so a product repo that also keeps
+    ``CLAUDE.md`` and ``research/`` is a child, not a second hub.
+    """
+    path = Path(repo)
+    try:
+        descriptor = read_child_descriptor(path)
+        role = _string(descriptor.get("role"))
+        if descriptor.get("found") and descriptor.get("ok") and role in TOPOLOGY_ROLES:
+            decided_by = str(descriptor.get("path") or CHILD_REPO_RELATIVE_PATH.as_posix())
+            if role == "business":
+                return {
+                    "kind": "hub",
+                    "role": role,
+                    "decided_by": decided_by,
+                    "reason": "descriptor declares role business",
+                }
+            return {
+                "kind": "child",
+                "role": role,
+                "decided_by": decided_by,
+                "reason": f"descriptor declares role {role}",
+            }
+        if (path / REGISTRY_RELATIVE_PATH).is_file():
+            return {
+                "kind": "hub",
+                "role": "business",
+                "decided_by": REGISTRY_RELATIVE_PATH.as_posix(),
+                "reason": "hub registry present",
+            }
+        if is_engine_repo(path):
+            return {
+                "kind": "engine",
+                "role": "",
+                "decided_by": "mb/pyproject.toml",
+                "reason": "Main Branch engine checkout",
+            }
+        if _legacy_hub_shape(path):
+            return {
+                "kind": "hub",
+                "role": "",
+                "decided_by": "CLAUDE.md",
+                "reason": "CLAUDE.md with business folders and no descriptor",
+            }
+    except OSError:
+        pass
+    return {"kind": "none", "role": "", "decided_by": "", "reason": "no Main Branch markers"}
+
+
+# ---------------------------------------------------------------------------
 # Registry reader
 # ---------------------------------------------------------------------------
 

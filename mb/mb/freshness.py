@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from mb import __version__
+from mb import __version__, topology
 from mb.engine import install_mode
 
 MINIMUM_SUPPORTED_VERSION = "0.2.0"
@@ -49,12 +49,8 @@ def release_notes_url(version: str) -> str:
 
 
 def looks_like_business_repo(repo: Path) -> bool:
-    return (repo / "CLAUDE.md").is_file() and (
-        (repo / "core").is_dir()
-        or (repo / "reference" / "core").exists()
-        or (repo / "research").is_dir()
-        or (repo / "decisions").is_dir()
-    )
+    """True when ``repo`` is a hub business repo (see ``topology.classify_repo``)."""
+    return topology.classify_repo(repo)["kind"] == "hub"
 
 
 def _post_update_commands(repo: str | Path | None) -> list[str]:
