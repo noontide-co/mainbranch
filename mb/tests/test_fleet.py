@@ -340,7 +340,12 @@ def test_multi_site_reads_dir_package_then_repo_root(
 
     alpha = rows["example-co/acme-sites:alpha"]
     beta = rows["example-co/acme-sites:beta"]
-    assert alpha["framework"] == {"name": "astro", "spec": "^5.1.0", "version": "5.1.0"}
+    assert alpha["framework"] == {
+        "name": "astro",
+        "spec": "^5.1.0",
+        "version": "5.1.0",
+        "state": "ok",
+    }
     assert alpha["engine_pin"]["ref"] == "v1.3.0"
     assert alpha["engine_pin"]["on_latest"] is True
     assert beta["framework"]["version"] == "4.16.18"
@@ -350,6 +355,83 @@ def test_multi_site_reads_dir_package_then_repo_root(
     assert alpha["ci"] == {"state": "failure", "total": 2, "failing": ["lint"]}
     assert "ci_failing" in alpha["flags"]
     assert alpha["days_since_commit"] == 10
+
+
+@needs_tomllib
+def test_denied_site_package_is_unavailable_not_root_facts(
+    tmp_path: Path, cloudflare_creds: None
+) -> None:
+    responses = dict(GH)
+    responses["repos/example-co/acme-sites/contents/clients/alpha/package.json"] = (403, None)
+
+    result, cache, _ = _refresh(tmp_path, FakeGh(responses))
+
+    assert not result["ok"]
+    assert any(
+        "example-co/acme-sites: clients/alpha/package.json not readable (HTTP 403)" in error
+        for error in result["errors"]
+    )
+    rows = _rows(cache)
+    alpha = rows["example-co/acme-sites:alpha"]
+    assert alpha["framework"]["state"] == "unavailable"
+    assert alpha["framework"]["version"] == ""
+    assert alpha["engine_pin"]["state"] == "unavailable"
+    assert alpha["engine_pin"]["http_status"] == 403
+    assert alpha["package"] == {
+        "path": "clients/alpha/package.json",
+        "state": "unavailable",
+        "http_status": 403,
+    }
+    assert "facts_unavailable" in alpha["flags"]
+    # beta's own package.json is a confirmed 404, so the root is still used.
+    beta = rows["example-co/acme-sites:beta"]
+    assert beta["framework"]["version"] == "4.16.18"
+    assert beta["package"]["path"] == "package.json"
+
+
+@needs_tomllib
+def test_rate_limited_descriptor_reports_unknown_sites(
+    tmp_path: Path, cloudflare_creds: None
+) -> None:
+    responses = dict(GH)
+    responses["repos/example-co/acme-sites/contents/.mainbranch/repo.json"] = (429, None)
+
+    result, cache, _ = _refresh(tmp_path, FakeGh(responses))
+
+    assert not result["ok"]
+    assert any(
+        "example-co/acme-sites: .mainbranch/repo.json not readable (HTTP 429)" in error
+        for error in result["errors"]
+    )
+    rows = _rows(cache)
+    assert "example-co/acme-sites:alpha" not in rows
+    row = rows["example-co/acme-sites:"]
+    assert row["sites_state"] == "unavailable"
+    assert row["framework"]["state"] == "unavailable"
+    assert row["framework"]["version"] == ""
+    assert row["engine_pin"]["state"] == "unavailable"
+    assert row["deploy"]["state"] == "descriptor_unavailable"
+    repo = {r["repo"]: r for r in fleet.status(cache=cache, now=NOW)["repos"]}
+    assert repo["example-co/acme-sites"]["descriptor"]["read_state"] == "unavailable"
+    assert repo["example-co/acme-sites"]["descriptor"]["http_status"] == 429
+
+
+@needs_tomllib
+def test_malformed_package_and_descriptor_are_errors(
+    tmp_path: Path, cloudflare_creds: None
+) -> None:
+    responses = dict(GH)
+    responses["repos/example-co/workshop-site/contents/package.json"] = (200, "{not json")
+    responses["repos/example-co/app/contents/.mainbranch/repo.json"] = (200, "[1]")
+
+    result, cache, _ = _refresh(tmp_path, FakeGh(responses))
+
+    assert not result["ok"]
+    assert any("package.json is not a valid JSON object" in e for e in result["errors"])
+    assert any("example-co/app: .mainbranch/repo.json" in e for e in result["errors"])
+    rows = _rows(cache)
+    assert rows["example-co/workshop-site:"]["framework"]["state"] == "malformed"
+    assert rows["example-co/app:"]["sites_state"] == "malformed"
 
 
 @needs_tomllib

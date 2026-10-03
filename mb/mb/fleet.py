@@ -454,15 +454,47 @@ def _parse_time(value: str) -> datetime | None:
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
-def _package(github: GitHub, full: str, rel: str) -> tuple[dict[str, Any] | None, int]:
+def _read_file(github: GitHub, full: str, rel: str) -> dict[str, Any]:
+    """Read one repo file and say why when it could not be read.
+
+    ``state`` is ``ok``, ``absent`` (a confirmed 404), ``unavailable`` (denied,
+    rate-limited or any other failed read) or ``malformed`` (not a JSON object).
+    Only ``absent`` means the file is not there.
+    """
     status, text = github.raw(f"repos/{full}/contents/{rel}")
+    if status == 404:
+        return {"path": rel, "state": "absent", "http_status": 404, "text": ""}
     if status != 200:
-        return None, status
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError:
-        return None, 0
-    return (data if isinstance(data, dict) else None), 200
+        return {"path": rel, "state": "unavailable", "http_status": status, "text": ""}
+    return {"path": rel, "state": "ok", "http_status": 200, "text": text}
+
+
+def _package(github: GitHub, full: str, rel: str) -> dict[str, Any]:
+    read = _read_file(github, full, rel)
+    data: Any = None
+    if read["state"] == "ok":
+        try:
+            data = json.loads(read["text"])
+        except json.JSONDecodeError:
+            data = None
+        if not isinstance(data, dict):
+            read["state"] = "malformed"
+            data = None
+    return {
+        "path": rel,
+        "state": read["state"],
+        "http_status": read["http_status"],
+        "data": data,
+    }
+
+
+def _read_problem(read: dict[str, Any]) -> str:
+    """Public-safe refresh error for a file read that failed, else ``""``."""
+    if read["state"] == "unavailable":
+        return f"{read['path']} not readable (HTTP {read['http_status'] or 'error'})"
+    if read["state"] == "malformed":
+        return f"{read['path']} is not a valid JSON object"
+    return ""
 
 
 def read_repo(github: GitHub, full: str, now: datetime) -> dict[str, Any]:
@@ -498,19 +530,45 @@ def read_repo(github: GitHub, full: str, now: datetime) -> dict[str, Any]:
     else:
         facts["errors"].append(f"default branch {branch!r} not readable")
         facts["ci"] = {"state": "unknown", "total": 0, "failing": []}
-    status, text = github.raw(f"repos/{full}/contents/{topology.CHILD_REPO_RELATIVE_PATH}")
-    facts["descriptor"] = topology.parse_descriptor_text(text) if status == 200 else None
-    package, _ = _package(github, full, "package.json")
-    facts["package"] = package
+    read = _read_file(github, full, topology.CHILD_REPO_RELATIVE_PATH.as_posix())
+    descriptor = topology.parse_descriptor_text(read["text"]) if read["state"] == "ok" else None
+    if descriptor is not None and descriptor.get("error"):
+        read["state"] = "malformed"
+    facts["descriptor"] = descriptor
+    facts["descriptor_read"] = {"state": read["state"], "http_status": read["http_status"]}
+    if read["state"] == "malformed":
+        facts["errors"].append(f"{read['path']}: {descriptor.get('error') if descriptor else ''}")
+    elif problem := _read_problem(read):
+        facts["errors"].append(problem)
+    facts["package"] = _package(github, full, "package.json")
     facts["site_packages"] = {}
-    descriptor = facts["descriptor"] or {}
-    for site in descriptor.get("sites") or []:
+    for site in (descriptor or {}).get("sites") or []:
         site_dir = str(site.get("dir") or ".")
         if site_dir != "." and site_dir not in facts["site_packages"]:
-            facts["site_packages"][site_dir], _ = _package(github, full, f"{site_dir}/package.json")
+            facts["site_packages"][site_dir] = _package(github, full, f"{site_dir}/package.json")
+    for package in [facts["package"], *facts["site_packages"].values()]:
+        if problem := _read_problem(package):
+            facts["errors"].append(problem)
     facts["dependabot_alerts"] = _dependabot_alerts(github, full)
     facts["dependabot_prs"] = _dependabot_prs(github, full, now)
     return facts
+
+
+def _site_package(facts: dict[str, Any], site_dir: str) -> dict[str, Any]:
+    """The package.json that holds a site's facts.
+
+    The site's own ``dir`` first; the repo root only after the site's file is
+    confirmed absent, so a denied or failed read never borrows the root's facts.
+    """
+    root: dict[str, Any] = facts.get("package") or {
+        "path": "package.json",
+        "state": "absent",
+        "data": None,
+    }
+    own: dict[str, Any] | None = (facts.get("site_packages") or {}).get(site_dir)
+    if own is None or own.get("state") == "absent":
+        return root
+    return own
 
 
 # ---------------------------------------------------------------------------
@@ -641,6 +699,8 @@ def _deploy_block(
 
 def _flags(row: dict[str, Any]) -> list[str]:
     flags: list[str] = []
+    if (row.get("framework") or {}).get("state") in _UNREAD_STATES:
+        flags.append("facts_unavailable")
     if row["ci"]["state"] == "failure":
         flags.append("ci_failing")
     deploy = row["deploy"]
@@ -687,6 +747,53 @@ def _engine_pin(
     if len(pins) > 1:
         pin["other_pins"] = [p["package"] for p in pins[1:]]
     return pin
+
+
+_UNREAD_STATES = frozenset({"unavailable", "malformed"})
+
+
+def _framework_field(package_read: dict[str, Any]) -> dict[str, Any]:
+    facts: dict[str, Any] = framework_facts(package_read.get("data") or {})
+    facts["state"] = package_read["state"]
+    return facts
+
+
+def _engine_pin_field(
+    github: GitHub, package_read: dict[str, Any], tags_cache: dict[str, list[str]]
+) -> dict[str, Any] | None:
+    """The engine pin, ``None`` when there is none, or an unavailable marker."""
+    if package_read["state"] in _UNREAD_STATES:
+        return {
+            "state": package_read["state"],
+            "http_status": package_read.get("http_status"),
+            "package": "",
+            "spec": "",
+            "kind": "",
+            "ref": "",
+            "repo": "",
+            "latest_tag": "",
+            "on_latest": None,
+        }
+    pin = _engine_pin(github, package_read.get("data"), tags_cache)
+    if pin is not None:
+        pin["state"] = "ok"
+    return pin
+
+
+def _unknown_deploy(descriptor_state: str) -> dict[str, Any]:
+    return {
+        "provider": "",
+        "project": "",
+        "project_source": "",
+        "state": f"descriptor_{descriptor_state}",
+        "deployed_sha": "",
+        "dirty": None,
+        "branch": "",
+        "deployed_at": "",
+        "matches_main": None,
+        "compare": "",
+        "behind_by": None,
+    }
 
 
 def refresh(
@@ -784,6 +891,8 @@ def refresh(
                     "main_committed_at": facts.get("main_committed_at", ""),
                     "ci": facts.get("ci") or {"state": "unknown", "total": 0, "failing": []},
                     "descriptor": {
+                        "read_state": (facts.get("descriptor_read") or {}).get("state", ""),
+                        "http_status": (facts.get("descriptor_read") or {}).get("http_status"),
                         "found": bool(descriptor.get("found")),
                         "ok": bool(descriptor.get("ok")),
                         "role": descriptor.get("role", ""),
@@ -802,10 +911,21 @@ def refresh(
             )
             if not facts.get("readable"):
                 continue
+            descriptor_state = str((facts.get("descriptor_read") or {}).get("state") or "absent")
+            sites_known = descriptor_state in {"ok", "absent"}
             sites: list[dict[str, Any] | None] = list(descriptor.get("sites") or []) or [None]
             for site in sites:
                 site_dir = str((site or {}).get("dir") or ".")
-                package = facts.get("site_packages", {}).get(site_dir) or facts.get("package")
+                package_read = _site_package(facts, site_dir)
+                if not sites_known:
+                    # The descriptor could not be read, so the repo's sites and
+                    # their dirs are unknown: report that, never root facts.
+                    package_read = {
+                        "path": topology.CHILD_REPO_RELATIVE_PATH.as_posix(),
+                        "state": descriptor_state,
+                        "http_status": (facts.get("descriptor_read") or {}).get("http_status"),
+                        "data": None,
+                    }
                 provider, project, source, deploy_facts = _resolve_deploy(
                     site, entry, full.split("/", 1)[1], hub_deploys
                 )
@@ -818,8 +938,14 @@ def refresh(
                     or entry.get("display_name", ""),
                     "role": role,
                     "lifecycle": (site or {}).get("lifecycle") or entry.get("lifecycle", ""),
-                    "framework": framework_facts(package or {}),
-                    "engine_pin": _engine_pin(gh, package, tags_cache),
+                    "sites_state": "ok" if sites_known else descriptor_state,
+                    "package": {
+                        "path": package_read["path"] if package_read["state"] != "absent" else "",
+                        "state": package_read["state"],
+                        "http_status": package_read.get("http_status"),
+                    },
+                    "framework": _framework_field(package_read),
+                    "engine_pin": _engine_pin_field(gh, package_read, tags_cache),
                     "default_branch": facts.get("default_branch", ""),
                     "main_sha": facts.get("main_sha", ""),
                     "main_committed_at": facts.get("main_committed_at", ""),
@@ -834,7 +960,9 @@ def refresh(
                         source,
                         deploy_facts,
                         compare_cache,
-                    ),
+                    )
+                    if sites_known
+                    else _unknown_deploy(descriptor_state),
                 }
                 row["flags"] = _flags(row)
                 sites_out.append(row)
@@ -1030,6 +1158,12 @@ def _table(header: list[str], rows: list[list[str]]) -> list[str]:
     return lines
 
 
+def _fact_text(field: dict[str, Any], text: str) -> str:
+    if field.get("state") in _UNREAD_STATES:
+        return f"{field['state']} ({field.get('http_status') or 'error'})"
+    return text.strip() or "-"
+
+
 def _yes_no(value: Any) -> str:
     if value is None:
         return "-"
@@ -1054,8 +1188,8 @@ def render_status(result: dict[str, Any]) -> None:
                 str(row.get("repo") or "").split("/", 1)[-1],
                 str(row.get("site") or "-"),
                 str(row.get("role") or "-"),
-                f"{framework.get('name')} {framework.get('version')}".strip() or "-",
-                str(pin.get("ref") or "-") if pin else "-",
+                _fact_text(framework, f"{framework.get('name')} {framework.get('version')}"),
+                _fact_text(pin, str(pin.get("ref") or "")) if pin else "-",
                 str((row.get("ci") or {}).get("state") or "-"),
                 _short(str(row.get("main_sha") or "")),
                 _short(str(deploy.get("deployed_sha") or ""))

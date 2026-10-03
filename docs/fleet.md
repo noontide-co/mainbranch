@@ -69,7 +69,12 @@ Edit this file by hand. `mb fleet hubs list` shows what mb understood.
    [`sites` list](child-repo-descriptors.md#sites-several-sites-in-one-repo)
    gets one row per site; any other repo gets one row.
 3. Framework and engine pin come from `package.json`: the site's `dir` when it
-   has its own `package.json`, else the repo root. An engine pin is a
+   has its own `package.json`, else the repo root. The root is used only after
+   GitHub confirms the site's file is absent (404); a denied, rate-limited or
+   failed read, or a file that is not a JSON object, leaves the row's
+   `framework` and `engine_pin` `unavailable` or `malformed` and is a refresh
+   error. The same holds for `.mainbranch/repo.json`: when it cannot be read
+   the repo gets one row with `sites_state` saying why, not guessed sites. An engine pin is a
    dependency installed from a git ref or a local path (`github:owner/repo#v1.2.3`,
    `git+https://…#<sha>`, `file:../engine`). The newest semver tag of the engine
    repo is read so a pin can be flagged as behind it.
@@ -95,17 +100,20 @@ hourly limit.
 | Field | Meaning |
 | --- | --- |
 | `hub`, `repo`, `site`, `role` | Where the row comes from. `site` is empty for a repo without a `sites` list. |
-| `framework` | `name`, the `spec` from package.json and its `version` number. |
-| `engine_pin` | `package`, `kind` (`tag`, `commit`, `branch`, `path`, `none`), `ref`, `latest_tag`, `on_latest`. |
+| `sites_state` | `ok`, or `unavailable` / `malformed` when the descriptor could not be read and the repo's sites are unknown. |
+| `package` | Which `package.json` gave the facts (`path`), its read `state` (`ok`, `absent`, `unavailable`, `malformed`) and `http_status`. |
+| `framework` | `name`, the `spec` from package.json, its `version` number and the read `state`. |
+| `engine_pin` | `state` (`ok`, or `unavailable` / `malformed` with `http_status`), `package`, `kind` (`tag`, `commit`, `branch`, `path`, `none`), `ref`, `latest_tag`, `on_latest`. |
 | `ci` | `state` (`success`, `failure`, `pending`, `none`, `unknown`), `total` check runs, names of `failing` ones. |
 | `main_sha`, `days_since_commit` | Head of the default branch and its age when `status` ran. |
 | `deploy` | `state`, `project`, `deployed_sha`, `dirty`, `matches_main`, `compare` (GitHub's compare of deployed against main: `ahead` means main has moved on) and `behind_by` (commits on main not in the deploy). |
-| `flags` | `ci_failing`, `deploy_dirty`, `deploy_behind_main`, `deploy_differs_from_main`, `engine_unpinned`, `engine_behind_latest`. |
+| `flags` | `facts_unavailable`, `ci_failing`, `deploy_dirty`, `deploy_behind_main`, `deploy_differs_from_main`, `engine_unpinned`, `engine_behind_latest`. |
 
 `deploy.state` is `ok` when a production deployment was read. Other values say
 why not: `undeclared` (no project known for this row), `no_connection` (the hub
 has no Cloudflare connection), `provider_error`, `project_not_found`,
-`no_production_deployment`, `no_commit_hash` and `unsupported_provider`.
+`no_production_deployment`, `no_commit_hash`, `unsupported_provider`, and
+`descriptor_unavailable` / `descriptor_malformed` (the repo's sites are unknown).
 
 ## The cache
 
