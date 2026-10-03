@@ -240,8 +240,13 @@ class Cloudflare:
 
     def production_deployments(
         self, token: str, account_id: str
-    ) -> tuple[int, dict[str, dict[str, Any]]]:
+    ) -> tuple[dict[str, dict[str, Any]], str]:
         """Map project name to its current production deployment facts.
+
+        Returns ``(projects, error)``. Any failed page, an unsuccessful envelope
+        (``success`` not true, whatever the HTTP status) or a malformed body is
+        an error, and then no projects are returned: a partial list would turn
+        real projects into ``project_not_found``.
 
         Keeps only the commit hash, dirty flag, branch, time and domains: a
         deployment object also carries build environment variables, which must
@@ -253,17 +258,42 @@ class Cloudflare:
             self.calls += 1
             url = f"{CLOUDFLARE_API}/accounts/{account_id}/pages/projects?per_page=10&page={page}"
             status, payload = self.http_get(url, {"Authorization": f"Bearer {token}"})
-            if status != 200 or not isinstance(payload, dict) or not payload.get("success"):
-                return (status or 0), projects
-            for project in payload.get("result") or []:
+            if status != 200:
+                return {}, f"cloudflare pages read failed (HTTP {status or 'error'})"
+            if not isinstance(payload, dict):
+                return {}, "cloudflare pages read failed: malformed response (HTTP 200)"
+            if payload.get("success") is not True:
+                return {}, (
+                    "cloudflare pages read failed: unsuccessful response"
+                    f"{_cloudflare_codes(payload)} (HTTP 200)"
+                )
+            result = payload.get("result")
+            info = payload.get("result_info")
+            info = info if isinstance(info, dict) else {}
+            try:
+                total_pages = int(info.get("total_pages") or 1)
+            except (TypeError, ValueError):
+                total_pages = 0
+            if not isinstance(result, list) or total_pages < 1:
+                return {}, "cloudflare pages read failed: malformed response (HTTP 200)"
+            for project in result:
                 if not isinstance(project, dict) or not project.get("name"):
                     continue
                 projects[str(project["name"])] = _deployment_facts(project)
-            info = payload.get("result_info") or {}
-            total_pages = int(info.get("total_pages") or 1) if isinstance(info, dict) else 1
             if page >= total_pages:
-                return 200, projects
+                return projects, ""
             page += 1
+
+
+def _cloudflare_codes(payload: dict[str, Any]) -> str:
+    """Cloudflare's numeric error codes only; messages are not repeated."""
+    errors = payload.get("errors")
+    codes = [
+        str(item["code"])
+        for item in (errors if isinstance(errors, list) else [])
+        if isinstance(item, dict) and isinstance(item.get("code"), int)
+    ]
+    return f", codes {', '.join(codes)}" if codes else ""
 
 
 def _deployment_facts(project: dict[str, Any]) -> dict[str, Any]:
@@ -861,13 +891,12 @@ def refresh(
                 hub_out["cloudflare"].update({"state": "error", "error": cred_error})
                 errors.append({"hub": hub["name"], "error": cred_error})
             else:
-                status, projects = cf.production_deployments(token, account_id)
+                projects, message = cf.production_deployments(token, account_id)
                 token = ""
-                if status == 200:
+                if not message:
                     hub_deploys = {"state": "ok", "projects": projects}
                     hub_out["cloudflare"].update({"state": "ok", "projects": len(projects)})
                 else:
-                    message = f"cloudflare pages read failed (HTTP {status or 'error'})"
                     hub_deploys["state"] = "error"
                     hub_out["cloudflare"].update({"state": "error", "error": message})
                     errors.append({"hub": hub["name"], "error": message})

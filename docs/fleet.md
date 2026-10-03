@@ -112,7 +112,9 @@ hourly limit.
 
 `deploy.state` is `ok` when a production deployment was read. Other values say
 why not: `undeclared` (no project known for this row), `no_connection` (the hub
-has no Cloudflare connection), `provider_error`, `project_not_found`,
+has no Cloudflare connection), `provider_error` (the Pages read failed: an
+HTTP error, an envelope without `success: true`, or a malformed body; no
+partial project list is kept), `project_not_found`,
 `no_production_deployment`, `no_commit_hash`, `unsupported_provider`, and
 `descriptor_unavailable` / `descriptor_malformed` (the repo's sites are unknown).
 

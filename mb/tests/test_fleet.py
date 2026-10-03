@@ -294,14 +294,20 @@ def cloudflare_creds(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-def _refresh(tmp_path: Path, gh: FakeGh | None = None) -> tuple[dict[str, Any], Path, FakeGh]:
+def _refresh(
+    tmp_path: Path,
+    gh: FakeGh | None = None,
+    pages: list[tuple[int, Any]] | None = None,
+) -> tuple[dict[str, Any], Path, FakeGh]:
     fake = gh or FakeGh(GH)
     seen_headers: list[dict[str, str]] = []
+    page_responses = list(pages or [(200, PAGES)])
 
     def http_get(url: str, headers: dict[str, str]) -> tuple[int, Any]:
         seen_headers.append(headers)
         assert url.startswith(f"{fleet.CLOUDFLARE_API}/accounts/acct-1/pages/projects")
-        return 200, PAGES
+        page = int(url.rsplit("page=", 1)[1])
+        return page_responses[min(page, len(page_responses)) - 1]
 
     cache = tmp_path / "state" / "fleet.db"
     result = fleet.refresh(
@@ -624,6 +630,51 @@ def test_refresh_reports_unreadable_repo_and_cloudflare_errors(
     status = fleet.status(cache=cache, now=NOW)
     assert status["ok"]
     assert status["warnings"]
+
+
+UNSUCCESSFUL = {"success": False, "errors": [{"code": 10000, "message": "x"}], "result": []}
+
+
+@needs_tomllib
+@pytest.mark.parametrize(
+    ("pages", "expected"),
+    [
+        ([(200, UNSUCCESSFUL)], "unsuccessful response, codes 10000 (HTTP 200)"),
+        ([(200, {"result": []})], "unsuccessful response (HTTP 200)"),
+        ([(200, {"success": True, "result": None})], "malformed response (HTTP 200)"),
+        ([(200, ["not", "an", "object"])], "malformed response (HTTP 200)"),
+        (
+            [(200, {"success": True, "result": [], "result_info": {"total_pages": "x"}})],
+            "malformed response (HTTP 200)",
+        ),
+        # A good first page and a failing second one: nothing is kept.
+        (
+            [(200, {**PAGES, "result_info": {"page": 1, "total_pages": 2}}), (200, UNSUCCESSFUL)],
+            "unsuccessful response, codes 10000 (HTTP 200)",
+        ),
+    ],
+)
+def test_unsuccessful_cloudflare_envelope_is_a_provider_error(
+    tmp_path: Path, cloudflare_creds: None, pages: list[tuple[int, Any]], expected: str
+) -> None:
+    result, cache, _ = _refresh(tmp_path, pages=pages)
+
+    assert not result["ok"]
+    assert f"example-co: cloudflare pages read failed: {expected}" in result["errors"]
+    rows = _rows(cache)
+    assert rows["example-co/acme-sites:alpha"]["deploy"]["state"] == "provider_error"
+    assert rows["example-co/workshop-site:"]["deploy"]["state"] == "provider_error"
+    hub = fleet.status(cache=cache, now=NOW)["hubs"][0]
+    assert hub["cloudflare"]["state"] == "error"
+    assert "x" not in hub["cloudflare"]["error"].split()
+
+
+@needs_tomllib
+def test_cloudflare_http_error_is_a_provider_error(tmp_path: Path, cloudflare_creds: None) -> None:
+    result, cache, _ = _refresh(tmp_path, pages=[(429, None)])
+
+    assert "example-co: cloudflare pages read failed (HTTP 429)" in result["errors"]
+    assert _rows(cache)["example-co/acme-sites:alpha"]["deploy"]["state"] == "provider_error"
 
 
 def test_status_without_cache_asks_for_refresh(tmp_path: Path) -> None:
