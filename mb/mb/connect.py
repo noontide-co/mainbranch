@@ -75,7 +75,9 @@ UNVERIFIED_STATE = "stored_unverified"
 # probe can be verified by running `mb connect test`, and one without cannot be
 # verified by anything the operator runs.
 # `test_probe_provider_set_matches_validate_with_provider` guards the drift.
-PROBE_PROVIDERS: frozenset[str] = frozenset({"cloudflare", "apify", "meta"})
+PROBE_PROVIDERS: frozenset[str] = frozenset(
+    {"cloudflare", "apify", "meta", "stripe", "github", "ga4"}
+)
 
 
 class ConnectRefusal(ValueError):
@@ -261,6 +263,33 @@ PROVIDERS: tuple[Provider, ...] = (
         metadata_fields=("default_actor",),
         description="Apify research actors and scrape jobs.",
         env_vars=("APIFY_TOKEN",),
+    ),
+    Provider(
+        id="github",
+        name="GitHub",
+        category="work",
+        auth="api_token",
+        # `api_key` matches the slot a GitHub token connected with `--custom`
+        # before this entry existed already uses, so those keep resolving.
+        required_secrets=("api_key",),
+        metadata_fields=("owner",),
+        description=(
+            "A GitHub token for scripts and agents that call the GitHub API directly. "
+            "Day-to-day issue and pull request work still goes through `gh`."
+        ),
+        env_vars=("GITHUB_TOKEN", "GH_TOKEN"),
+    ),
+    Provider(
+        id="ga4",
+        name="Google Analytics 4",
+        category="analytics",
+        auth="oauth_access_token",
+        required_secrets=("access_token",),
+        metadata_fields=("property_id",),
+        description=(
+            "Read access to one Google Analytics 4 property. Record the numeric "
+            "`property_id` so the probe knows which property to check."
+        ),
     ),
     Provider(
         id="hledger",
@@ -1752,8 +1781,30 @@ def status_provider(
             "repair": str(validation.get("repair") or ""),
             "repair_command": str(validation.get("repair_command") or ""),
             "safe_to_share": True,
+            **_safe_probe_details(validation),
         },
     }
+
+
+def _safe_probe_details(validation: dict[str, Any]) -> dict[str, Any]:
+    """Recorded probe facts, re-typed so a hand-edited config cannot inject values."""
+    details: dict[str, Any] = {}
+    scopes = validation.get("scopes")
+    if isinstance(scopes, dict):
+        details["scopes"] = {
+            str(name): str(verdict)
+            for name, verdict in scopes.items()
+            if verdict in {"allowed", "refused", "unknown"}
+        }
+    kind = validation.get("token_kind")
+    if kind in GITHUB_TOKEN_KIND_NAMES:
+        details["token_kind"] = kind
+    token_scopes = validation.get("token_scopes")
+    if isinstance(token_scopes, list):
+        details["token_scopes"] = [
+            str(scope) for scope in token_scopes if not metadata_value_rule(str(scope))
+        ]
+    return details
 
 
 def hydrate(
@@ -2255,8 +2306,24 @@ def _http_get_json(
     *,
     provider_name: str = "provider",
     endpoint_family: str = "unknown",
+    response_headers: tuple[str, ...] = (),
 ) -> dict[str, Any]:
+    """GET ``url`` and report a share-safe outcome.
+
+    ``response_headers`` names non-secret response headers to hand back under
+    ``headers`` (for example GitHub's ``X-OAuth-Scopes``). The body is never
+    returned.
+    """
     request = urllib.request.Request(url, headers=headers or {})
+
+    def picked(raw: Any) -> dict[str, str]:
+        found: dict[str, str] = {}
+        for name in response_headers:
+            value = raw.get(name) if raw is not None else None
+            if value is not None:
+                found[name] = str(value)
+        return found
+
     secret_values = tuple(_header_secret_candidates(headers))
     upstream: dict[str, Any] = {
         "endpoint_family": endpoint_family,
@@ -2266,11 +2333,14 @@ def _http_get_json(
         "error_messages": [],
         "safe_to_share": True,
     }
+    got_headers: dict[str, str] = {}
     try:
         with urllib.request.urlopen(request, timeout=VALIDATION_TIMEOUT_SECONDS) as response:
             status = int(getattr(response, "status", 0) or 0)
             body = response.read(8192)
+            got_headers = picked(getattr(response, "headers", None))
     except urllib.error.HTTPError as exc:
+        got_headers = picked(exc.headers)
         body = b""
         with suppress(OSError):
             body = exc.read(8192)
@@ -2294,6 +2364,7 @@ def _http_get_json(
             "summary": _provider_error_summary(provider_name, upstream),
             "upstream": upstream,
             "safe_to_share": True,
+            "headers": got_headers,
         }
     except (urllib.error.URLError, TimeoutError, OSError):
         return {
@@ -2302,6 +2373,7 @@ def _http_get_json(
             "summary": f"{provider_name} validation could not reach the service.",
             "upstream": upstream,
             "safe_to_share": True,
+            "headers": got_headers,
         }
     payload = {}
     if body:
@@ -2324,6 +2396,7 @@ def _http_get_json(
             "summary": _provider_error_summary(provider_name, upstream),
             "upstream": upstream,
             "safe_to_share": True,
+            "headers": got_headers,
         }
     if isinstance(payload, dict) and payload.get("success") is False:
         return {
@@ -2332,6 +2405,7 @@ def _http_get_json(
             "summary": _provider_error_summary(provider_name, upstream),
             "upstream": upstream,
             "safe_to_share": True,
+            "headers": got_headers,
         }
     token_status = ""
     if isinstance(payload, dict) and isinstance(payload.get("result"), dict):
@@ -2344,6 +2418,7 @@ def _http_get_json(
             "summary": f"{provider_name} token is {token_status}; reconnect an active token.",
             "upstream": upstream,
             "safe_to_share": True,
+            "headers": got_headers,
         }
     return {
         "ok": True,
@@ -2351,6 +2426,7 @@ def _http_get_json(
         "summary": f"{provider_name} credential validated with provider.",
         "upstream": upstream,
         "safe_to_share": True,
+        "headers": got_headers,
     }
 
 
@@ -2544,6 +2620,157 @@ def _validate_meta_with_cli(
     )
 
 
+# Read-only resources the Stripe probe lists to learn what a key may read.
+# Each is a GET with limit=1; the body is never returned.
+STRIPE_SCOPE_PROBES: tuple[tuple[str, str], ...] = (
+    ("products", "https://api.stripe.com/v1/products?limit=1"),
+    ("prices", "https://api.stripe.com/v1/prices?limit=1"),
+    ("customers", "https://api.stripe.com/v1/customers?limit=1"),
+    ("charges", "https://api.stripe.com/v1/charges?limit=1"),
+    ("balance", "https://api.stripe.com/v1/balance"),
+)
+GITHUB_API_HEADERS = {
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+    "User-Agent": "mainbranch-mb-connect",
+}
+GITHUB_TOKEN_KINDS: tuple[tuple[str, str], ...] = (
+    ("github_pat_", "fine_grained"),
+    ("ghp_", "classic"),
+    ("gho_", "oauth"),
+    ("ghu_", "app_user"),
+    ("ghs_", "app_installation"),
+)
+# Share-safe probe facts carried from a probe into the recorded validation.
+PROBE_DETAIL_KEYS: tuple[str, ...] = ("scopes", "token_kind", "token_scopes")
+GITHUB_TOKEN_KIND_NAMES = frozenset({kind for _prefix, kind in GITHUB_TOKEN_KINDS} | {"unknown"})
+GA4_PROPERTY_RE = re.compile(r"^(?:properties/)?(\d{1,20})$")
+
+
+def _probe_stripe(provider: Provider, secret: str) -> dict[str, Any]:
+    """Which of a fixed set of read resources does this key allow?
+
+    A 2xx means allowed and a 403 means the key is valid but restricted from
+    that resource. A 401 anywhere means Stripe rejected the key itself.
+    """
+    scopes: dict[str, str] = {}
+    first_upstream: dict[str, Any] = {}
+    for resource, url in STRIPE_SCOPE_PROBES:
+        result = _http_get_json(
+            url,
+            {"Authorization": f"Bearer {secret}"},
+            provider_name=provider.name,
+            endpoint_family=f"stripe_{resource}_read",
+        )
+        raw_upstream = result.get("upstream")
+        upstream: dict[str, Any] = raw_upstream if isinstance(raw_upstream, dict) else {}
+        if not first_upstream:
+            first_upstream = upstream
+        status = upstream.get("http_status")
+        if status == 401:
+            return {**result, "state": "invalid", "scopes": scopes}
+        if result.get("ok"):
+            scopes[resource] = "allowed"
+        elif status == 403:
+            scopes[resource] = "refused"
+        else:
+            scopes[resource] = "unknown"
+    allowed = [name for name, verdict in scopes.items() if verdict == "allowed"]
+    refused = [name for name, verdict in scopes.items() if verdict == "refused"]
+    if not allowed and not refused:
+        return {
+            "ok": False,
+            "state": "unvalidated",
+            "summary": "Stripe validation could not reach the service or got no clear answer.",
+            "upstream": first_upstream,
+            "scopes": scopes,
+        }
+    if allowed:
+        summary = f"Stripe key validated; reads allowed: {', '.join(allowed)}"
+    else:
+        summary = "Stripe key validated, but every probed read was refused"
+    if refused:
+        summary += f"; refused: {', '.join(refused)}"
+    return {
+        "ok": True,
+        "state": "ready",
+        "summary": summary + ".",
+        "upstream": first_upstream,
+        "scopes": scopes,
+    }
+
+
+def _github_token_kind(secret: str) -> str:
+    for prefix, kind in GITHUB_TOKEN_KINDS:
+        if secret.startswith(prefix):
+            return kind
+    return "unknown"
+
+
+def _probe_github(provider: Provider, secret: str) -> dict[str, Any]:
+    """Authenticated-user read, plus the scopes GitHub reports for the token."""
+    result = _http_get_json(
+        "https://api.github.com/user",
+        {"Authorization": f"Bearer {secret}", **GITHUB_API_HEADERS},
+        provider_name=provider.name,
+        endpoint_family="github_authenticated_user",
+        response_headers=("X-OAuth-Scopes",),
+    )
+    kind = _github_token_kind(secret)
+    raw_headers = result.get("headers")
+    headers: dict[str, Any] = raw_headers if isinstance(raw_headers, dict) else {}
+    raw_scopes = headers.get("X-OAuth-Scopes")
+    token_scopes = (
+        [scope.strip() for scope in str(raw_scopes).split(",") if scope.strip()]
+        if raw_scopes is not None
+        else []
+    )
+    probed = {**result, "token_kind": kind, "token_scopes": token_scopes}
+    if result.get("ok"):
+        if raw_scopes is not None:
+            listed = ", ".join(token_scopes) or "none"
+            probed["summary"] = f"GitHub token authenticated; scopes: {listed}."
+        else:
+            probed["summary"] = (
+                "GitHub token authenticated. GitHub does not list a fine-grained or app "
+                "token's permissions through the API; check them in the token's settings."
+            )
+    return probed
+
+
+def _probe_ga4(provider: Provider, secret: str, metadata: dict[str, Any]) -> dict[str, Any]:
+    """Read one property's metadata from the GA4 Admin API."""
+    raw_property = str(metadata.get("property_id") or "").strip()
+    match = GA4_PROPERTY_RE.fullmatch(raw_property)
+    if not match:
+        reason = "is not a numeric GA4 property id" if raw_property else "is not recorded"
+        return {
+            "ok": False,
+            "state": "unvalidated",
+            "summary": f"GA4 validation needs `property_id` metadata, which {reason}.",
+            "repair": (
+                "Find the numeric property id under GA4 Admin > Property details, then run "
+                "`mb connect ga4 --metadata property_id=<property-id>` and "
+                "`mb connect test ga4`."
+            ),
+            "repair_command": "mb connect ga4 --metadata property_id=<property-id>",
+            "upstream": {
+                "endpoint_family": "ga4_property_read",
+                "http_status": None,
+                "response_received": False,
+                "error_codes": [],
+                "error_messages": [],
+                "safe_to_share": True,
+            },
+        }
+    return _http_get_json(
+        f"https://analyticsadmin.googleapis.com/v1beta/properties/{match.group(1)}",
+        {"Authorization": f"Bearer {secret}"},
+        provider_name=provider.name,
+        endpoint_family="ga4_property_read",
+    )
+
+
 def _validate_with_provider(
     provider: Provider,
     secret: str,
@@ -2625,6 +2852,12 @@ def _validate_with_provider(
             provider_name=provider.name,
             endpoint_family="apify_user_me",
         )
+    elif provider.id == "stripe":
+        result = _probe_stripe(provider, secret)
+    elif provider.id == "github":
+        result = _probe_github(provider, secret)
+    elif provider.id == "ga4":
+        result = _probe_ga4(provider, secret, metadata)
     elif provider.id == "meta":
         return _validate_meta_with_cli(
             provider,
@@ -2660,6 +2893,7 @@ def _validate_with_provider(
         "repair_command": str(result.get("repair_command") or ""),
         "safe_to_share": True,
         "upstream": result.get("upstream", {}),
+        **{key: result[key] for key in PROBE_DETAIL_KEYS if key in result},
     }
 
 
@@ -2753,6 +2987,9 @@ def test_provider(
         entry["validation"]["repair_command"] = validation.get("repair_command", "")
     if isinstance(validation.get("upstream"), dict):
         entry["validation"]["upstream"] = validation["upstream"]
+    for key in PROBE_DETAIL_KEYS:
+        if key in validation:
+            entry["validation"][key] = validation[key]
     entry["last_checked_at"] = validation["checked_at"]
     config["providers"][provider.id] = entry
     _write_config(target, config)
@@ -3727,6 +3964,9 @@ def render_test_result(result: dict[str, Any]) -> None:
         if isinstance(codes, list) and codes:
             details.append(f"codes: {', '.join(str(code) for code in codes[:3])}")
         print("provider: " + "  ".join(details))
+    scopes = validation.get("scopes") if isinstance(validation, dict) else None
+    if isinstance(scopes, dict) and scopes:
+        print("reads: " + "  ".join(f"{name}={verdict}" for name, verdict in scopes.items()))
     if status.get("repair_command"):
         print(f"next: {status['repair_command']}")
 

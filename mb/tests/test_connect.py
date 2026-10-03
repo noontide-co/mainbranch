@@ -3742,3 +3742,242 @@ def test_rotate_not_connected(tmp_path: Path, monkeypatch) -> None:
         connect_mod.rotate_provider("cloudflare", repo)
 
     assert caught.value.rule == "rotate_not_connected"
+
+
+def _fake_http(responses: dict[str, tuple[int | None, dict[str, str]]], calls: list[dict]):
+    """Answer `_http_get_json` by endpoint family: (http_status or None, headers)."""
+
+    def fake(url, headers=None, **kwargs):
+        family = kwargs["endpoint_family"]
+        calls.append({"url": url, "family": family, "headers": dict(headers or {})})
+        status, response_headers = responses.get(family, (None, {}))
+        ok = status is not None and 200 <= status < 300
+        if status is None:
+            state = "unvalidated"
+        elif ok:
+            state = "ready"
+        else:
+            state = "invalid" if status in {400, 401, 403, 404} else "unvalidated"
+        return {
+            "ok": ok,
+            "state": state,
+            "summary": f"simulated {family}",
+            "safe_to_share": True,
+            "upstream": {
+                "endpoint_family": family,
+                "http_status": status,
+                "response_received": status is not None,
+                "error_codes": [],
+                "error_messages": [],
+                "safe_to_share": True,
+            },
+            "headers": response_headers,
+        }
+
+    return fake
+
+
+def test_registry_includes_github_and_ga4_with_probes() -> None:
+    providers = {provider["id"]: provider for provider in connect_mod.provider_registry()}
+
+    assert providers["github"]["required_secrets"] == ["api_key"]
+    assert "GITHUB_TOKEN" in providers["github"]["env_vars"]
+    assert providers["ga4"]["metadata_fields"] == ["property_id"]
+    assert {"stripe", "github", "ga4"} <= connect_mod.PROBE_PROVIDERS
+    assert connect_mod.exec_env_name("github") == "GITHUB_TOKEN"
+    assert connect_mod.exec_env_name("ga4") == "MB_SECRET"
+
+
+def test_stripe_probe_reports_restricted_key_scopes(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    calls: list[dict] = []
+    monkeypatch.setattr(
+        connect_mod,
+        "_http_get_json",
+        _fake_http(
+            {
+                "stripe_products_read": (200, {}),
+                "stripe_prices_read": (200, {}),
+                "stripe_customers_read": (403, {}),
+                "stripe_charges_read": (403, {}),
+                "stripe_balance_read": (200, {}),
+            },
+            calls,
+        ),
+    )
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    secret = "rk_test_" + "F4k3v4lu3F4k3"
+    connect_mod.connect_provider("stripe", repo=repo, token=secret)
+
+    result = runner.invoke(app, ["connect", "test", "stripe", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["provider_verified"] is True
+    assert payload["validation"]["scopes"] == {
+        "products": "allowed",
+        "prices": "allowed",
+        "customers": "refused",
+        "charges": "refused",
+        "balance": "allowed",
+    }
+    assert "refused: customers, charges" in payload["validation"]["summary"]
+    assert [call["family"] for call in calls] == [
+        f"stripe_{name}_read" for name, _url in connect_mod.STRIPE_SCOPE_PROBES
+    ]
+    assert all(call["url"].startswith("https://api.stripe.com/v1/") for call in calls)
+    assert secret not in result.output
+    status = connect_mod.status_provider("stripe", repo)
+    assert status["validation"]["scopes"]["customers"] == "refused"
+
+    human = runner.invoke(app, ["connect", "test", "stripe", "--repo", str(repo)])
+    assert "reads: products=allowed" in human.stdout
+
+
+def test_stripe_probe_stops_on_rejected_key(tmp_path: Path, monkeypatch) -> None:
+    calls: list[dict] = []
+    monkeypatch.setattr(
+        connect_mod,
+        "_http_get_json",
+        _fake_http({"stripe_products_read": (401, {})}, calls),
+    )
+    provider = connect_mod.normalize_provider("stripe")
+
+    result = connect_mod._validate_with_provider(provider, "sk_test_fake")
+
+    assert result["ok"] is False
+    assert result["state"] == "invalid"
+    assert result["provider_verified"] is False
+    assert len(calls) == 1
+
+
+def test_stripe_probe_unreachable_is_unvalidated(monkeypatch) -> None:
+    calls: list[dict] = []
+    monkeypatch.setattr(connect_mod, "_http_get_json", _fake_http({}, calls))
+
+    result = connect_mod._validate_with_provider(
+        connect_mod.normalize_provider("stripe"), "sk_test_fake"
+    )
+
+    assert result["state"] == "unvalidated"
+    assert set(result["scopes"].values()) == {"unknown"}
+
+
+def test_github_probe_reports_classic_scopes(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    calls: list[dict] = []
+    monkeypatch.setattr(
+        connect_mod,
+        "_http_get_json",
+        _fake_http(
+            {"github_authenticated_user": (200, {"X-OAuth-Scopes": "repo, read:org"})}, calls
+        ),
+    )
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    secret = "ghp_" + "F4k3" * 9
+    connect_mod.connect_provider("github", repo=repo, token=secret)
+
+    result = connect_mod.test_provider("github", repo)
+
+    assert result["ok"] is True
+    assert result["validation"]["token_kind"] == "classic"
+    assert result["validation"]["token_scopes"] == ["repo", "read:org"]
+    assert "scopes: repo, read:org" in result["validation"]["summary"]
+    assert calls[0]["url"] == "https://api.github.com/user"
+    assert calls[0]["headers"]["Authorization"] == f"Bearer {secret}"
+    assert secret not in json.dumps(result)
+
+
+def test_github_probe_fine_grained_explains_permissions(monkeypatch) -> None:
+    calls: list[dict] = []
+    monkeypatch.setattr(
+        connect_mod,
+        "_http_get_json",
+        _fake_http({"github_authenticated_user": (200, {})}, calls),
+    )
+
+    result = connect_mod._validate_with_provider(
+        connect_mod.normalize_provider("github"), "github_pat_" + "11F4K3_f4k3"
+    )
+
+    assert result["ok"] is True
+    assert result["token_kind"] == "fine_grained"
+    assert result["token_scopes"] == []
+    assert "token's settings" in result["summary"]
+
+
+def test_github_custom_connection_keeps_resolving_as_builtin(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("github", repo=repo, token="ghp_" + "F4k3" * 9, custom=False)
+
+    assert connect_mod.read_token("github", repo)["field"] == "api_key"
+    assert connect_mod.read_token("github", repo)["ok"] is True
+
+
+@pytest.mark.parametrize("property_id", ["", "G-ABC123", "123; drop"])
+def test_ga4_probe_needs_numeric_property_id(property_id: str, monkeypatch) -> None:
+    calls: list[dict] = []
+    monkeypatch.setattr(connect_mod, "_http_get_json", _fake_http({}, calls))
+
+    result = connect_mod._validate_with_provider(
+        connect_mod.normalize_provider("ga4"), "ya29.fake", {"property_id": property_id}
+    )
+
+    assert result["state"] == "unvalidated"
+    assert result["repair_command"] == "mb connect ga4 --metadata property_id=<property-id>"
+    assert calls == []
+
+
+def test_ga4_probe_reads_the_configured_property(monkeypatch) -> None:
+    calls: list[dict] = []
+    monkeypatch.setattr(
+        connect_mod,
+        "_http_get_json",
+        _fake_http({"ga4_property_read": (200, {})}, calls),
+    )
+
+    result = connect_mod._validate_with_provider(
+        connect_mod.normalize_provider("ga4"), "ya29.fake", {"property_id": "properties/123456"}
+    )
+
+    assert result["ok"] is True
+    assert calls[0]["url"] == "https://analyticsadmin.googleapis.com/v1beta/properties/123456"
+
+
+def test_http_get_json_returns_only_named_headers(monkeypatch) -> None:
+    class FakeResponse:
+        status = 200
+        headers = {"X-OAuth-Scopes": "repo", "Set-Cookie": "session=f4k3"}
+
+        def read(self, size: int) -> bytes:
+            return b'{"login": "someone"}'
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args) -> None:
+            return None
+
+    seen: dict[str, Any] = {}
+
+    def fake_urlopen(request, timeout):
+        seen["method"] = request.get_method()
+        return FakeResponse()
+
+    monkeypatch.setattr(connect_mod.urllib.request, "urlopen", fake_urlopen)
+
+    result = connect_mod._http_get_json(
+        "https://api.example.test/user",
+        {"Authorization": "Bearer f4k3"},
+        endpoint_family="example",
+        response_headers=("X-OAuth-Scopes",),
+    )
+
+    assert seen["method"] == "GET"
+    assert result["ok"] is True
+    assert result["headers"] == {"X-OAuth-Scopes": "repo"}
+    assert "someone" not in json.dumps(result)
