@@ -89,28 +89,39 @@ def _scrub_paths(text: str) -> str:
     return _UNIX_PATH_RE.sub("<local-path>", text)
 
 
-# Key names that mark the value beside them as a secret. ``auth`` and ``sig``
-# only count as whole words so ``author`` and ``design`` stay readable.
+# Key names that mark the value beside them as a secret. The key must end in
+# the secret word (optionally ``_key``/``_value``/``_hash``), so ``GITHUB_TOKEN``
+# and ``client_secret`` count while ``token_count``, ``max_tokens``, ``author``
+# and ``design`` do not.
 _SECRET_KEY = (
-    r"[A-Za-z0-9_.-]*(?:token|secret|passw(?:or)?d|pwd|api[_-]?key|credentials?|"
-    r"authorization|auth(?![a-z])|private[_-]?key|access[_-]?key|signature|sig(?![a-z]))"
-    r"[A-Za-z0-9_.-]*"
+    r"[A-Za-z0-9_.-]*?(?:token|secret|passw(?:or)?d|passphrase|pwd|api[_-]?key|"
+    r"credentials?|authorization|auth|private[_-]?key|access[_-]?key|signature|sig)"
+    r"(?:[_.-]?(?:key|value|hash))?(?![A-Za-z0-9_.-])"
 )
-_SECRET_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
-    # Before the key rule, which would otherwise take ``Basic`` or ``Bearer`` as the value.
+# A value: a whole double- or single-quoted string (escapes and the other quote
+# allowed, an unterminated one runs to the end of the line), or a bare word.
+_SECRET_VALUE = r"(?:\"(?:[^\"\\\n]|\\.)*\"?|'(?:[^'\\\n]|\\.)*'?|[^\s\"',;&]+)"
+_SECRET_PAIR_RE = re.compile(
+    rf"(?i)(?<![A-Za-z0-9_.-])([\"']?)({_SECRET_KEY})\1(\s*[:=]\s*)({_SECRET_VALUE})"
+)
+
+
+def _redact_pair(match: re.Match[str]) -> str:
+    value = match.group(4)
+    quote = value[0] if value[0] in "\"'" else ""
+    return (
+        f"{match.group(1)}{match.group(2)}{match.group(1)}{match.group(3)}{quote}<redacted>{quote}"
+    )
+
+
+# Run before the pair rule, which would otherwise take ``Basic`` or ``Bearer``
+# as the value and leave the credential after it.
+_CREDENTIAL_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"(?i)\b((?:basic|bearer)\s+)[A-Za-z0-9+/=._~-]{8,}"), r"\1<redacted>"),
     # scheme://user:password@host
     (re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://[^\s:/@]+:)[^\s@/]+@"), r"\1<redacted>@"),
-    # "token": "value" and 'api_key': 'value'
-    (
-        re.compile(rf"(?i)([\"'])({_SECRET_KEY})\1(\s*:\s*)([\"'])[^\"'\n]*\4"),
-        r"\1\2\1\3\4<redacted>\4",
-    ),
-    # GITHUB_TOKEN=value, export X_SECRET="value", ?client_secret=value
-    (
-        re.compile(rf"(?i)(?<![A-Za-z0-9_.-])({_SECRET_KEY})(\s*[:=]\s*)([\"']?)[^\s\"',;&]+\3"),
-        r"\1\2\3<redacted>\3",
-    ),
+)
+_TOKEN_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
     # Provider token families, including GitHub's underscore family.
     (
         re.compile(
@@ -146,7 +157,11 @@ def scrub(text: str) -> str:
     from mb.issue import QUERY_SECRET_RE, TOKEN_RE
 
     cleaned = text
-    for pattern, replacement in _SECRET_RULES:
+    for pattern, replacement in _CREDENTIAL_RULES:
+        cleaned = pattern.sub(replacement, cleaned)
+    # key=value, "key": "value", GITHUB_TOKEN=..., ?client_secret=...
+    cleaned = _SECRET_PAIR_RE.sub(_redact_pair, cleaned)
+    for pattern, replacement in _TOKEN_RULES:
         cleaned = pattern.sub(replacement, cleaned)
     cleaned = _redact_sensitive_text(cleaned)
     cleaned = _credential_token_re().sub(SECRET_REPLACEMENT, cleaned)

@@ -340,6 +340,11 @@ SECRET_SHAPES = {
     "url_userinfo": f"https://someone:{CANARY}@x.test/repo.git",
     "dsn_userinfo": f"postgres://app:{CANARY}@db.internal:5432/main",
     "basic_auth": f"Authorization: Basic {CANARY}",
+    "json_apostrophe": f'{{"token": "it\'s-{CANARY}"}}',
+    "json_escaped_quote": f'{{"token": "a\\"{CANARY}"}}',
+    "env_quoted_space_semicolon": f'export X_TOKEN="abc def;{CANARY}"',
+    "env_single_with_double": f"X_SECRET='a \"b\" {CANARY}'",
+    "env_unterminated_quote": f'X_TOKEN="abc {CANARY}',
 }
 
 
@@ -579,3 +584,18 @@ def test_repo_kind_is_unknown_when_the_classifier_fails(
 
     monkeypatch.setattr(topology, "classify_repo", broken)
     assert feedback_mod.repo_kind(tmp_path) == "unknown"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "https://example.test/?token_count=25",
+        "https://example.test/search?q=token&page=2&sort=desc",
+        "set max_tokens=100 and tokenizer=bpe",
+        "author=Ana design=x signed=yes",
+        "see ./docs/feedback.md and core/offer.md, and/or run /mb-start",
+        "file://x.test/a/b and https://github.com/noontide-co/mainbranch/pull/989",
+    ],
+)
+def test_scrub_keeps_ordinary_metadata(text: str) -> None:
+    assert feedback_mod.scrub(text) == text
