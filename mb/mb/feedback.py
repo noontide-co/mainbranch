@@ -38,9 +38,16 @@ DEFAULT_SINCE = "7d"
 
 _SINCE_RE = re.compile(r"^\s*(\d+)\s*([hdw])\s*$", re.IGNORECASE)
 # Home directories of any user, in case text quotes another account's path.
-_OTHER_HOME_RE = re.compile(
-    r"(?<![\w~])(?:/Users|/home)/[^/\s\"'`]+|[A-Za-z]:\\Users\\[^\\\s\"'`]+"
+_OTHER_HOME_RE = re.compile(r"(?<![\w~])(?:/Users|/home)/[^/\s\"'`]+")
+_PATH_CHARS = r"[^\s\"'`<>|(),;]"
+# Windows drive paths with either slash, and UNC shares.
+_WINDOWS_PATH_RE = re.compile(
+    rf"(?<![\w])[A-Za-z]:[\\/]{_PATH_CHARS}*|(?<![\w\\])\\\\[^\s\\\"'`<>|]+\\{_PATH_CHARS}*"
 )
+# Any absolute Unix path with at least two segments. A slash after a word
+# character, a colon or another slash is part of a URL or a relative path,
+# and a lone ``/mb-start`` is a slash command, so neither is touched.
+_UNIX_PATH_RE = re.compile(rf"(?<![\w:/.~\\-])/(?:[^\s/\"'`<>|(),;]+/)+{_PATH_CHARS}*")
 
 
 def state_dir() -> Path:
@@ -73,11 +80,13 @@ def refusal_logging_enabled() -> bool:
     return os.environ.get(LOG_ENV_VAR, "").strip().lower() not in {"0", "false", "no", "off"}
 
 
-def _replace_home(text: str) -> str:
+def _scrub_paths(text: str) -> str:
     home = str(Path.home())
     if home and home not in {"/", "\\"}:
         text = text.replace(home, "~")
-    return _OTHER_HOME_RE.sub("~", text)
+    text = _WINDOWS_PATH_RE.sub("<local-path>", text)
+    text = _OTHER_HOME_RE.sub("~", text)
+    return _UNIX_PATH_RE.sub("<local-path>", text)
 
 
 # Key names that mark the value beside them as a secret. ``auth`` and ``sig``
@@ -129,12 +138,12 @@ def _credential_token_re() -> re.Pattern[str]:
 def scrub(text: str) -> str:
     """Redact secret-shaped values and absolute paths from ``text``.
 
-    Home-directory paths become ``~``; any other absolute path that ``mb issue``
-    would scrub becomes ``<local-path>``.
+    Home-directory paths become ``~``; any other absolute Unix, Windows drive
+    or UNC path becomes ``<local-path>``. URLs are left alone.
     """
     # Imported here so connect can call ``record_refusal`` without an import cycle.
     from mb.connect import SECRET_REPLACEMENT, _redact_sensitive_text
-    from mb.issue import ABSOLUTE_PATH_RE, QUERY_SECRET_RE, TOKEN_RE
+    from mb.issue import QUERY_SECRET_RE, TOKEN_RE
 
     cleaned = text
     for pattern, replacement in _SECRET_RULES:
@@ -143,8 +152,7 @@ def scrub(text: str) -> str:
     cleaned = _credential_token_re().sub(SECRET_REPLACEMENT, cleaned)
     cleaned = TOKEN_RE.sub(SECRET_REPLACEMENT, cleaned)
     cleaned = QUERY_SECRET_RE.sub(lambda match: f"{match.group(1)}{SECRET_REPLACEMENT}", cleaned)
-    cleaned = _replace_home(cleaned)
-    cleaned = ABSOLUTE_PATH_RE.sub("<local-path>", cleaned)
+    cleaned = _scrub_paths(cleaned)
     if len(cleaned) > MAX_TEXT_CHARS:
         cleaned = cleaned[:MAX_TEXT_CHARS] + " [truncated]"
     return cleaned

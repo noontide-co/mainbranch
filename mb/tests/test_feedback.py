@@ -364,3 +364,49 @@ def test_scrub_keeps_ordinary_urls_and_words() -> None:
         "see https://github.com/noontide-co/mainbranch/issues/986?tab=comments and the token flow"
     )
     assert feedback_mod.scrub(text) == text
+
+
+# shape -> (path, text that must not survive)
+PATH_SHAPES = {
+    "users": ("/Users/someone/biz/notes.md", "/Users/someone"),
+    "home": ("/home/someone/biz/notes.md", "/home/someone"),
+    "tmp": ("/tmp/run-42/out.log", "run-42"),
+    "etc": ("/etc/acme/config.yaml", "acme"),
+    "srv": ("/srv/acme-repo/core/offer.md", "acme"),
+    "root": ("/root/acme/core/offer.md", "acme"),
+    "mnt": ("/mnt/data/acme/core.md", "acme"),
+    "workspace": ("/workspace/acme/core/offer.md", "acme"),
+    "opt": ("/opt/acme/run.sh", "acme"),
+    "windows_backslash": ("C:\\Users\\someone\\biz\\notes.md", "someone"),
+    "windows_forward": ("C:/Users/someone/biz/notes.md", "someone"),
+    "windows_other_drive": ("D:/work/acme/notes.md", "acme"),
+    "unc": ("\\\\fileserver\\share\\biz\\notes.md", "fileserver"),
+}
+
+
+@pytest.mark.parametrize("shape", sorted(PATH_SHAPES))
+def test_every_absolute_path_shape_is_scrubbed_in_every_field(state_home: Path, shape: str) -> None:
+    path, marker = PATH_SHAPES[shape]
+    hostile = f"mb status failed reading {path} today"
+    feedback_mod.record(hostile, command=f"mb status --repo {path}")
+    assert feedback_mod.record_refusal(f"rule {path}", f"mb connect {path}")
+    for entry in _lines(state_home):
+        for field in ("text", "command", "rule"):
+            value = str(entry.get(field) or "")
+            assert marker not in value, (shape, field, value)
+            assert not value or "~" in value or "<local-path>" in value, (shape, field, value)
+
+
+def test_path_scrub_keeps_urls_slash_commands_and_home_tilde(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    home = tmp_path / "someone"
+    monkeypatch.setenv("HOME", str(home))
+    text = (
+        "run /mb-start, see https://github.com/noontide-co/mainbranch/blob/main/docs/feedback.md "
+        f"and file://x.test/a/b, and {home}/biz/x.md, and/or 1/2"
+    )
+    assert feedback_mod.scrub(text) == (
+        "run /mb-start, see https://github.com/noontide-co/mainbranch/blob/main/docs/feedback.md "
+        "and file://x.test/a/b, and ~/biz/x.md, and/or 1/2"
+    )

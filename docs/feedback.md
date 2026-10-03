@@ -28,7 +28,9 @@ Each call appends one JSON line to
   `GITHUB_TOKEN`), Bearer and Basic credentials, URL passwords
   (`scheme://user:<redacted>@host`), and provider token families such as
   GitHub's `ghp_`/`ghs_`, Slack, OpenAI and AWS key ids. Home directory paths
-  become `~`, and other absolute paths become `<local-path>`.
+  become `~`. Any other absolute path (Unix, Windows drive with either
+  slash, or UNC share) becomes `<local-path>`; URLs and slash commands such as
+  `/mb-start` are left alone.
 
 Write a credential-free summary in your own words and pass only the command
 name to `--command`. The scrubber is a backstop, not permission to paste a
