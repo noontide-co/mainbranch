@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 from typer.testing import CliRunner
 
+from mb import connect as connect_mod
 from mb import feedback as feedback_mod
 from mb.cli import app
 
@@ -645,3 +646,158 @@ def test_command_is_stored_as_the_command_path_only(
 def test_rule_is_a_slug_or_other(state_home: Path, given: str, stored: str) -> None:
     assert feedback_mod.record_refusal(given, "mb connect")
     assert _lines(state_home)[-1]["rule"] == stored
+
+
+# --- Connect refusals through the CLI (phase 2b) -------------------------------
+
+_SYNTHETIC_METADATA_SECRET = "ghp_" + "F4k3" * 9
+_SYNTHETIC_BAD_KEY = "not-a-stripe-key-F4k3"
+_REFUSAL_FIELDS = {"schema", "kind", "time", "mb_version", "command", "rule", "repo_kind"}
+
+
+@pytest.fixture
+def connect_env(state_home: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A synthetic business repo with a local-file secret store under ``tmp_path``."""
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    for provider in connect_mod.PROVIDERS:
+        for env_var in provider.env_vars:
+            monkeypatch.delenv(env_var, raising=False)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    return repo
+
+
+def _symlinked_state(repo: Path, tmp_path: Path) -> None:
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "connect.yaml").write_text("version: 1\nproviders: {}\n", encoding="utf-8")
+    (repo / ".mb").symlink_to(outside, target_is_directory=True)
+
+
+# (argv after `--repo <repo>` is appended, stored command, stored rule, a value that must not leak)
+CONNECT_REFUSALS = [
+    pytest.param(
+        ["connect", "token", "cloudflare"],
+        "mb connect token",
+        "connect.token_print",
+        None,
+        id="token_print",
+    ),
+    pytest.param(
+        ["connect", "cloudflare", "--metadata", f"zone_label={_SYNTHETIC_METADATA_SECRET}"],
+        "mb connect",
+        "connect.metadata_secret_value",
+        _SYNTHETIC_METADATA_SECRET,
+        id="metadata_secret_value",
+    ),
+    pytest.param(
+        ["connect", "stripe", "--token", _SYNTHETIC_BAD_KEY],
+        "mb connect",
+        "connect.key_shape",
+        _SYNTHETIC_BAD_KEY,
+        id="key_shape",
+    ),
+    pytest.param(
+        ["connect", "exec", "cloudflare"],
+        "mb connect exec",
+        "connect.exec_no_command",
+        None,
+        id="exec_no_command",
+    ),
+]
+
+
+@pytest.mark.parametrize(("argv", "command", "rule", "value"), CONNECT_REFUSALS)
+def test_connect_refusal_through_cli_logs_one_rule_line(
+    connect_env: Path,
+    state_home: Path,
+    tmp_path: Path,
+    argv: list[str],
+    command: str,
+    rule: str,
+    value: str | None,
+) -> None:
+    result = runner.invoke(app, [*argv, "--repo", str(connect_env)])
+
+    assert result.exit_code == 2, result.output
+    [entry] = _lines(state_home)
+    assert set(entry) == _REFUSAL_FIELDS
+    assert entry["kind"] == "refusal"
+    assert entry["command"] == command
+    assert entry["rule"] == rule
+    raw = _log(state_home).read_text(encoding="utf-8")
+    assert str(tmp_path) not in raw
+    assert result.stderr.strip().split(": ", 1)[1] not in raw
+    if value is not None:
+        assert value not in raw
+        assert value not in result.output
+
+
+def test_config_boundary_refusal_logs_exactly_one_line(
+    connect_env: Path, state_home: Path, tmp_path: Path
+) -> None:
+    _symlinked_state(connect_env, tmp_path)
+
+    for argv in (["connect", "status"], ["connect", "list"]):
+        result = runner.invoke(app, [*argv, "--repo", str(connect_env)])
+        assert result.exit_code == 2, result.output
+
+    entries = _lines(state_home)
+    assert [(e["command"], e["rule"]) for e in entries] == [
+        ("mb connect status", "connect.config_boundary"),
+        ("mb connect list", "connect.config_boundary"),
+    ]
+
+
+def test_plain_connect_value_error_logs_nothing(connect_env: Path, state_home: Path) -> None:
+    result = runner.invoke(app, ["connect", "no-such-provider", "--repo", str(connect_env)])
+
+    assert result.exit_code == 2
+    assert not _log(state_home).exists()
+
+
+@pytest.mark.parametrize(("argv", "command", "rule", "value"), CONNECT_REFUSALS)
+def test_connect_refusal_logging_opt_out(
+    connect_env: Path,
+    state_home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    argv: list[str],
+    command: str,
+    rule: str,
+    value: str | None,
+) -> None:
+    monkeypatch.setenv("MB_FEEDBACK_LOG", "0")
+
+    result = runner.invoke(app, [*argv, "--repo", str(connect_env)])
+
+    assert result.exit_code == 2
+    assert not _log(state_home).exists()
+
+
+@pytest.mark.parametrize(("argv", "command", "rule", "value"), CONNECT_REFUSALS)
+def test_unwritable_log_never_changes_the_refusal(
+    connect_env: Path,
+    state_home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    argv: list[str],
+    command: str,
+    rule: str,
+    value: str | None,
+) -> None:
+    monkeypatch.setenv("MB_FEEDBACK_LOG", "0")
+    baseline = runner.invoke(app, [*argv, "--repo", str(connect_env)])
+    monkeypatch.delenv("MB_FEEDBACK_LOG")
+    locked = state_home / "mainbranch"
+    locked.mkdir(parents=True)
+    locked.chmod(0o500)
+    try:
+        result = runner.invoke(app, [*argv, "--repo", str(connect_env)])
+    finally:
+        locked.chmod(0o700)
+
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+    assert result.exit_code == baseline.exit_code == 2
+    assert result.stderr == baseline.stderr
+    assert result.stdout == baseline.stdout
+    assert not _log(state_home).exists()

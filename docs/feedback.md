@@ -86,9 +86,21 @@ anything else is stored as `other`.
 {"command": "mb connect list", "kind": "refusal", "mb_version": "0.5.3", "repo_kind": "hub", "rule": "connect.config_boundary", "schema": 1, "time": "2026-10-03T12:00:00Z"}
 ```
 
+Every `mb connect` refusal that ends the command is logged once, as
+`connect.<rule>`, where `<rule>` is the name the refusal itself carries. The
+log holds the rule name only: never the refusal message, the value, a path or a
+token. Code that calls `mb.connect` as a library and handles a refusal itself
+logs nothing.
+
 | Rule | Fires when |
 | --- | --- |
 | `connect.config_boundary` | `mb connect` refuses `.mb/connect.yaml` because it is a symlink, invalid, or outside the repo. |
+| `connect.token_print` | `mb connect token` refuses to print to a terminal or a pipe. |
+| `connect.metadata_secret_value`, `connect.metadata_format` | `--metadata` holds a secret-shaped value or is not `key=value`. |
+| `connect.source_secret_value` | `--source` holds a secret value instead of a reference. |
+| `connect.key_shape`, `connect.stripe_mode_mismatch` | A credential does not match the provider's key shape or mode. |
+| `connect.exec_no_command`, `connect.exec_env_name` | `mb connect exec` has no command, or `--env` is not a usable variable name. |
+| `connect.rotate_*` | `mb connect rotate` has nothing to rotate, no usable recorded source, or cannot read the source. |
 
 Set `MB_FEEDBACK_LOG=0` to turn refusal logging off. Logging is best effort: if
 the file cannot be written, the refusal still happens exactly as before.

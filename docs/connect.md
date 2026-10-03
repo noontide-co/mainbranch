@@ -255,6 +255,16 @@ refuses, so labels such as `key_name=Main restricted key` or
 `onepassword_item=Stripe restricted` are fine. The refusal names the rule and
 the key, never the value.
 
+## Refusals Are Logged Locally
+
+Each refusal above that ends an `mb connect` command appends one line to the
+local feedback log (see [feedback.md](feedback.md)): the rule name as
+`connect.<rule>`, the command path, the repo kind, the time and the mb
+version. It never holds the refusal message, the value, a path or a token, and
+nothing is sent anywhere. `mb feedback rollup` counts them by rule. Set
+`MB_FEEDBACK_LOG=0` to turn this off; a log that cannot be written never
+changes the refusal or its exit code.
+
 ## Custom Providers
 
 Use `--custom` when the provider is not in the built-in registry yet. Custom

@@ -48,9 +48,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   about (`--command`), the repo kind (hub, child, engine or none) and the text.
   Secret-shaped values and absolute paths are scrubbed before writing. Nothing
   is sent anywhere. (#986)
-- When `mb connect` refuses its local metadata at the repo boundary, it logs a
-  `refusal` line with the rule and the command, never the refused value.
-  `MB_FEEDBACK_LOG=0` turns this off. (#986)
+- Every `mb connect` refusal that ends the command (the repo boundary, a token
+  print to a terminal or pipe, a secret-shaped metadata or source value, a key
+  shape, exec and rotate refusals) logs one local `refusal` line with the rule
+  name as `connect.<rule>` and the command path, never the message, the value,
+  a path or a token. `MB_FEEDBACK_LOG=0` turns this off. (#986)
 - `mb feedback rollup [--since 7d] [--json]` groups the log by command and rule
   with counts, oldest and newest, as a Markdown draft for a maintainer.
   `mb feedback list` and `mb feedback clear --before <date>` read and prune it.
