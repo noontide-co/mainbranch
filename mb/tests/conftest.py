@@ -17,6 +17,18 @@ def tmp_repo(tmp_path: Path) -> Path:
 
 
 @pytest.fixture(autouse=True)
+def isolated_state_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep every test's ``mb feedback`` writes out of the real user state dir.
+
+    Connect boundary refusals log themselves, so any test that reaches one
+    would otherwise append to the operator's own feedback file.
+    """
+
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
+    monkeypatch.delenv("MB_FEEDBACK_LOG", raising=False)
+
+
+@pytest.fixture(autouse=True)
 def stable_runtime_mb_probe(monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep Codex runtime readiness tests independent of the host PATH."""
 

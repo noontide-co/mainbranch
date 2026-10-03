@@ -516,3 +516,13 @@ def test_clear_disk_full_is_a_structured_scrubbed_error(
     assert "No space left on device" in payload["errors"][0]["message"]
     assert str(target) not in result.stdout
     assert [entry["text"] for entry in _lines(state_home)] == ["keep me"]
+
+
+def test_suite_never_writes_the_real_feedback_file(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> None:
+    # No state_home fixture here: conftest must already isolate every test,
+    # including connect tests that reach the refusal hook.
+    assert feedback_mod.feedback_path().is_relative_to(tmp_path_factory.getbasetemp())
+    assert feedback_mod.record_refusal("test.isolation", "mb connect")
+    assert feedback_mod.feedback_path().is_file()
