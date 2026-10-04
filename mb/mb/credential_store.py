@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import platform
+import signal
 import subprocess
 import sys
 import time
@@ -29,6 +30,9 @@ INTERACTIVE_CREDENTIAL_TIMEOUT_SECONDS = 60
 KEYCHAIN_REPAIR_COMMAND = "mb connect repair --keychain"
 HELPER_STATES = {"ready", "missing", "locked", "auth-failed", "prompt-pending", "unavailable"}
 HELPER_OUTPUT_LIMIT = 1024 * 1024
+# The helper's own deadline ends this long before the parent stops waiting, so
+# it can finish or undo a step and stop its `security` children first.
+HELPER_EXIT_HEADROOM_SECONDS = 1.0
 SUPPORTED_BACKENDS = {"auto", "macos-keychain", "secret-service", "keyring", "local-file"}
 
 KEYCHAIN_RESET_WARNING = (
@@ -159,6 +163,9 @@ class SecretProbe(NamedTuple):
     reason: str
     # True when this read moved a legacy macOS item to /usr/bin/security.
     migrated: bool = False
+    # macOS only: "security" when /usr/bin/security owns the item (Python
+    # changes cannot prompt), "legacy" when a Python interpreter does.
+    owner: str = ""
 
 
 def select_secret_backend(requested: str | None = None) -> str:
@@ -256,7 +263,15 @@ class SecretStore:
         value = result.get("value")
         if not isinstance(value, str):
             return SecretProbe("", False, False, _reason_for(self.backend, "unavailable"))
-        return SecretProbe(value, True, True, "", result.get("migrated") is True)
+        owner = result.get("owner")
+        return SecretProbe(
+            value,
+            True,
+            True,
+            "",
+            result.get("migrated") is True,
+            owner if owner in {"security", "legacy"} else "",
+        )
 
     def health(self, *, deadline: float | None = None) -> dict[str, Any]:
         reason = ""
@@ -350,24 +365,20 @@ def _run_helper(
         if remaining <= 0:
             return {"state": "timed-out"}
         timeout = min(timeout, remaining)
-    # The helper stops its own `security` calls before this process kills it,
-    # so a pending dialog is reported as such rather than as a bare timeout.
-    payload["budget_seconds"] = max(0.5, timeout - 1.5)
+    # An absolute wall-clock deadline: the helper refuses to start a move it
+    # cannot finish, and stops its own `security` calls, before this process
+    # gives up on it. A pending dialog is then reported as such.
+    payload["deadline_epoch"] = time.time() + timeout - HELPER_EXIT_HEADROOM_SECONDS
     try:
-        completed = subprocess.run(
+        returncode, stdout = _invoke_helper(
             [sys.executable, "-m", "mb._credential_helper", backend, action],
-            check=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            input=json.dumps(payload),
-            timeout=timeout,
+            json.dumps(payload),
+            timeout,
         )
     except subprocess.TimeoutExpired:
         return {"state": "timed-out"}
     except (OSError, subprocess.SubprocessError):
         return {"state": "unavailable"}
-    stdout = completed.stdout or ""
     if len(stdout) > HELPER_OUTPUT_LIMIT:
         return {"state": "unavailable"}
     try:
@@ -379,9 +390,43 @@ def _run_helper(
     state = result.get("state")
     if state not in HELPER_STATES:
         return {"state": "unavailable"}
-    if completed.returncode != (0 if state in {"ready", "missing"} else 1):
+    if returncode != (0 if state in {"ready", "missing"} else 1):
         return {"state": "unavailable"}
     return result
+
+
+def _invoke_helper(args: list[str], stdin: str, timeout: float) -> tuple[int, str]:
+    """Run the helper in its own process group; on timeout kill the whole group.
+
+    Killing only the helper could leave a `security` child it started running
+    (and, in the worst case, holding a dialog). The group takes them all.
+    """
+
+    process = subprocess.Popen(
+        args,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        start_new_session=True,
+    )
+    try:
+        stdout, _ = process.communicate(stdin, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        _kill_group(process)
+        raise
+    return int(process.returncode or 0), stdout or ""
+
+
+def _kill_group(process: Any) -> None:
+    pid = getattr(process, "pid", None)
+    if isinstance(pid, int) and pid > 1:
+        with suppress(OSError):
+            os.killpg(pid, signal.SIGKILL)
+    with suppress(Exception):
+        process.kill()
+    with suppress(Exception):
+        process.communicate(timeout=2)
 
 
 def _local_secret_path() -> Path:

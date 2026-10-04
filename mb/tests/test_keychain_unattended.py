@@ -33,6 +33,46 @@ from mb import fleet as fleet_mod
 MB_PACKAGE = Path(connect_mod.__file__).resolve().parent
 
 
+def _popen_running(run: Any) -> Any:
+    """A ``subprocess.Popen`` stand-in that answers through a ``run``-style fake."""
+
+    class FakePopen:
+        def __init__(self, args: list[str], **kwargs: Any) -> None:
+            self.args = args
+            self.kwargs = kwargs
+            self.pid = None
+            self.returncode: int | None = None
+
+        def communicate(self, input: str | None = None, timeout: float | None = None) -> Any:
+            result = run(
+                self.args,
+                input=input,
+                timeout=timeout,
+                stdout=self.kwargs.get("stdout"),
+                stderr=self.kwargs.get("stderr"),
+                text=True,
+                start_new_session=self.kwargs.get("start_new_session"),
+            )
+            self.returncode = result.returncode
+            return result.stdout, None
+
+        def kill(self) -> None:
+            pass
+
+    return FakePopen
+
+
+def _fake_subprocess(run: Any) -> SimpleNamespace:
+    return SimpleNamespace(
+        run=run,
+        Popen=_popen_running(run),
+        PIPE=subprocess.PIPE,
+        DEVNULL=subprocess.DEVNULL,
+        TimeoutExpired=subprocess.TimeoutExpired,
+        SubprocessError=subprocess.SubprocessError,
+    )
+
+
 def _keychain_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A repo whose Cloudflare and Resend refs are recorded in the macOS Keychain."""
 
@@ -77,19 +117,15 @@ class _RecordingHelper:
                 if self.always_allow:
                     self.trusted.add(payload["ref"])
             if state == "ready":
-                return SimpleNamespace(returncode=0, stdout='{"state":"ready","value":"fixture"}')
+                return SimpleNamespace(
+                    returncode=0,
+                    stdout='{"state":"ready","value":"fixture","owner":"security"}',
+                )
             return SimpleNamespace(returncode=1, stdout=json.dumps({"state": state}))
         return SimpleNamespace(returncode=0, stdout='{"state":"ready"}')
 
     def install(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        fake = SimpleNamespace(
-            run=self.run,
-            PIPE=subprocess.PIPE,
-            DEVNULL=subprocess.DEVNULL,
-            TimeoutExpired=subprocess.TimeoutExpired,
-            SubprocessError=subprocess.SubprocessError,
-        )
-        monkeypatch.setattr(store_mod, "subprocess", fake)
+        monkeypatch.setattr(store_mod, "subprocess", _fake_subprocess(self.run))
 
 
 def test_every_unattended_caller_reads_with_interaction_off(
@@ -705,6 +741,9 @@ def _foreign_python(tmp_path: Path) -> list[str]:
         capture_output=True,
         timeout=60,
     )
+    subprocess.run(
+        [str(copy), "-c", "pass"], env=_helper_env(), check=True, capture_output=True, timeout=60
+    )
     return [str(copy)]
 
 
@@ -743,7 +782,7 @@ def test_macos_item_from_this_python_still_reads(throwaway_keychain: Path) -> No
     store.set("mbtest-ref-own", "dummy-not-a-secret")
 
     assert store.probe("mbtest-ref-own") == store_mod.SecretProbe(
-        "dummy-not-a-secret", True, True, ""
+        "dummy-not-a-secret", True, True, "", False, "security"
     )
     store.delete("mbtest-ref-own")
     assert store.probe("mbtest-ref-own").present is False
@@ -782,7 +821,7 @@ def _note(log: list[Any], entry: Any, result: Any) -> Any:
 def _tool_adapter(monkeypatch: pytest.MonkeyPatch, runs: list[dict[str, Any]]) -> Any:
     adapter: Any = object.__new__(helper_mod._MacSecurity)
     adapter.keychain_path = None
-    adapter.deadline = time.monotonic() + 30
+    adapter.deadline = time.time() + 30
     adapter.migrated = False
 
     def fake_run(args: list[str], **kwargs: Any) -> SimpleNamespace:
@@ -847,7 +886,7 @@ def test_security_write_of_a_long_value_never_puts_it_on_the_security_line(
 def test_security_tool_deadline_reports_prompt_pending(monkeypatch: pytest.MonkeyPatch) -> None:
     adapter: Any = object.__new__(helper_mod._MacSecurity)
     adapter.keychain_path = None
-    adapter.deadline = time.monotonic() + 30
+    adapter.deadline = time.time() + 30
 
     def hang(args: list[str], **kwargs: Any) -> SimpleNamespace:
         raise subprocess.TimeoutExpired(args, kwargs["timeout"])
@@ -858,106 +897,339 @@ def test_security_tool_deadline_reports_prompt_pending(monkeypatch: pytest.Monke
         adapter._security_get("fixture-ref")
 
 
-def _fake_store_adapter(owner: str) -> tuple[Any, list[str]]:
-    calls: list[str] = []
-    adapter: Any = object.__new__(helper_mod._MacSecurity)
-    adapter.migrated = False
-    adapter.health = lambda: "ready"
-    adapter._item_owner = lambda ref: _note(calls, "owner", owner)
+class _Crash(BaseException):
+    """Stands in for the helper process dying (SIGKILL, power loss)."""
 
-    def tool(args: list[str], *, stdin: str | None = None) -> Any:
-        raise AssertionError("security must not run against this item")
 
-    adapter._security_tool = tool
-    return adapter, calls
+class _FakeKeychain:
+    """An in-memory keychain with the rules that matter for a move.
+
+    ``security`` may touch only items it owns; a legacy item can be read or
+    deleted only by a trusted Python. ``log`` records every step in order.
+    """
+
+    def __init__(self) -> None:
+        self.items: dict[str, tuple[str, str]] = {}
+        self.trusted = True
+        self.log: list[str] = []
+        self.fail: dict[str, BaseException] = {}
+        self.fail_security_call: int | None = None
+        self.security_calls = 0
+        self.crash_at = ""
+        self.fill_fails = False
+
+    def _hook(self, step: str) -> None:
+        self.log.append(step)
+        if step in self.fail:
+            raise self.fail.pop(step)
+
+    def _security(self) -> None:
+        self.security_calls += 1
+        if self.fail_security_call == self.security_calls:
+            raise OSError("could not start security")
+
+    def adapter(self, *, seconds: float = 30.0) -> Any:
+        adapter: Any = object.__new__(helper_mod._MacSecurity)
+        adapter.migrated = False
+        adapter.owner = ""
+        adapter.keychain_path = None
+        adapter.deadline = time.time() + seconds
+        adapter.health = lambda: "ready"
+        adapter._item_owner = lambda ref: self.items.get(ref, ("absent", ""))[0]
+        adapter._security_get = self.security_get
+        adapter._security_put = self.security_put
+        adapter._security_delete = self.security_delete
+        adapter._ctypes_get = self.ctypes_get
+        adapter._ctypes_delete = self.ctypes_delete
+        adapter._ctypes_add = self.ctypes_add
+        adapter._update = self.update
+        adapter._crash_point = self.crash_point
+        return adapter
+
+    def crash_point(self, step: str) -> None:
+        self.log.append(f"point:{step}")
+        if step == self.crash_at:
+            raise _Crash(step)
+
+    def security_get(self, ref: str) -> tuple[str, str | None]:
+        self._security()
+        owner, value = self.items.get(ref, ("absent", ""))
+        assert owner != "legacy", "security must never read a legacy item"
+        self._hook(f"security_get:{ref}")
+        return ("ready", value) if owner == "security" else ("missing", None)
+
+    def security_put(self, ref: str, value: str, *, exists: bool) -> str:
+        self._security()
+        owner = self.items.get(ref, ("absent", ""))[0]
+        assert owner != "legacy", "security must never write over a legacy item"
+        self._hook(f"security_put:{ref}")
+        if not exists and owner != "absent":
+            return "unavailable"
+        long = len(value.encode().hex()) > helper_mod.SECURITY_HEX_LIMIT
+        if long and not exists:
+            self.items[ref] = ("security", "")
+            self.crash_point("after-placeholder")
+            if self.fill_fails:
+                del self.items[ref]
+                return "unavailable"
+        self.items[ref] = ("security", value)
+        return "ready"
+
+    def security_delete(self, ref: str) -> str:
+        self._security()
+        owner = self.items.get(ref, ("absent", ""))[0]
+        assert owner != "legacy", "security must never delete a legacy item"
+        self._hook(f"security_delete:{ref}")
+        if owner == "absent":
+            return "missing"
+        del self.items[ref]
+        return "ready"
+
+    def ctypes_get(self, ref: str, *, health: str) -> tuple[str, str | None]:
+        self._hook(f"ctypes_get:{ref}")
+        owner, value = self.items.get(ref, ("absent", ""))
+        if owner == "absent":
+            return "missing", None
+        return ("ready", value) if self.trusted else ("prompt-pending", None)
+
+    def ctypes_delete(self, ref: str) -> int:
+        self._hook(f"ctypes_delete:{ref}")
+        if ref not in self.items:
+            return helper_mod.ERR_SEC_ITEM_NOT_FOUND
+        if not self.trusted:
+            return helper_mod.ERR_SEC_AUTH_FAILED
+        del self.items[ref]
+        return 0
+
+    def ctypes_add(self, ref: str, value: str) -> int:
+        self._hook(f"ctypes_add:{ref}")
+        if ref in self.items:
+            return helper_mod.ERR_SEC_DUPLICATE_ITEM
+        self.items[ref] = ("legacy", value)
+        return 0
+
+    def update(self, ref: str, value: str) -> int:
+        self._hook(f"update:{ref}")
+        if ref not in self.items:
+            return helper_mod.ERR_SEC_ITEM_NOT_FOUND
+        self.items[ref] = (self.items[ref][0], value)
+        return 0
+
+    def holds(self, value: str) -> bool:
+        return any(stored == value for _, stored in self.items.values())
+
+
+REF = "mainbranch://abc/cloudflare/api_token"
+STAGE = REF + helper_mod.STAGE_SUFFIX
+SHORT = "dummy-not-a-secret"
+LONG = "d" * 4096
+
+
+def _legacy_keychain(value: str = SHORT) -> _FakeKeychain:
+    keychain = _FakeKeychain()
+    keychain.items[REF] = ("legacy", value)
+    return keychain
 
 
 def test_legacy_item_is_never_read_through_security() -> None:
-    adapter, _ = _fake_store_adapter("legacy")
-    adapter._ctypes_get = lambda ref, health: ("prompt-pending", None)
+    keychain = _legacy_keychain()
+    keychain.trusted = False
 
-    assert adapter.get("fixture-ref") == ("prompt-pending", None)
+    assert keychain.adapter().get(REF) == ("prompt-pending", None)
+    assert keychain.items == {REF: ("legacy", SHORT)}
 
 
 def test_security_owned_item_is_read_through_security_only() -> None:
-    adapter, _ = _fake_store_adapter("security")
-    adapter._ctypes_get = lambda ref, health: pytest.fail("legacy read on a security item")
-    adapter._security_get = lambda ref: ("ready", "fixture")
+    keychain = _FakeKeychain()
+    keychain.items[REF] = ("security", SHORT)
+    adapter = keychain.adapter()
 
-    assert adapter.get("fixture-ref") == ("ready", "fixture")
+    assert adapter.get(REF) == ("ready", SHORT)
+    assert adapter.owner == "security"
+    assert not any(step.startswith("ctypes_") for step in keychain.log)
 
 
-def test_trusted_legacy_read_migrates_and_verifies() -> None:
-    adapter, _ = _fake_store_adapter("legacy")
-    steps: list[str] = []
-    adapter._ctypes_get = lambda ref, health: ("ready", "fixture")
-    adapter._ctypes_delete = lambda ref: _note(steps, "delete", 0)
-    adapter._security_put = lambda ref, value, exists: _note(steps, f"put:{exists}", "ready")
-    adapter._verified = lambda ref, value: _note(steps, "verify", True)
-    adapter._ctypes_add = lambda ref, value: pytest.fail("restore after a good migration")
+@pytest.mark.parametrize("value", [SHORT, LONG])
+def test_move_stages_a_verified_copy_before_deleting_the_legacy_item(value: str) -> None:
+    keychain = _legacy_keychain(value)
+    adapter = keychain.adapter()
 
-    assert adapter.get("fixture-ref") == ("ready", "fixture")
+    assert adapter.get(REF) == ("ready", value)
     assert adapter.migrated is True
-    assert steps == ["delete", "put:False", "verify"]
+    assert adapter.owner == "security"
+    assert keychain.items == {REF: ("security", value)}
+    log = keychain.log
+    assert log.index(f"security_put:{STAGE}") < log.index(f"security_get:{STAGE}")
+    assert log.index(f"security_get:{STAGE}") < log.index(f"ctypes_delete:{REF}")
+    assert log.index(f"ctypes_delete:{REF}") < log.index(f"security_put:{REF}")
+    assert log.index(f"security_get:{REF}") < log.index(f"security_delete:{STAGE}")
 
 
-@pytest.mark.parametrize("failure", ["put", "verify", "deadline"])
-def test_failed_migration_restores_the_legacy_item(failure: str) -> None:
-    adapter, _ = _fake_store_adapter("legacy")
-    steps: list[str] = []
-    restored: list[tuple[str, str]] = []
-    adapter._ctypes_get = lambda ref, health: ("ready", "fixture")
-    adapter._ctypes_delete = lambda ref: _note(steps, "delete", 0)
+@pytest.mark.parametrize(
+    ("value", "crash_at"),
+    [
+        (SHORT, "after-stage"),
+        (SHORT, "after-legacy-delete"),
+        (SHORT, "after-final"),
+        (LONG, "after-placeholder"),
+        (LONG, "after-legacy-delete"),
+    ],
+)
+def test_a_crash_at_any_step_keeps_the_value_and_the_next_read_finishes(
+    value: str, crash_at: str
+) -> None:
+    keychain = _legacy_keychain(value)
+    keychain.crash_at = crash_at
+    with pytest.raises(_Crash):
+        keychain.adapter().get(REF)
+    assert keychain.holds(value)
 
-    def put(ref: str, value: str, exists: bool) -> str:
-        steps.append("put")
-        if failure == "deadline":
-            raise helper_mod._PromptPending
-        return "unavailable" if failure == "put" else "ready"
+    keychain.crash_at = ""
+    nxt = keychain.adapter()
+    assert nxt.get(REF) == ("ready", value)
+    assert keychain.items == {REF: ("security", value)}
 
-    adapter._security_put = put
-    adapter._verified = lambda ref, value: False
-    owners = iter(["legacy", "security" if failure == "verify" else "absent"])
-    adapter._item_owner = lambda ref: next(owners)
-    adapter._security_delete = lambda ref: _note(steps, "security-delete", "ready")
-    adapter._ctypes_add = lambda ref, value: _note(restored, (ref, value), 0)
 
-    assert adapter.get("fixture-ref") == ("ready", "fixture")
+def test_a_crash_while_filling_the_final_long_item_recovers_from_the_staged_copy() -> None:
+    keychain = _legacy_keychain(LONG)
+    seen = 0
+
+    def crash_on_second_placeholder(step: str) -> None:
+        nonlocal seen
+        keychain.log.append(f"point:{step}")
+        if step == "after-placeholder":
+            seen += 1
+            if seen == 2:  # the first placeholder is the staged copy's
+                raise _Crash(step)
+
+    keychain.crash_point = crash_on_second_placeholder  # type: ignore[method-assign]
+    with pytest.raises(_Crash):
+        keychain.adapter().get(REF)
+    del keychain.crash_point
+    assert keychain.items[REF] == ("security", "")
+    assert keychain.items[STAGE] == ("security", LONG)
+
+    assert keychain.adapter().get(REF) == ("ready", LONG)
+    assert keychain.items == {REF: ("security", LONG)}
+
+
+@pytest.mark.parametrize("call", range(1, 9))
+def test_a_security_launch_failure_at_any_call_never_loses_the_value(call: int) -> None:
+    keychain = _legacy_keychain()
+    keychain.fail_security_call = call
+
+    state, value = keychain.adapter().get(REF)
+
+    assert (state, value) == ("ready", SHORT)
+    assert keychain.holds(SHORT)
+    assert REF in keychain.items
+    keychain.fail_security_call = None
+    assert keychain.adapter().get(REF) == ("ready", SHORT)
+    assert keychain.items == {REF: ("security", SHORT)}
+
+
+def test_a_failed_final_write_restores_the_legacy_item_and_keeps_the_staged_copy() -> None:
+    keychain = _legacy_keychain()
+    keychain.fail[f"security_put:{REF}"] = OSError("security failed")
+
+    adapter = keychain.adapter()
+    assert adapter.get(REF) == ("ready", SHORT)
     assert adapter.migrated is False
-    assert restored == [("fixture-ref", "fixture")]
-    if failure == "verify":
-        assert "security-delete" in steps
+    assert keychain.items[REF] == ("legacy", SHORT)
+    assert keychain.items[STAGE] == ("security", SHORT)
+
+    assert keychain.adapter().get(REF) == ("ready", SHORT)
+    assert keychain.items == {REF: ("security", SHORT)}
 
 
-def test_migration_never_starts_when_the_legacy_item_cannot_be_removed() -> None:
-    adapter, _ = _fake_store_adapter("legacy")
-    adapter._ctypes_get = lambda ref, health: ("ready", "fixture")
-    adapter._ctypes_delete = lambda ref: helper_mod.ERR_SEC_AUTH_FAILED
-    adapter._security_put = lambda ref, value, exists: pytest.fail("put without delete")
+def test_a_refused_legacy_delete_leaves_the_item_and_drops_the_staged_copy() -> None:
+    keychain = _legacy_keychain()
+    keychain.fail[f"ctypes_delete:{REF}"] = OSError("refused")
 
-    assert adapter.get("fixture-ref") == ("ready", "fixture")
+    with pytest.raises(OSError):
+        keychain.adapter().get(REF)
+    assert keychain.items[REF] == ("legacy", SHORT)
+    assert keychain.adapter().get(REF) == ("ready", SHORT)
+    assert keychain.items == {REF: ("security", SHORT)}
+
+
+def test_no_move_without_time_for_all_of_it() -> None:
+    keychain = _legacy_keychain()
+    adapter = keychain.adapter(seconds=helper_mod.MIN_MOVE_SECONDS - 0.5)
+
+    assert adapter.get(REF) == ("ready", SHORT)
     assert adapter.migrated is False
+    assert adapter.owner == "legacy"
+    assert keychain.items == {REF: ("legacy", SHORT)}
+    assert not any(step.startswith(("ctypes_delete", "security_")) for step in keychain.log)
 
 
-def test_replacing_a_legacy_item_updates_in_place_before_migrating() -> None:
-    adapter, _ = _fake_store_adapter("legacy")
-    steps: list[str] = []
-    adapter._update = lambda ref, value: _note(steps, f"update:{value}", 0)
-    adapter._migrate = lambda ref, value: _note(steps, f"migrate:{value}", True)
-    adapter._ctypes_delete = lambda ref: pytest.fail("delete before the new value is stored")
+def test_replacing_a_legacy_item_updates_in_place_before_moving() -> None:
+    keychain = _legacy_keychain()
 
-    assert adapter.set("fixture-ref", "replacement") == "ready"
-    assert steps == ["update:replacement", "migrate:replacement"]
+    assert keychain.adapter().set(REF, "replacement") == "ready"
+
+    assert keychain.log.index(f"update:{REF}") < keychain.log.index(f"ctypes_delete:{REF}")
+    assert keychain.items == {REF: ("security", "replacement")}
 
 
-def test_new_items_are_written_through_security() -> None:
-    adapter, _ = _fake_store_adapter("absent")
-    puts: list[bool] = []
-    adapter._security_put = lambda ref, value, exists: _note(puts, exists, "ready")
-    adapter._ctypes_add = lambda ref, value: pytest.fail("legacy add for a new item")
+def test_replacing_an_untrusted_legacy_item_keeps_it_legacy() -> None:
+    keychain = _legacy_keychain()
+    keychain.trusted = False
 
-    assert adapter.set("fixture-ref", "fixture") == "ready"
-    assert puts == [False]
+    assert keychain.adapter().set(REF, "replacement") == "ready"
+    assert keychain.items == {REF: ("legacy", "replacement")}
+
+
+@pytest.mark.parametrize("value", [SHORT, LONG])
+def test_new_items_are_written_through_security(value: str) -> None:
+    keychain = _FakeKeychain()
+
+    assert keychain.adapter().set(REF, value) == "ready"
+    assert keychain.items == {REF: ("security", value)}
+
+
+def test_a_crash_in_a_new_long_write_leaves_no_empty_credential() -> None:
+    keychain = _FakeKeychain()
+    keychain.crash_at = "after-placeholder"
+    with pytest.raises(_Crash):
+        keychain.adapter().set(REF, LONG)
+    assert keychain.items == {STAGE: ("security", "")}
+
+    keychain.crash_at = ""
+    assert keychain.adapter().get(REF) == ("missing", None)
+    assert keychain.items == {}
+
+
+def test_a_failed_new_write_falls_back_without_an_empty_item() -> None:
+    keychain = _FakeKeychain()
+    keychain.fill_fails = True
+
+    assert keychain.adapter().set(REF, LONG) == "ready"
+    assert keychain.items == {REF: ("legacy", LONG)}
+
+
+def test_a_failed_long_fill_removes_the_empty_placeholder(monkeypatch: pytest.MonkeyPatch) -> None:
+    adapter: Any = object.__new__(helper_mod._MacSecurity)
+    adapter.keychain_path = None
+    adapter.deadline = time.time() + 30
+    deleted: list[str] = []
+    adapter._security_tool = lambda args, stdin=None: SimpleNamespace(returncode=0, stderr="")
+    adapter._update = lambda ref, value: helper_mod.ERR_SEC_AUTH_FAILED
+    adapter._security_delete = lambda ref: _note(deleted, ref, "ready")
+    adapter._crash_point = lambda step: None
+
+    assert adapter._security_put(REF, LONG, exists=False) != "ready"
+    assert deleted == [REF]
+
+
+def test_delete_removes_a_staged_copy_too() -> None:
+    keychain = _FakeKeychain()
+    keychain.items[REF] = ("security", SHORT)
+    keychain.items[STAGE] = ("security", SHORT)
+
+    assert keychain.adapter().delete(REF) == "ready"
+    assert keychain.items == {}
 
 
 def test_helper_rejects_refs_that_could_break_security_quoting(
@@ -972,7 +1244,7 @@ def test_helper_rejects_refs_that_could_break_security_quoting(
 
     monkeypatch.setattr(platform, "system", lambda: "Darwin")
     monkeypatch.setattr(helper_mod, "_MacSecurity", Adapter)
-    for ref in ['a" -X "00', "a\nb", "a b", "-flag"]:
+    for ref in ['a" -X "00', "a\nb", "a b", "-flag", "mainbranch://abc/x/y.mbstage"]:
         assert helper_mod._macos("get", {"ref": ref})[0] == "unavailable"
 
 
@@ -981,24 +1253,96 @@ def test_probe_reports_migration_without_the_value(monkeypatch: pytest.MonkeyPat
     monkeypatch.setattr(
         store_mod,
         "_run_helper",
-        lambda backend, action, **kwargs: {"state": "ready", "value": "fixture", "migrated": True},
+        lambda backend, action, **kwargs: {
+            "state": "ready",
+            "value": "fixture",
+            "migrated": True,
+            "owner": "security",
+        },
     )
 
     probe = store_mod.SecretStore("macos-keychain").probe("fixture-ref")
 
-    assert probe == store_mod.SecretProbe("fixture", True, True, "", True)
+    assert probe == store_mod.SecretProbe("fixture", True, True, "", True, "security")
 
 
-def test_helper_budget_ends_before_the_parent_deadline(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_helper_deadline_ends_before_the_parent_stops_waiting(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     helper = _RecordingHelper()
     helper.install(monkeypatch)
     monkeypatch.setattr(store_mod.platform, "system", lambda: "Darwin")  # type: ignore[attr-defined]
 
+    started = time.time()
     store_mod.SecretStore("macos-keychain").probe("fixture-ref")
     store_mod.SecretStore("macos-keychain").probe("fixture-ref", interactive=True)
 
     for call in helper.calls:
-        assert 0 < call["payload"]["budget_seconds"] < call["timeout"]
+        epoch = call["payload"]["deadline_epoch"]
+        assert "budget_seconds" not in call["payload"]
+        assert epoch <= started + call["timeout"] - store_mod.HELPER_EXIT_HEADROOM_SECONDS + 0.5
+
+
+def test_a_nearly_spent_shared_deadline_never_starts_a_move(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """status_all shares one deadline; with 0.1 s left the helper may only read."""
+
+    repo = _keychain_repo(tmp_path, monkeypatch)
+    keychain = _legacy_keychain()
+    timeouts: list[float] = []
+
+    def run(args: list[str], **kwargs: Any) -> SimpleNamespace:
+        payload = json.loads(kwargs["input"])
+        timeouts.append(kwargs["timeout"])
+        adapter = keychain.adapter()
+        adapter.deadline = payload["deadline_epoch"]
+        state, value = adapter.get(REF)
+        body = {"state": state, "value": value} if value is not None else {"state": state}
+        return SimpleNamespace(returncode=0 if state == "ready" else 1, stdout=json.dumps(body))
+
+    monkeypatch.setattr(store_mod, "subprocess", _fake_subprocess(run))
+    real_monotonic = time.monotonic
+    start = real_monotonic()
+    monkeypatch.setattr(
+        store_mod,
+        "new_credential_deadline",
+        lambda: start + 0.1,
+    )
+    monkeypatch.setattr(connect_mod, "new_credential_deadline", lambda: start + 0.1)
+
+    connect_mod.status_all(repo)
+
+    assert timeouts and max(timeouts) <= 0.1
+    assert keychain.items == {REF: ("legacy", SHORT)}
+    assert not any(step.startswith(("ctypes_delete", "security_put")) for step in keychain.log)
+
+
+def test_a_timed_out_helper_takes_its_children_with_it(tmp_path: Path) -> None:
+    """The parent kills the helper's whole process group, grandchildren included."""
+
+    pid_file = tmp_path / "child.pid"
+    script = (
+        "import subprocess, sys, time\n"
+        "child = subprocess.Popen(['sleep', '60'])\n"
+        f"open({str(pid_file)!r}, 'w').write(str(child.pid))\n"
+        "time.sleep(60)\n"
+    )
+
+    with pytest.raises(subprocess.TimeoutExpired):
+        store_mod._invoke_helper([sys.executable, "-c", script], "", 1.5)
+
+    child = int(pid_file.read_text(encoding="utf-8"))
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        try:
+            os.kill(child, 0)
+        except ProcessLookupError:
+            break
+        time.sleep(0.05)
+    else:
+        os.kill(child, 9)
+        pytest.fail("the helper's child outlived it")
 
 
 def _python_as(tmp_path: Path, identifier: str) -> list[str]:
@@ -1011,6 +1355,11 @@ def _python_as(tmp_path: Path, identifier: str) -> list[str]:
         check=True,
         capture_output=True,
         timeout=60,
+    )
+    # The first launch of a newly signed binary pays for macOS signature
+    # checks; warm it so timings measure the keychain, not the launch.
+    subprocess.run(
+        [str(copy), "-c", "pass"], env=_helper_env(), check=True, capture_output=True, timeout=60
     )
     return [str(copy)]
 
@@ -1122,25 +1471,18 @@ def test_keychain_repair_reports_each_migration_without_values(
         calls.append(payload["interactive"])
         if payload["ref"] in moved:
             # Owned by /usr/bin/security now: any Python reads it unattended.
-            return SimpleNamespace(returncode=0, stdout='{"state":"ready","value":"fixture"}')
+            return SimpleNamespace(
+                returncode=0, stdout='{"state":"ready","value":"fixture","owner":"security"}'
+            )
         if not payload["interactive"]:
             return SimpleNamespace(returncode=1, stdout='{"state":"prompt-pending"}')
         moved.add(payload["ref"])
         return SimpleNamespace(
-            returncode=0, stdout='{"state":"ready","value":"fixture","migrated":true}'
+            returncode=0,
+            stdout='{"state":"ready","value":"fixture","migrated":true,"owner":"security"}',
         )
 
-    monkeypatch.setattr(
-        store_mod,
-        "subprocess",
-        SimpleNamespace(
-            run=run,
-            PIPE=subprocess.PIPE,
-            DEVNULL=subprocess.DEVNULL,
-            TimeoutExpired=subprocess.TimeoutExpired,
-            SubprocessError=subprocess.SubprocessError,
-        ),
-    )
+    monkeypatch.setattr(store_mod, "subprocess", _fake_subprocess(run))
 
     result = connect_mod.repair_keychain(repo, interactive=True)
 
@@ -1151,3 +1493,102 @@ def test_keychain_repair_reports_each_migration_without_values(
     # Each item: unattended probe, answered read, fresh unattended verify.
     assert calls == [False, True, False] * 2
     assert "fixture" not in json.dumps(result)
+
+
+def test_keychain_repair_does_not_call_a_legacy_read_a_repair(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Readable now is not immune to the next Python change until security owns it."""
+
+    repo = _keychain_repo(tmp_path, monkeypatch)
+    answered: set[str] = set()
+
+    def run(args: list[str], **kwargs: Any) -> SimpleNamespace:
+        payload = json.loads(kwargs["input"])
+        if payload["interactive"]:
+            answered.add(payload["ref"])
+        if payload["ref"] in answered or "cloudflare" in payload["ref"]:
+            # Readable, but the move did not finish: a Python still owns it.
+            return SimpleNamespace(
+                returncode=0, stdout='{"state":"ready","value":"fixture","owner":"legacy"}'
+            )
+        return SimpleNamespace(returncode=1, stdout='{"state":"prompt-pending"}')
+
+    monkeypatch.setattr(store_mod, "subprocess", _fake_subprocess(run))
+
+    result = connect_mod.repair_keychain(repo, interactive=True)
+
+    assert [(item["provider"], item["state"]) for item in result["items"]] == [
+        ("cloudflare", "readable_not_migrated"),
+        ("resend", "readable_not_migrated"),
+    ]
+    assert result["ok"] is False
+    assert result["repair_command"] == "mb connect repair --keychain"
+    assert all("again" in item["summary"] for item in result["items"])
+
+
+def test_crash_hook_is_inert_without_the_test_keychain(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(helper_mod.TEST_CRASH_ENV, "after-stage")
+    adapter: Any = object.__new__(helper_mod._MacSecurity)
+    adapter.keychain_path = None
+
+    adapter._crash_point("after-stage")  # returns; never exits outside tests
+
+
+@integration
+@pytest.mark.parametrize(
+    ("value", "crash_at"),
+    [
+        ("dummy-not-a-secret", "after-stage"),
+        ("dummy-not-a-secret", "after-legacy-delete"),
+        ("dummy-not-a-secret", "after-final"),
+        ("d" * 4096, "after-placeholder"),
+        ("d" * 4096, "after-legacy-delete"),
+    ],
+)
+def test_macos_a_killed_move_is_recovered_on_the_next_read(
+    throwaway_keychain: Path, monkeypatch: pytest.MonkeyPatch, value: str, crash_at: str
+) -> None:
+    _require_seam(throwaway_keychain)
+    ref = "mbtest-ref-crash"
+    _legacy_add([sys.executable], ref, value)
+
+    monkeypatch.setenv(helper_mod.TEST_CRASH_ENV, crash_at)
+    crashed = subprocess.run(
+        [sys.executable, "-m", "mb._credential_helper", "macos-keychain", "get"],
+        input=json.dumps({"ref": ref}),
+        capture_output=True,
+        text=True,
+        env=_helper_env(),
+        timeout=30,
+        check=False,
+    )
+    assert crashed.returncode == 70
+    monkeypatch.delenv(helper_mod.TEST_CRASH_ENV)
+
+    result = _helper([sys.executable], "get", {"ref": ref})
+
+    assert result["state"] == "ready"
+    assert result["value"] == value
+    adapter = helper_mod._MacSecurity()
+    assert adapter._item_owner(ref) == "security"
+    assert adapter._item_owner(ref + helper_mod.STAGE_SUFFIX) == "absent"
+
+
+@integration
+def test_macos_a_whole_move_fits_well_inside_the_minimum(
+    throwaway_keychain: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _require_seam(throwaway_keychain)
+    timings: list[float] = []
+    for index in range(3):
+        ref = f"mbtest-ref-timing-{index}"
+        _legacy_add([sys.executable], ref, "dummy-not-a-secret")
+        adapter = helper_mod._MacSecurity()
+        started = time.monotonic()
+        assert adapter.get(ref) == ("ready", "dummy-not-a-secret")
+        timings.append(time.monotonic() - started)
+        assert adapter.migrated is True
+    with capsys.disabled():
+        print(f"\nmove seconds: {', '.join(f'{t:.2f}' for t in timings)}")
+    assert max(timings) < helper_mod.MIN_MOVE_SECONDS

@@ -38,6 +38,16 @@ SECURITY_TOOL = "/usr/bin/security"
 # command, the ref and a keychain path around the hex value.
 SECURITY_HEX_LIMIT = 3600
 DEFAULT_BUDGET_SECONDS = 6.0
+# A move deletes the legacy item, so it starts only with time for every step
+# plus cleanup. A whole move is a handful of `security` calls of well under a
+# second each; this leaves several times that before the parent's deadline.
+MIN_MOVE_SECONDS = 3.0
+# A move keeps a full, verified copy under `<ref>.mbstage` until the final item
+# verifies. Any later access finishes or undoes an interrupted move from it.
+STAGE_SUFFIX = ".mbstage"
+# Test-only: exit at a named step of a move, to prove recovery after a crash.
+# Inert unless the throwaway-keychain seam is also set.
+TEST_CRASH_ENV = "MB_CREDENTIAL_TEST_CRASH_AT"
 
 
 _SAFE_REF = re.compile(r"[A-Za-z0-9][A-Za-z0-9:/._@+_-]{0,511}")
@@ -47,12 +57,14 @@ class _PromptPending(Exception):
     """A keychain operation would have to wait on a macOS dialog."""
 
 
-def _emit(state: str, *, value: str | None = None, migrated: bool = False) -> int:
+def _emit(state: str, *, value: str | None = None, migrated: bool = False, owner: str = "") -> int:
     payload: dict[str, Any] = {"state": state}
     if value is not None:
         payload["value"] = value
     if migrated:
         payload["migrated"] = True
+    if owner:
+        payload["owner"] = owner
     sys.stdout.write(json.dumps(payload, separators=(",", ":")))
     return 0 if state in {"ready", "missing"} else 1
 
@@ -141,11 +153,13 @@ def _test_keychain_path() -> str | None:
 class _MacSecurity:
     """Minimal ctypes bridge for generic-password operations."""
 
-    def __init__(
-        self, *, interactive: bool = False, budget: float = DEFAULT_BUDGET_SECONDS
-    ) -> None:
-        self.deadline = time.monotonic() + budget
+    def __init__(self, *, interactive: bool = False, deadline: float | None = None) -> None:
+        # Wall-clock deadline from the parent: the helper must finish, and stop
+        # every `security` child, before the parent stops waiting for it.
+        self.deadline = deadline if deadline is not None else time.time() + DEFAULT_BUDGET_SECONDS
         self.migrated = False
+        # Who owns the item after this call: "security", "legacy" or "".
+        self.owner = ""
         self.security = ctypes.CDLL("/System/Library/Frameworks/Security.framework/Security")
         self.core = ctypes.CDLL(
             "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation"
@@ -475,7 +489,7 @@ class _MacSecurity:
         the last guard, and expiry reports a pending prompt.
         """
 
-        remaining = self.deadline - time.monotonic()
+        remaining = self.deadline - time.time()
         if remaining <= 0:
             raise _PromptPending
         try:
@@ -521,7 +535,8 @@ class _MacSecurity:
         The value goes over stdin as hex (``security -i``), never in argv. A
         value too long for one ``security -i`` line is written as an empty
         item by ``security`` and then filled in through the Security
-        framework, which leaves the item's access list unchanged.
+        framework, which leaves the item's access list unchanged. If that fill
+        fails, the empty item is removed again.
         """
 
         encoded = value.encode("utf-8").hex()
@@ -539,8 +554,11 @@ class _MacSecurity:
         if completed.returncode != 0 or "returned -" in (completed.stderr or ""):
             return "unavailable"
         if not fits:
+            self._crash_point("after-placeholder")
             status = self._update(ref, value)
             if status != ERR_SEC_SUCCESS:
+                with contextlib.suppress(Exception):
+                    self._security_delete(ref)
                 return _status_state(status)
         return "ready"
 
@@ -558,30 +576,110 @@ class _MacSecurity:
         state, stored = self._security_get(ref)
         return state == "ready" and stored == value
 
-    def _migrate(self, ref: str, value: str) -> bool:
-        """Re-create a legacy item under ``/usr/bin/security``; never lose it.
+    def _can_move(self) -> bool:
+        return self.deadline - time.time() >= MIN_MOVE_SECONDS
 
-        The value is already in memory. Delete the legacy item, add it back
-        through ``security`` and read it back the same way. If any step
-        fails, put the legacy item back exactly as this Python can read it.
+    def _crash_point(self, step: str) -> None:
+        if self.keychain_path is not None and os.environ.get(TEST_CRASH_ENV) == step:
+            os._exit(70)
+
+    def _put_verified(self, ref: str, value: str) -> bool:
+        exists = self._item_owner(ref) == "security"
+        return self._security_put(ref, value, exists=exists) == "ready" and self._verified(
+            ref, value
+        )
+
+    def _staged_write(self, ref: str, value: str, *, replaces_legacy: bool) -> bool:
+        """Make ``ref`` a ``security``-owned item holding ``value``; never lose it.
+
+        1. Write the full value to ``<ref>.mbstage`` and verify it.
+        2. Delete the legacy item (when moving one).
+        3. Write the final item and verify it.
+        4. Delete the staged copy.
+
+        A crash at any point leaves either the legacy item or a verified staged
+        copy, and the next access recovers from it. On an ordinary failure the
+        legacy item is put back and the staged copy is kept.
         """
 
-        if self._ctypes_delete(ref) != ERR_SEC_SUCCESS:
+        if not self._can_move():
             return False
+        stage = ref + STAGE_SUFFIX
         try:
-            if self._security_put(ref, value, exists=False) == "ready" and self._verified(
-                ref, value
-            ):
-                return True
-        except _PromptPending:
-            pass
-        with contextlib.suppress(_PromptPending):
+            if not self._put_verified(stage, value):
+                with contextlib.suppress(Exception):
+                    if self._item_owner(stage) == "security":
+                        self._security_delete(stage)
+                return False
+        except Exception:
+            return False
+        self._crash_point("after-stage")
+        if replaces_legacy and self._ctypes_delete(ref) != ERR_SEC_SUCCESS:
+            # The legacy item stays where it is, so the staged copy is redundant.
+            with contextlib.suppress(Exception):
+                self._security_delete(stage)
+            return False
+        self._crash_point("after-legacy-delete")
+        try:
+            done = self._put_verified(ref, value)
+        except Exception:
+            done = False
+        self._crash_point("after-final")
+        if done:
+            with contextlib.suppress(Exception):
+                self._security_delete(stage)
+            return True
+        # Put a copy back where this Python can read it, and keep the staged
+        # copy as the backup until a later access finishes the move.
+        with contextlib.suppress(Exception):
             if self._item_owner(ref) == "security":
                 self._security_delete(ref)
         if self._ctypes_add(ref, value) != ERR_SEC_SUCCESS:
-            # Last resort: keep the value somewhere this Python can read it.
             self._update(ref, value)
         return False
+
+    def _recover(self, ref: str) -> tuple[str, str | None] | None:
+        """Finish or undo a move that a crash or timeout interrupted.
+
+        Returns a read result when the staged copy answered the read, or None
+        when the item itself should be read as usual.
+        """
+
+        stage = ref + STAGE_SUFFIX
+        if self._item_owner(stage) != "security":
+            # No staged copy, or one this code did not make: never touch it.
+            return None
+        state, staged = self._security_get(stage)
+        owner = self._item_owner(ref)
+        if state != "ready" or not staged:
+            # An interrupted fill of the staged copy itself. Nothing was
+            # deleted yet, so the item (if any) still holds the value.
+            if self._can_move():
+                self._security_delete(stage)
+            return None
+        if owner == "absent":
+            # Interrupted after the legacy item was deleted: finish the move.
+            if self._can_move() and self._put_verified(ref, staged):
+                self._security_delete(stage)
+                self.migrated = True
+                self.owner = "security"
+            return "ready", staged
+        if owner == "security":
+            final_state, final = self._security_get(ref)
+            if final_state == "ready" and final == "":
+                # Interrupted while filling the final item.
+                if self._can_move() and self._put_verified(ref, staged):
+                    self._security_delete(stage)
+                    self.migrated = True
+                self.owner = "security"
+                return "ready", staged
+            if final_state == "ready" and self._can_move():
+                # The final item verified (or a newer write replaced it).
+                self._security_delete(stage)
+            return None
+        # A legacy item is still there (put back after a failure, or the crash
+        # came before it was deleted): read it as usual; a move re-stages.
+        return None
 
     # -- Public operations ---------------------------------------------------
 
@@ -590,22 +688,32 @@ class _MacSecurity:
         if health != "ready":
             # A locked keychain would need an unlock dialog: fail fast.
             return health, None
+        recovered = self._recover(ref)
+        if recovered is not None:
+            return recovered
         owner = self._item_owner(ref)
         if owner == "absent":
             return "missing", None
         if owner == "security":
+            self.owner = "security"
             return self._security_get(ref)
         if owner != "legacy":
             return _denied_state_for(owner, health=health), None
         state, value = self._ctypes_get(ref, health=health)
+        self.owner = "legacy"
         if state == "ready" and value is not None:
-            self.migrated = self._migrate(ref, value)
+            # Without enough time left for the whole move, read only and move
+            # next time: a delete must never be cut short by the parent.
+            self.migrated = self._staged_write(ref, value, replaces_legacy=True)
+            if self.migrated:
+                self.owner = "security"
         return state, value
 
     def set(self, ref: str, value: str) -> str:
         health = self.health()
         if health != "ready":
             return health
+        self._recover(ref)
         owner = self._item_owner(ref)
         if owner == "security":
             return self._security_put(ref, value, exists=True)
@@ -617,23 +725,26 @@ class _MacSecurity:
             status = self._update(ref, value)
             if status != ERR_SEC_SUCCESS:
                 return _denied_state(status, health=health)
-            self._migrate(ref, value)
+            self._staged_write(ref, value, replaces_legacy=True)
             return "ready"
         if owner != "absent":
             return _denied_state_for(owner, health=health)
-        state = self._security_put(ref, value, exists=False)
-        if state != "ready":
-            # Never leave a write undone: fall back to the legacy store.
-            status = self._ctypes_add(ref, value)
-            if status == ERR_SEC_DUPLICATE_ITEM:
-                status = self._update(ref, value)
-            return "ready" if status == ERR_SEC_SUCCESS else _denied_state(status, health=health)
-        return "ready"
+        if self._staged_write(ref, value, replaces_legacy=False):
+            return "ready"
+        # Never leave a write undone: fall back to the legacy store. A staged
+        # copy, if one was kept, holds the same value and is cleaned up later.
+        status = self._ctypes_add(ref, value)
+        if status == ERR_SEC_DUPLICATE_ITEM:
+            status = self._update(ref, value)
+        return "ready" if status == ERR_SEC_SUCCESS else _denied_state(status, health=health)
 
     def delete(self, ref: str) -> str:
         health = self.health()
         if health != "ready":
             return health
+        stage = ref + STAGE_SUFFIX
+        if self._item_owner(stage) == "security":
+            self._security_delete(stage)
         owner = self._item_owner(ref)
         if owner == "absent":
             return "missing"
@@ -661,34 +772,35 @@ class _MacSecurity:
         return "ready" if flags.value & KEYCHAIN_UNLOCKED_STATUS else "locked"
 
 
-def _macos(action: str, payload: dict[str, Any]) -> tuple[str, str | None, bool]:
+def _macos(action: str, payload: dict[str, Any]) -> tuple[str, str | None, bool, str]:
     if platform.system() != "Darwin":
-        return "unavailable", None, False
-    budget = payload.get("budget_seconds")
+        return "unavailable", None, False, ""
+    deadline = payload.get("deadline_epoch")
     adapter = _MacSecurity(
         interactive=payload.get("interactive") is True,
-        budget=float(budget) if isinstance(budget, (int, float)) else DEFAULT_BUDGET_SECONDS,
+        deadline=float(deadline) if isinstance(deadline, (int, float)) else None,
     )
     ref = str(payload.get("ref") or "")
     if action == "health":
-        return adapter.health(), None, False
-    if not ref or not _SAFE_REF.fullmatch(ref):
-        # Refs are generated by mb; anything else could break `security -i` quoting.
-        return "unavailable", None, False
+        return adapter.health(), None, False, ""
+    if not ref or not _SAFE_REF.fullmatch(ref) or ref.endswith(STAGE_SUFFIX):
+        # Refs are generated by mb; anything else could break `security -i`
+        # quoting or address a staged copy directly.
+        return "unavailable", None, False, ""
     try:
         if action == "get":
             state, value = adapter.get(ref)
-            return state, value, adapter.migrated
+            return state, value, adapter.migrated, adapter.owner if state == "ready" else ""
         if action == "set":
             value = payload.get("value")
             if not isinstance(value, str):
-                return "unavailable", None, False
-            return adapter.set(ref, value), None, False
+                return "unavailable", None, False, ""
+            return adapter.set(ref, value), None, False, ""
         if action == "delete":
-            return adapter.delete(ref), None, False
+            return adapter.delete(ref), None, False, ""
     except _PromptPending:
-        return "prompt-pending", None, False
-    return "unavailable", None, False
+        return "prompt-pending", None, False, ""
+    return "unavailable", None, False, ""
 
 
 def _secret_service_items(collection: Any, ref: str) -> list[Any]:
@@ -793,16 +905,16 @@ def main() -> int:
         return _emit("unavailable")
     try:
         payload = _read_payload()
-        migrated = False
+        migrated, owner = False, ""
         if backend == "macos-keychain":
-            state, value, migrated = _macos(action, payload)
+            state, value, migrated, owner = _macos(action, payload)
         elif backend == "secret-service":
             state, value = _secret_service(action, payload)
         else:
             state, value = "unavailable", None
     except BaseException as exc:
-        state, value, migrated = _secret_service_state(exc), None, False
-    return _emit(state, value=value, migrated=migrated)
+        state, value, migrated, owner = _secret_service_state(exc), None, False, ""
+    return _emit(state, value=value, migrated=migrated, owner=owner)
 
 
 if __name__ == "__main__":

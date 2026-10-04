@@ -28,6 +28,46 @@ def _local_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
 
 
+def _popen_running(run: Any) -> Any:
+    """A ``subprocess.Popen`` stand-in that answers through a ``run``-style fake."""
+
+    class FakePopen:
+        def __init__(self, args: list[str], **kwargs: Any) -> None:
+            self.args = args
+            self.kwargs = kwargs
+            self.pid = None
+            self.returncode: int | None = None
+
+        def communicate(self, input: str | None = None, timeout: float | None = None) -> Any:
+            result = run(
+                self.args,
+                input=input,
+                timeout=timeout,
+                stdout=self.kwargs.get("stdout"),
+                stderr=self.kwargs.get("stderr"),
+                text=True,
+                start_new_session=self.kwargs.get("start_new_session"),
+            )
+            self.returncode = result.returncode
+            return result.stdout, None
+
+        def kill(self) -> None:
+            pass
+
+    return FakePopen
+
+
+def _fake_subprocess(run: Any) -> SimpleNamespace:
+    return SimpleNamespace(
+        run=run,
+        Popen=_popen_running(run),
+        PIPE=subprocess.PIPE,
+        DEVNULL=subprocess.DEVNULL,
+        TimeoutExpired=subprocess.TimeoutExpired,
+        SubprocessError=subprocess.SubprocessError,
+    )
+
+
 def _completed(stdout: str, stderr: str = "") -> SimpleNamespace:
     return SimpleNamespace(returncode=0, stdout=stdout, stderr=stderr)
 
@@ -126,7 +166,7 @@ def test_native_helper_keeps_secret_out_of_argv_and_discards_stderr(
         seen["stderr"] = kwargs["stderr"]
         return _completed('{"state":"unavailable"}', f"raw failure {secret}")
 
-    monkeypatch.setattr(store_mod.subprocess, "run", fake_run)  # type: ignore[attr-defined]
+    monkeypatch.setattr(store_mod, "subprocess", _fake_subprocess(fake_run))
 
     with pytest.raises(store_mod.CredentialStoreError) as exc_info:
         store_mod.SecretStore("macos-keychain").set("fixture-ref", secret)
@@ -148,7 +188,7 @@ def test_native_helper_timeout_is_bounded_and_sanitized(
     def hang(args: list[str], **kwargs: Any) -> SimpleNamespace:
         raise subprocess.TimeoutExpired(args, kwargs["timeout"])
 
-    monkeypatch.setattr(store_mod.subprocess, "run", hang)  # type: ignore[attr-defined]
+    monkeypatch.setattr(store_mod, "subprocess", _fake_subprocess(hang))
 
     probe = store_mod.SecretStore("macos-keychain").probe("fixture-ref")
 
@@ -608,14 +648,7 @@ def test_status_all_shares_one_aggregate_credential_deadline(
         calls += 1
         return SimpleNamespace(returncode=1, stdout='{"state":"unavailable"}')
 
-    fake_subprocess = SimpleNamespace(
-        run=unavailable,
-        PIPE=subprocess.PIPE,
-        DEVNULL=subprocess.DEVNULL,
-        TimeoutExpired=subprocess.TimeoutExpired,
-        SubprocessError=subprocess.SubprocessError,
-    )
-    monkeypatch.setattr(store_mod, "subprocess", fake_subprocess)
+    monkeypatch.setattr(store_mod, "subprocess", _fake_subprocess(unavailable))
 
     status = connect_mod.status_all(repo)
 
