@@ -1649,7 +1649,7 @@ def connect_cmd(
         "",
         help=(
             "Provider to connect, or `list` / `plan` / `status` / `doctor` / `hygiene` / "
-            "`identity` / `test` / `exec` / `rotate` / `token` / `hydrate`."
+            "`identity` / `test` / `exec` / `rotate` / `token` / `hydrate` / `repair`."
         ),
     ),
     provider: str = typer.Argument(
@@ -1710,6 +1710,14 @@ def connect_cmd(
         False,
         "--print",
         help="With `mb connect token`, print even when stdout is a terminal or a pipe.",
+    ),
+    keychain: bool = typer.Option(
+        False,
+        "--keychain",
+        help=(
+            "With `mb connect repair`, let macOS ask once whether this mb install may read "
+            "each stored credential. Needs a terminal."
+        ),
     ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
@@ -1880,6 +1888,31 @@ def connect_cmd(
         # The token is the entire stdout contract; nothing else may print here.
         typer.echo(result["token"], nl=False)
         raise typer.Exit(0)
+    if target == "repair":
+        if provider:
+            typer.echo(f"mb connect repair: unexpected extra argument {provider!r}", err=True)
+            raise typer.Exit(2)
+        if not keychain:
+            typer.echo("mb connect repair: choose what to repair: --keychain", err=True)
+            raise typer.Exit(2)
+        if not sys.stdin.isatty():
+            # The only command that may show a keychain dialog. Without a
+            # terminal there is nobody to answer it, so refuse rather than wait.
+            typer.echo(
+                "mb connect repair --keychain: run this from a terminal; macOS may ask you "
+                "to allow access",
+                err=True,
+            )
+            raise typer.Exit(2)
+        try:
+            result = connect_mod.repair_keychain(repo, interactive=True)
+        except ValueError as exc:
+            _connect_error_exit("mb connect repair", exc)
+        if json_out:
+            typer.echo(json.dumps(result, indent=2))
+        else:
+            connect_mod.render_keychain_repair(result)
+        raise typer.Exit(0 if result["ok"] else 1)
     if target == "test":
         if not provider:
             typer.echo("mb connect test: provider required", err=True)

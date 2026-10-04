@@ -25,6 +25,7 @@ from typing import Any, NoReturn
 import yaml
 
 from mb.credential_store import (
+    KEYCHAIN_REPAIR_COMMAND,
     CredentialStoreError,
     SecretProbe,
     SecretStore,
@@ -1626,11 +1627,17 @@ def _secret_statuses(
     return secrets, missing
 
 
-def _probe_secret_ref(backend: str, ref: str, *, deadline: float | None = None) -> SecretProbe:
+def _probe_secret_ref(
+    backend: str,
+    ref: str,
+    *,
+    deadline: float | None = None,
+    interactive: bool = False,
+) -> SecretProbe:
     """Probe stored metadata without letting a foreign backend crash status."""
 
     try:
-        return SecretStore(backend).probe(ref, deadline=deadline)
+        return SecretStore(backend).probe(ref, deadline=deadline, interactive=interactive)
     except (CredentialStoreError, ValueError):
         return SecretProbe("", False, False, "backend_incompatible")
 
@@ -2048,6 +2055,91 @@ def hydrate(
     }
 
 
+def repair_keychain(repo: str | Path = ".", *, interactive: bool = False) -> dict[str, Any]:
+    """Let a person at a terminal answer the macOS keychain dialog for each credential.
+
+    Every other command reads with keychain interaction disabled, so an item
+    this mb install is not yet trusted to read reports
+    ``keychain_prompt_pending`` instead of waiting on a dialog. This is the one
+    place that dialog may appear, and only when the caller passes
+    ``interactive=True`` from a real terminal. Values are never returned.
+    """
+
+    target = Path(repo).resolve()
+    config = _read_config(target)
+    repo_id = str(config.get("repo_id") or _repo_identity(target)["repo_id"])
+    entries: dict[str, dict[str, Any]] = {}
+    user_repo = _read_user_scope()["repos"].get(repo_id)
+    user_repo = user_repo if isinstance(user_repo, dict) else {}
+    user_providers = user_repo.get("providers")
+    if isinstance(user_providers, dict):
+        entries.update(
+            {str(key): value for key, value in user_providers.items() if isinstance(value, dict)}
+        )
+    entries.update(
+        {str(key): value for key, value in config["providers"].items() if isinstance(value, dict)}
+    )
+    items: list[dict[str, str]] = []
+    for provider_id in sorted(entries):
+        raw_secrets = entries[provider_id].get("secrets")
+        secrets = raw_secrets if isinstance(raw_secrets, dict) else {}
+        for field in sorted(str(key) for key in secrets):
+            raw = secrets.get(field)
+            raw = raw if isinstance(raw, dict) else {}
+            ref = str(raw.get("ref") or "")
+            backend = str(raw.get("backend") or "local-file")
+            try:
+                selected = select_secret_backend(backend)
+            except (CredentialStoreError, ValueError):
+                continue
+            if selected != "macos-keychain" or not ref:
+                continue
+            probe = _probe_secret_ref(backend, ref)
+            before = probe.reason or ("ready" if probe.present else "missing")
+            if probe.reason == "keychain_prompt_pending" and interactive:
+                probe = _probe_secret_ref(backend, ref, interactive=True)
+            state = probe.reason or ("ready" if probe.present else "missing")
+            items.append(
+                {
+                    "provider": provider_id,
+                    "field": field,
+                    "before": before,
+                    "state": state,
+                    "summary": (
+                        "readable without a prompt"
+                        if state == "ready"
+                        else _backend_repair(state)["summary"]
+                        if state != "missing"
+                        else "no stored value"
+                    ),
+                }
+            )
+    pending = [item for item in items if item["state"] == "keychain_prompt_pending"]
+    failed = [item for item in items if item["state"] not in {"ready", "missing"}]
+    return {
+        "ok": not failed,
+        "repo": str(target),
+        "interactive": interactive,
+        "items": items,
+        "pending": len(pending),
+        "safe_to_share": True,
+        "repair_command": KEYCHAIN_REPAIR_COMMAND if pending else "",
+    }
+
+
+def render_keychain_repair(result: dict[str, Any]) -> None:
+    print(f"mb connect repair --keychain  {result['repo']}")
+    if not result["items"]:
+        print("no macOS Keychain credentials are recorded for this repo")
+    for item in result["items"]:
+        note = item["summary"]
+        if item["before"] != item["state"]:
+            note = f"{note} (was {state_label(item['before'])})"
+        print(f"  {item['provider']}.{item['field']}: {state_label(item['state'])}  {note}")
+    if result.get("repair_command"):
+        print(f"next: run `{result['repair_command']}` from a terminal and allow access")
+
+
 def _entry_secret_probe(
     entry: dict[str, Any], field: str, *, deadline: float | None = None
 ) -> SecretProbe:
@@ -2115,6 +2207,9 @@ def read_token(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
     probe = _entry_secret_probe(entry, field)
     if not probe.backend_ok:
         detail = _backend_repair(probe.reason)
+        error = detail["summary"]
+        if probe.reason == "keychain_prompt_pending":
+            error = f"{provider.name} credential: keychain prompt pending"
         return {
             "ok": False,
             "provider": provider.id,
@@ -2123,7 +2218,7 @@ def read_token(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
             "token": "",
             "state": BACKEND_FAILURE_STATE,
             "backend_state": probe.reason,
-            "error": detail["summary"],
+            "error": error,
             "repair_command": detail["repair_command"],
         }
     if not probe.present:

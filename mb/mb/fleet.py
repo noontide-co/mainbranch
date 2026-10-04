@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any
 
 from mb import topology
+from mb.credential_store import KEYCHAIN_REPAIR_COMMAND
 
 FLEET_SCHEMA = "mb.fleet.v0"
 CONFIG_FILENAME = "fleet.toml"
@@ -319,8 +320,12 @@ def _deployment_facts(project: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _cloudflare_credentials(connection: str, checkout: Path) -> tuple[str, str, str]:
-    """Return (token, account_id, error). The token is for in-memory use only."""
+def _cloudflare_credentials(connection: str, checkout: Path, hub: str = "") -> tuple[str, str, str]:
+    """Return (token, account_id, error). The token is for in-memory use only.
+
+    Each call reads with its own credential deadline, so one slow hub cannot
+    use up another hub's time.
+    """
     from mb import connect
 
     try:
@@ -329,6 +334,14 @@ def _cloudflare_credentials(connection: str, checkout: Path) -> tuple[str, str, 
     except (ValueError, OSError) as exc:
         return "", "", f"cloudflare connection {connection!r} could not be read: {exc}"
     if not token_result.get("ok"):
+        if token_result.get("backend_state") == "keychain_prompt_pending":
+            where = f" in {hub}" if hub else ""
+            return (
+                "",
+                "",
+                f"cloudflare connection {connection!r}: keychain prompt pending; "
+                f"run {KEYCHAIN_REPAIR_COMMAND}{where}",
+            )
         return (
             "",
             "",
@@ -884,7 +897,7 @@ def refresh(
         hub_deploys: dict[str, Any] = {"state": "none", "projects": {}}
         if hub["cloudflare"]:
             token, account_id, cred_error = _cloudflare_credentials(
-                hub["cloudflare"], hub["connect_checkout"]
+                hub["cloudflare"], hub["connect_checkout"], hub["name"]
             )
             if cred_error:
                 hub_deploys["state"] = "error"

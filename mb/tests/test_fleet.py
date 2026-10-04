@@ -290,7 +290,7 @@ def _write_config(tmp_path: Path, *, cloudflare: bool = True) -> Path:
 @pytest.fixture
 def cloudflare_creds(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        fleet, "_cloudflare_credentials", lambda connection, checkout: (TOKEN, "acct-1", "")
+        fleet, "_cloudflare_credentials", lambda connection, checkout, hub="": (TOKEN, "acct-1", "")
     )
 
 
@@ -614,7 +614,11 @@ def test_refresh_reports_unreadable_repo_and_cloudflare_errors(
     monkeypatch.setattr(
         fleet,
         "_cloudflare_credentials",
-        lambda connection, checkout: ("", "", "cloudflare connection 'cloudflare-read': missing"),
+        lambda connection, checkout, hub="": (
+            "",
+            "",
+            "cloudflare connection 'cloudflare-read': missing",
+        ),
     )
     responses = dict(GH)
     responses["repos/example-co/app"] = (404, None)

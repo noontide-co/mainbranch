@@ -11,6 +11,16 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Fixed
+
+- Unattended credential reads on macOS no longer wait on a keychain dialog.
+  Every command reads with keychain interaction off, so an item the current
+  Python is not yet trusted to read reports `keychain_prompt_pending` at once,
+  naming the provider and the repair, instead of "did not answer before the
+  safety deadline". `mb fleet refresh` names the hub. A locked keychain fails
+  at once. The new `mb connect repair --keychain` is the one command that may
+  show the dialog, and only from a terminal. Part of #1005; refs #992.
+
 ## [0.6.0] - 2026-10-04
 
 This release adds three commands. `mb fleet` shows every site across your hubs

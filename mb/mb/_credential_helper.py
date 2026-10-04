@@ -9,8 +9,10 @@ from __future__ import annotations
 import ctypes
 import importlib
 import json
+import os
 import platform
 import sys
+from pathlib import Path
 from typing import Any
 
 SERVICE_NAME = "mainbranch"
@@ -22,6 +24,10 @@ ERR_SEC_INTERACTION_NOT_ALLOWED = -25308
 ERR_SEC_USER_CANCELED = -128
 KEYCHAIN_UNLOCKED_STATUS = 1
 CF_STRING_ENCODING_UTF8 = 0x08000100
+# Test-only seam: point the macOS adapter at a throwaway keychain instead of
+# the user's default. Honored only for a file named ``mbtest-*.keychain-db``
+# outside ``~/Library/Keychains``; any other value refuses to run.
+TEST_KEYCHAIN_ENV = "MB_CREDENTIAL_TEST_KEYCHAIN"
 
 
 def _emit(state: str, *, value: str | None = None) -> int:
@@ -42,10 +48,46 @@ def _status_state(status: int) -> str:
     return "unavailable"
 
 
+def _denied_state(status: int, *, health: str) -> str:
+    """Classify an item-level refusal once keychain health is known.
+
+    With user interaction disabled, an item whose access list does not trust
+    this interpreter fails at once instead of showing a dialog. On an unlocked
+    keychain that refusal means a macOS prompt would be waiting for a click.
+    """
+
+    state = _status_state(status)
+    if health == "ready" and state in {"auth-failed", "locked"}:
+        return "prompt-pending"
+    return state
+
+
+def _test_keychain_path() -> str | None:
+    """Return the throwaway keychain named by the test seam, if any.
+
+    Raises when the variable is set to anything that is not a throwaway
+    keychain, so a typo can never fall through to the login keychain.
+    """
+
+    raw = os.environ.get(TEST_KEYCHAIN_ENV, "")
+    if not raw:
+        return None
+    path = Path(raw).expanduser().resolve()
+    keychains = (Path.home() / "Library" / "Keychains").resolve()
+    if (
+        not path.name.startswith("mbtest-")
+        or not path.name.endswith(".keychain-db")
+        or path.is_relative_to(keychains)
+        or not path.is_file()
+    ):
+        raise RuntimeError("refusing test keychain")
+    return str(path)
+
+
 class _MacSecurity:
     """Minimal ctypes bridge for generic-password operations."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, interactive: bool = False) -> None:
         self.security = ctypes.CDLL("/System/Library/Frameworks/Security.framework/Security")
         self.core = ctypes.CDLL(
             "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation"
@@ -97,6 +139,43 @@ class _MacSecurity:
             ctypes.POINTER(ctypes.c_uint32),
         ]
         self.security.SecKeychainGetStatus.restype = ctypes.c_int32
+        self.security.SecKeychainSetUserInteractionAllowed.argtypes = [ctypes.c_bool]
+        self.security.SecKeychainSetUserInteractionAllowed.restype = ctypes.c_int32
+        self.security.SecKeychainOpen.argtypes = [
+            ctypes.c_char_p,
+            ctypes.POINTER(ctypes.c_void_p),
+        ]
+        self.security.SecKeychainOpen.restype = ctypes.c_int32
+        self.core.CFArrayCreate.argtypes = [
+            ctypes.c_void_p,
+            ctypes.POINTER(ctypes.c_void_p),
+            ctypes.c_long,
+            ctypes.c_void_p,
+        ]
+        self.core.CFArrayCreate.restype = ctypes.c_void_p
+        if not interactive:
+            # kSecUseAuthenticationUIFail does not suppress the file-keychain
+            # access dialog; this does. It must run before any keychain call,
+            # so an untrusted read fails at once instead of waiting on a click.
+            status = int(self.security.SecKeychainSetUserInteractionAllowed(False))
+            if status != ERR_SEC_SUCCESS:
+                raise RuntimeError("could not disable keychain interaction")
+        self.keychain: int | None = None
+        self.search_list: int | None = None
+        test_path = _test_keychain_path()
+        if test_path is not None:
+            keychain = ctypes.c_void_p()
+            status = int(
+                self.security.SecKeychainOpen(test_path.encode("utf-8"), ctypes.byref(keychain))
+            )
+            if status != ERR_SEC_SUCCESS or not keychain.value:
+                raise RuntimeError("could not open test keychain")
+            self.keychain = int(keychain.value)
+            items = (ctypes.c_void_p * 1)(self.keychain)
+            search_list = self.core.CFArrayCreate(None, items, 1, None)
+            if not search_list:
+                raise RuntimeError("could not allocate search list")
+            self.search_list = int(search_list)
 
     @staticmethod
     def _constant(library: Any, name: str) -> int:
@@ -149,6 +228,8 @@ class _MacSecurity:
                 self._constant(self.security, "kSecUseAuthenticationUIFail"),
             ),
         ]
+        if self.search_list is not None:
+            pairs.append((self._constant(self.security, "kSecMatchSearchList"), self.search_list))
         if return_data:
             pairs.extend(
                 [
@@ -169,12 +250,16 @@ class _MacSecurity:
             self.core.CFRelease(value)
 
     def get(self, ref: str) -> tuple[str, str | None]:
+        health = self.health()
+        if health != "ready":
+            # A locked keychain would need an unlock dialog: fail fast.
+            return health, None
         query, owned = self._query(ref, return_data=True)
         result = ctypes.c_void_p()
         try:
             status = int(self.security.SecItemCopyMatching(query, ctypes.byref(result)))
             if status != ERR_SEC_SUCCESS:
-                return _status_state(status), None
+                return _denied_state(status, health=health), None
             if not result.value:
                 return "unavailable", None
             length = int(self.core.CFDataGetLength(result.value))
@@ -200,30 +285,34 @@ class _MacSecurity:
             self.core.CFRelease(data)
 
     def set(self, ref: str, value: str) -> str:
+        health = self.health()
+        if health != "ready":
+            return health
         status = self._update(ref, value)
         if status == ERR_SEC_SUCCESS:
             return "ready"
         if status != ERR_SEC_ITEM_NOT_FOUND:
-            return _status_state(status)
+            return _denied_state(status, health=health)
 
         service = self._string(SERVICE_NAME)
         account = self._string(ref)
         data = self._data(value)
-        add = self._dictionary(
-            [
-                (
-                    self._constant(self.security, "kSecClass"),
-                    self._constant(self.security, "kSecClassGenericPassword"),
-                ),
-                (self._constant(self.security, "kSecAttrService"), service),
-                (self._constant(self.security, "kSecAttrAccount"), account),
-                (self._constant(self.security, "kSecValueData"), data),
-                (
-                    self._constant(self.security, "kSecUseAuthenticationUI"),
-                    self._constant(self.security, "kSecUseAuthenticationUIFail"),
-                ),
-            ]
-        )
+        pairs = [
+            (
+                self._constant(self.security, "kSecClass"),
+                self._constant(self.security, "kSecClassGenericPassword"),
+            ),
+            (self._constant(self.security, "kSecAttrService"), service),
+            (self._constant(self.security, "kSecAttrAccount"), account),
+            (self._constant(self.security, "kSecValueData"), data),
+            (
+                self._constant(self.security, "kSecUseAuthenticationUI"),
+                self._constant(self.security, "kSecUseAuthenticationUIFail"),
+            ),
+        ]
+        if self.keychain is not None:
+            pairs.append((self._constant(self.security, "kSecUseKeychain"), self.keychain))
+        add = self._dictionary(pairs)
         try:
             status = int(self.security.SecItemAdd(add, None))
         finally:
@@ -233,28 +322,34 @@ class _MacSecurity:
             # Another writer won the add race. Update in-place rather than
             # delete/re-add so the prior value survives a failed replacement.
             status = self._update(ref, value)
-        return "ready" if status == ERR_SEC_SUCCESS else _status_state(status)
+        return "ready" if status == ERR_SEC_SUCCESS else _denied_state(status, health=health)
 
     def delete(self, ref: str) -> str:
+        health = self.health()
+        if health != "ready":
+            return health
         query, owned = self._query(ref)
         try:
             status = int(self.security.SecItemDelete(query))
         finally:
             self.core.CFRelease(query)
             self._release_all(owned)
-        return "ready" if status == ERR_SEC_SUCCESS else _status_state(status)
+        return "ready" if status == ERR_SEC_SUCCESS else _denied_state(status, health=health)
 
     def health(self) -> str:
-        keychain = ctypes.c_void_p()
-        status = int(self.security.SecKeychainCopyDefault(ctypes.byref(keychain)))
-        if status != ERR_SEC_SUCCESS:
-            return _status_state(status)
         flags = ctypes.c_uint32()
-        try:
-            status = int(self.security.SecKeychainGetStatus(keychain, ctypes.byref(flags)))
-        finally:
-            if keychain.value:
-                self.core.CFRelease(keychain.value)
+        if self.keychain is not None:
+            status = int(self.security.SecKeychainGetStatus(self.keychain, ctypes.byref(flags)))
+        else:
+            keychain = ctypes.c_void_p()
+            status = int(self.security.SecKeychainCopyDefault(ctypes.byref(keychain)))
+            if status != ERR_SEC_SUCCESS:
+                return _status_state(status)
+            try:
+                status = int(self.security.SecKeychainGetStatus(keychain, ctypes.byref(flags)))
+            finally:
+                if keychain.value:
+                    self.core.CFRelease(keychain.value)
         if status != ERR_SEC_SUCCESS:
             return _status_state(status)
         return "ready" if flags.value & KEYCHAIN_UNLOCKED_STATUS else "locked"
@@ -263,7 +358,7 @@ class _MacSecurity:
 def _macos(action: str, payload: dict[str, Any]) -> tuple[str, str | None]:
     if platform.system() != "Darwin":
         return "unavailable", None
-    adapter = _MacSecurity()
+    adapter = _MacSecurity(interactive=payload.get("interactive") is True)
     ref = str(payload.get("ref") or "")
     if action == "health":
         return adapter.health(), None

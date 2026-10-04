@@ -355,15 +355,23 @@ broker, or launchd job. A new security session or reboot can require another
 interactive unlock in that owning session.
 
 Keychain item access control is separate from Keychain lock state. A new item
-trusts the installed Python application identity that created it. Reads from a
-different or reinstalled interpreter can require a one-time Access Control
-addition in Keychain Access or reprovisioning from the intended stable `mb`
-install. An item ACL that trusts only `/usr/bin/security` does not authorize the
-native reader, which runs inside the Python interpreter named by the installed
-`mb` executable's shebang. Provisioning must add that exact interpreter as a
-trusted application without granting access to every application. Main Branch
-fails closed instead of opening that approval dialog. Never reset or delete the
-login keychain to repair one item.
+trusts the installed Python application identity that created it, so after the
+Python under `mb` changes (a uv Python upgrade or reinstall), macOS wants to
+ask once more before that item can be read. Main Branch never waits on that
+dialog: every command reads with keychain interaction turned off, so a pending
+prompt fails at once with the `keychain_prompt_pending` state instead of
+running into the safety deadline. A locked keychain fails at once with
+`keychain_locked`, since unlocking would also need a dialog.
+
+To answer the prompts, run this once from a terminal in the hub, at the screen:
+
+```bash
+mb connect repair --keychain
+```
+
+It is the only command that lets macOS show the keychain dialog. It refuses to
+run without a terminal, waits up to 60 seconds per credential, and never prints
+a value. Never reset or delete the login keychain to repair one item.
 
 On Linux, Main Branch uses the existing Secret Service default collection. It
 checks collection and item lock state and never calls an unlock method. Unlock

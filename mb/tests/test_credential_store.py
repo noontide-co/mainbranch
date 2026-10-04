@@ -161,6 +161,7 @@ def test_native_helper_timeout_is_bounded_and_sanitized(
     [
         ("locked", "keychain_locked"),
         ("auth-failed", "keychain_auth_failed"),
+        ("prompt-pending", "keychain_prompt_pending"),
         ("unavailable", "keychain_unavailable"),
     ],
 )
@@ -183,6 +184,7 @@ def test_macos_read_query_explicitly_forbids_authentication_ui() -> None:
     adapter: Any = object.__new__(helper_mod._MacSecurity)
     adapter.security = object()
     adapter.core = object()
+    adapter.search_list = None
     constants = {
         "kSecClass": 1,
         "kSecClassGenericPassword": 2,
@@ -231,11 +233,13 @@ def test_macos_failed_update_preserves_previous_item_without_delete() -> None:
 
     adapter: Any = object.__new__(helper_mod._MacSecurity)
     adapter.security = FakeSecurity()
+    adapter.health = lambda: "ready"
     adapter._update = lambda ref, value: helper_mod.ERR_SEC_AUTH_FAILED
 
     result = adapter.set("fixture-ref", "replacement")
 
-    assert result == "auth-failed"
+    # On an unlocked keychain the refusal means a macOS dialog would wait.
+    assert result == "prompt-pending"
     assert state == {"value": "previous", "add_called": False, "delete_called": False}
 
 
@@ -243,6 +247,8 @@ def test_macos_add_explicitly_forbids_authentication_ui() -> None:
     adapter: Any = object.__new__(helper_mod._MacSecurity)
     adapter.security = SimpleNamespace(SecItemAdd=lambda add, result: helper_mod.ERR_SEC_SUCCESS)
     adapter.core = SimpleNamespace(CFRelease=lambda value: None)
+    adapter.keychain = None
+    adapter.health = lambda: "ready"
     constants = {
         "kSecClass": 1,
         "kSecClassGenericPassword": 2,

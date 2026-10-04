@@ -22,6 +22,12 @@ from mb.durable import atomic_write_text
 
 SERVICE_NAME = "mainbranch"
 CREDENTIAL_HELPER_TIMEOUT_SECONDS = 8
+# Only `mb connect repair --keychain` runs the helper interactively: a human at
+# a terminal needs time to answer a macOS dialog. Every other caller keeps the
+# short deadline and never lets the helper show a dialog.
+INTERACTIVE_CREDENTIAL_TIMEOUT_SECONDS = 60
+KEYCHAIN_REPAIR_COMMAND = "mb connect repair --keychain"
+HELPER_STATES = {"ready", "missing", "locked", "auth-failed", "prompt-pending", "unavailable"}
 HELPER_OUTPUT_LIMIT = 1024 * 1024
 SUPPORTED_BACKENDS = {"auto", "macos-keychain", "secret-service", "keyring", "local-file"}
 
@@ -39,6 +45,18 @@ BACKEND_REPAIRS: dict[str, dict[str, str]] = {
             f"{KEYCHAIN_RESET_WARNING}"
         ),
         "repair_command": "security unlock-keychain ~/Library/Keychains/login.keychain-db",
+    },
+    "keychain_prompt_pending": {
+        "summary": (
+            "macOS is asking whether this mb install may read the stored credential "
+            "(keychain prompt pending). Unattended runs do not wait on that dialog."
+        ),
+        "repair": (
+            f"From a terminal in this hub, run `{KEYCHAIN_REPAIR_COMMAND}` and allow access "
+            "when macOS asks. "
+            f"{KEYCHAIN_RESET_WARNING}"
+        ),
+        "repair_command": KEYCHAIN_REPAIR_COMMAND,
     },
     "keychain_auth_failed": {
         "summary": (
@@ -181,11 +199,25 @@ class SecretStore:
     def __init__(self, backend: str | None = None) -> None:
         self.backend = select_secret_backend(backend)
 
-    def set(self, ref: str, value: str, *, deadline: float | None = None) -> None:
+    def set(
+        self,
+        ref: str,
+        value: str,
+        *,
+        deadline: float | None = None,
+        interactive: bool = False,
+    ) -> None:
         if self.backend == "local-file":
             _local_set(ref, value)
             return
-        result = _run_helper(self.backend, "set", ref=ref, value=value, deadline=deadline)
+        result = _run_helper(
+            self.backend,
+            "set",
+            ref=ref,
+            value=value,
+            deadline=deadline,
+            interactive=interactive,
+        )
         state = str(result.get("state") or "unavailable")
         if state != "ready":
             raise CredentialStoreError(_reason_for(self.backend, state))
@@ -193,7 +225,13 @@ class SecretStore:
     def get(self, ref: str) -> str:
         return self.probe(ref).value
 
-    def probe(self, ref: str, *, deadline: float | None = None) -> SecretProbe:
+    def probe(
+        self,
+        ref: str,
+        *,
+        deadline: float | None = None,
+        interactive: bool = False,
+    ) -> SecretProbe:
         if not ref:
             return SecretProbe("", False, True, "")
         if self.backend == "local-file":
@@ -204,7 +242,9 @@ class SecretStore:
             if ref not in data:
                 return SecretProbe("", False, True, "")
             return SecretProbe(data[ref], True, True, "")
-        result = _run_helper(self.backend, "get", ref=ref, deadline=deadline)
+        result = _run_helper(
+            self.backend, "get", ref=ref, deadline=deadline, interactive=interactive
+        )
         state = str(result.get("state") or "unavailable")
         if state == "missing":
             return SecretProbe("", False, True, "")
@@ -272,11 +312,13 @@ def _reason_for(backend: str, state: str) -> str:
     if backend == "macos-keychain":
         if state == "locked":
             return "keychain_locked"
+        if state == "prompt-pending":
+            return "keychain_prompt_pending"
         if state == "auth-failed":
             return "keychain_auth_failed"
         return "keychain_unavailable"
     if backend == "secret-service":
-        if state in {"locked", "auth-failed"}:
+        if state in {"locked", "auth-failed", "prompt-pending"}:
             return "secret_service_locked"
         return "secret_service_unavailable"
     return "local_file_unavailable"
@@ -289,11 +331,17 @@ def _run_helper(
     ref: str = "",
     value: str | None = None,
     deadline: float | None = None,
+    interactive: bool = False,
 ) -> dict[str, Any]:
-    payload: dict[str, Any] = {"ref": ref}
+    # The helper treats anything but an explicit true as non-interactive.
+    payload: dict[str, Any] = {"ref": ref, "interactive": interactive is True}
     if value is not None:
         payload["value"] = value
-    timeout = float(CREDENTIAL_HELPER_TIMEOUT_SECONDS)
+    timeout = float(
+        INTERACTIVE_CREDENTIAL_TIMEOUT_SECONDS
+        if interactive is True
+        else CREDENTIAL_HELPER_TIMEOUT_SECONDS
+    )
     if deadline is not None:
         remaining = deadline - time.monotonic()
         if remaining <= 0:
@@ -323,7 +371,7 @@ def _run_helper(
     if not isinstance(result, dict):
         return {"state": "unavailable"}
     state = result.get("state")
-    if state not in {"ready", "missing", "locked", "auth-failed", "unavailable"}:
+    if state not in HELPER_STATES:
         return {"state": "unavailable"}
     if completed.returncode != (0 if state in {"ready", "missing"} else 1):
         return {"state": "unavailable"}
