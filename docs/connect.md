@@ -464,7 +464,8 @@ exactly as above: a dialog only for an item that needs one, the same
 `repaired` / `readable_not_migrated` / `still_pending` verdicts, and one
 summary with the count per state and what is still pending. Each item is
 labelled with its hub and provider when this repo or a hub checkout in the
-`mb fleet` hub list records it, otherwise by its keychain ref. A staged copy
+`mb fleet` hub list records it (reading the hub list needs Python 3.11 or
+newer, as `mb fleet` does), otherwise by its keychain ref. A staged copy
 left by an interrupted move is not repaired on its own: its item is read,
 which finishes or undoes the move. Like the per-repo repair, it needs a
 terminal, refuses to run without one, and never prints a value.
