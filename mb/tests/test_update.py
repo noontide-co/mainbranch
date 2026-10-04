@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import shutil
 import subprocess
@@ -2151,3 +2152,100 @@ def test_unattended_guard_reports_a_tracked_change_the_plan_missed(
     assert result["ok"] is False
     assert result["surface_refresh"]["planned"]["unapproved_changes"] == ["AGENTS.md"]
     assert any("not approved: AGENTS.md" in error for error in result["errors"])
+
+
+def _case_insensitive(directory: Path) -> bool:
+    probe = directory / "case-probe"
+    probe.write_text("", encoding="utf-8")
+    try:
+        return (directory / "CASE-PROBE").exists()
+    finally:
+        probe.unlink()
+
+
+def _with_current_gitignore(repo: Path) -> None:
+    entries, _ = engine_mod._link_gitignore_entries()
+    (repo / ".gitignore").write_text("\n".join(entries) + "\n", encoding="utf-8")
+
+
+def test_unattended_update_leaves_a_lowercase_agents_md_alone(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path
+) -> None:
+    if not _case_insensitive(business_repo):
+        pytest.skip("needs a case-insensitive filesystem: agents.md and AGENTS.md differ here")
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    _with_current_gitignore(business_repo)
+    _git(business_repo, "mv", "AGENTS.md", "intermediate.md")
+    _git(business_repo, "mv", "intermediate.md", "agents.md")
+    _commit_all(business_repo, "Lowercase agents.md")
+
+    result = update_mod.run(repo=business_repo, interactive=False)
+
+    assert _git(business_repo, "status", "--porcelain") == ""
+    assert (business_repo / "agents.md").read_text(encoding="utf-8") == "# Old guidance\n"
+    planned = result["surface_refresh"]["planned"]
+    assert planned["consent"] == "no_terminal", planned
+    assert "agents.md" in planned["tracked_files"], planned
+    assert result["ok"] is True, result["errors"]
+
+
+@pytest.mark.parametrize("holder", ["business", "other"])
+def test_unattended_update_never_writes_through_a_hard_link(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path, holder: str
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    _with_current_gitignore(business_repo)
+    codex_mod.write_agents_md(business_repo)
+    holder_repo = business_repo
+    if holder == "other":
+        holder_repo = tmp_path / "other"
+        holder_repo.mkdir()
+        _git(holder_repo, "init", "-q", "-b", "main")
+    shared = holder_repo / "shared-skill.md"
+    shared.write_text("stale\n", encoding="utf-8")
+    global_skill = codex_mod.global_skill_source_root() / "mb-start" / "SKILL.md"
+    global_skill.parent.mkdir(parents=True, exist_ok=True)
+    os.link(shared, global_skill)
+    _commit_all(holder_repo, "Shared skill")
+    if holder == "other":
+        _commit_all(business_repo, "Current surfaces")
+
+    result = update_mod.run(repo=business_repo, interactive=False)
+
+    assert shared.read_text(encoding="utf-8") == "stale\n"
+    assert _git(business_repo, "status", "--porcelain") == ""
+    assert _git(holder_repo, "status", "--porcelain") == ""
+    planned = result["surface_refresh"]["planned"]
+    if holder == "business":
+        assert "shared-skill.md" in planned["tracked_files"], planned
+    else:
+        # Outside the business repo the refresh still runs, into a new file.
+        assert global_skill.read_text(encoding="utf-8") != "stale\n"
+        assert not os.path.samefile(global_skill, shared)
+    assert result["ok"] is True, result["errors"]
+
+
+def test_planned_personal_backup_is_where_the_link_moves_it(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    _with_current_gitignore(business_repo)
+    codex_mod.write_agents_md(business_repo)
+    _commit_all(business_repo, "Current surfaces")
+    personal = engine_mod._personal_skills_dir()
+    personal.mkdir(parents=True)
+    (personal / "mb-start").symlink_to(tmp_path / "missing-engine")
+
+    planned = [
+        item["path"]
+        for item in engine_mod.plan_link_skills(business_repo)["operations"]
+        if item["op"] == "create" and ".mainbranch-backups" in item["path"]
+    ]
+    result = update_mod.run(repo=business_repo, interactive=False)
+
+    applied = sorted(str(path) for path in (personal / ".mainbranch-backups").rglob("mb-start*"))
+    assert planned and applied == planned, (planned, applied)
+    assert result["ok"] is True, result["errors"]

@@ -2823,8 +2823,8 @@ def write_global_skill_source() -> dict[str, Any]:
     for item in global_skill_operations():
         path = Path(item["path"])
         if item["op"] == "write":
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(item["content"], encoding="utf-8")
+            # Replace the directory entry: a hard-linked file keeps its content.
+            atomic_write_text(path, item["content"])
             changed_paths.append(str(path))
         elif _remove_generated_tree(path):
             changed_paths.append(str(path))
@@ -2948,7 +2948,7 @@ def write_global_plugin_source() -> dict[str, Any]:
         path.parent.mkdir(parents=True, exist_ok=True)
         existing = path.read_text(encoding="utf-8") if path.exists() else ""
         if existing != text:
-            path.write_text(text, encoding="utf-8")
+            atomic_write_text(path, text)
             changed_paths.append(str(path))
     old_skill = root / CODEX_PLUGIN_DIR_RELATIVE_PATH / "skills"
     if _remove_generated_tree(old_skill):
@@ -2974,6 +2974,9 @@ def write_global_plugin_source() -> dict[str, Any]:
 
 
 def _remove_generated_tree(path: Path) -> bool:
+    if path.is_symlink():
+        path.unlink()  # the link only, never the tree it points into
+        return True
     if path.is_dir():
         shutil.rmtree(path)
         return True

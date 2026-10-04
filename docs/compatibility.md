@@ -297,11 +297,16 @@ already current see no change on disk.
 each surface first (`mb skill link --plan`, `mb doctor repair --plan --only
 codex`). Each plan lists every destination its apply touches (writes, new or
 replaced links, deletions, including old skill links and transitional Codex
-files), and the apply carries out that same list. Each destination is resolved
-through symlinks and checked against git in whichever repo really holds it, so
-a symlinked `.claude/` or a Codex skill folder linked into a repo cannot slip a
-tracked file past the plan. Gitignored links and the per-user Codex bundle
-refresh on their own. When the refresh would change, delete or replace a
+files), and the apply carries out that same list, including the exact backup
+path for a personal skill link it moves. A destination counts as tracked when
+it is the same file or folder (same device and inode) as one git tracks in the
+business repo, which catches a case variant such as a committed `agents.md`, a
+symlink and a hard link; or when, resolved through symlinks, git tracks it in
+whichever repo really holds it. Anything that cannot be checked counts as
+tracked. Every file write replaces the directory entry (a temporary file
+renamed into place), so a file hard-linked into another repo keeps its content,
+and a deletion removes a symlink itself, never the tree it points to.
+Gitignored links and the per-user Codex bundle refresh on their own. When the refresh would change, delete or replace a
 tracked file:
 
 - at an interactive terminal, it lists those files and asks once (default no);
@@ -313,9 +318,11 @@ tracked file:
 `declined` or `approved`), `tracked_files` (the repo files that would change),
 `tracked_changes` (each with its `op`: `write`, `delete`, `delete_tree`,
 `create_link`, `replace_link`) and `apply_commands` (what is left to run).
-After applying, `mb update` compares `git status` with what it saw before. If a
-tracked file changed that was not approved, it sets `ok` to false, names the
-file in `errors` and `planned.unapproved_changes`, and reverts nothing. `surface_refresh.claude` and
+After applying, `mb update` compares the business repo's `git status` with what
+it saw before. This check is a backstop for a case the plan missed, not part
+of the guarantee: if a tracked file changed that was not approved, it sets `ok`
+to false, names the file in `errors` and `planned.unapproved_changes`, and
+reverts nothing. `surface_refresh.claude` and
 `surface_refresh.codex` each carry `applied`; a surface left alone also
 carries its `tracked_writes` and `plan`.
 

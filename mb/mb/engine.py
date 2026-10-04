@@ -504,8 +504,12 @@ def _classify_personal_skill(entry: Path, name: str) -> tuple[str, str]:
     return "not-mainbranch-link", str(entry)
 
 
-def _backup_destination(global_dir: Path, name: str, timestamp: str) -> Path:
-    base = global_dir / ".mainbranch-backups" / timestamp
+# `mb skill link` moves personal links here, at a path it can plan exactly.
+LINK_BACKUP_FOLDER = "skill-link"
+
+
+def _backup_destination(global_dir: Path, name: str, folder: str) -> Path:
+    base = global_dir / ".mainbranch-backups" / folder
     candidate = base / name
     if not candidate.exists() and not candidate.is_symlink():
         return candidate
@@ -525,6 +529,7 @@ def _conflict_finding(
     repo: Path,
     apply: bool,
     timestamp: str,
+    backup_to: Path | None = None,
 ) -> dict[str, Any]:
     entry = global_dir / name
     classification, target = _classify_personal_skill(entry, name)
@@ -533,7 +538,7 @@ def _conflict_finding(
     repaired = False
     error = ""
     if apply and safe_to_repair:
-        backup = _backup_destination(global_dir, name, timestamp)
+        backup = backup_to or _backup_destination(global_dir, name, timestamp)
         try:
             backup.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(entry), str(backup))
@@ -568,14 +573,14 @@ def inspect_personal_skill_conflicts(
     *,
     apply: bool = False,
     personal_skills_dir: Path | None = None,
-    only_names: set[str] | None = None,
+    backup_paths: dict[str, Path] | None = None,
 ) -> dict[str, Any]:
     """Inspect or repair personal Claude Code skills that can shadow Main Branch.
 
     ``apply`` only moves stale Main Branch symlinks and broken symlinks matching
     Main Branch's current or legacy skill names. User-authored or third-party
-    skills are reported but never changed. ``only_names`` limits the repair to
-    names a plan already listed.
+    skills are reported but never changed. ``backup_paths`` limits the repair
+    to the names a plan listed and moves each to its planned path.
     """
     target = Path(repo).expanduser().resolve()
     global_dir = personal_skills_dir or _personal_skills_dir()
@@ -593,8 +598,9 @@ def inspect_personal_skill_conflicts(
                     kind="active-shadow",
                     global_dir=global_dir,
                     repo=target,
-                    apply=apply and (only_names is None or name in only_names),
+                    apply=apply and (backup_paths is None or name in backup_paths),
                     timestamp=timestamp,
+                    backup_to=(backup_paths or {}).get(name),
                 )
             )
 
@@ -608,8 +614,9 @@ def inspect_personal_skill_conflicts(
                     kind="legacy-global",
                     global_dir=global_dir,
                     repo=target,
-                    apply=apply and (only_names is None or name in only_names),
+                    apply=apply and (backup_paths is None or name in backup_paths),
                     timestamp=timestamp,
+                    backup_to=(backup_paths or {}).get(name),
                 )
             )
 
@@ -723,6 +730,111 @@ class _TrackedIndex:
         return rel in tracked or any(item.startswith(prefix) for item in tracked)
 
 
+class _TrackedIdentities:
+    """The business repo's tracked files and their folders, by (device, inode).
+
+    A case variant (`agents.md` for `AGENTS.md` on a case-insensitive disk), a
+    symlink or a hard link reaches the same inode under another spelling, so
+    matching identities catches every alias a string comparison misses.
+    """
+
+    def __init__(self, repo_real: str) -> None:
+        self.repo = repo_real
+        self.files: dict[tuple[int, int], str] = {}
+        self.dirs: dict[tuple[int, int], str] = {}
+        self.names: set[str] = set()
+        self.known = False
+        inside = self._git("rev-parse", "--is-inside-work-tree")
+        if inside is not None and inside.returncode != 0:
+            self.known = True  # not a git work tree: nothing here is tracked
+            return
+        proc = self._git("ls-files", "-z")
+        if inside is None or proc is None or proc.returncode != 0:
+            return
+        self.known = True
+        folders: set[str] = {"."}
+        for rel in (item for item in proc.stdout.split("\0") if item):
+            self.names.add(rel.casefold())
+            try:
+                st = os.lstat(os.path.join(repo_real, rel))
+            except OSError:
+                continue  # tracked but missing from the work tree
+            self.files.setdefault((st.st_dev, st.st_ino), rel)
+            parent = os.path.dirname(rel)
+            while parent and parent not in folders:
+                folders.add(parent)
+                parent = os.path.dirname(parent)
+        for rel in folders:
+            try:
+                st = os.stat(os.path.join(repo_real, rel))
+            except OSError:
+                continue
+            self.dirs.setdefault((st.st_dev, st.st_ino), rel)
+
+    def _git(self, *args: str) -> subprocess.CompletedProcess[str] | None:
+        try:
+            return subprocess.run(
+                ["git", "-C", self.repo, *args],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+                stdin=subprocess.DEVNULL,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return None
+
+    def match(self, path: str, op: str) -> str | None:
+        """The tracked path ``op`` on ``path`` would change, or None.
+
+        Raises OSError when the destination cannot be checked.
+        """
+        if not self.known:
+            raise OSError(f"cannot list the files git tracks in {self.repo}")
+        lexical = os.path.abspath(path)
+        try:
+            st = os.lstat(lexical)
+        except FileNotFoundError:
+            return self._match_new(lexical)
+        hit = self._match_stat(st, op)
+        if hit is None and op in _FOLLOWING_OPS and os.path.islink(lexical):
+            try:
+                hit = self._match_stat(os.stat(lexical), op)
+            except FileNotFoundError:
+                return None
+        return hit
+
+    def _match_stat(self, st: os.stat_result, op: str) -> str | None:
+        key = (st.st_dev, st.st_ino)
+        if key in self.files:
+            return self.files[key]
+        if op == "delete_tree" and key in self.dirs:
+            return self.dirs[key]
+        return None
+
+    def _match_new(self, lexical: str) -> str | None:
+        """A path that does not exist yet: is a tracked file missing there?"""
+        parent, rest = lexical, ""
+        while True:
+            head, tail = os.path.split(parent)
+            if head == parent:
+                return None
+            parent, rest = head, os.path.join(tail, rest) if rest else tail
+            try:
+                st = os.stat(parent)
+            except FileNotFoundError:
+                continue
+            folder = self.dirs.get((st.st_dev, st.st_ino))
+            if folder is None:
+                return None
+            rel = rest if folder == "." else f"{folder}/{rest}"
+            rel = rel.replace(os.sep, "/")
+            folded = rel.casefold()
+            if folded in self.names or any(name.startswith(folded + "/") for name in self.names):
+                return rel
+            return None
+
+
 # Operations whose last path component is followed when written or removed.
 _FOLLOWING_OPS = frozenset({"write", "delete_tree"})
 
@@ -741,21 +853,31 @@ def consent_destinations(
 ) -> list[dict[str, str]]:
     """The planned operations that would change a file git tracks.
 
-    Each destination is resolved through every symlinked parent (and through a
-    symlinked last component when the operation follows it), then looked up in
-    the git work tree that really holds it, whichever repo that is. A path
-    that cannot be resolved needs consent. Paths inside ``repo`` are reported
-    relative to it; anything else is reported as its real absolute path.
+    Two checks, and either one is enough. By identity: a destination that
+    exists (or, for a new path, its nearest existing parent) is compared by
+    device and inode with the business repo's tracked files and the folders
+    that hold them, so case variants, symlinks and hard links all match. By
+    real path: the destination is resolved through every symlinked parent
+    (and a followed last component) and looked up in the git work tree that
+    really holds it, whichever repo that is. Anything that cannot be checked
+    needs consent. Paths inside ``repo`` are reported relative to it; anything
+    else is reported as its real absolute path.
     """
     repo_real = os.path.realpath(Path(repo).expanduser())
     index = _TrackedIndex()
+    identities = _TrackedIdentities(repo_real)
     needed: list[dict[str, str]] = []
     for operation in operations:
         op = str(operation.get("op") or "")
+        raw = str(operation.get("path") or "")
         try:
+            by_identity = identities.match(raw, op)
             destinations = _real_destinations(str(operation["path"]), op)
         except (KeyError, OSError, ValueError):
-            needed.append({"path": str(operation.get("path") or ""), "op": op})
+            needed.append({"path": raw, "op": op})
+            continue
+        if by_identity is not None:
+            needed.append({"path": by_identity, "op": op})
             continue
         for real in destinations:
             if not index.is_tracked(real):
@@ -877,15 +999,12 @@ def _link_operations(target: Path, root: Path) -> dict[str, Any]:
 
     global_dir = _personal_skills_dir()
     personal = _planned_personal_repairs(global_dir)
+    backup_paths: dict[str, Path] = {}
     for name in personal:
+        backup = _backup_destination(global_dir, name, LINK_BACKUP_FOLDER)
+        backup_paths[name] = backup
         operations.append({"op": "delete", "path": str(global_dir / name), "rel": ""})
-        operations.append(
-            {
-                "op": "create",
-                "path": str(global_dir / ".mainbranch-backups" / "pending" / name),
-                "rel": "",
-            }
-        )
+        operations.append({"op": "create", "path": str(backup), "rel": ""})
 
     return {
         "error": "",
@@ -894,6 +1013,7 @@ def _link_operations(target: Path, root: Path) -> dict[str, Any]:
         "gitignore_add": gitignore_add,
         "gitignore_remove": gitignore_remove,
         "personal_repairs": personal,
+        "backup_paths": backup_paths,
         "removed_stale_engine_paths": removed_stale,
     }
 
@@ -1024,7 +1144,7 @@ def link_skills(repo: str | Path) -> dict[str, Any]:
         "removed_stale_engine_paths": planned["removed_stale_engine_paths"],
         "errors": [],
         "shadow_report": inspect_personal_skill_conflicts(
-            target, apply=True, only_names=set(planned["personal_repairs"])
+            target, apply=True, backup_paths=planned["backup_paths"]
         ),
     }
 
