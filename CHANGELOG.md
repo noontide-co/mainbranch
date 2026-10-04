@@ -11,6 +11,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-10-04
+
+This patch fixes a regression on macOS: unattended credential reads could wait
+on a keychain dialog after the Python under `mb` changed. Reads now report a
+pending keychain prompt at once instead of waiting, and
+`mb connect repair --keychain` moves any item that cannot move on its own.
+The docs now match 0.6.0.
+
 ### Fixed
 
 - Regression: unattended credential reads on macOS no longer wait on keychain
