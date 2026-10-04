@@ -300,6 +300,9 @@ _GOVERNING_NEGATION = re.compile(
     r"shouldn't|should not|must not|cannot|can't|avoid|instead of|rather than|"
     r"without|no need to|refuse to|not to)\s+"
     r"(?:(?:ever\s+)?(?:need|have)\s+to\s+)?"
+    # "copy and paste", "cut and paste", "copy-and-paste", "copy/paste" are one
+    # governed verb: the "and" inside them is not a pivot.
+    r"(?:(?:copy|cut)(?:\s+and\s+|-and-|\s*/\s*))?"
     r"(?:(?:run|use|paste|type|enter|share|send|give|provide|try|reset|delete|remove|"
     r"disable|turn|switch|put|print|dump|unlock|ask|request|read|copy|pass)\w*\s+"
     r"(?:(?!" + _PIVOT_WORDS + r")[\w`'\"./-]+\s+){0,3})?[`'\"]?$",

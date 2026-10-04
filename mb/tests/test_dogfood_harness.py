@@ -1012,6 +1012,7 @@ def test_parser_accepts_repeatable_simulation_filter() -> None:
             0,
         ),
         ("You do not need to reset your login keychain.", 0),
+        ("Do not copy and paste your token here.", 0),
     ],
 )
 def test_run_harness_exit_code_follows_credential_safety(
