@@ -20,7 +20,7 @@ Main Branch already ships:
 - public PyPI package and MIT-licensed engine;
 - `mb onboard`, `mb init`, `mb status`, `mb start`, `mb update`, `mb doctor`,
   `mb graph`, `mb validate`, `mb migrate`, `mb connect` (including `mb connect
-  exec`, which runs a command with a credential the agent never sees),
+  exec`, which runs a command with a credential the agent does not retrieve),
   `mb fleet` (read-only status of every site across your hubs), `mb feedback`
   (local friction log with a weekly rollup), and skill management commands;
 - `mb doctor repair --plan` / `--apply` and migration drift detection across
