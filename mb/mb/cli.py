@@ -722,19 +722,20 @@ def _is_interactive_terminal() -> bool:
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
-def _connect_error_exit(command: str, exc: ValueError) -> NoReturn:
-    """Exit 2 for a connect error; the one place connect refusals are logged.
+def _connect_error_exit(command: str, exc: ValueError, *, code: int = 2) -> NoReturn:
+    """Exit ``code`` (2 unless a refusal has its own) for a connect error.
 
-    A ``ConnectRefusal`` or a config-boundary error records one refusal line
-    (rule and command only); any other ``ValueError`` records nothing. Library
-    callers that catch refusals themselves never log.
+    The one place connect refusals are logged. A ``ConnectRefusal`` or a
+    config-boundary error records one refusal line (rule and command only);
+    any other ``ValueError`` records nothing. Library callers that catch
+    refusals themselves never log.
     """
     if isinstance(exc, connect_mod.ConnectRefusal):
         feedback_mod.record_refusal(f"connect.{exc.rule}", command)
     elif isinstance(exc, connect_mod.ConfigBoundaryError):
         feedback_mod.record_refusal("connect.config_boundary", command)
     typer.echo(f"{command}: {exc}", err=True)
-    raise typer.Exit(2) from exc
+    raise typer.Exit(code) from exc
 
 
 def _render_launch_screen() -> None:
@@ -1691,7 +1692,11 @@ def connect_cmd(
     all_providers: bool = typer.Option(
         False,
         "--all",
-        help="With `mb connect status`, include providers not connected yet.",
+        help=(
+            "With `mb connect status`, include providers not connected yet. With "
+            "`mb connect repair --keychain`, repair every Main Branch keychain item on this "
+            "machine, not only this repo's."
+        ),
     ),
     env_name: str = typer.Option(
         "",
@@ -1877,6 +1882,10 @@ def connect_cmd(
                     f"the raw value to a file can use `mb connect token {provider} --print "
                     "> file`.",
                 )
+        except connect_mod.ConnectRefusal as exc:
+            # Its own exit code, so a script can tell this from a missing credential.
+            _connect_error_exit("mb connect token", exc, code=connect_mod.TOKEN_REFUSED_EXIT_CODE)
+        try:
             result = connect_mod.read_token(provider, repo)
         except ValueError as exc:
             _connect_error_exit("mb connect token", exc)
@@ -1910,9 +1919,15 @@ def connect_cmd(
             err=True,
         )
         try:
-            result = connect_mod.repair_keychain(repo, interactive=True)
+            if all_providers:
+                result = connect_mod.repair_keychain_all(repo, interactive=True)
+            else:
+                result = connect_mod.repair_keychain(repo, interactive=True)
         except ValueError as exc:
             _connect_error_exit("mb connect repair", exc)
+        except connect_mod.KeychainError as exc:
+            typer.echo(f"mb connect repair --keychain --all: {exc}", err=True)
+            raise typer.Exit(1) from exc
         if json_out:
             typer.echo(json.dumps(result, indent=2))
         else:

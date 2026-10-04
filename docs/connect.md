@@ -82,10 +82,10 @@ still the command's business: avoid commands that echo their environment.
 ## Raw Read: `token`
 
 `mb connect token <provider>` prints the raw credential with no added newline.
-It refuses, with exit 2, when stdout is a terminal or a pipe, because both put
-the secret into some other process's text: a transcript, a log, a variable
-an agent later prints. The refusal points at `exec`. A script that must write
-the raw value to a file can still do so explicitly:
+It refuses when stdout is a terminal or a pipe, because both put the secret
+into some other process's text: a transcript, a log, a variable an agent later
+prints. The refusal points at `exec` on stderr. A script that must write the
+raw value to a file can still do so explicitly:
 
 ```bash
 mb connect token stripe --print > "$private_tmp/stripe-key"
@@ -93,6 +93,34 @@ mb connect token stripe --print > "$private_tmp/stripe-key"
 
 `--print` also lifts the refusal for a terminal or a pipe. Use it only when
 nothing reading that output is an agent or a log.
+
+Exit codes, stable for scripts:
+
+| Exit | Meaning |
+| --- | --- |
+| 0 | The value was written to stdout. |
+| 1 | No value: the provider is not connected, the credential is missing, or the credential store could not read it. stderr says which and names the repair. |
+| 2 | Usage error, or another refusal (for example a provider with no secret slot). |
+| 3 | Refused by design: stdout is a terminal or a pipe and `--print` was not given. |
+
+`--json` is not supported: the token is the whole stdout contract.
+
+### Breaking in 0.6.0 (not flagged at the time)
+
+0.6.0 made `mb connect token <provider>` refuse a terminal or a pipe. Scripts
+that captured the value through stdout stopped working, for example
+`TOKEN=$(mb connect token stripe)` (command substitution reads through a pipe)
+or `mb connect token stripe | tool`. Through 0.6.1 the refusal exited 2, the
+same code as usage errors; from 0.6.2 it exits 3, so a wrapper can tell
+"refused by design" from "no credential". To migrate:
+
+- Run the command with the credential instead:
+  `mb connect exec <provider> -- <command>`. The value reaches only that
+  command's environment (see `exec` above).
+- Where a script must hold the raw value, add `--print`, preferably writing
+  to a private file: `mb connect token <provider> --print > file`.
+  `TOKEN=$(mb connect token <provider> --print)` also works, but keeps the
+  value in the shell.
 
 The product model behind this surface lives in
 [connection-model.md](connection-model.md).
@@ -387,9 +415,17 @@ fails at once with the `keychain_prompt_pending` state instead of running into
 the safety deadline. A locked keychain fails at once with `keychain_locked`,
 since unlocking would also need a dialog. Main Branch runs `security` only on
 items whose access list already trusts it, because `security` itself cannot be
-told to fail instead of showing a dialog. An item whose access list was edited
-by hand can still make `security` raise a dialog; the command's deadline stops
-it, kills `security`, and reports `keychain_prompt_pending`.
+told to fail instead of showing a dialog.
+
+One case is not detected: an item whose access list was edited by hand (in
+Keychain Access, or with `security set-generic-password-partition-list`) so
+that `/usr/bin/security` comes first while its partition list lacks
+`apple-tool:`. Main Branch never creates such an item. Telling it apart needs
+the item's partition list, which the public Security API does not expose, so
+Main Branch reads it like any other `security`-owned item; `security` may then
+raise a dialog. The command's deadline bounds it: it stops waiting, kills
+`security`, and reports `keychain_prompt_pending`. To fix such an item, delete
+it in Keychain Access and connect the provider again.
 
 `ready` in `mb connect status` means the credential can be read now; it does
 not prove the item has moved to `security`. An item still owned by the old
@@ -416,6 +452,23 @@ pending. A credential already owned by `security` reports `ready`. After every
 credential reports `ready` or `repaired`, Python and `mb` updates do not ask
 again. Never reset or delete the login keychain to repair one item.
 
+With several business repos, repair every item on the machine in one pass:
+
+```bash
+mb connect repair --keychain --all
+```
+
+It lists the `mainbranch` items in the keychain by their attributes only (no
+values are read and no dialog can appear while listing), then repairs each one
+exactly as above: a dialog only for an item that needs one, the same
+`repaired` / `readable_not_migrated` / `still_pending` verdicts, and one
+summary with the count per state and what is still pending. Each item is
+labelled with its hub and provider when this repo or a hub checkout in the
+`mb fleet` hub list records it, otherwise by its keychain ref. A staged copy
+left by an interrupted move is not repaired on its own: its item is read,
+which finishes or undoes the move. Like the per-repo repair, it needs a
+terminal, refuses to run without one, and never prints a value.
+
 To move an existing install, in this order, from a terminal in the hub:
 
 1. `mb update`. It runs `uv tool install mainbranch@latest`, which keeps the
@@ -426,7 +479,8 @@ To move an existing install, in this order, from a terminal in the hub:
    `security` silently; the rest report `keychain_prompt_pending`.
 3. `mb connect repair --keychain`, at the screen, choosing **Always Allow** for
    each dialog. Run it again until every credential reports `ready` (already
-   owned by `security`) or `repaired`, and nothing is pending.
+   owned by `security`) or `repaired`, and nothing is pending. With several
+   hubs, `mb connect repair --keychain --all` does every hub in one run.
 
 On Linux, Main Branch uses the existing Secret Service default collection. It
 checks collection and item lock state and never calls an unlock method. Unlock

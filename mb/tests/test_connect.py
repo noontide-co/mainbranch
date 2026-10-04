@@ -1888,11 +1888,121 @@ def test_connect_token_refuses_terminal_or_pipe_without_print(tmp_path: Path, mo
 
     result = runner.invoke(app, ["connect", "token", "cloudflare", "--repo", str(repo)])
 
-    assert result.exit_code == 2
+    assert result.exit_code == connect_mod.TOKEN_REFUSED_EXIT_CODE
     assert result.stdout == ""
     assert "cf-test-token" not in result.output
     assert "mb connect exec cloudflare -- <command>" in result.stderr
     assert "--print" in result.stderr
+
+
+def test_token_refusal_exit_code_is_pinned_and_distinct() -> None:
+    """Scripts match on this number (#1011); changing it is a breaking change."""
+
+    assert connect_mod.TOKEN_REFUSED_EXIT_CODE == 3
+    # 1: credential missing, unreadable or store failure; 2: usage and other refusals.
+    assert connect_mod.TOKEN_REFUSED_EXIT_CODE not in {0, 1, 2}
+
+
+def _token_subprocess_env(tmp_path: Path) -> dict[str, str]:
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if not any(key in provider.env_vars for provider in connect_mod.PROVIDERS)
+    }
+    env["MB_CONNECT_SECRET_BACKEND"] = "local-file"
+    env["MAINBRANCH_HOME"] = str(tmp_path / "home")
+    env["MB_FEEDBACK_LOG"] = "0"
+    return env
+
+
+@pytest.mark.parametrize("stdout_kind", ["pipe", "terminal"])
+def test_connect_token_refusal_exit_code_for_a_real_pipe_and_terminal(
+    tmp_path: Path, monkeypatch, stdout_kind: str
+) -> None:
+    if stdout_kind == "terminal" and sys.platform == "win32":
+        pytest.skip("needs a pty")
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token")
+    argv = [sys.executable, "-m", "mb", "connect", "token", "cloudflare", "--repo", str(repo)]
+    env = _token_subprocess_env(tmp_path)
+
+    if stdout_kind == "pipe":
+        completed = subprocess.run(
+            argv, capture_output=True, text=True, env=env, timeout=60, check=False
+        )
+        returncode, stdout, stderr = completed.returncode, completed.stdout, completed.stderr
+    else:
+        import pty
+
+        leader, follower = pty.openpty()
+        try:
+            completed = subprocess.run(
+                argv,
+                stdout=follower,
+                stderr=subprocess.PIPE,
+                text=True,
+                env=env,
+                timeout=60,
+                check=False,
+            )
+            os.close(follower)
+            follower = -1
+            chunks: list[bytes] = []
+            while True:
+                try:
+                    chunk = os.read(leader, 4096)
+                except OSError:
+                    break
+                if not chunk:
+                    break
+                chunks.append(chunk)
+        finally:
+            if follower != -1:
+                os.close(follower)
+            os.close(leader)
+        returncode, stdout, stderr = (
+            completed.returncode,
+            b"".join(chunks).decode(),
+            completed.stderr,
+        )
+
+    assert returncode == connect_mod.TOKEN_REFUSED_EXIT_CODE == 3
+    assert stdout == ""
+    assert "cf-test-token" not in stdout + stderr
+    assert "mb connect exec cloudflare -- <command>" in stderr
+
+
+def test_connect_token_print_still_writes_to_a_real_pipe(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token")
+
+    completed = subprocess.run(
+        [sys.executable, "-m", "mb", "connect", "token", "cloudflare", "--print"]
+        + ["--repo", str(repo)],
+        capture_output=True,
+        text=True,
+        env=_token_subprocess_env(tmp_path),
+        timeout=60,
+        check=False,
+    )
+
+    assert completed.returncode == 0
+    assert completed.stdout == "cf-test-token"
+
+
+def test_connect_token_missing_credential_keeps_exit_1(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(app, ["connect", "token", "cloudflare", "--print", "--repo", str(repo)])
+
+    assert result.exit_code == 1
+    assert "not connected" in result.stderr
 
 
 def test_stdout_exposes_secret_for_tty_pipe_and_unknown(tmp_path: Path) -> None:

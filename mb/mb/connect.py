@@ -24,12 +24,15 @@ from typing import Any, NoReturn
 
 import yaml
 
+from mb._credential_helper import STAGE_SUFFIX
 from mb.credential_store import (
+    KEYCHAIN_REPAIR_ALL_COMMAND,
     KEYCHAIN_REPAIR_COMMAND,
     CredentialStoreError,
     SecretProbe,
     SecretStore,
     backend_repair,
+    list_keychain_refs,
     new_credential_deadline,
     select_secret_backend,
 )
@@ -80,6 +83,13 @@ UNVERIFIED_STATE = "stored_unverified"
 PROBE_PROVIDERS: frozenset[str] = frozenset(
     {"cloudflare", "apify", "meta", "stripe", "github", "ga4"}
 )
+
+
+# `mb connect token` without `--print` when stdout is a terminal or a pipe.
+# Distinct from 1 (credential missing or unreadable, store failure) and 2
+# (usage error or any other refusal), so a script can tell "refused by design"
+# from "no credential". Stable: documented in docs/connect.md.
+TOKEN_REFUSED_EXIT_CODE = 3
 
 
 class ConnectRefusal(ValueError):
@@ -2055,20 +2065,14 @@ def hydrate(
     }
 
 
-def repair_keychain(repo: str | Path = ".", *, interactive: bool = False) -> dict[str, Any]:
-    """Move every macOS Keychain credential of this repo to ``/usr/bin/security``.
+def _recorded_keychain_refs(repo: Path) -> list[tuple[str, str, str]]:
+    """``(provider, field, ref)`` for every macOS Keychain secret ``repo`` records.
 
-    Every other command reads with keychain interaction disabled, so an item
-    this mb install is not yet trusted to read reports
-    ``keychain_prompt_pending`` instead of waiting on a dialog. This is the one
-    place that dialog may appear, and only when the caller passes
-    ``interactive=True`` from a real terminal. Each successful read migrates
-    the item, so it is asked about at most once. Values are never returned.
+    Repo config wins over the user-scope entry for the same provider.
     """
 
-    target = Path(repo).resolve()
-    config = _read_config(target)
-    repo_id = str(config.get("repo_id") or _repo_identity(target)["repo_id"])
+    config = _read_config(repo)
+    repo_id = str(config.get("repo_id") or _repo_identity(repo)["repo_id"])
     entries: dict[str, dict[str, Any]] = {}
     user_repo = _read_user_scope()["repos"].get(repo_id)
     user_repo = user_repo if isinstance(user_repo, dict) else {}
@@ -2080,7 +2084,7 @@ def repair_keychain(repo: str | Path = ".", *, interactive: bool = False) -> dic
     entries.update(
         {str(key): value for key, value in config["providers"].items() if isinstance(value, dict)}
     )
-    items: list[dict[str, Any]] = []
+    recorded: list[tuple[str, str, str]] = []
     for provider_id in sorted(entries):
         raw_secrets = entries[provider_id].get("secrets")
         secrets = raw_secrets if isinstance(raw_secrets, dict) else {}
@@ -2095,47 +2099,83 @@ def repair_keychain(repo: str | Path = ".", *, interactive: bool = False) -> dic
                 continue
             if selected != "macos-keychain" or not ref:
                 continue
-            # A read that succeeds also moves a legacy item to the Apple-signed
-            # `security` tool, after which no Python change prompts again.
-            probe = _probe_secret_ref(backend, ref)
-            before = probe.reason or ("ready" if probe.present else "missing")
-            state = before
-            migrated = probe.migrated
-            if probe.present and probe.owner != "security":
-                # Readable, but by this Python only: the next Python change
-                # would prompt again. Not a repair until `security` owns it.
+            recorded.append((provider_id, field, ref))
+    return recorded
+
+
+def _repair_keychain_ref(
+    ref: str, *, interactive: bool = False, command: str = KEYCHAIN_REPAIR_COMMAND
+) -> dict[str, Any]:
+    """Repair one macOS Keychain item; the same path for one repo or every item.
+
+    An unattended read first: it also moves a legacy item this Python can
+    read. Only an item whose read would need a dialog gets the interactive
+    read, and only a fresh unattended read that finds the item owned by
+    ``security`` counts as ``repaired``. Never returns the value.
+    """
+
+    backend = "macos-keychain"
+    probe = _probe_secret_ref(backend, ref)
+    before = probe.reason or ("ready" if probe.present else "missing")
+    state = before
+    migrated = probe.migrated
+    if probe.present and probe.owner != "security":
+        # Readable, but by this Python only: the next Python change would
+        # prompt again. Not a repair until `security` owns it.
+        state = "readable_not_migrated"
+    if probe.reason == "keychain_prompt_pending" and interactive:
+        answered = _probe_secret_ref(backend, ref, interactive=True)
+        if answered.present:
+            # The answered read also moves the item when this Python may
+            # remove it. Only a fresh unattended read that finds the item
+            # owned by `security` proves the repair.
+            after = _probe_secret_ref(backend, ref)
+            migrated = answered.migrated or after.migrated
+            if not after.present:
+                state = "still_pending"
+            elif after.owner == "security":
+                state = "repaired"
+            else:
                 state = "readable_not_migrated"
-            if probe.reason == "keychain_prompt_pending" and interactive:
-                answered = _probe_secret_ref(backend, ref, interactive=True)
-                if answered.present:
-                    # The answered read also moves the item when this Python
-                    # may remove it. Only a fresh unattended read that finds the
-                    # item owned by `security` proves the repair.
-                    after = _probe_secret_ref(backend, ref)
-                    migrated = answered.migrated or after.migrated
-                    if not after.present:
-                        state = "still_pending"
-                    elif after.owner == "security":
-                        state = "repaired"
-                    else:
-                        state = "readable_not_migrated"
-                else:
-                    state = answered.reason or "missing"
-            items.append(
-                {
-                    "provider": provider_id,
-                    "field": field,
-                    "before": before,
-                    "state": state,
-                    "migrated": migrated,
-                    "summary": _keychain_repair_summary(state, migrated=migrated),
-                }
-            )
-    pending = [
-        item
-        for item in items
-        if item["state"] in {"keychain_prompt_pending", "still_pending", "readable_not_migrated"}
-    ]
+        else:
+            state = answered.reason or "missing"
+    return {
+        "before": before,
+        "state": state,
+        "migrated": migrated,
+        "summary": _keychain_repair_summary(state, migrated=migrated, command=command),
+    }
+
+
+KEYCHAIN_PENDING_STATES = frozenset(
+    {"keychain_prompt_pending", "still_pending", "readable_not_migrated"}
+)
+
+
+def repair_keychain(repo: str | Path = ".", *, interactive: bool = False) -> dict[str, Any]:
+    """Move every macOS Keychain credential of this repo to ``/usr/bin/security``.
+
+    Every other command reads with keychain interaction disabled, so an item
+    this mb install is not yet trusted to read reports
+    ``keychain_prompt_pending`` instead of waiting on a dialog. This is the one
+    place that dialog may appear, and only when the caller passes
+    ``interactive=True`` from a real terminal. Each successful read migrates
+    the item, so it is asked about at most once. Values are never returned.
+    """
+
+    target = Path(repo).resolve()
+    items: list[dict[str, Any]] = []
+    for provider_id, field, ref in _recorded_keychain_refs(target):
+        items.append(
+            {
+                "provider": provider_id,
+                "field": field,
+                **_repair_keychain_ref(
+                    ref, interactive=interactive, command=KEYCHAIN_REPAIR_COMMAND
+                ),
+            }
+        )
+    pending = [item for item in items if item["state"] in KEYCHAIN_PENDING_STATES]
     failed = [item for item in items if item["state"] not in {"ready", "repaired", "missing"}]
     return {
         "ok": not failed,
@@ -2148,7 +2188,107 @@ def repair_keychain(repo: str | Path = ".", *, interactive: bool = False) -> dic
     }
 
 
-def _keychain_repair_summary(state: str, *, migrated: bool = False) -> str:
+def _keychain_ref_owners(repo: Path) -> dict[str, dict[str, str]]:
+    """Map recorded keychain refs to the hub and provider that use them.
+
+    Sources, first label wins: ``repo`` itself, then every hub checkout in the
+    ``mb fleet`` hub list. A hub list that is missing or invalid, or a source
+    that is not a business repo, adds nothing. Reads metadata only.
+    """
+
+    sources: list[tuple[str, Path]] = [(repo.name, repo)]
+    from mb import fleet as fleet_mod
+
+    try:
+        hubs = fleet_mod.load_config()["hubs"]
+    except (fleet_mod.FleetConfigError, OSError, ValueError):
+        hubs = []
+    for hub in hubs:
+        for checkout in (hub.get("checkout"), hub.get("connect_checkout")):
+            if isinstance(checkout, Path) and checkout.is_dir():
+                sources.append((str(hub["name"]), checkout.resolve()))
+    owners: dict[str, dict[str, str]] = {}
+    for label, checkout in sources:
+        try:
+            recorded = _recorded_keychain_refs(checkout)
+        except (ValueError, OSError):
+            continue
+        for provider_id, field, ref in recorded:
+            owners.setdefault(
+                ref,
+                {"hub": label, "hub_path": str(checkout), "provider": provider_id, "field": field},
+            )
+    return owners
+
+
+def _ref_provider_field(ref: str) -> tuple[str, str]:
+    """Provider and field from an ``mainbranch://<digest>/<provider>/<field>`` ref."""
+
+    parts = ref.removeprefix("mainbranch://").split("/")
+    if ref.startswith("mainbranch://") and len(parts) == 3:
+        return parts[1], parts[2]
+    return "", ""
+
+
+def repair_keychain_all(repo: str | Path = ".", *, interactive: bool = False) -> dict[str, Any]:
+    """Repair every Main Branch item in the macOS Keychain in one pass.
+
+    Lists the ``mainbranch`` service's items by attributes only (no values, no
+    dialog), then runs each through the same path as ``repair_keychain``. A
+    staged copy (``<ref>.mbstage``) is not repaired itself: its ref is read,
+    which finishes or undoes the interrupted move. Items are labelled with the
+    hub and provider when a known hub records the ref, otherwise by the ref.
+    """
+
+    target = Path(repo).resolve()
+    listed = list_keychain_refs()
+    refs = {ref for ref in listed if not ref.endswith(STAGE_SUFFIX)}
+    staged_only = {
+        ref.removesuffix(STAGE_SUFFIX) for ref in listed if ref.endswith(STAGE_SUFFIX)
+    } - refs
+    owners = _keychain_ref_owners(target)
+    items: list[dict[str, Any]] = []
+    for ref in sorted(refs | staged_only):
+        owner = owners.get(ref)
+        provider_id, field = (
+            (owner["provider"], owner["field"]) if owner else _ref_provider_field(ref)
+        )
+        items.append(
+            {
+                "hub": owner["hub"] if owner else "",
+                "hub_path": owner["hub_path"] if owner else "",
+                "provider": provider_id,
+                "field": field,
+                "ref": ref,
+                "staged_only": ref in staged_only,
+                **_repair_keychain_ref(
+                    ref, interactive=interactive, command=KEYCHAIN_REPAIR_ALL_COMMAND
+                ),
+            }
+        )
+    counts: dict[str, int] = {}
+    for item in items:
+        counts[item["state"]] = counts.get(item["state"], 0) + 1
+    pending = [item for item in items if item["state"] in KEYCHAIN_PENDING_STATES]
+    failed = [item for item in items if item["state"] not in {"ready", "repaired", "missing"}]
+    return {
+        "ok": not failed,
+        "scope": "all",
+        "repo": str(target),
+        "interactive": interactive,
+        "items": items,
+        "total": len(items),
+        "counts": dict(sorted(counts.items())),
+        "pending": len(pending),
+        "unmapped": sum(1 for item in items if not item["hub"]),
+        "safe_to_share": True,
+        "repair_command": KEYCHAIN_REPAIR_ALL_COMMAND if pending else "",
+    }
+
+
+def _keychain_repair_summary(
+    state: str, *, migrated: bool = False, command: str = KEYCHAIN_REPAIR_COMMAND
+) -> str:
     moved = "moved to the macOS security tool; Python changes no longer prompt"
     if state == "ready":
         return (
@@ -2159,13 +2299,12 @@ def _keychain_repair_summary(state: str, *, migrated: bool = False) -> str:
     if state == "readable_not_migrated":
         return (
             "readable by this Python only; the move to the macOS security tool did not "
-            f"finish, so a Python change would prompt again: run `{KEYCHAIN_REPAIR_COMMAND}` "
-            "again"
+            f"finish, so a Python change would prompt again: run `{command}` again"
         )
     if state == "still_pending":
         return (
             "read once, but unattended reads still need a prompt: choose Always Allow "
-            f"(not Allow) and run `{KEYCHAIN_REPAIR_COMMAND}` again"
+            f"(not Allow) and run `{command}` again"
         )
     if state == "missing":
         return "no stored value"
@@ -2173,6 +2312,9 @@ def _keychain_repair_summary(state: str, *, migrated: bool = False) -> str:
 
 
 def render_keychain_repair(result: dict[str, Any]) -> None:
+    if result.get("scope") == "all":
+        _render_keychain_repair_all(result)
+        return
     print(f"mb connect repair --keychain  {result['repo']}")
     if not result["items"]:
         print("no macOS Keychain credentials are recorded for this repo")
@@ -2181,6 +2323,37 @@ def render_keychain_repair(result: dict[str, Any]) -> None:
         if item["before"] != item["state"]:
             note = f"{note} (was {state_label(item['before'])})"
         print(f"  {item['provider']}.{item['field']}: {state_label(item['state'])}  {note}")
+    if result.get("repair_command"):
+        print(
+            f"next: run `{result['repair_command']}` from a terminal and choose Always Allow "
+            "when macOS asks"
+        )
+
+
+def _render_keychain_repair_all(result: dict[str, Any]) -> None:
+    print("mb connect repair --keychain --all  (every Main Branch item in the macOS Keychain)")
+    if not result["items"]:
+        print("no Main Branch items in the macOS Keychain")
+    for item in result["items"]:
+        where = item["hub"] or item["ref"]
+        name = f"{item['provider']}.{item['field']}" if item["provider"] else "item"
+        note = item["summary"]
+        if item["before"] != item["state"]:
+            note = f"{note} (was {state_label(item['before'])})"
+        if item["staged_only"]:
+            note = f"{note}; recovered from an interrupted move"
+        print(f"  {where}  {name}: {state_label(item['state'])}  {note}")
+    counts = ", ".join(f"{count} {state_label(state)}" for state, count in result["counts"].items())
+    print(
+        f"summary: {result['total']} items"
+        + (f" ({counts})" if counts else "")
+        + f", {result['pending']} pending"
+    )
+    if result["unmapped"]:
+        print(
+            f"{result['unmapped']} item(s) are shown by ref: no hub in this repo or the "
+            "`mb fleet` hub list records them"
+        )
     if result.get("repair_command"):
         print(
             f"next: run `{result['repair_command']}` from a terminal and choose Always Allow "

@@ -28,6 +28,7 @@ CREDENTIAL_HELPER_TIMEOUT_SECONDS = 8
 # short deadline and never lets the helper show a dialog.
 INTERACTIVE_CREDENTIAL_TIMEOUT_SECONDS = 60
 KEYCHAIN_REPAIR_COMMAND = "mb connect repair --keychain"
+KEYCHAIN_REPAIR_ALL_COMMAND = "mb connect repair --keychain --all"
 HELPER_STATES = {"ready", "missing", "locked", "auth-failed", "prompt-pending", "unavailable"}
 HELPER_OUTPUT_LIMIT = 1024 * 1024
 # The helper's own deadline ends this long before the parent stops waiting, so
@@ -320,6 +321,25 @@ class SecretStore:
         state = str(result.get("state") or "unavailable")
         if state not in {"ready", "missing"}:
             raise CredentialStoreError(_reason_for(self.backend, state))
+
+
+def list_keychain_refs(*, deadline: float | None = None) -> list[str]:
+    """Every Main Branch ref in the macOS Keychain, staged copies included.
+
+    The helper asks for item attributes only, never data, with keychain
+    interaction off, so nothing is decrypted and no dialog can appear. Raises
+    ``CredentialStoreError`` when the keychain cannot be listed.
+    """
+
+    backend = select_secret_backend("macos-keychain")
+    result = _run_helper(backend, "list", deadline=deadline)
+    state = str(result.get("state") or "unavailable")
+    if state != "ready":
+        raise CredentialStoreError(_reason_for(backend, state))
+    refs = result.get("refs")
+    if not isinstance(refs, list) or not all(isinstance(ref, str) for ref in refs):
+        raise CredentialStoreError(_reason_for(backend, "unavailable"))
+    return list(refs)
 
 
 def _reason_for(backend: str, state: str) -> str:

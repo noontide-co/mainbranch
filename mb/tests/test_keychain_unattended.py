@@ -175,6 +175,8 @@ CREDENTIAL_CALLS = {
     "probe",
     "_probe_secret_ref",
     "repair_keychain",
+    "repair_keychain_all",
+    "_repair_keychain_ref",
     "_MacSecurity",
 }
 
@@ -256,7 +258,7 @@ def _guard_offenders(
             continue
         if isinstance(value, ast.Constant) and value.value is True:
             literal_true.append(where)
-            if where == "connect.py:repair_keychain" or (
+            if where == "connect.py:_repair_keychain_ref" or (
                 where == "cli.py:connect_cmd" and in_repair_branch
             ):
                 continue
@@ -274,7 +276,8 @@ def _guard_offenders(
 def test_only_the_keychain_repair_passes_interactive_true() -> None:
     """A source guard: a new interactive caller must be a deliberate choice.
 
-    ``interactive=True`` is allowed only in ``repair_keychain`` and in the exact
+    ``interactive=True`` is allowed only in ``_repair_keychain_ref`` (the one
+    per-item path behind ``repair_keychain`` and ``repair_keychain_all``) and in the exact
     ``mb connect repair`` CLI branch. Elsewhere the value must be ``False`` or a
     parameter named ``interactive`` that itself defaults to ``False``. The one
     computed value is the helper reading its payload, which only accepts JSON
@@ -283,7 +286,7 @@ def test_only_the_keychain_repair_passes_interactive_true() -> None:
 
     offenders, literal_true = _guard_offenders(_interactive_keywords())
     assert offenders == []
-    assert sorted(set(literal_true)) == ["cli.py:connect_cmd", "connect.py:repair_keychain"]
+    assert sorted(set(literal_true)) == ["cli.py:connect_cmd", "connect.py:_repair_keychain_ref"]
 
 
 @pytest.mark.parametrize(
@@ -567,6 +570,325 @@ def test_cli_keychain_repair_refuses_without_a_terminal(
     missing_flag = CliRunner().invoke(app, ["connect", "repair", "--repo", str(repo)])
     assert missing_flag.exit_code == 2
     assert helper.calls == []
+
+
+def test_keychain_listing_asks_for_attributes_never_data() -> None:
+    """The ``--all`` enumeration cannot decrypt a value, so it has nothing to ask about."""
+
+    pairs: list[tuple[Any, Any]] = []
+    adapter: Any = object.__new__(helper_mod._MacSecurity)
+    adapter.search_list = None
+    adapter._constant = lambda library, name: name
+    adapter._string = lambda value: f"str:{value}"
+
+    def dictionary(items: list[tuple[Any, Any]]) -> int:
+        pairs.extend(items)
+        return 1
+
+    adapter._dictionary = dictionary
+    adapter.security = SimpleNamespace(
+        SecItemCopyMatching=lambda query, result: helper_mod.ERR_SEC_ITEM_NOT_FOUND
+    )
+    adapter.core = SimpleNamespace(CFRelease=lambda value: None)
+
+    assert adapter._ctypes_accounts() == ("ready", [])
+    query = dict(pairs)
+    assert query["kSecReturnAttributes"] == "kCFBooleanTrue"
+    assert "kSecReturnData" not in query
+    assert "kSecReturnRef" not in query
+    assert query["kSecAttrService"] == f"str:{helper_mod.SERVICE_NAME}"
+    assert query["kSecMatchLimit"] == "kSecMatchLimitAll"
+    assert query["kSecUseAuthenticationUI"] == "kSecUseAuthenticationUIFail"
+
+
+def test_keychain_listing_is_never_interactive(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[bool] = []
+
+    class Adapter:
+        def __init__(self, *, interactive: bool = False, **kwargs: Any) -> None:
+            seen.append(interactive)
+
+        def list_refs(self) -> tuple[str, list[str]]:
+            return "ready", []
+
+    monkeypatch.setattr(platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(helper_mod, "_MacSecurity", Adapter)
+
+    assert helper_mod._macos_list({"interactive": True}) == ("ready", [])
+    assert seen == [False]
+
+
+def test_keychain_listing_checks_the_lock_and_keeps_only_mb_refs() -> None:
+    listed: list[int] = []
+    adapter: Any = object.__new__(helper_mod._MacSecurity)
+    adapter.health = lambda: "locked"
+
+    def accounts() -> tuple[str, list[str]]:
+        listed.append(1)
+        return "ready", ["mainbranch://b/x/y", "mainbranch://a/x/y", 'bad "ref', "a.mbstage"]
+
+    adapter._ctypes_accounts = accounts
+    assert adapter.list_refs() == ("locked", [])
+    assert listed == []
+
+    adapter.health = lambda: "ready"
+    assert adapter.list_refs() == (
+        "ready",
+        ["a.mbstage", "mainbranch://a/x/y", "mainbranch://b/x/y"],
+    )
+
+
+def test_keychain_listing_is_macos_only(monkeypatch: pytest.MonkeyPatch, capsys: Any) -> None:
+    monkeypatch.setattr(sys, "argv", ["helper", "secret-service", "list"])
+    monkeypatch.setattr(sys, "stdin", SimpleNamespace(read=lambda size: "{}"))
+
+    assert helper_mod.main() == 1
+    assert json.loads(capsys.readouterr().out) == {"state": "unavailable"}
+
+
+class _FakeKeychainHelper:
+    """The helper subprocess over an in-memory keychain of mb refs, for ``--all``.
+
+    ``items`` maps a ref to its state: ``security`` (owned by security,
+    readable), ``legacy`` (this Python reads it but cannot move it),
+    ``pending`` (needs Always Allow; the answered read moves it), ``once``
+    (Allow only: the answered read works, unattended reads stay pending) or
+    ``staged`` (only its staged copy survives; any read recovers it).
+    """
+
+    def __init__(self, items: dict[str, str]) -> None:
+        self.items = dict(items)
+        self.calls: list[dict[str, Any]] = []
+
+    def run(self, args: list[str], **kwargs: Any) -> SimpleNamespace:
+        action = args[-1]
+        payload = json.loads(kwargs["input"])
+        self.calls.append({"action": action, "payload": payload})
+        if action == "list":
+            refs: list[str] = []
+            for ref, kind in self.items.items():
+                refs.append(ref + helper_mod.STAGE_SUFFIX if kind == "staged" else ref)
+            return SimpleNamespace(
+                returncode=0, stdout=json.dumps({"state": "ready", "refs": sorted(refs)})
+            )
+        assert action == "get"
+        ref = payload["ref"]
+        assert not ref.endswith(helper_mod.STAGE_SUFFIX), "a staged copy is never read directly"
+        kind = self.items.get(ref)
+        if kind is None:
+            return SimpleNamespace(returncode=0, stdout='{"state":"missing"}')
+        ready = '{"state":"ready","value":"fixture","owner":"%s"}'
+        if kind == "staged":
+            self.items[ref] = "security"
+            return SimpleNamespace(
+                returncode=0,
+                stdout='{"state":"ready","value":"fixture","migrated":true,"owner":"security"}',
+            )
+        if kind == "security":
+            return SimpleNamespace(returncode=0, stdout=ready % "security")
+        if kind == "legacy":
+            return SimpleNamespace(returncode=0, stdout=ready % "legacy")
+        if payload["interactive"] is True:
+            if kind == "pending":
+                self.items[ref] = "security"
+            return SimpleNamespace(returncode=0, stdout=ready % "legacy")
+        return SimpleNamespace(returncode=1, stdout='{"state":"prompt-pending"}')
+
+    def install(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(store_mod, "subprocess", _fake_subprocess(self.run))
+
+
+def _recorded_refs(repo: Path) -> dict[str, str]:
+    return {
+        f"{provider}.{field}": ref
+        for provider, field, ref in connect_mod._recorded_keychain_refs(repo)
+    }
+
+
+def test_keychain_repair_all_repairs_every_item_in_one_pass(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    (tmp_path / "a").mkdir()
+    (tmp_path / "b").mkdir()
+    hub_b = _keychain_repo(tmp_path / "b", monkeypatch)
+    hub_a = _keychain_repo(tmp_path / "a", monkeypatch)
+    fleet_file = tmp_path / "config" / "mainbranch" / "fleet.toml"
+    fleet_file.parent.mkdir(parents=True)
+    fleet_file.write_text(
+        f'[[hubs]]\nname = "hub-b"\nremote = "github:example-co/hub-b"\ncheckout = "{hub_b}"\n',
+        encoding="utf-8",
+    )
+    a, b = _recorded_refs(hub_a), _recorded_refs(hub_b)
+    unknown = "mainbranch://ffffffffffffffffffffffff/stripe/api_key"
+    helper = _FakeKeychainHelper(
+        {
+            a["cloudflare.api_token"]: "security",
+            a["resend.api_key"]: "pending",
+            b["cloudflare.api_token"]: "once",
+            b["resend.api_key"]: "legacy",
+            unknown: "staged",
+        }
+    )
+    helper.install(monkeypatch)
+
+    result = connect_mod.repair_keychain_all(hub_a, interactive=True)
+
+    by_ref = {item["ref"]: item for item in result["items"]}
+    assert set(by_ref) == {*a.values(), *b.values(), unknown}
+    assert by_ref[a["cloudflare.api_token"]]["state"] == "ready"
+    assert by_ref[a["resend.api_key"]]["state"] == "repaired"
+    assert by_ref[b["cloudflare.api_token"]]["state"] == "still_pending"
+    assert by_ref[b["resend.api_key"]]["state"] == "readable_not_migrated"
+    assert by_ref[unknown]["state"] == "ready"
+    assert by_ref[unknown]["migrated"] is True
+    assert by_ref[unknown]["staged_only"] is True
+    # Labelled by hub where a hub records the ref, by the ref otherwise.
+    assert {by_ref[ref]["hub"] for ref in a.values()} == {hub_a.name}
+    assert {by_ref[ref]["hub"] for ref in b.values()} == {"hub-b"}
+    assert (by_ref[unknown]["hub"], by_ref[unknown]["provider"]) == ("", "stripe")
+    assert by_ref[b["resend.api_key"]]["provider"] == "resend"
+    # One summary for the machine.
+    assert result["total"] == 5
+    assert result["counts"] == {
+        "readable_not_migrated": 1,
+        "ready": 2,
+        "repaired": 1,
+        "still_pending": 1,
+    }
+    assert result["pending"] == 2
+    assert result["unmapped"] == 1
+    assert result["ok"] is False
+    assert result["repair_command"] == "mb connect repair --keychain --all"
+    assert all("--all" in item["summary"] for item in result["items"] if "again" in item["summary"])
+    # One attribute-only listing, never interactive; dialogs only for pending items.
+    assert [call["action"] for call in helper.calls].count("list") == 1
+    assert helper.calls[0]["action"] == "list"
+    assert helper.calls[0]["payload"]["interactive"] is False
+    interactive = sorted(
+        call["payload"]["ref"] for call in helper.calls if call["payload"]["interactive"]
+    )
+    assert interactive == sorted([a["resend.api_key"], b["cloudflare.api_token"]])
+    assert "fixture" not in json.dumps(result)
+
+
+def test_keychain_repair_all_skips_a_staged_copy_when_its_item_exists(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    repo = _keychain_repo(tmp_path, monkeypatch)
+    ref = _recorded_refs(repo)["cloudflare.api_token"]
+    helper = _FakeKeychainHelper({ref: "security"})
+    original = helper.run
+
+    def run(args: list[str], **kwargs: Any) -> SimpleNamespace:
+        if args[-1] == "list":
+            refs = [ref, ref + helper_mod.STAGE_SUFFIX]
+            return SimpleNamespace(
+                returncode=0, stdout=json.dumps({"state": "ready", "refs": refs})
+            )
+        return original(args, **kwargs)
+
+    monkeypatch.setattr(store_mod, "subprocess", _fake_subprocess(run))
+
+    result = connect_mod.repair_keychain_all(repo, interactive=True)
+
+    assert [(item["ref"], item["staged_only"], item["state"]) for item in result["items"]] == [
+        (ref, False, "ready")
+    ]
+    assert [call["payload"]["ref"] for call in helper.calls] == [ref]
+    assert result["ok"] is True
+    assert result["repair_command"] == ""
+
+
+def test_keychain_repair_all_with_an_empty_keychain_is_ok(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    repo = _keychain_repo(tmp_path, monkeypatch)
+    helper = _FakeKeychainHelper({})
+    helper.install(monkeypatch)
+
+    result = connect_mod.repair_keychain_all(repo, interactive=True)
+
+    assert (result["ok"], result["total"], result["pending"], result["items"]) == (True, 0, 0, [])
+    assert [call["action"] for call in helper.calls] == ["list"]
+
+
+def test_keychain_repair_all_reports_a_keychain_it_cannot_list(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _keychain_repo(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        store_mod,
+        "subprocess",
+        _fake_subprocess(
+            lambda args, **kwargs: SimpleNamespace(returncode=1, stdout='{"state":"locked"}')
+        ),
+    )
+
+    with pytest.raises(store_mod.CredentialStoreError) as caught:
+        connect_mod.repair_keychain_all(repo, interactive=True)
+
+    assert caught.value.reason == "keychain_locked"
+
+
+def test_cli_keychain_repair_all_refuses_without_a_terminal_before_any_keychain_call(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from typer.testing import CliRunner
+
+    from mb.cli import app
+
+    repo = _keychain_repo(tmp_path, monkeypatch)
+    helper = _FakeKeychainHelper({"mainbranch://abc/cloudflare/api_token": "pending"})
+    helper.install(monkeypatch)
+
+    result = CliRunner().invoke(
+        app, ["connect", "repair", "--keychain", "--all", "--repo", str(repo)]
+    )
+    assert result.exit_code == 2
+    assert "terminal" in result.stderr
+    assert helper.calls == []
+
+    without_keychain = CliRunner().invoke(app, ["connect", "repair", "--all", "--repo", str(repo)])
+    assert without_keychain.exit_code == 2
+    assert helper.calls == []
+
+
+def test_cli_keychain_repair_all_runs_the_all_items_pass_from_a_terminal(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from typer.testing import CliRunner
+
+    from mb import cli as cli_mod
+    from mb.cli import app
+
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    repo = _keychain_repo(tmp_path, monkeypatch)
+    ref = _recorded_refs(repo)["resend.api_key"]
+    helper = _FakeKeychainHelper({ref: "pending", "mainbranch://ffff/stripe/api_key": "security"})
+    helper.install(monkeypatch)
+
+    class _TerminalSys:
+        """``sys`` as the CLI sees it, but with stdin at a terminal."""
+
+        stdin = SimpleNamespace(isatty=lambda: True)
+
+        def __getattr__(self, name: str) -> Any:
+            return getattr(sys, name)
+
+    monkeypatch.setattr(cli_mod, "sys", _TerminalSys())
+
+    result = CliRunner().invoke(
+        app, ["connect", "repair", "--keychain", "--all", "--repo", str(repo)]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "summary: 2 items (1 ready, 1 repaired), 0 pending" in result.stdout
+    assert "mainbranch://ffff/stripe/api_key  stripe.api_key: ready" in result.stdout
+    assert f"{repo.name}  resend.api_key: repaired" in result.stdout
+    assert "fixture" not in result.output
 
 
 @pytest.mark.parametrize(
@@ -1797,3 +2119,72 @@ def test_macos_a_whole_move_fits_well_inside_the_minimum(
     with capsys.disabled():
         print(f"\nmove seconds: {', '.join(f'{t:.2f}' for t in timings)}")
     assert max(timings) < helper_mod.MIN_MOVE_SECONDS
+
+
+@integration
+def test_macos_listing_every_item_is_prompt_free(tmp_path: Path, throwaway_keychain: Path) -> None:
+    """``--all`` lists items this Python may not read, without a dialog or a value."""
+
+    _require_seam(throwaway_keychain)
+    foreign = "mainbranch://000000000000000000000001/stripe/api_key"
+    own = "mainbranch://000000000000000000000002/resend/api_key"
+    _legacy_add(_foreign_python(tmp_path), foreign, "dummy-not-a-secret")
+    store_mod.SecretStore("macos-keychain").set(own, "dummy-not-a-secret")
+    # Control: this Python is not trusted to read the foreign item's value.
+    assert _helper([sys.executable], "get", {"ref": foreign})["state"] == "prompt-pending"
+
+    for payload in ({}, {"interactive": True}):
+        listed = _helper([sys.executable], "list", payload)
+        assert listed["state"] == "ready"
+        assert listed["refs"] == sorted([foreign, own])
+        assert set(listed) == {"state", "refs", "elapsed"}
+        assert listed["elapsed"] < 2.0
+    assert store_mod.list_keychain_refs() == sorted([foreign, own])
+
+
+@integration
+def test_macos_repair_all_moves_legacy_items_and_recovers_staged_ones(
+    tmp_path: Path, throwaway_keychain: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _require_seam(throwaway_keychain)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    legacy = "mainbranch://000000000000000000000003/cloudflare/api_token"
+    staged = "mainbranch://000000000000000000000004/apify/api_token"
+    foreign = "mainbranch://000000000000000000000005/stripe/api_key"
+    owned = "mainbranch://000000000000000000000006/resend/api_key"
+    _legacy_add([sys.executable], legacy, "dummy-legacy")
+    _legacy_add([sys.executable], staged, "dummy-staged")
+    _legacy_add(_foreign_python(tmp_path), foreign, "dummy-foreign")
+    store_mod.SecretStore("macos-keychain").set(owned, "dummy-owned")
+    # Interrupt a move after the legacy delete: only the staged copy is left.
+    crashed = subprocess.run(
+        [sys.executable, "-m", "mb._credential_helper", "macos-keychain", "get"],
+        input=json.dumps({"ref": staged}),
+        capture_output=True,
+        text=True,
+        env={**_helper_env(), helper_mod.TEST_CRASH_ENV: "after-legacy-delete"},
+        timeout=30,
+        check=False,
+    )
+    assert crashed.returncode == 70
+    assert staged + helper_mod.STAGE_SUFFIX in store_mod.list_keychain_refs()
+    assert staged not in store_mod.list_keychain_refs()
+
+    # Unattended only: the foreign item would need a dialog, which a test never shows.
+    result = connect_mod.repair_keychain_all(tmp_path, interactive=False)
+
+    by_ref = {item["ref"]: item for item in result["items"]}
+    assert set(by_ref) == {legacy, staged, foreign, owned}
+    assert (by_ref[legacy]["state"], by_ref[legacy]["migrated"]) == ("ready", True)
+    assert (by_ref[staged]["state"], by_ref[staged]["staged_only"]) == ("ready", True)
+    assert by_ref[owned]["state"] == "ready"
+    assert by_ref[foreign]["state"] == "keychain_prompt_pending"
+    assert result["pending"] == 1
+    assert result["repair_command"] == "mb connect repair --keychain --all"
+    assert "dummy" not in json.dumps(result)
+    adapter = helper_mod._MacSecurity()
+    for ref in (legacy, staged, owned):
+        assert adapter._item_owner(ref) == "security"
+    assert adapter._item_owner(staged + helper_mod.STAGE_SUFFIX) == "absent"
+    assert store_mod.list_keychain_refs() == sorted([legacy, staged, foreign, owned])

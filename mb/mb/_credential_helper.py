@@ -28,6 +28,8 @@ ERR_SEC_INTERACTION_NOT_ALLOWED = -25308
 ERR_SEC_USER_CANCELED = -128
 KEYCHAIN_UNLOCKED_STATUS = 1
 CF_STRING_ENCODING_UTF8 = 0x08000100
+# `list` returns at most this many refs; more than this is not an mb install.
+LIST_LIMIT = 2000
 # Test-only seam: point the macOS adapter at a throwaway keychain instead of
 # the user's default. Honored only for a file named ``mbtest-*.keychain-db``
 # outside ``~/Library/Keychains``; any other value refuses to run.
@@ -68,7 +70,11 @@ STAGE_SUFFIX = ".mbstage"
 #              |   keep (never   |   move          |                |   keep         |
 #              |   missing)      | set: update     | set: put       | set: failure   | set: failure
 #              | set: failure    |   in place      |                |                |
-#              | del: failure (the staged copy must be confirmed gone first)
+#              | del: delete the staged copy without reading it (`security` for a
+#              |   security-owned copy, the framework for a legacy-owned one) and
+#              |   confirm it is gone, then main as the "absent" row; fails, and
+#              |   leaves main, only when the copy's owner cannot be read or the
+#              |   copy is still there after the delete
 #
 # Invariants (one parametrized test walks every cell with each fault):
 # (a) a stored value always keeps at least one durable copy;
@@ -97,10 +103,19 @@ def _failure_state(exc: BaseException) -> str:
     return "prompt-pending" if isinstance(exc, _PromptPending) else "unavailable"
 
 
-def _emit(state: str, *, value: str | None = None, migrated: bool = False, owner: str = "") -> int:
+def _emit(
+    state: str,
+    *,
+    value: str | None = None,
+    migrated: bool = False,
+    owner: str = "",
+    refs: list[str] | None = None,
+) -> int:
     payload: dict[str, Any] = {"state": state}
     if value is not None:
         payload["value"] = value
+    if refs is not None:
+        payload["refs"] = refs
     if migrated:
         payload["migrated"] = True
     if owner:
@@ -294,6 +309,19 @@ class _MacSecurity:
             ctypes.POINTER(ctypes.c_void_p),
         ]
         self.security.SecTrustedApplicationCopyData.restype = ctypes.c_int32
+        self.core.CFDictionaryGetValue.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        self.core.CFDictionaryGetValue.restype = ctypes.c_void_p
+        self.core.CFGetTypeID.argtypes = [ctypes.c_void_p]
+        self.core.CFGetTypeID.restype = ctypes.c_ulong
+        self.core.CFStringGetTypeID.argtypes = []
+        self.core.CFStringGetTypeID.restype = ctypes.c_ulong
+        self.core.CFStringGetCString.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_long,
+            ctypes.c_uint32,
+        ]
+        self.core.CFStringGetCString.restype = ctypes.c_bool
         if not interactive:
             # kSecUseAuthenticationUIFail does not suppress the file-keychain
             # access dialog; this does. It must run before any keychain call,
@@ -524,6 +552,81 @@ class _MacSecurity:
                     self.core.CFRelease(value)
             self.core.CFRelease(query)
             self._release_all(owned)
+
+    # -- Every mb item, by attributes only (non-secret, never prompts) --------
+
+    def _ctypes_accounts(self) -> tuple[str, list[str]]:
+        """Return the account of every item under the ``mainbranch`` service.
+
+        Asks for attributes only (``kSecReturnAttributes``), never data, so
+        macOS decrypts nothing and has no reason to ask; interaction is off as
+        well, so a refusal fails instead of showing a dialog.
+        """
+
+        service = self._string(SERVICE_NAME)
+        pairs = [
+            (
+                self._constant(self.security, "kSecClass"),
+                self._constant(self.security, "kSecClassGenericPassword"),
+            ),
+            (self._constant(self.security, "kSecAttrService"), service),
+            (
+                self._constant(self.security, "kSecMatchLimit"),
+                self._constant(self.security, "kSecMatchLimitAll"),
+            ),
+            (
+                self._constant(self.security, "kSecReturnAttributes"),
+                self._constant(self.core, "kCFBooleanTrue"),
+            ),
+            (
+                self._constant(self.security, "kSecUseAuthenticationUI"),
+                self._constant(self.security, "kSecUseAuthenticationUIFail"),
+            ),
+        ]
+        if self.search_list is not None:
+            pairs.append((self._constant(self.security, "kSecMatchSearchList"), self.search_list))
+        query = self._dictionary(pairs)
+        result = ctypes.c_void_p()
+        try:
+            status = int(self.security.SecItemCopyMatching(query, ctypes.byref(result)))
+            if status == ERR_SEC_ITEM_NOT_FOUND:
+                return "ready", []
+            if status != ERR_SEC_SUCCESS or not result.value:
+                return _status_state(status) if status != ERR_SEC_SUCCESS else "unavailable", []
+            account_key = self._constant(self.security, "kSecAttrAccount")
+            string_type = int(self.core.CFStringGetTypeID())
+            accounts: list[str] = []
+            for index in range(int(self.core.CFArrayGetCount(result.value))):
+                attributes = self.core.CFArrayGetValueAtIndex(result.value, index)
+                account = self.core.CFDictionaryGetValue(attributes, account_key)
+                if not account or int(self.core.CFGetTypeID(account)) != string_type:
+                    continue
+                buffer = ctypes.create_string_buffer(2048)
+                if self.core.CFStringGetCString(
+                    account, buffer, len(buffer), CF_STRING_ENCODING_UTF8
+                ):
+                    accounts.append(buffer.value.decode("utf-8"))
+            return "ready", accounts
+        finally:
+            if result.value:
+                self.core.CFRelease(result.value)
+            self.core.CFRelease(query)
+            self.core.CFRelease(service)
+
+    def list_refs(self) -> tuple[str, list[str]]:
+        """Every mb ref in the keychain, staged copies included, sorted.
+
+        Refs that mb could not have written (see ``_SAFE_REF``) are left out.
+        """
+
+        health = self.health()
+        if health != "ready":
+            return health, []
+        state, accounts = self._ctypes_accounts()
+        if state != "ready":
+            return _denied_state_for(state, health=health), []
+        refs = sorted({account for account in accounts if _SAFE_REF.fullmatch(account)})
+        return "ready", refs[:LIST_LIMIT]
 
     # -- Items created by Apple-signed /usr/bin/security ---------------------
 
@@ -946,6 +1049,19 @@ def _macos(action: str, payload: dict[str, Any]) -> tuple[str, str | None, bool,
     return "unavailable", None, False, ""
 
 
+def _macos_list(payload: dict[str, Any]) -> tuple[str, list[str]]:
+    """List mb's keychain refs. Always with interaction off, whatever the payload says."""
+
+    if platform.system() != "Darwin":
+        return "unavailable", []
+    deadline = payload.get("deadline_epoch")
+    adapter = _MacSecurity(
+        interactive=False,
+        deadline=float(deadline) if isinstance(deadline, (int, float)) else None,
+    )
+    return adapter.list_refs()
+
+
 def _secret_service_items(collection: Any, ref: str) -> list[Any]:
     return list(collection.search_items({"service": SERVICE_NAME, "username": ref}))
 
@@ -1044,11 +1160,17 @@ def main() -> int:
     if len(sys.argv) != 3:
         return _emit("unavailable")
     backend, action = sys.argv[1:]
-    if action not in {"get", "set", "delete", "health"}:
+    if action not in {"get", "set", "delete", "health", "list"}:
         return _emit("unavailable")
     try:
         payload = _read_payload()
         migrated, owner = False, ""
+        if action == "list":
+            # Only the macOS Keychain can be enumerated without reading values.
+            state, refs = (
+                _macos_list(payload) if backend == "macos-keychain" else ("unavailable", [])
+            )
+            return _emit(state, refs=refs if state == "ready" else None)
         if backend == "macos-keychain":
             state, value, migrated, owner = _macos(action, payload)
         elif backend == "secret-service":

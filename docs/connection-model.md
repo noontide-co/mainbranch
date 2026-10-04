@@ -21,7 +21,7 @@ APIs, and niche SaaS tools before Main Branch has native wrappers.
   credential in its environment only, so agents and scripts use a secret
   without ever seeing it. `mb connect token <provider>` remains the raw read
   path for scripts that write to a file, and refuses terminals and pipes
-  unless `--print` is passed.
+  (exit 3) unless `--print` is passed.
 - `status`, `doctor`, `list`, `identity`, `hygiene`, and `test` give agents
   facts without copying credentials into chat or workpapers.
 - User scope lets worktrees and scheduled jobs resolve the same credential

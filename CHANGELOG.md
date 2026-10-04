@@ -11,6 +11,33 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- `mb connect repair --keychain --all` repairs every Main Branch item in the
+  macOS Keychain in one run, instead of once per business repo. It lists the
+  `mainbranch` items by attributes only (no value is read and no dialog can
+  appear while listing), runs each through the same repair as the per-repo
+  command, labels each with its hub and provider where this repo or the
+  `mb fleet` hub list records it (otherwise by its keychain ref), finishes any
+  interrupted move from its staged copy, and prints one summary of what is
+  still pending. It needs a terminal and never prints a value.
+
+### Changed
+
+- `mb connect token` refusing a terminal or a pipe (without `--print`) now
+  exits 3 instead of 2, so scripts can tell "refused by design" from a missing
+  credential or a store failure (1) and from usage errors (2). The exit codes
+  are documented in `docs/connect.md`.
+- Breaking in 0.6.0, not flagged at the time: that refusal broke scripts that
+  captured the token through stdout, such as `TOKEN=$(mb connect token <provider>)`
+  or `mb connect token <provider> | tool`. Migrate to
+  `mb connect exec <provider> -- <command>`, or add `--print` where a script
+  must capture the raw value (preferably `--print > file`).
+- `docs/connect.md` says plainly that a keychain item whose access list was
+  edited by hand (`security` first, no `apple-tool:` partition) is not
+  detected, why (the partition list is not in the public API), and that the
+  deadline bounds the dialog it can raise.
+
 ## [0.6.1] - 2026-10-04
 
 This patch fixes a regression on macOS: after the Python under `mb` changed,
