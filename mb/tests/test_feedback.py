@@ -668,6 +668,11 @@ def connect_env(state_home: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     return repo
 
 
+def _refusal_exit(rule: str) -> int:
+    """The token refusal has its own exit code (#1011); every other refusal exits 2."""
+    return connect_mod.TOKEN_REFUSED_EXIT_CODE if rule == "connect.token_print" else 2
+
+
 def _symlinked_state(repo: Path, tmp_path: Path) -> None:
     outside = tmp_path / "outside"
     outside.mkdir()
@@ -720,7 +725,7 @@ def test_connect_refusal_through_cli_logs_one_rule_line(
 ) -> None:
     result = runner.invoke(app, [*argv, "--repo", str(connect_env)])
 
-    assert result.exit_code == 2, result.output
+    assert result.exit_code == _refusal_exit(rule), result.output
     [entry] = _lines(state_home)
     assert set(entry) == _REFUSAL_FIELDS
     assert entry["kind"] == "refusal"
@@ -771,7 +776,7 @@ def test_connect_refusal_logging_opt_out(
 
     result = runner.invoke(app, [*argv, "--repo", str(connect_env)])
 
-    assert result.exit_code == 2
+    assert result.exit_code == _refusal_exit(rule)
     assert not _log(state_home).exists()
 
 
@@ -797,7 +802,7 @@ def test_unwritable_log_never_changes_the_refusal(
         locked.chmod(0o700)
 
     assert result.exception is None or isinstance(result.exception, SystemExit)
-    assert result.exit_code == baseline.exit_code == 2
+    assert result.exit_code == baseline.exit_code == _refusal_exit(rule)
     assert result.stderr == baseline.stderr
     assert result.stdout == baseline.stdout
     assert not _log(state_home).exists()
