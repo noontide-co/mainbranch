@@ -6,12 +6,16 @@ emits one small JSON result and never includes raw exception text.
 
 from __future__ import annotations
 
+import contextlib
 import ctypes
 import importlib
 import json
 import os
 import platform
+import re
+import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -28,12 +32,27 @@ CF_STRING_ENCODING_UTF8 = 0x08000100
 # the user's default. Honored only for a file named ``mbtest-*.keychain-db``
 # outside ``~/Library/Keychains``; any other value refuses to run.
 TEST_KEYCHAIN_ENV = "MB_CREDENTIAL_TEST_KEYCHAIN"
+# Apple-signed, so its keychain identity survives Python, uv and macOS updates.
+SECURITY_TOOL = "/usr/bin/security"
+# `security -i` rejects input lines longer than about 4 KB; leave room for the
+# command, the ref and a keychain path around the hex value.
+SECURITY_HEX_LIMIT = 3600
+DEFAULT_BUDGET_SECONDS = 6.0
 
 
-def _emit(state: str, *, value: str | None = None) -> int:
-    payload: dict[str, str] = {"state": state}
+_SAFE_REF = re.compile(r"[A-Za-z0-9][A-Za-z0-9:/._@+_-]{0,511}")
+
+
+class _PromptPending(Exception):
+    """A keychain operation would have to wait on a macOS dialog."""
+
+
+def _emit(state: str, *, value: str | None = None, migrated: bool = False) -> int:
+    payload: dict[str, Any] = {"state": state}
     if value is not None:
         payload["value"] = value
+    if migrated:
+        payload["migrated"] = True
     sys.stdout.write(json.dumps(payload, separators=(",", ":")))
     return 0 if state in {"ready", "missing"} else 1
 
@@ -60,6 +79,36 @@ def _denied_state(status: int, *, health: str) -> str:
     if health == "ready" and state in {"auth-failed", "locked"}:
         return "prompt-pending"
     return state
+
+
+def _denied_state_for(state: str, *, health: str) -> str:
+    if health == "ready" and state in {"auth-failed", "locked"}:
+        return "prompt-pending"
+    return state
+
+
+def _parse_security_password(text: str) -> str | None:
+    """Decode the ``password:`` line that ``security find-generic-password -g`` writes.
+
+    ``security`` prints a printable value in double quotes, unescaped, and
+    any other value as ``0x`` followed by hex, so the two never collide.
+    """
+
+    for line in text.splitlines():
+        if not line.startswith("password: "):
+            continue
+        rest = line[len("password: ") :]
+        if rest == "":
+            return ""
+        if len(rest) >= 2 and rest.startswith('"') and rest.endswith('"'):
+            return rest[1:-1]
+        if rest.startswith("0x"):
+            try:
+                return bytes.fromhex(rest[2:].split(" ", 1)[0]).decode("utf-8")
+            except ValueError:
+                return None
+        return None
+    return None
 
 
 def _test_keychain_path() -> str | None:
@@ -92,7 +141,11 @@ def _test_keychain_path() -> str | None:
 class _MacSecurity:
     """Minimal ctypes bridge for generic-password operations."""
 
-    def __init__(self, *, interactive: bool = False) -> None:
+    def __init__(
+        self, *, interactive: bool = False, budget: float = DEFAULT_BUDGET_SECONDS
+    ) -> None:
+        self.deadline = time.monotonic() + budget
+        self.migrated = False
         self.security = ctypes.CDLL("/System/Library/Frameworks/Security.framework/Security")
         self.core = ctypes.CDLL(
             "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation"
@@ -158,6 +211,29 @@ class _MacSecurity:
             ctypes.c_void_p,
         ]
         self.core.CFArrayCreate.restype = ctypes.c_void_p
+        self.core.CFArrayGetCount.argtypes = [ctypes.c_void_p]
+        self.core.CFArrayGetCount.restype = ctypes.c_long
+        self.core.CFArrayGetValueAtIndex.argtypes = [ctypes.c_void_p, ctypes.c_long]
+        self.core.CFArrayGetValueAtIndex.restype = ctypes.c_void_p
+        self.security.SecKeychainItemCopyAccess.argtypes = [
+            ctypes.c_void_p,
+            ctypes.POINTER(ctypes.c_void_p),
+        ]
+        self.security.SecKeychainItemCopyAccess.restype = ctypes.c_int32
+        self.security.SecAccessCopyMatchingACLList.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        self.security.SecAccessCopyMatchingACLList.restype = ctypes.c_void_p
+        self.security.SecACLCopyContents.argtypes = [
+            ctypes.c_void_p,
+            ctypes.POINTER(ctypes.c_void_p),
+            ctypes.POINTER(ctypes.c_void_p),
+            ctypes.POINTER(ctypes.c_uint16),
+        ]
+        self.security.SecACLCopyContents.restype = ctypes.c_int32
+        self.security.SecTrustedApplicationCopyData.argtypes = [
+            ctypes.c_void_p,
+            ctypes.POINTER(ctypes.c_void_p),
+        ]
+        self.security.SecTrustedApplicationCopyData.restype = ctypes.c_int32
         if not interactive:
             # kSecUseAuthenticationUIFail does not suppress the file-keychain
             # access dialog; this does. It must run before any keychain call,
@@ -168,6 +244,7 @@ class _MacSecurity:
         self.keychain: int | None = None
         self.search_list: int | None = None
         test_path = _test_keychain_path()
+        self.keychain_path = test_path
         if test_path is not None:
             keychain = ctypes.c_void_p()
             status = int(
@@ -217,7 +294,9 @@ class _MacSecurity:
             self.core.CFDictionarySetValue(result, key, value)
         return int(result)
 
-    def _query(self, ref: str, *, return_data: bool = False) -> tuple[int, list[int]]:
+    def _query(
+        self, ref: str, *, return_data: bool = False, return_ref: bool = False
+    ) -> tuple[int, list[int]]:
         service = self._string(SERVICE_NAME)
         account = self._string(ref)
         owned = [service, account]
@@ -235,7 +314,7 @@ class _MacSecurity:
         ]
         if self.search_list is not None:
             pairs.append((self._constant(self.security, "kSecMatchSearchList"), self.search_list))
-        if return_data:
+        if return_data or return_ref:
             pairs.extend(
                 [
                     (
@@ -243,7 +322,9 @@ class _MacSecurity:
                         self._constant(self.security, "kSecMatchLimitOne"),
                     ),
                     (
-                        self._constant(self.security, "kSecReturnData"),
+                        self._constant(
+                            self.security, "kSecReturnData" if return_data else "kSecReturnRef"
+                        ),
                         self._constant(self.core, "kCFBooleanTrue"),
                     ),
                 ]
@@ -254,11 +335,9 @@ class _MacSecurity:
         for value in values:
             self.core.CFRelease(value)
 
-    def get(self, ref: str) -> tuple[str, str | None]:
-        health = self.health()
-        if health != "ready":
-            # A locked keychain would need an unlock dialog: fail fast.
-            return health, None
+    # -- Legacy items: created by a Python interpreter through SecItem ------
+
+    def _ctypes_get(self, ref: str, *, health: str) -> tuple[str, str | None]:
         query, owned = self._query(ref, return_data=True)
         result = ctypes.c_void_p()
         try:
@@ -289,16 +368,7 @@ class _MacSecurity:
             self._release_all(query_owned)
             self.core.CFRelease(data)
 
-    def set(self, ref: str, value: str) -> str:
-        health = self.health()
-        if health != "ready":
-            return health
-        status = self._update(ref, value)
-        if status == ERR_SEC_SUCCESS:
-            return "ready"
-        if status != ERR_SEC_ITEM_NOT_FOUND:
-            return _denied_state(status, health=health)
-
+    def _ctypes_add(self, ref: str, value: str) -> int:
         service = self._string(SERVICE_NAME)
         account = self._string(ref)
         data = self._data(value)
@@ -319,26 +389,257 @@ class _MacSecurity:
             pairs.append((self._constant(self.security, "kSecUseKeychain"), self.keychain))
         add = self._dictionary(pairs)
         try:
-            status = int(self.security.SecItemAdd(add, None))
+            return int(self.security.SecItemAdd(add, None))
         finally:
             self.core.CFRelease(add)
             self._release_all([service, account, data])
-        if status == ERR_SEC_DUPLICATE_ITEM:
-            # Another writer won the add race. Update in-place rather than
-            # delete/re-add so the prior value survives a failed replacement.
+
+    def _ctypes_delete(self, ref: str) -> int:
+        query, owned = self._query(ref)
+        try:
+            return int(self.security.SecItemDelete(query))
+        finally:
+            self.core.CFRelease(query)
+            self._release_all(owned)
+
+    # -- Which code an item trusts (non-secret, never prompts) --------------
+
+    def _item_owner(self, ref: str) -> str:
+        """Return ``security``, ``legacy`` or ``absent`` for one item, or a failure state.
+
+        Reads the item's access list, never its data, so it cannot prompt. An
+        item counts as ``security`` only when ``/usr/bin/security`` is the
+        first application its decrypt rule trusts, which is how macOS records
+        the creating tool. Only those items are ever read through ``security``:
+        it has no way to refuse a dialog, so any other item could block on one.
+        """
+
+        query, owned = self._query(ref, return_ref=True)
+        item = ctypes.c_void_p()
+        access = ctypes.c_void_p()
+        acls: int | None = None
+        apps = ctypes.c_void_p()
+        description = ctypes.c_void_p()
+        try:
+            status = int(self.security.SecItemCopyMatching(query, ctypes.byref(item)))
+            if status == ERR_SEC_ITEM_NOT_FOUND:
+                return "absent"
+            if status != ERR_SEC_SUCCESS or not item.value:
+                return _status_state(status) if status != ERR_SEC_SUCCESS else "unavailable"
+            status = int(self.security.SecKeychainItemCopyAccess(item, ctypes.byref(access)))
+            if status != ERR_SEC_SUCCESS or not access.value:
+                return "legacy"
+            acls = self.security.SecAccessCopyMatchingACLList(
+                access, self._constant(self.security, "kSecACLAuthorizationDecrypt")
+            )
+            if not acls or int(self.core.CFArrayGetCount(acls)) < 1:
+                return "legacy"
+            acl = self.core.CFArrayGetValueAtIndex(acls, 0)
+            selector = ctypes.c_uint16()
+            status = int(
+                self.security.SecACLCopyContents(
+                    acl, ctypes.byref(apps), ctypes.byref(description), ctypes.byref(selector)
+                )
+            )
+            if status != ERR_SEC_SUCCESS or not apps.value:
+                # No application list means any application; still not proof
+                # that `security` can read it without a partition prompt.
+                return "legacy"
+            if int(self.core.CFArrayGetCount(apps.value)) < 1:
+                return "legacy"
+            first = self.core.CFArrayGetValueAtIndex(apps.value, 0)
+            data = ctypes.c_void_p()
+            status = int(self.security.SecTrustedApplicationCopyData(first, ctypes.byref(data)))
+            if status != ERR_SEC_SUCCESS or not data.value:
+                return "legacy"
+            try:
+                length = int(self.core.CFDataGetLength(data.value))
+                path = ctypes.string_at(self.core.CFDataGetBytePtr(data.value), length)
+            finally:
+                self.core.CFRelease(data.value)
+            return "security" if path.rstrip(b"\0") == SECURITY_TOOL.encode() else "legacy"
+        finally:
+            for value in (description.value, apps.value, acls, access.value, item.value):
+                if value:
+                    self.core.CFRelease(value)
+            self.core.CFRelease(query)
+            self._release_all(owned)
+
+    # -- Items created by Apple-signed /usr/bin/security ---------------------
+
+    def _security_tool(self, args: list[str], *, stdin: str | None = None) -> Any:
+        """Run ``/usr/bin/security`` within the remaining budget.
+
+        ``security`` cannot be told to fail instead of showing a dialog, so the
+        caller must already have proved the item trusts it; this deadline is
+        the last guard, and expiry reports a pending prompt.
+        """
+
+        remaining = self.deadline - time.monotonic()
+        if remaining <= 0:
+            raise _PromptPending
+        try:
+            if stdin is None:
+                return subprocess.run(
+                    [SECURITY_TOOL, *args],
+                    check=False,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    timeout=remaining,
+                )
+            return subprocess.run(
+                [SECURITY_TOOL, *args],
+                check=False,
+                input=stdin,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=remaining,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise _PromptPending from exc
+
+    def _keychain_args(self) -> list[str]:
+        return [self.keychain_path] if self.keychain_path is not None else []
+
+    def _security_get(self, ref: str) -> tuple[str, str | None]:
+        completed = self._security_tool(
+            ["find-generic-password", "-s", SERVICE_NAME, "-a", ref, "-g", *self._keychain_args()]
+        )
+        if completed.returncode != 0:
+            return ("missing" if completed.returncode == 44 else "unavailable"), None
+        value = _parse_security_password(completed.stderr or "")
+        if value is None:
+            return "unavailable", None
+        return "ready", value
+
+    def _security_put(self, ref: str, value: str, *, exists: bool) -> str:
+        """Write ``value`` so that ``/usr/bin/security`` owns the item.
+
+        The value goes over stdin as hex (``security -i``), never in argv. A
+        value too long for one ``security -i`` line is written as an empty
+        item by ``security`` and then filled in through the Security
+        framework, which leaves the item's access list unchanged.
+        """
+
+        encoded = value.encode("utf-8").hex()
+        fits = len(encoded) <= SECURITY_HEX_LIMIT
+        keychain = f' "{self.keychain_path}"' if self.keychain_path is not None else ""
+        if exists and not fits:
             status = self._update(ref, value)
-        return "ready" if status == ERR_SEC_SUCCESS else _denied_state(status, health=health)
+            return "ready" if status == ERR_SEC_SUCCESS else _status_state(status)
+        flag = "-U " if exists else ""
+        hex_value = encoded if fits else ""
+        command = (
+            f'add-generic-password {flag}-s {SERVICE_NAME} -a "{ref}" -X "{hex_value}"{keychain}\n'
+        )
+        completed = self._security_tool(["-i"], stdin=command)
+        if completed.returncode != 0 or "returned -" in (completed.stderr or ""):
+            return "unavailable"
+        if not fits:
+            status = self._update(ref, value)
+            if status != ERR_SEC_SUCCESS:
+                return _status_state(status)
+        return "ready"
+
+    def _security_delete(self, ref: str) -> str:
+        completed = self._security_tool(
+            ["delete-generic-password", "-s", SERVICE_NAME, "-a", ref, *self._keychain_args()]
+        )
+        if completed.returncode == 0:
+            return "ready"
+        return "missing" if completed.returncode == 44 else "unavailable"
+
+    def _verified(self, ref: str, value: str) -> bool:
+        if self._item_owner(ref) != "security":
+            return False
+        state, stored = self._security_get(ref)
+        return state == "ready" and stored == value
+
+    def _migrate(self, ref: str, value: str) -> bool:
+        """Re-create a legacy item under ``/usr/bin/security``; never lose it.
+
+        The value is already in memory. Delete the legacy item, add it back
+        through ``security`` and read it back the same way. If any step
+        fails, put the legacy item back exactly as this Python can read it.
+        """
+
+        if self._ctypes_delete(ref) != ERR_SEC_SUCCESS:
+            return False
+        try:
+            if self._security_put(ref, value, exists=False) == "ready" and self._verified(
+                ref, value
+            ):
+                return True
+        except _PromptPending:
+            pass
+        with contextlib.suppress(_PromptPending):
+            if self._item_owner(ref) == "security":
+                self._security_delete(ref)
+        if self._ctypes_add(ref, value) != ERR_SEC_SUCCESS:
+            # Last resort: keep the value somewhere this Python can read it.
+            self._update(ref, value)
+        return False
+
+    # -- Public operations ---------------------------------------------------
+
+    def get(self, ref: str) -> tuple[str, str | None]:
+        health = self.health()
+        if health != "ready":
+            # A locked keychain would need an unlock dialog: fail fast.
+            return health, None
+        owner = self._item_owner(ref)
+        if owner == "absent":
+            return "missing", None
+        if owner == "security":
+            return self._security_get(ref)
+        if owner != "legacy":
+            return _denied_state_for(owner, health=health), None
+        state, value = self._ctypes_get(ref, health=health)
+        if state == "ready" and value is not None:
+            self.migrated = self._migrate(ref, value)
+        return state, value
+
+    def set(self, ref: str, value: str) -> str:
+        health = self.health()
+        if health != "ready":
+            return health
+        owner = self._item_owner(ref)
+        if owner == "security":
+            return self._security_put(ref, value, exists=True)
+        if owner == "legacy":
+            # Replace the value in place first, so a failure never loses the
+            # previous credential, then move the item exactly as a read would.
+            # If this Python may not remove the old item, it stays legacy and a
+            # later read reports the pending prompt for the keychain repair.
+            status = self._update(ref, value)
+            if status != ERR_SEC_SUCCESS:
+                return _denied_state(status, health=health)
+            self._migrate(ref, value)
+            return "ready"
+        if owner != "absent":
+            return _denied_state_for(owner, health=health)
+        state = self._security_put(ref, value, exists=False)
+        if state != "ready":
+            # Never leave a write undone: fall back to the legacy store.
+            status = self._ctypes_add(ref, value)
+            if status == ERR_SEC_DUPLICATE_ITEM:
+                status = self._update(ref, value)
+            return "ready" if status == ERR_SEC_SUCCESS else _denied_state(status, health=health)
+        return "ready"
 
     def delete(self, ref: str) -> str:
         health = self.health()
         if health != "ready":
             return health
-        query, owned = self._query(ref)
-        try:
-            status = int(self.security.SecItemDelete(query))
-        finally:
-            self.core.CFRelease(query)
-            self._release_all(owned)
+        owner = self._item_owner(ref)
+        if owner == "absent":
+            return "missing"
+        if owner == "security":
+            return self._security_delete(ref)
+        status = self._ctypes_delete(ref)
         return "ready" if status == ERR_SEC_SUCCESS else _denied_state(status, health=health)
 
     def health(self) -> str:
@@ -360,25 +661,34 @@ class _MacSecurity:
         return "ready" if flags.value & KEYCHAIN_UNLOCKED_STATUS else "locked"
 
 
-def _macos(action: str, payload: dict[str, Any]) -> tuple[str, str | None]:
+def _macos(action: str, payload: dict[str, Any]) -> tuple[str, str | None, bool]:
     if platform.system() != "Darwin":
-        return "unavailable", None
-    adapter = _MacSecurity(interactive=payload.get("interactive") is True)
+        return "unavailable", None, False
+    budget = payload.get("budget_seconds")
+    adapter = _MacSecurity(
+        interactive=payload.get("interactive") is True,
+        budget=float(budget) if isinstance(budget, (int, float)) else DEFAULT_BUDGET_SECONDS,
+    )
     ref = str(payload.get("ref") or "")
     if action == "health":
-        return adapter.health(), None
-    if not ref:
-        return "unavailable", None
-    if action == "get":
-        return adapter.get(ref)
-    if action == "set":
-        value = payload.get("value")
-        if not isinstance(value, str):
-            return "unavailable", None
-        return adapter.set(ref, value), None
-    if action == "delete":
-        return adapter.delete(ref), None
-    return "unavailable", None
+        return adapter.health(), None, False
+    if not ref or not _SAFE_REF.fullmatch(ref):
+        # Refs are generated by mb; anything else could break `security -i` quoting.
+        return "unavailable", None, False
+    try:
+        if action == "get":
+            state, value = adapter.get(ref)
+            return state, value, adapter.migrated
+        if action == "set":
+            value = payload.get("value")
+            if not isinstance(value, str):
+                return "unavailable", None, False
+            return adapter.set(ref, value), None, False
+        if action == "delete":
+            return adapter.delete(ref), None, False
+    except _PromptPending:
+        return "prompt-pending", None, False
+    return "unavailable", None, False
 
 
 def _secret_service_items(collection: Any, ref: str) -> list[Any]:
@@ -483,15 +793,16 @@ def main() -> int:
         return _emit("unavailable")
     try:
         payload = _read_payload()
+        migrated = False
         if backend == "macos-keychain":
-            state, value = _macos(action, payload)
+            state, value, migrated = _macos(action, payload)
         elif backend == "secret-service":
             state, value = _secret_service(action, payload)
         else:
             state, value = "unavailable", None
     except BaseException as exc:
-        state, value = _secret_service_state(exc), None
-    return _emit(state, value=value)
+        state, value, migrated = _secret_service_state(exc), None, False
+    return _emit(state, value=value, migrated=migrated)
 
 
 if __name__ == "__main__":

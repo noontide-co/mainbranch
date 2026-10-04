@@ -53,7 +53,8 @@ BACKEND_REPAIRS: dict[str, dict[str, str]] = {
         ),
         "repair": (
             f"From a terminal in this hub, run `{KEYCHAIN_REPAIR_COMMAND}` and choose "
-            "Always Allow (not Allow) when macOS asks. "
+            "Always Allow (not Allow) when macOS asks. It moves the credential to the macOS "
+            "security tool, so later Python or mb updates do not ask again. "
             f"{KEYCHAIN_RESET_WARNING}"
         ),
         "repair_command": KEYCHAIN_REPAIR_COMMAND,
@@ -156,6 +157,8 @@ class SecretProbe(NamedTuple):
     present: bool
     backend_ok: bool
     reason: str
+    # True when this read moved a legacy macOS item to /usr/bin/security.
+    migrated: bool = False
 
 
 def select_secret_backend(requested: str | None = None) -> str:
@@ -253,7 +256,7 @@ class SecretStore:
         value = result.get("value")
         if not isinstance(value, str):
             return SecretProbe("", False, False, _reason_for(self.backend, "unavailable"))
-        return SecretProbe(value, True, True, "")
+        return SecretProbe(value, True, True, "", result.get("migrated") is True)
 
     def health(self, *, deadline: float | None = None) -> dict[str, Any]:
         reason = ""
@@ -347,6 +350,9 @@ def _run_helper(
         if remaining <= 0:
             return {"state": "timed-out"}
         timeout = min(timeout, remaining)
+    # The helper stops its own `security` calls before this process kills it,
+    # so a pending dialog is reported as such rather than as a bare timeout.
+    payload["budget_seconds"] = max(0.5, timeout - 1.5)
     try:
         completed = subprocess.run(
             [sys.executable, "-m", "mb._credential_helper", backend, action],

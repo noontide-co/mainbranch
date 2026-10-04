@@ -310,7 +310,8 @@ def test_adapter_get_checks_lock_first_and_never_reads_a_locked_keychain() -> No
 def test_adapter_get_maps_untrusted_read_to_prompt_pending() -> None:
     adapter: Any = object.__new__(helper_mod._MacSecurity)
     adapter.health = lambda: "ready"
-    adapter._query = lambda ref, return_data=False: (7, [])
+    adapter._item_owner = lambda ref: "legacy"
+    adapter._query = lambda ref, **kwargs: (7, [])
     adapter._release_all = lambda values: None
     adapter.security = SimpleNamespace(
         SecItemCopyMatching=lambda query, result: helper_mod.ERR_SEC_AUTH_FAILED
@@ -357,7 +358,7 @@ def test_helper_payload_without_explicit_true_stays_non_interactive(
     seen: list[bool] = []
 
     class Adapter:
-        def __init__(self, *, interactive: bool = False) -> None:
+        def __init__(self, *, interactive: bool = False, **kwargs: Any) -> None:
             seen.append(interactive)
 
         def health(self) -> str:
@@ -678,16 +679,8 @@ def test_macos_item_from_another_python_reports_prompt_pending_fast(
 ) -> None:
     _require_seam(throwaway_keychain)
     ref = "mbtest-ref-foreign"
-    created = subprocess.run(
-        [*_foreign_python(tmp_path), "-m", "mb._credential_helper", "macos-keychain", "set"],
-        input=json.dumps({"ref": ref, "value": "dummy-not-a-secret"}),
-        capture_output=True,
-        text=True,
-        env=_helper_env(),
-        timeout=30,
-        check=False,
-    )
-    assert json.loads(created.stdout) == {"state": "ready"}
+    # The pre-#1005 write path: SecItemAdd from another interpreter.
+    _legacy_add(_foreign_python(tmp_path), ref, "dummy-not-a-secret")
 
     store = store_mod.SecretStore("macos-keychain")
     started = time.monotonic()
@@ -712,3 +705,407 @@ def test_macos_item_from_this_python_still_reads(throwaway_keychain: Path) -> No
     )
     store.delete("mbtest-ref-own")
     assert store.probe("mbtest-ref-own").present is False
+
+
+# ---------------------------------------------------------------------------
+# Phase 2: items owned by Apple-signed /usr/bin/security (#1005).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ('password: "abc"\n', "abc"),
+        ('password: "a"b"\n', 'a"b'),
+        ('password: " lead"\n', " lead"),
+        ('password: "0x41"\n', "0x41"),
+        ('password: 0x615C62  "a\\134b"\n', "a\\b"),
+        ("password: 0xC3A9 \n", "é"),
+        ("password: \n", ""),
+        ("nothing useful\n", None),
+        ("password: 0xZZ\n", None),
+    ],
+)
+def test_security_password_line_is_parsed_without_ambiguity(
+    text: str, expected: str | None
+) -> None:
+    assert helper_mod._parse_security_password(text) == expected
+
+
+def _note(log: list[Any], entry: Any, result: Any) -> Any:
+    log.append(entry)
+    return result
+
+
+def _tool_adapter(monkeypatch: pytest.MonkeyPatch, runs: list[dict[str, Any]]) -> Any:
+    adapter: Any = object.__new__(helper_mod._MacSecurity)
+    adapter.keychain_path = None
+    adapter.deadline = time.monotonic() + 30
+    adapter.migrated = False
+
+    def fake_run(args: list[str], **kwargs: Any) -> SimpleNamespace:
+        runs.append({"args": args, **kwargs})
+        return SimpleNamespace(returncode=0, stderr="")
+
+    monkeypatch.setattr(helper_mod.subprocess, "run", fake_run)  # type: ignore[attr-defined]
+    return adapter
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "plain-token",
+        "with space",
+        'with "quotes"',
+        "back\\slash",
+        "new\nline",
+        "naïve-✓",
+        "",
+        "x" * 1700,
+    ],
+)
+def test_security_write_keeps_value_out_of_argv_and_round_trips_hex(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    runs: list[dict[str, Any]] = []
+    adapter = _tool_adapter(monkeypatch, runs)
+
+    assert adapter._security_put("mainbranch://abc/cloudflare/api_token", value, exists=False) == (
+        "ready"
+    )
+
+    assert len(runs) == 1
+    assert runs[0]["args"] == ["/usr/bin/security", "-i"]
+    command = runs[0]["input"]
+    assert command.count("\n") == 1 and command.endswith("\n")
+    hex_value = command.split(' -X "', 1)[1].split('"', 1)[0]
+    assert bytes.fromhex(hex_value).decode("utf-8") == value
+    if value:
+        assert value not in command or value == hex_value
+
+
+def test_security_write_of_a_long_value_never_puts_it_on_the_security_line(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runs: list[dict[str, Any]] = []
+    adapter = _tool_adapter(monkeypatch, runs)
+    updates: list[tuple[str, str]] = []
+    adapter._update = lambda ref, value: _note(updates, (ref, value), 0)
+    value = "y" * 4096
+
+    assert adapter._security_put("fixture-ref", value, exists=False) == "ready"
+
+    assert runs[0]["args"] == ["/usr/bin/security", "-i"]
+    assert ' -X ""' in runs[0]["input"]
+    assert value not in runs[0]["input"]
+    assert value.encode().hex() not in runs[0]["input"]
+    assert updates == [("fixture-ref", value)]
+
+
+def test_security_tool_deadline_reports_prompt_pending(monkeypatch: pytest.MonkeyPatch) -> None:
+    adapter: Any = object.__new__(helper_mod._MacSecurity)
+    adapter.keychain_path = None
+    adapter.deadline = time.monotonic() + 30
+
+    def hang(args: list[str], **kwargs: Any) -> SimpleNamespace:
+        raise subprocess.TimeoutExpired(args, kwargs["timeout"])
+
+    monkeypatch.setattr(helper_mod.subprocess, "run", hang)  # type: ignore[attr-defined]
+
+    with pytest.raises(helper_mod._PromptPending):
+        adapter._security_get("fixture-ref")
+
+
+def _fake_store_adapter(owner: str) -> tuple[Any, list[str]]:
+    calls: list[str] = []
+    adapter: Any = object.__new__(helper_mod._MacSecurity)
+    adapter.migrated = False
+    adapter.health = lambda: "ready"
+    adapter._item_owner = lambda ref: _note(calls, "owner", owner)
+
+    def tool(args: list[str], *, stdin: str | None = None) -> Any:
+        raise AssertionError("security must not run against this item")
+
+    adapter._security_tool = tool
+    return adapter, calls
+
+
+def test_legacy_item_is_never_read_through_security() -> None:
+    adapter, _ = _fake_store_adapter("legacy")
+    adapter._ctypes_get = lambda ref, health: ("prompt-pending", None)
+
+    assert adapter.get("fixture-ref") == ("prompt-pending", None)
+
+
+def test_security_owned_item_is_read_through_security_only() -> None:
+    adapter, _ = _fake_store_adapter("security")
+    adapter._ctypes_get = lambda ref, health: pytest.fail("legacy read on a security item")
+    adapter._security_get = lambda ref: ("ready", "fixture")
+
+    assert adapter.get("fixture-ref") == ("ready", "fixture")
+
+
+def test_trusted_legacy_read_migrates_and_verifies() -> None:
+    adapter, _ = _fake_store_adapter("legacy")
+    steps: list[str] = []
+    adapter._ctypes_get = lambda ref, health: ("ready", "fixture")
+    adapter._ctypes_delete = lambda ref: _note(steps, "delete", 0)
+    adapter._security_put = lambda ref, value, exists: _note(steps, f"put:{exists}", "ready")
+    adapter._verified = lambda ref, value: _note(steps, "verify", True)
+    adapter._ctypes_add = lambda ref, value: pytest.fail("restore after a good migration")
+
+    assert adapter.get("fixture-ref") == ("ready", "fixture")
+    assert adapter.migrated is True
+    assert steps == ["delete", "put:False", "verify"]
+
+
+@pytest.mark.parametrize("failure", ["put", "verify", "deadline"])
+def test_failed_migration_restores_the_legacy_item(failure: str) -> None:
+    adapter, _ = _fake_store_adapter("legacy")
+    steps: list[str] = []
+    restored: list[tuple[str, str]] = []
+    adapter._ctypes_get = lambda ref, health: ("ready", "fixture")
+    adapter._ctypes_delete = lambda ref: _note(steps, "delete", 0)
+
+    def put(ref: str, value: str, exists: bool) -> str:
+        steps.append("put")
+        if failure == "deadline":
+            raise helper_mod._PromptPending
+        return "unavailable" if failure == "put" else "ready"
+
+    adapter._security_put = put
+    adapter._verified = lambda ref, value: False
+    owners = iter(["legacy", "security" if failure == "verify" else "absent"])
+    adapter._item_owner = lambda ref: next(owners)
+    adapter._security_delete = lambda ref: _note(steps, "security-delete", "ready")
+    adapter._ctypes_add = lambda ref, value: _note(restored, (ref, value), 0)
+
+    assert adapter.get("fixture-ref") == ("ready", "fixture")
+    assert adapter.migrated is False
+    assert restored == [("fixture-ref", "fixture")]
+    if failure == "verify":
+        assert "security-delete" in steps
+
+
+def test_migration_never_starts_when_the_legacy_item_cannot_be_removed() -> None:
+    adapter, _ = _fake_store_adapter("legacy")
+    adapter._ctypes_get = lambda ref, health: ("ready", "fixture")
+    adapter._ctypes_delete = lambda ref: helper_mod.ERR_SEC_AUTH_FAILED
+    adapter._security_put = lambda ref, value, exists: pytest.fail("put without delete")
+
+    assert adapter.get("fixture-ref") == ("ready", "fixture")
+    assert adapter.migrated is False
+
+
+def test_replacing_a_legacy_item_updates_in_place_before_migrating() -> None:
+    adapter, _ = _fake_store_adapter("legacy")
+    steps: list[str] = []
+    adapter._update = lambda ref, value: _note(steps, f"update:{value}", 0)
+    adapter._migrate = lambda ref, value: _note(steps, f"migrate:{value}", True)
+    adapter._ctypes_delete = lambda ref: pytest.fail("delete before the new value is stored")
+
+    assert adapter.set("fixture-ref", "replacement") == "ready"
+    assert steps == ["update:replacement", "migrate:replacement"]
+
+
+def test_new_items_are_written_through_security() -> None:
+    adapter, _ = _fake_store_adapter("absent")
+    puts: list[bool] = []
+    adapter._security_put = lambda ref, value, exists: _note(puts, exists, "ready")
+    adapter._ctypes_add = lambda ref, value: pytest.fail("legacy add for a new item")
+
+    assert adapter.set("fixture-ref", "fixture") == "ready"
+    assert puts == [False]
+
+
+def test_helper_rejects_refs_that_could_break_security_quoting(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Adapter:
+        def __init__(self, **kwargs: Any) -> None:
+            pass
+
+        def get(self, ref: str) -> tuple[str, str | None]:
+            raise AssertionError("unsafe ref reached the adapter")
+
+    monkeypatch.setattr(platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(helper_mod, "_MacSecurity", Adapter)
+    for ref in ['a" -X "00', "a\nb", "a b", "-flag"]:
+        assert helper_mod._macos("get", {"ref": ref})[0] == "unavailable"
+
+
+def test_probe_reports_migration_without_the_value(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(store_mod.platform, "system", lambda: "Darwin")  # type: ignore[attr-defined]
+    monkeypatch.setattr(
+        store_mod,
+        "_run_helper",
+        lambda backend, action, **kwargs: {"state": "ready", "value": "fixture", "migrated": True},
+    )
+
+    probe = store_mod.SecretStore("macos-keychain").probe("fixture-ref")
+
+    assert probe == store_mod.SecretProbe("fixture", True, True, "", True)
+
+
+def test_helper_budget_ends_before_the_parent_deadline(monkeypatch: pytest.MonkeyPatch) -> None:
+    helper = _RecordingHelper()
+    helper.install(monkeypatch)
+    monkeypatch.setattr(store_mod.platform, "system", lambda: "Darwin")  # type: ignore[attr-defined]
+
+    store_mod.SecretStore("macos-keychain").probe("fixture-ref")
+    store_mod.SecretStore("macos-keychain").probe("fixture-ref", interactive=True)
+
+    for call in helper.calls:
+        assert 0 < call["payload"]["budget_seconds"] < call["timeout"]
+
+
+def _python_as(tmp_path: Path, identifier: str) -> list[str]:
+    """A copy of this interpreter that the keychain treats as another app."""
+
+    copy = tmp_path / f"python-{identifier}"
+    shutil.copy2(Path(sys.executable).resolve(), copy)
+    subprocess.run(
+        ["/usr/bin/codesign", "--force", "--sign", "-", "--identifier", identifier, str(copy)],
+        check=True,
+        capture_output=True,
+        timeout=60,
+    )
+    return [str(copy)]
+
+
+def _helper(python: list[str], action: str, payload: dict[str, Any]) -> dict[str, Any]:
+    started = time.monotonic()
+    completed = subprocess.run(
+        [*python, "-m", "mb._credential_helper", "macos-keychain", action],
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        env=_helper_env(),
+        timeout=30,
+        check=False,
+    )
+    result: dict[str, Any] = json.loads(completed.stdout)
+    result["elapsed"] = time.monotonic() - started
+    return result
+
+
+def _legacy_add(python: list[str], ref: str, value: str) -> None:
+    """Create an item the way mb did before #1005: SecItemAdd from Python."""
+
+    script = (
+        "import sys; from mb import _credential_helper as h; "
+        "sys.exit(h._MacSecurity()._ctypes_add(sys.argv[1], sys.argv[2]) != 0)"
+    )
+    subprocess.run(
+        [*python, "-c", script, ref, value],
+        env=_helper_env(),
+        check=True,
+        capture_output=True,
+        timeout=30,
+    )
+
+
+@integration
+def test_macos_migrated_item_survives_python_swaps(
+    tmp_path: Path, throwaway_keychain: Path
+) -> None:
+    _require_seam(throwaway_keychain)
+    python_a = [sys.executable]
+    python_b = _python_as(tmp_path, "com.example.mbtest-b")
+    python_c = _python_as(tmp_path, "com.example.mbtest-c")
+    ref = "mbtest-ref-swap"
+    _legacy_add(python_a, ref, "dummy-not-a-secret")
+
+    before = _helper(python_b, "get", {"ref": ref})
+    assert before["state"] == "prompt-pending"
+    assert before["elapsed"] < 1.0
+
+    migrated = _helper(python_a, "get", {"ref": ref})
+    assert migrated["state"] == "ready"
+    assert migrated["migrated"] is True
+    assert migrated["value"] == "dummy-not-a-secret"
+
+    for python in (python_b, python_c, python_a):
+        result = _helper(python, "get", {"ref": ref})
+        assert result["state"] == "ready"
+        assert result["value"] == "dummy-not-a-secret"
+        assert "migrated" not in result
+        assert result["elapsed"] < 2.0
+
+
+@integration
+@pytest.mark.parametrize(
+    "value",
+    ["dummy plain", 'dummy "quoted" \\ back', "dummy\nnewline", "dümmy-✓", "d" * 4096],
+)
+def test_macos_security_round_trip(throwaway_keychain: Path, value: str) -> None:
+    _require_seam(throwaway_keychain)
+    store = store_mod.SecretStore("macos-keychain")
+    ref = "mbtest-ref-roundtrip"
+
+    store.set(ref, value)
+    assert store.probe(ref).value == value
+    store.set(ref, value + "-2")
+    assert store.probe(ref).value == value + "-2"
+
+    adapter = helper_mod._MacSecurity()
+    assert adapter._item_owner(ref) == "security"
+    store.delete(ref)
+    assert store.probe(ref).present is False
+
+
+@integration
+def test_macos_new_write_is_readable_by_another_python(
+    tmp_path: Path, throwaway_keychain: Path
+) -> None:
+    _require_seam(throwaway_keychain)
+    ref = "mbtest-ref-new"
+    store_mod.SecretStore("macos-keychain").set(ref, "dummy-not-a-secret")
+
+    result = _helper(_python_as(tmp_path, "com.example.mbtest-d"), "get", {"ref": ref})
+
+    assert result["state"] == "ready"
+    assert result["value"] == "dummy-not-a-secret"
+
+
+def test_keychain_repair_reports_each_migration_without_values(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _keychain_repo(tmp_path, monkeypatch)
+    calls: list[bool] = []
+    moved: set[str] = set()
+
+    def run(args: list[str], **kwargs: Any) -> SimpleNamespace:
+        payload = json.loads(kwargs["input"])
+        calls.append(payload["interactive"])
+        if payload["ref"] in moved:
+            # Owned by /usr/bin/security now: any Python reads it unattended.
+            return SimpleNamespace(returncode=0, stdout='{"state":"ready","value":"fixture"}')
+        if not payload["interactive"]:
+            return SimpleNamespace(returncode=1, stdout='{"state":"prompt-pending"}')
+        moved.add(payload["ref"])
+        return SimpleNamespace(
+            returncode=0, stdout='{"state":"ready","value":"fixture","migrated":true}'
+        )
+
+    monkeypatch.setattr(
+        store_mod,
+        "subprocess",
+        SimpleNamespace(
+            run=run,
+            PIPE=subprocess.PIPE,
+            DEVNULL=subprocess.DEVNULL,
+            TimeoutExpired=subprocess.TimeoutExpired,
+            SubprocessError=subprocess.SubprocessError,
+        ),
+    )
+
+    result = connect_mod.repair_keychain(repo, interactive=True)
+
+    assert result["ok"] is True
+    assert [item["state"] for item in result["items"]] == ["repaired", "repaired"]
+    assert [item["migrated"] for item in result["items"]] == [True, True]
+    assert all("security tool" in item["summary"] for item in result["items"])
+    # Each item: unattended probe, answered read, fresh unattended verify.
+    assert calls == [False, True, False] * 2
+    assert "fixture" not in json.dumps(result)

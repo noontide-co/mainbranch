@@ -354,26 +354,44 @@ logged-in user's GUI launchd domain; Main Branch does not install a daemon,
 broker, or launchd job. A new security session or reboot can require another
 interactive unlock in that owning session.
 
-Keychain item access control is separate from Keychain lock state. A new item
-trusts the installed Python application identity that created it, so after the
-Python under `mb` changes (a uv Python upgrade or reinstall), macOS wants to
-ask once more before that item can be read. Main Branch never waits on that
-dialog: every command reads with keychain interaction turned off, so a pending
-prompt fails at once with the `keychain_prompt_pending` state instead of
-running into the safety deadline. A locked keychain fails at once with
-`keychain_locked`, since unlocking would also need a dialog.
+Keychain item access control is separate from Keychain lock state. A macOS
+Keychain item trusts the program that created it. Main Branch reads and writes
+its items through Apple-signed `/usr/bin/security`, whose identity stays the
+same across Python, uv, `mb` and macOS updates, so changing the Python under
+`mb` does not bring back an access dialog. Values reach `security` only on
+stdin, hex-encoded (`security -i`), never in process arguments; a value too
+long for one `security -i` line is written as an empty item by `security` and
+filled in through the Security framework, which keeps the same access list.
 
-To answer the prompts, run this once from a terminal in the hub, at the screen,
-and choose **Always Allow** (Allow lets only that one read through):
+Items stored by `mb` before this change trust the Python that created them.
+The first read that this Python can do moves the item to `security`: the value
+is held in memory, the old item is removed, the new one is added and read back,
+and the old item is restored if any step fails. That happens silently in any
+command, including unattended ones.
+
+Main Branch never waits on a keychain dialog. Every command reads with
+keychain interaction turned off, so an item this Python is not trusted to read
+fails at once with the `keychain_prompt_pending` state instead of running into
+the safety deadline. A locked keychain fails at once with `keychain_locked`,
+since unlocking would also need a dialog. Main Branch runs `security` only on
+items whose access list already trusts it, because `security` itself cannot be
+told to fail instead of showing a dialog; a bounded deadline stops it and
+reports `keychain_prompt_pending` if it ever does.
+
+When an item reports `keychain_prompt_pending`, run this once from a terminal
+in the hub, at the screen, and choose **Always Allow** for each dialog (Allow lets only that one read
+through):
 
 ```bash
 mb connect repair --keychain
 ```
 
 It is the only command that lets macOS show the keychain dialog. It refuses to
-run without a terminal, waits up to 60 seconds per credential, and never prints
-a value. It reports a credential as repaired only after a fresh unattended read
-succeeds; otherwise it says the prompt is still pending. Never reset or delete the login keychain to repair one item.
+run without a terminal, waits up to 60 seconds per credential, moves each
+credential it can read to `security`, and never prints a value. It reports a
+credential as repaired only after a fresh unattended read succeeds; otherwise it
+says the prompt is still pending. After a repair, Python and `mb` updates do not
+ask again. Never reset or delete the login keychain to repair one item.
 
 On Linux, Main Branch uses the existing Secret Service default collection. It
 checks collection and item lock state and never calls an unlock method. Unlock
@@ -381,7 +399,8 @@ the collection in the user's desktop keyring application before starting the
 unattended reader.
 
 A connect attempt that fails on the backend stores nothing and leaves repo
-metadata unchanged. Replacement updates an existing Keychain item in place,
+metadata unchanged. Replacement updates an existing Keychain item in place
+(an item stored before the `security` change is updated first and then moved),
 and Secret Service updates a matched item in place while preserving its
 attributes, including legacy Python keyring attributes. New Secret Service
 items use its replacement contract. Main Branch never delete-before-adds an

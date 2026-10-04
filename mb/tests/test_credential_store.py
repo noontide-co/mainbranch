@@ -234,6 +234,7 @@ def test_macos_failed_update_preserves_previous_item_without_delete() -> None:
     adapter: Any = object.__new__(helper_mod._MacSecurity)
     adapter.security = FakeSecurity()
     adapter.health = lambda: "ready"
+    adapter._item_owner = lambda ref: "legacy"
     adapter._update = lambda ref, value: helper_mod.ERR_SEC_AUTH_FAILED
 
     result = adapter.set("fixture-ref", "replacement")
@@ -271,7 +272,8 @@ def test_macos_add_explicitly_forbids_authentication_ui() -> None:
     adapter._dictionary = capture
     adapter._release_all = lambda values: None
 
-    assert adapter.set("fixture-ref", "replacement") == "ready"
+    # The legacy add is now only the restore path of a failed migration.
+    assert adapter._ctypes_add("fixture-ref", "replacement") == helper_mod.ERR_SEC_SUCCESS
     assert (constants["kSecUseAuthenticationUI"], constants["kSecUseAuthenticationUIFail"]) in (
         captured
     )
