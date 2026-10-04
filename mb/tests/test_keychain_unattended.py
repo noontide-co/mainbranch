@@ -2447,3 +2447,49 @@ def test_macos_repair_all_moves_legacy_items_and_recovers_staged_ones(
         assert adapter._item_owner(ref) == "security"
     assert adapter._item_owner(staged + helper_mod.STAGE_SUFFIX) == "absent"
     assert store_mod.list_keychain_refs().refs == sorted([legacy, staged, foreign, owned])
+
+
+def test_the_helper_starts_from_the_installed_package_directory(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: list[dict[str, Any]] = []
+
+    def run(args: list[str], **kwargs: Any) -> SimpleNamespace:
+        return SimpleNamespace(returncode=1, stdout='{"state":"unavailable"}')
+
+    fake = _fake_subprocess(run)
+
+    class RecordingPopen(fake.Popen):  # type: ignore[misc,name-defined]
+        def __init__(self, args: list[str], **kwargs: Any) -> None:
+            seen.append(kwargs)
+            super().__init__(args, **kwargs)
+
+    fake.Popen = RecordingPopen
+    monkeypatch.setattr(store_mod, "subprocess", fake)
+
+    store_mod._run_helper("no-such-backend", "get", ref="fixture-ref")
+
+    assert [call["cwd"] for call in seen] == [str(MB_PACKAGE.parent)]
+    assert (Path(seen[0]["cwd"]) / "mb" / "_credential_helper.py").is_file()
+
+
+def test_the_working_directory_cannot_stand_in_for_the_helper(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A directory holding another ``mb`` package is ignored when the helper starts."""
+
+    other = tmp_path / "checkout"
+    (other / "mb").mkdir(parents=True)
+    (other / "mb" / "__init__.py").write_text("", encoding="utf-8")
+    (other / "mb" / "_credential_helper.py").write_text(
+        'import sys\nsys.stdout.write(\'{"state":"ready","value":"NOT-THE-HELPER"}\')\n',
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(other)
+    monkeypatch.delenv("PYTHONPATH", raising=False)
+
+    # An unknown backend: the real helper answers at once and touches no keychain.
+    result = store_mod._run_helper("no-such-backend", "get", ref="fixture-ref")
+
+    assert result.get("value") != "NOT-THE-HELPER"
+    assert result == {"state": "unavailable"}

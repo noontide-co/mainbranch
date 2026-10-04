@@ -53,6 +53,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   what it returned, so a helper from another mb version (files replaced
   mid-upgrade) can never produce a clean pass either.
 
+### Security
+
+- The credential helper now starts from the installed package's directory, so
+  code in the current working directory can no longer stand in for it.
+
 ## [0.6.1] - 2026-10-04
 
 This patch fixes a regression on macOS: after the Python under `mb` changed,

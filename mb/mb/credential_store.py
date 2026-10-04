@@ -441,6 +441,17 @@ def _run_helper(
     return result
 
 
+def _helper_cwd() -> str:
+    """The directory that holds this ``mb`` package.
+
+    ``python -m`` puts the working directory first on ``sys.path``. Starting
+    the helper here makes ``mb._credential_helper`` resolve to this package,
+    whatever directory the command was run from.
+    """
+
+    return str(Path(__file__).resolve().parent.parent)
+
+
 def _invoke_helper(args: list[str], stdin: str, timeout: float) -> tuple[int, str]:
     """Run the helper in its own process group; on timeout kill the whole group.
 
@@ -455,6 +466,7 @@ def _invoke_helper(args: list[str], stdin: str, timeout: float) -> tuple[int, st
         stderr=subprocess.DEVNULL,
         text=True,
         start_new_session=True,
+        cwd=_helper_cwd(),
     )
     try:
         stdout, _ = process.communicate(stdin, timeout=timeout)
