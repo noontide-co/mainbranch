@@ -665,14 +665,15 @@ class _FakeKeychainHelper:
         payload = json.loads(kwargs["input"])
         self.calls.append({"action": action, "payload": payload})
         if action == "list":
-            refs: list[str] = []
-            for ref, kind in self.items.items():
-                refs.append(ref + helper_mod.STAGE_SUFFIX if kind == "staged" else ref)
+            refs = sorted(
+                ref + helper_mod.STAGE_SUFFIX if kind == "staged" else ref
+                for ref, kind in self.items.items()
+            )
             return SimpleNamespace(
-                returncode=0, stdout=json.dumps({"state": "ready", "refs": sorted(refs)})
+                returncode=0, stdout=json.dumps({"state": "ready", "refs": refs})
             )
         assert action == "get"
-        ref = payload["ref"]
+        ref: str = payload["ref"]
         assert not ref.endswith(helper_mod.STAGE_SUFFIX), "a staged copy is never read directly"
         kind = self.items.get(ref)
         if kind is None:
