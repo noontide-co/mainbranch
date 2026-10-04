@@ -45,6 +45,36 @@ MIN_MOVE_SECONDS = 3.0
 # A move keeps a full, verified copy under `<ref>.mbstage` until the final item
 # verifies. Any later access finishes or undoes an interrupted move from it.
 STAGE_SUFFIX = ".mbstage"
+# Staged-copy state table (macOS). Stage = `<ref>.mbstage`; main = `<ref>`.
+# "Gate" = only with MIN_MOVE_SECONDS left (checked again before each delete);
+# without it the delete is skipped and a later access does it. Repair is a get
+# with interaction allowed for a legacy read; it follows the get column.
+#
+# stage \ main | absent          | legacy          | sec-readable   | sec-empty      | unreadable
+# absent       | get: missing    | get: read; move | get: read      | get: ready ""  | get: failure
+#              | set: staged new | set: update,move| set: put       | set: put       | set: failure
+#              | del: missing    | del: delete     | del: delete    | del: delete    | del: failure
+# empty        | get/set: drop stage (gate; proved empty by a successful read, and
+#   (proved)   |   empty values are never staged), then as the "absent" row
+#              | del: delete stage, confirm gone, then main as the "absent" row
+# readable     | get: finish     | get: read; move | get: drop stage| get: refill    | get: failure,
+#              |   move (gate),  |   re-stages     |   (gate), main |   (gate), ready|   keep both
+#              |   ready staged  |   (untrusted:   |   value        |   staged       |
+#              |                 |   pending, keep)|                |                |
+#              | set: as get, then write the new value (a short gate leaves the
+#              |   staged copy; the readable item supersedes it on the next get)
+#              | del: delete stage, confirm gone, then main; on failure leave main
+# unreadable   | get: failure,   | get: read, no   | get: read      | get: failure,  | get: failure
+#              |   keep (never   |   move          |                |   keep         |
+#              |   missing)      | set: update     | set: put       | set: failure   | set: failure
+#              | set: failure    |   in place      |                |                |
+#              | del: failure (the staged copy must be confirmed gone first)
+#
+# Invariants (one parametrized test walks every cell with each fault):
+# (a) a stored value always keeps at least one durable copy;
+# (b) a deleted credential never comes back;
+# (c) no move or recovery delete starts without the gate;
+# (d) unreadable never becomes `missing`.
 # Test-only: exit at a named step of a move, to prove recovery after a crash.
 # Inert unless the throwaway-keychain seam is also set.
 TEST_CRASH_ENV = "MB_CREDENTIAL_TEST_CRASH_AT"
@@ -55,6 +85,16 @@ _SAFE_REF = re.compile(r"[A-Za-z0-9][A-Za-z0-9:/._@+_-]{0,511}")
 
 class _PromptPending(Exception):
     """A keychain operation would have to wait on a macOS dialog."""
+
+
+def _monotonic_deadline(epoch: float) -> float:
+    """Turn the parent's wall-clock deadline into a monotonic one, once."""
+
+    return time.monotonic() + (epoch - time.time())
+
+
+def _failure_state(exc: BaseException) -> str:
+    return "prompt-pending" if isinstance(exc, _PromptPending) else "unavailable"
 
 
 def _emit(state: str, *, value: str | None = None, migrated: bool = False, owner: str = "") -> int:
@@ -154,10 +194,16 @@ class _MacSecurity:
     """Minimal ctypes bridge for generic-password operations."""
 
     def __init__(self, *, interactive: bool = False, deadline: float | None = None) -> None:
-        # Wall-clock deadline from the parent: the helper must finish, and stop
-        # every `security` child, before the parent stops waiting for it.
-        self.deadline = deadline if deadline is not None else time.time() + DEFAULT_BUDGET_SECONDS
+        # The parent sends a wall-clock deadline; it is turned into a monotonic
+        # one once, here, so a clock change cannot stretch or shrink the budget.
+        # The helper must finish, and stop every `security` child, before the
+        # parent stops waiting for it.
+        self.deadline = _monotonic_deadline(
+            deadline if deadline is not None else time.time() + DEFAULT_BUDGET_SECONDS
+        )
         self.migrated = False
+        # What the last recovery found in the staged copy (see _recover).
+        self.stage_kind = "absent"
         # Who owns the item after this call: "security", "legacy" or "".
         self.owner = ""
         self.security = ctypes.CDLL("/System/Library/Frameworks/Security.framework/Security")
@@ -489,7 +535,7 @@ class _MacSecurity:
         the last guard, and expiry reports a pending prompt.
         """
 
-        remaining = self.deadline - time.time()
+        remaining = self.deadline - time.monotonic()
         if remaining <= 0:
             raise _PromptPending
         try:
@@ -577,7 +623,7 @@ class _MacSecurity:
         return state == "ready" and stored == value
 
     def _can_move(self) -> bool:
-        return self.deadline - time.time() >= MIN_MOVE_SECONDS
+        return self.deadline - time.monotonic() >= MIN_MOVE_SECONDS
 
     def _crash_point(self, step: str) -> None:
         if self.keychain_path is not None and os.environ.get(TEST_CRASH_ENV) == step:
@@ -602,7 +648,9 @@ class _MacSecurity:
         legacy item is put back and the staged copy is kept.
         """
 
-        if not self._can_move():
+        if value == "" or not self._can_move():
+            # An empty value is never staged, so an empty staged copy always
+            # means an interrupted fill and is safe to drop (see _recover).
             return False
         stage = ref + STAGE_SUFFIX
         try:
@@ -614,6 +662,10 @@ class _MacSecurity:
         except Exception:
             return False
         self._crash_point("after-stage")
+        if not self._can_move():
+            # Too little time left to finish: keep the legacy item. The staged
+            # copy is redundant and is refreshed by the next move.
+            return False
         if replaces_legacy and self._ctypes_delete(ref) != ERR_SEC_SUCCESS:
             # The legacy item stays where it is, so the staged copy is redundant.
             with contextlib.suppress(Exception):
@@ -638,48 +690,133 @@ class _MacSecurity:
             self._update(ref, value)
         return False
 
+    def _stage_state(self, stage: str) -> tuple[str, str | None, str]:
+        """Classify a staged copy: ``(kind, value, failure state)``.
+
+        ``kind`` is ``absent``, ``empty`` (read successfully, holds ""),
+        ``readable`` or ``unreadable``. Only a successful read can make a
+        staged copy ``empty``; any failure is ``unreadable`` and keeps it.
+        """
+
+        try:
+            owner = self._item_owner(stage)
+            if owner == "absent":
+                return "absent", None, ""
+            if owner != "security":
+                # Not one this code made, or its owner could not be read.
+                return "unreadable", None, owner if owner != "legacy" else "unavailable"
+            state, value = self._security_get(stage)
+        except Exception as exc:
+            return "unreadable", None, _failure_state(exc)
+        if state != "ready" or value is None:
+            return "unreadable", None, state if state != "missing" else "unavailable"
+        return ("empty" if value == "" else "readable"), value, ""
+
+    def _main_state(self, ref: str) -> tuple[str, str | None, str]:
+        """Classify the item itself without reading a legacy item's data.
+
+        ``absent``, ``legacy``, ``security-readable``, ``security-empty`` or
+        ``unreadable`` (with its failure state).
+        """
+
+        try:
+            owner = self._item_owner(ref)
+            if owner in {"absent", "legacy"}:
+                return owner, None, ""
+            if owner != "security":
+                return "unreadable", None, owner
+            state, value = self._security_get(ref)
+        except Exception as exc:
+            return "unreadable", None, _failure_state(exc)
+        if state == "missing":
+            return "absent", None, ""
+        if state != "ready" or value is None:
+            return "unreadable", None, state
+        return ("security-empty" if value == "" else "security-readable"), value, ""
+
+    def _drop_stage(self, stage: str) -> None:
+        """Remove a staged copy that is proved redundant, if time allows."""
+
+        if self._can_move():
+            with contextlib.suppress(Exception):
+                self._security_delete(stage)
+
     def _recover(self, ref: str) -> tuple[str, str | None] | None:
         """Finish or undo a move that a crash or timeout interrupted.
 
-        Returns a read result when the staged copy answered the read, or None
-        when the item itself should be read as usual.
+        Returns a result for this access, or None when the item itself should
+        be read as usual. Invariants: a stored value always keeps at least one
+        durable copy; an unreadable staged copy is never deleted and never
+        turns into ``missing``; nothing is deleted without the time gate.
+        The full table of cases is at the top of this module.
         """
 
         stage = ref + STAGE_SUFFIX
-        if self._item_owner(stage) != "security":
-            # No staged copy, or one this code did not make: never touch it.
+        kind, staged, stage_failure = self._stage_state(stage)
+        self.stage_kind = kind
+        if kind == "absent":
             return None
-        state, staged = self._security_get(stage)
-        owner = self._item_owner(ref)
-        if state != "ready" or not staged:
-            # An interrupted fill of the staged copy itself. Nothing was
-            # deleted yet, so the item (if any) still holds the value.
+        if kind == "empty":
+            # Proved empty by a successful read. Empty values are never
+            # staged, so this is an interrupted fill of the staged copy:
+            # nothing was deleted yet and the item still holds the value.
+            self._drop_stage(stage)
+            return None
+        main, value, main_failure = self._main_state(ref)
+        if main == "unreadable":
+            return main_failure, None
+        if kind == "unreadable":
+            if main in {"absent", "security-empty"}:
+                # The value may live only in the staged copy: report the
+                # failure for this access and keep everything.
+                return stage_failure, None
+            # The item holds the value; read it as usual (without moving it).
+            return None
+        if main in {"absent", "security-empty"}:
+            # Interrupted after the legacy delete, or while filling the final
+            # item: finish the move from the staged copy.
             if self._can_move():
-                self._security_delete(stage)
-            return None
-        if owner == "absent":
-            # Interrupted after the legacy item was deleted: finish the move.
-            if self._can_move() and self._put_verified(ref, staged):
-                self._security_delete(stage)
-                self.migrated = True
-                self.owner = "security"
-            return "ready", staged
-        if owner == "security":
-            final_state, final = self._security_get(ref)
-            if final_state == "ready" and final == "":
-                # Interrupted while filling the final item.
-                if self._can_move() and self._put_verified(ref, staged):
-                    self._security_delete(stage)
+                try:
+                    done = self._put_verified(ref, staged or "")
+                except Exception:
+                    done = False
+                if done:
                     self.migrated = True
-                self.owner = "security"
-                return "ready", staged
-            if final_state == "ready" and self._can_move():
-                # The final item verified (or a newer write replaced it).
-                self._security_delete(stage)
-            return None
+                    self.owner = "security"
+                    self._drop_stage(stage)
+            return "ready", staged
+        if main == "security-readable":
+            # The final item verified (or a newer write replaced it).
+            self._drop_stage(stage)
+            self.owner = "security"
+            return "ready", value
         # A legacy item is still there (put back after a failure, or the crash
         # came before it was deleted): read it as usual; a move re-stages.
         return None
+
+    def _remove_stage(self, stage: str) -> str | None:
+        """Delete a staged copy for ``delete``; None once it is confirmed gone."""
+
+        try:
+            owner = self._item_owner(stage)
+            if owner == "absent":
+                return None
+            if owner == "security":
+                state = self._security_delete(stage)
+            elif owner == "legacy":
+                status = self._ctypes_delete(stage)
+                state = (
+                    "ready"
+                    if status in {ERR_SEC_SUCCESS, ERR_SEC_ITEM_NOT_FOUND}
+                    else (_status_state(status))
+                )
+            else:
+                return owner
+            if state not in {"ready", "missing"}:
+                return state
+            return None if self._item_owner(stage) == "absent" else "unavailable"
+        except Exception as exc:
+            return _failure_state(exc)
 
     # -- Public operations ---------------------------------------------------
 
@@ -701,7 +838,7 @@ class _MacSecurity:
             return _denied_state_for(owner, health=health), None
         state, value = self._ctypes_get(ref, health=health)
         self.owner = "legacy"
-        if state == "ready" and value is not None:
+        if state == "ready" and value is not None and self.stage_kind != "unreadable":
             # Without enough time left for the whole move, read only and move
             # next time: a delete must never be cut short by the parent.
             self.migrated = self._staged_write(ref, value, replaces_legacy=True)
@@ -713,7 +850,10 @@ class _MacSecurity:
         health = self.health()
         if health != "ready":
             return health
-        self._recover(ref)
+        recovered = self._recover(ref)
+        if recovered is not None and recovered[0] != "ready":
+            # The item or its staged copy cannot be read now: write nothing.
+            return recovered[0]
         owner = self._item_owner(ref)
         if owner == "security":
             return self._security_put(ref, value, exists=True)
@@ -725,7 +865,8 @@ class _MacSecurity:
             status = self._update(ref, value)
             if status != ERR_SEC_SUCCESS:
                 return _denied_state(status, health=health)
-            self._staged_write(ref, value, replaces_legacy=True)
+            if self.stage_kind != "unreadable":
+                self._staged_write(ref, value, replaces_legacy=True)
             return "ready"
         if owner != "absent":
             return _denied_state_for(owner, health=health)
@@ -742,9 +883,11 @@ class _MacSecurity:
         health = self.health()
         if health != "ready":
             return health
-        stage = ref + STAGE_SUFFIX
-        if self._item_owner(stage) == "security":
-            self._security_delete(stage)
+        # The staged copy goes first and must be confirmed gone: otherwise the
+        # next access would restore the credential from it.
+        failure = self._remove_stage(ref + STAGE_SUFFIX)
+        if failure is not None:
+            return failure
         owner = self._item_owner(ref)
         if owner == "absent":
             return "missing"

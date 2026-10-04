@@ -917,6 +917,12 @@ class _FakeKeychain:
         self.security_calls = 0
         self.crash_at = ""
         self.fill_fails = False
+        # Fault injection: per-ref read failures (a state, or an exception to
+        # raise), delete failures, and an exception for every `security` call.
+        self.get_fail: dict[str, str | BaseException] = {}
+        self.delete_fails = False
+        self.delete_fail_refs: set[str] = set()
+        self.security_raises: BaseException | None = None
 
     def _hook(self, step: str) -> None:
         self.log.append(step)
@@ -927,13 +933,16 @@ class _FakeKeychain:
         self.security_calls += 1
         if self.fail_security_call == self.security_calls:
             raise OSError("could not start security")
+        if self.security_raises is not None:
+            raise self.security_raises
 
     def adapter(self, *, seconds: float = 30.0) -> Any:
         adapter: Any = object.__new__(helper_mod._MacSecurity)
         adapter.migrated = False
         adapter.owner = ""
         adapter.keychain_path = None
-        adapter.deadline = time.time() + seconds
+        adapter.deadline = time.monotonic() + seconds
+        adapter.stage_kind = "absent"
         adapter.health = lambda: "ready"
         adapter._item_owner = lambda ref: self.items.get(ref, ("absent", ""))[0]
         adapter._security_get = self.security_get
@@ -956,6 +965,11 @@ class _FakeKeychain:
         owner, value = self.items.get(ref, ("absent", ""))
         assert owner != "legacy", "security must never read a legacy item"
         self._hook(f"security_get:{ref}")
+        failure = self.get_fail.get(ref)
+        if isinstance(failure, BaseException):
+            raise failure
+        if failure is not None:
+            return failure, None
         return ("ready", value) if owner == "security" else ("missing", None)
 
     def security_put(self, ref: str, value: str, *, exists: bool) -> str:
@@ -980,6 +994,8 @@ class _FakeKeychain:
         owner = self.items.get(ref, ("absent", ""))[0]
         assert owner != "legacy", "security must never delete a legacy item"
         self._hook(f"security_delete:{ref}")
+        if self.delete_fails or ref in self.delete_fail_refs:
+            return "unavailable"
         if owner == "absent":
             return "missing"
         del self.items[ref]
@@ -996,7 +1012,7 @@ class _FakeKeychain:
         self._hook(f"ctypes_delete:{ref}")
         if ref not in self.items:
             return helper_mod.ERR_SEC_ITEM_NOT_FOUND
-        if not self.trusted:
+        if not self.trusted or self.delete_fails:
             return helper_mod.ERR_SEC_AUTH_FAILED
         del self.items[ref]
         return 0
@@ -1232,6 +1248,190 @@ def test_delete_removes_a_staged_copy_too() -> None:
     assert keychain.items == {}
 
 
+def test_recovery_keeps_a_staged_copy_it_cannot_read() -> None:
+    """Crash after the legacy delete, then a failed staged read: never `missing`."""
+
+    keychain = _legacy_keychain()
+    keychain.crash_at = "after-legacy-delete"
+    with pytest.raises(_Crash):
+        keychain.adapter().get(REF)
+    keychain.crash_at = ""
+    assert keychain.items == {STAGE: ("security", SHORT)}
+
+    failures: list[str | BaseException] = [
+        "unavailable",
+        helper_mod._PromptPending(),
+        OSError("no security"),
+    ]
+    for failure in failures:
+        keychain.get_fail[STAGE] = failure
+        state, value = keychain.adapter().get(REF)
+        assert state in {"unavailable", "prompt-pending"}
+        assert value is None
+        assert keychain.items == {STAGE: ("security", SHORT)}
+
+    keychain.get_fail.clear()
+    assert keychain.adapter().get(REF) == ("ready", SHORT)
+    assert keychain.items == {REF: ("security", SHORT)}
+
+
+def test_a_failed_staged_delete_leaves_the_credential_and_reports_it() -> None:
+    """Only the staged copy's delete fails: the item must stay and the delete
+    must fail, or the next access would bring the credential back."""
+
+    keychain = _FakeKeychain()
+    keychain.items[REF] = ("security", SHORT)
+    keychain.items[STAGE] = ("security", SHORT)
+    keychain.delete_fail_refs = {STAGE}
+
+    assert keychain.adapter().delete(REF) == "unavailable"
+    assert keychain.items[REF] == ("security", SHORT)
+    keychain.delete_fail_refs = set()
+    assert keychain.adapter().delete(REF) == "ready"
+    assert keychain.adapter().get(REF) == ("missing", None)
+
+
+def test_a_deleted_credential_never_comes_back() -> None:
+    keychain = _FakeKeychain()
+    keychain.items[REF] = ("security", SHORT)
+    keychain.items[STAGE] = ("security", SHORT)
+
+    assert keychain.adapter().delete(REF) == "ready"
+    assert keychain.adapter().get(REF) == ("missing", None)
+    assert keychain.items == {}
+
+
+def test_the_time_gate_is_checked_again_before_the_legacy_delete() -> None:
+    keychain = _legacy_keychain()
+    adapter = keychain.adapter()
+    answers = iter([True])  # enough time to stage, then not enough to delete
+    adapter._can_move = lambda: next(answers, False)
+
+    assert adapter.get(REF) == ("ready", SHORT)
+    assert keychain.items[REF] == ("legacy", SHORT)
+    assert not any("delete" in step for step in keychain.log)
+
+
+def test_an_empty_value_is_never_staged() -> None:
+    keychain = _legacy_keychain("")
+
+    assert keychain.adapter().get(REF) == ("ready", "")
+    assert keychain.items == {REF: ("legacy", "")}
+    assert not any(step.startswith("security_put") for step in keychain.log)
+
+
+def test_the_helper_deadline_is_monotonic() -> None:
+    before = time.monotonic()
+    deadline = helper_mod._monotonic_deadline(time.time() + 5.0)
+    assert before + 4.5 < deadline < time.monotonic() + 5.5
+
+
+_OLD = "dummy-old-not-a-secret"
+_NEW = "dummy-new-not-a-secret"
+_STAGE_KINDS = ["absent", "empty", "readable", "unreadable"]
+_MAIN_KINDS = ["absent", "legacy", "security-readable", "security-empty", "unreadable"]
+_FAULTS = [
+    "none",
+    "read-error",
+    "prompt",
+    "owner-error",
+    "delete-error",
+    "deadline-short",
+    "exception",
+]
+
+
+def _table_keychain(stage: str, main: str) -> _FakeKeychain:
+    keychain = _FakeKeychain()
+    if stage == "empty":
+        keychain.items[STAGE] = ("security", "")
+    elif stage in {"readable", "unreadable"}:
+        keychain.items[STAGE] = ("security", _OLD)
+        if stage == "unreadable":
+            keychain.get_fail[STAGE] = "unavailable"
+    if main == "legacy":
+        keychain.items[REF] = ("legacy", _OLD)
+    elif main in {"security-readable", "unreadable"}:
+        keychain.items[REF] = ("security", _OLD)
+        if main == "unreadable":
+            keychain.get_fail[REF] = "unavailable"
+    elif main == "security-empty":
+        keychain.items[REF] = ("security", "")
+    return keychain
+
+
+def _held(keychain: _FakeKeychain) -> set[str]:
+    return {value for _, value in keychain.items.values() if value}
+
+
+@pytest.mark.parametrize("fault", _FAULTS)
+@pytest.mark.parametrize("main", _MAIN_KINDS)
+@pytest.mark.parametrize("stage", _STAGE_KINDS)
+@pytest.mark.parametrize("action", ["get", "set", "delete"])
+def test_staged_copy_state_table_invariants(action: str, stage: str, main: str, fault: str) -> None:
+    """Every (staged copy x item) cell, each fault, against the four invariants:
+    (a) a stored value keeps a durable copy, (b) a deleted credential never
+    comes back, (c) no move or recovery delete without the time gate,
+    (d) unreadable never becomes `missing`."""
+
+    keychain = _table_keychain(stage, main)
+    held_before = _held(keychain)
+    item_before = keychain.items.get(REF)
+    seconds = helper_mod.MIN_MOVE_SECONDS - 0.5 if fault == "deadline-short" else 30.0
+    adapter = keychain.adapter(seconds=seconds)
+    if fault == "read-error":
+        for ref in (REF, STAGE):
+            keychain.get_fail.setdefault(ref, "unavailable")
+    elif fault == "prompt":
+        for ref in (REF, STAGE):
+            keychain.get_fail.setdefault(ref, helper_mod._PromptPending())
+    elif fault == "delete-error":
+        keychain.delete_fails = True
+    elif fault == "exception":
+        keychain.security_raises = OSError("could not start security")
+    elif fault == "owner-error":
+        adapter._item_owner = lambda ref: "unavailable"
+
+    try:
+        if action == "get":
+            result: Any = adapter.get(REF)[0]
+        elif action == "set":
+            result = adapter.set(REF, _NEW)
+        else:
+            result = adapter.delete(REF)
+    except (OSError, helper_mod._PromptPending):
+        result = "raised"
+
+    deleted = [step for step in keychain.log if "delete" in step]
+    if fault == "deadline-short" and action != "delete":
+        assert not deleted, "(c) a delete started without the time gate"
+    if action == "get" and held_before:
+        assert result != "missing", "(d) a stored value was reported missing"
+
+    succeeded = result == "ready" or (action == "delete" and result == "missing")
+    if action == "set" and succeeded:
+        assert _NEW in _held(keychain)
+    elif action == "delete" and succeeded:
+        assert _OLD not in _held(keychain)
+    else:
+        assert held_before <= _held(keychain), "(a) a stored value lost its last copy"
+    if action == "delete" and not succeeded:
+        assert keychain.items.get(REF) == item_before, "a failed delete touched the item"
+
+    # Later, with every fault gone and time to spare, the credential settles.
+    keychain.get_fail.clear()
+    keychain.delete_fails = False
+    keychain.security_raises = None
+    after = keychain.adapter().get(REF)
+    if action == "delete" and succeeded:
+        assert after == ("missing", None), "(b) a deleted credential came back"
+    elif action == "set" and succeeded:
+        assert after == ("ready", _NEW)
+    elif _OLD in held_before:
+        assert after == ("ready", _OLD)
+        assert keychain.items == {REF: ("security", _OLD)}
+
+
 def test_helper_rejects_refs_that_could_break_security_quoting(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1299,7 +1499,7 @@ def test_a_nearly_spent_shared_deadline_never_starts_a_move(
         payload = json.loads(kwargs["input"])
         timeouts.append(kwargs["timeout"])
         adapter = keychain.adapter()
-        adapter.deadline = payload["deadline_epoch"]
+        adapter.deadline = helper_mod._monotonic_deadline(payload["deadline_epoch"])
         state, value = adapter.get(REF)
         body = {"state": state, "value": value} if value is not None else {"state": state}
         return SimpleNamespace(returncode=0 if state == "ready" else 1, stdout=json.dumps(body))
