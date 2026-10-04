@@ -364,19 +364,38 @@ long for one `security -i` line is written as an empty item by `security` and
 filled in through the Security framework, which keeps the same access list.
 
 Items stored by `mb` before this change trust the Python that created them.
-The first read that this Python can do moves the item to `security`: the value
-is held in memory, the old item is removed, the new one is added and read back,
-and the old item is restored if any step fails. That happens silently in any
-command, including unattended ones.
+The first read that this Python can do moves the item to `security` as a staged
+move, so no step can lose the credential:
 
-Main Branch never waits on a keychain dialog. Every command reads with
+1. the full value is written to a temporary `security` item next to the old one
+   and read back;
+2. the old item is removed;
+3. the final `security` item is written and read back;
+4. the temporary item is removed.
+
+If a step fails, the old item is put back and the temporary copy is kept. If
+the process is killed between steps, the next access of that credential, in
+any command, finishes or undoes the move from the temporary copy before doing
+anything else. A move starts only when at least 3 seconds remain before the
+command's deadline; otherwise the read returns the value without moving it,
+and the next read moves it. This happens silently in any command, including
+unattended ones, with keychain interaction off.
+
+Unattended reads do not wait on a keychain dialog. Every command reads with
 keychain interaction turned off, so an item this Python is not trusted to read
 fails at once with the `keychain_prompt_pending` state instead of running into
 the safety deadline. A locked keychain fails at once with `keychain_locked`,
 since unlocking would also need a dialog. Main Branch runs `security` only on
 items whose access list already trusts it, because `security` itself cannot be
-told to fail instead of showing a dialog; a bounded deadline stops it and
-reports `keychain_prompt_pending` if it ever does.
+told to fail instead of showing a dialog. An item whose access list was edited
+by hand can still make `security` raise a dialog; the command's deadline stops
+it, kills `security`, and reports `keychain_prompt_pending`.
+
+`ready` in `mb connect status` means the credential can be read now; it does
+not prove the item has moved to `security`. An item still owned by the old
+Python reads as `ready` until a Python change, then as
+`keychain_prompt_pending`. `mb connect repair --keychain` is the check that
+reports whether each item has moved.
 
 When an item reports `keychain_prompt_pending`, run this once from a terminal
 in the hub, at the screen, and choose **Always Allow** for each dialog (Allow lets only that one read
@@ -389,9 +408,25 @@ mb connect repair --keychain
 It is the only command that lets macOS show the keychain dialog. It refuses to
 run without a terminal, waits up to 60 seconds per credential, moves each
 credential it can read to `security`, and never prints a value. It reports a
-credential as repaired only after a fresh unattended read succeeds; otherwise it
-says the prompt is still pending. After a repair, Python and `mb` updates do not
-ask again. Never reset or delete the login keychain to repair one item.
+credential as `repaired` only after a fresh unattended read succeeds and shows
+the item owned by `security`. A credential it can read but could not move
+reports `readable_not_migrated`: it works now but would ask again after a
+Python change, so run the command again. Otherwise it says the prompt is still
+pending. A credential already owned by `security` reports `ready`. After every
+credential reports `ready` or `repaired`, Python and `mb` updates do not ask
+again. Never reset or delete the login keychain to repair one item.
+
+To move an existing install, in this order, from a terminal in the hub:
+
+1. `mb update`. It runs `uv tool install mainbranch@latest`, which keeps the
+   Python the tool already uses; `uv tool list --show-python` shows it before
+   and after. Do not upgrade or reinstall uv's Python until step 3 reports
+   nothing pending: a new Python cannot read items that have not moved yet.
+2. `mb connect status`. Every credential this Python can read moves to
+   `security` silently; the rest report `keychain_prompt_pending`.
+3. `mb connect repair --keychain`, at the screen, choosing **Always Allow** for
+   each dialog. Run it again until every credential reports `ready` (already
+   owned by `security`) or `repaired`, and nothing is pending.
 
 On Linux, Main Branch uses the existing Secret Service default collection. It
 checks collection and item lock state and never calls an unlock method. Unlock
@@ -399,12 +434,14 @@ the collection in the user's desktop keyring application before starting the
 unattended reader.
 
 A connect attempt that fails on the backend stores nothing and leaves repo
-metadata unchanged. Replacement updates an existing Keychain item in place
-(an item stored before the `security` change is updated first and then moved),
-and Secret Service updates a matched item in place while preserving its
-attributes, including legacy Python keyring attributes. New Secret Service
-items use its replacement contract. Main Branch never delete-before-adds an
-existing credential. Helper stderr and raw exceptions are discarded.
+metadata unchanged. Replacement updates an existing Keychain item in place; an
+item stored before the `security` change is updated in place first and then
+moved with the staged move above, which keeps a verified copy until the final
+item reads back. New Keychain items are written through the same staged move,
+so a failed write never leaves an empty credential. Secret Service updates a
+matched item in place while preserving its attributes, including legacy Python
+keyring attributes. New Secret Service items use its replacement contract.
+Helper stderr and raw exceptions are discarded.
 
 Reconnecting an already configured custom provider also works without
 `--custom`, but keeping the flag in repair output makes the command safe to

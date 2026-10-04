@@ -17,14 +17,18 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   prompts after the Python under `mb` changes. Credentials now read and write
   through Apple-signed `/usr/bin/security`, whose identity survives Python, uv,
   `mb` and macOS updates; values travel on its stdin, never in process
-  arguments. Existing items migrate on their first successful read, with the
-  old item restored if a step fails. Every command reads with keychain
-  interaction off, so an item that cannot migrate silently reports
+  arguments. Existing items migrate on their first successful read through a
+  staged copy that is kept until the final item reads back, so an interrupted
+  move is finished or undone on the next access. Every command reads with
+  keychain interaction off, so an item that cannot migrate silently reports
   `keychain_prompt_pending` at once, naming the provider (and the hub in
   `mb fleet refresh`), instead of "did not answer before the safety deadline";
   a locked keychain also fails at once. For those items, run
   `mb connect repair --keychain` once from a terminal in the hub and choose
-  Always Allow: it is the only command that may show the keychain dialog.
+  Always Allow: it is the only command that may show the keychain dialog,
+  and it reports `repaired` only once the item has moved to `security`. An
+  item whose access list was edited by hand can still raise a dialog; the
+  command deadline stops it and reports `keychain_prompt_pending`.
   (#1005, #992)
 
 ## [0.6.0] - 2026-10-04
