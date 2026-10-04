@@ -1994,6 +1994,21 @@ def test_connect_token_print_still_writes_to_a_real_pipe(tmp_path: Path, monkeyp
     assert completed.stdout == "cf-test-token"
 
 
+def test_connect_token_refusal_comes_before_the_provider_lookup(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Exit 1 needs the stdout gate passed: not connected, through a pipe, is still 3."""
+
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    for provider in ("cloudflare", "no-such-provider"):
+        result = runner.invoke(app, ["connect", "token", provider, "--repo", str(repo)])
+        assert result.exit_code == connect_mod.TOKEN_REFUSED_EXIT_CODE, provider
+        assert "not connected" not in result.stderr
+
+
 def test_connect_token_missing_credential_keeps_exit_1(tmp_path: Path, monkeypatch) -> None:
     _local_secret_env(monkeypatch, tmp_path)
     repo = tmp_path / "biz"

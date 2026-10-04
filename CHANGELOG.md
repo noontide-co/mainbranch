@@ -26,8 +26,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 - `mb connect token` refusing a terminal or a pipe (without `--print`) now
   exits 3 instead of 2, so scripts can tell "refused by design" from a missing
-  credential or a store failure (1) and from usage errors (2). The exit codes
-  are documented in `docs/connect.md`.
+  credential or a store failure (1) and from usage errors (2). The refusal is
+  checked before the provider is looked up, so exit 1 applies only once it
+  has passed: a provider that is not connected still exits 3 on a terminal or
+  a pipe without `--print`. The exit codes and their order are documented in
+  `docs/connect.md`.
 - Breaking in 0.6.0, not flagged at the time: that refusal broke scripts that
   captured the token through stdout, such as `TOKEN=$(mb connect token <provider>)`
   or `mb connect token <provider> | tool`. Migrate to
@@ -37,6 +40,15 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   edited by hand (`security` first, no `apple-tool:` partition) is not
   detected, why (the partition list is not in the public API), and that the
   deadline bounds the dialog it can raise.
+
+### Fixed
+
+- `mb connect repair --keychain --all` no longer reports a clean pass when the
+  keychain holds more Main Branch items than one pass lists (2000). The
+  listing now says it was cut and how many items it found, and the repair
+  reports `complete: false` with the number not checked, exits 1, and points
+  at `mb connect repair --keychain` in each hub for the rest, since a rerun
+  would list the same first items. No value is read to count them.
 
 ## [0.6.1] - 2026-10-04
 

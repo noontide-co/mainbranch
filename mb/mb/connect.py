@@ -2238,10 +2238,16 @@ def repair_keychain_all(repo: str | Path = ".", *, interactive: bool = False) ->
     staged copy (``<ref>.mbstage``) is not repaired itself: its ref is read,
     which finishes or undoes the interrupted move. Items are labelled with the
     hub and provider when a known hub records the ref, otherwise by the ref.
+
+    A listing cut at the helper's cap is never a clean pass: the result says
+    ``complete: false`` with how many items were left out, is not ``ok``, and
+    points at the per-hub repair for the rest, since a rerun lists the same
+    first items again.
     """
 
     target = Path(repo).resolve()
-    listed = list_keychain_refs()
+    listing = list_keychain_refs()
+    listed = listing.refs
     refs = {ref for ref in listed if not ref.endswith(STAGE_SUFFIX)}
     staged_only = {
         ref.removesuffix(STAGE_SUFFIX) for ref in listed if ref.endswith(STAGE_SUFFIX)
@@ -2271,8 +2277,19 @@ def repair_keychain_all(repo: str | Path = ".", *, interactive: bool = False) ->
         counts[item["state"]] = counts.get(item["state"], 0) + 1
     pending = [item for item in items if item["state"] in KEYCHAIN_PENDING_STATES]
     failed = [item for item in items if item["state"] not in {"ready", "repaired", "missing"}]
+    unlisted = max(listing.found - len(listed), 0) if listing.truncated else 0
+    repair_command = ""
+    if pending:
+        repair_command = KEYCHAIN_REPAIR_ALL_COMMAND
+    elif listing.truncated:
+        # A rerun of --all lists the same first items, so name the per-hub path.
+        repair_command = KEYCHAIN_REPAIR_COMMAND
     return {
-        "ok": not failed,
+        "ok": not failed and not listing.truncated,
+        "complete": not listing.truncated,
+        "listed": len(listed),
+        "unlisted": unlisted,
+        "list_limit": listing.limit,
         "scope": "all",
         "repo": str(target),
         "interactive": interactive,
@@ -2282,7 +2299,7 @@ def repair_keychain_all(repo: str | Path = ".", *, interactive: bool = False) ->
         "pending": len(pending),
         "unmapped": sum(1 for item in items if not item["hub"]),
         "safe_to_share": True,
-        "repair_command": KEYCHAIN_REPAIR_ALL_COMMAND if pending else "",
+        "repair_command": repair_command,
     }
 
 
@@ -2353,6 +2370,12 @@ def _render_keychain_repair_all(result: dict[str, Any]) -> None:
         print(
             f"{result['unmapped']} item(s) are shown by ref: no hub in this repo or the "
             "`mb fleet` hub list records them"
+        )
+    if not result["complete"]:
+        print(
+            f"incomplete: the keychain holds more Main Branch items than one pass lists "
+            f"({result['listed']} listed, {result['unlisted']} not checked). Run "
+            f"`{KEYCHAIN_REPAIR_COMMAND}` from a terminal in each hub for the rest"
         )
     if result.get("repair_command"):
         print(

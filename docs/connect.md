@@ -94,14 +94,25 @@ mb connect token stripe --print > "$private_tmp/stripe-key"
 `--print` also lifts the refusal for a terminal or a pipe. Use it only when
 nothing reading that output is an agent or a log.
 
-Exit codes, stable for scripts:
+Exit codes, stable for scripts. The checks run in this order, and the first
+that fails decides the code:
+
+1. Usage: no provider, or `--json`: exit 2.
+2. The stdout gate: stdout is a terminal or a pipe and `--print` was not
+   given: exit 3. This comes before any lookup, so a provider that is not
+   connected, or not even known, still exits 3 here.
+3. The lookup, only once the gate has passed: an unknown provider or one with
+   no secret slot exits 2; a provider that is not connected, a missing
+   credential, or a store that cannot read it exits 1 (stderr says which and
+   names the repair).
+4. Otherwise the value is written to stdout: exit 0.
 
 | Exit | Meaning |
 | --- | --- |
 | 0 | The value was written to stdout. |
-| 1 | No value: the provider is not connected, the credential is missing, or the credential store could not read it. stderr says which and names the repair. |
-| 2 | Usage error, or another refusal (for example a provider with no secret slot). |
-| 3 | Refused by design: stdout is a terminal or a pipe and `--print` was not given. |
+| 1 | After the stdout gate passed: no value (not connected, missing, or unreadable). |
+| 2 | Usage error, or a refusal other than the stdout gate (unknown provider, no secret slot). |
+| 3 | Refused by design: stdout is a terminal or a pipe and `--print` was not given. Checked before the provider is looked up. |
 
 `--json` is not supported: the token is the whole stdout contract.
 
@@ -467,7 +478,10 @@ labelled with its hub and provider when this repo or a hub checkout in the
 `mb fleet` hub list records it (reading the hub list needs Python 3.11 or
 newer, as `mb fleet` does), otherwise by its keychain ref. A staged copy
 left by an interrupted move is not repaired on its own: its item is read,
-which finishes or undoes the move. Like the per-repo repair, it needs a
+which finishes or undoes the move. One pass lists at most 2000 items; past
+that it says the pass is incomplete, with how many items it did not check,
+exits 1, and names `mb connect repair --keychain` to run in each hub for the
+rest. Like the per-repo repair, it needs a
 terminal, refuses to run without one, and never prints a value.
 
 To move an existing install, in this order, from a terminal in the hub:

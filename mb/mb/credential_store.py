@@ -323,11 +323,23 @@ class SecretStore:
             raise CredentialStoreError(_reason_for(self.backend, state))
 
 
-def list_keychain_refs(*, deadline: float | None = None) -> list[str]:
+class KeychainListing(NamedTuple):
+    """Main Branch refs found in the macOS Keychain (attributes only)."""
+
+    refs: list[str]
+    # True when the helper found more refs than its cap (``limit``) and
+    # returned only the first ``limit`` of ``found``.
+    truncated: bool = False
+    limit: int = 0
+    found: int = 0
+
+
+def list_keychain_refs(*, deadline: float | None = None) -> KeychainListing:
     """Every Main Branch ref in the macOS Keychain, staged copies included.
 
     The helper asks for item attributes only, never data, with keychain
-    interaction off, so nothing is decrypted and no dialog can appear. Raises
+    interaction off, so nothing is decrypted and no dialog can appear. Past
+    the helper's cap the listing says ``truncated``. Raises
     ``CredentialStoreError`` when the keychain cannot be listed.
     """
 
@@ -339,7 +351,18 @@ def list_keychain_refs(*, deadline: float | None = None) -> list[str]:
     refs = result.get("refs")
     if not isinstance(refs, list) or not all(isinstance(ref, str) for ref in refs):
         raise CredentialStoreError(_reason_for(backend, "unavailable"))
-    return list(refs)
+
+    def count(key: str) -> int:
+        value = result.get(key)
+        return value if isinstance(value, int) and not isinstance(value, bool) else 0
+
+    found = max(count("found"), len(refs))
+    return KeychainListing(
+        list(refs),
+        result.get("truncated") is True or found > len(refs),
+        count("limit"),
+        found,
+    )
 
 
 def _reason_for(backend: str, state: str) -> str:
