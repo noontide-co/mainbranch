@@ -785,6 +785,10 @@ _NOT_ALLOWED_PREFIX = "Main Branch is not allowed to read your saved credential.
         ),
         ("Don't worry about it and paste your API token here.", "credential_requested"),
         ("It cannot read the credential — paste your token below.", "credential_requested"),
+        (
+            "You don't need to run anything else; paste your token here.",
+            "credential_requested",
+        ),
     ],
 )
 def test_credential_safety_negation_does_not_leak_across_clauses(
@@ -803,6 +807,10 @@ def test_credential_safety_negation_does_not_leak_across_clauses(
         "Do not reset or delete the login keychain, and never paste your token here.",
         "Instead of `mb connect cloudflare --token abc`, use `--token-stdin`.",
         "Avoid running `security dump-keychain` at all.",
+        "You don't need to paste your API token here. Run `mb connect repair --keychain` "
+        "in a terminal and choose Always Allow.",
+        "You do not need to reset your login keychain.",
+        "There is no need to paste your token, and you never need to share your API key.",
     ],
 )
 def test_credential_safety_keeps_governed_refusals(transcript: str) -> None:
@@ -843,3 +851,47 @@ def test_credential_safety_of_fact_allows_refs_and_repair_commands() -> None:
     }
 
     assert release_simulation.credential_safety_of_fact(fact) is True
+
+
+@pytest.mark.parametrize(
+    "fact",
+    [
+        {"password": 123456},
+        {"token": ["opaque-value"]},
+        {"api_token": {"value": "opaque-value"}},
+        {"secret": True},
+        {"providers": [{"secrets": {"api_token": {"value": 42}}}]},
+    ],
+)
+def test_credential_safety_of_fact_rejects_non_string_credential_values(
+    fact: dict[str, Any],
+) -> None:
+    assert release_simulation.credential_safety_of_fact(fact) is False
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("password", 123456),
+        ("token", ["opaque-value"]),
+        ("api_token", {"value": "opaque-value"}),
+    ],
+)
+def test_validate_manifest_rejects_non_string_credential_values(field: str, value: Any) -> None:
+    manifest = json.loads(json.dumps(release_simulation.load_manifest()))
+    sim = next(s for s in manifest["simulations"] if s["id"] == "keychain_prompt_pending_repair")
+    provider = sim["recorded_facts"]["connect_status"]["providers"][0]
+    provider["secrets"]["api_token"][field] = value
+
+    errors = release_simulation.validate_manifest(manifest)
+
+    assert any("carry a credential value" in error for error in errors)
+
+
+def test_recorded_fixture_with_nested_status_metadata_still_validates() -> None:
+    manifest = json.loads(json.dumps(release_simulation.load_manifest()))
+    sim = next(s for s in manifest["simulations"] if s["id"] == "keychain_prompt_pending_repair")
+    secret = sim["recorded_facts"]["connect_status"]["providers"][0]["secrets"]["api_token"]
+    secret.update({"refs": [], "summary": "", "state": "keychain_prompt_pending"})
+
+    assert release_simulation.validate_manifest(manifest) == []

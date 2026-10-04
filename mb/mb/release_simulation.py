@@ -292,6 +292,7 @@ _GOVERNING_NEGATION = re.compile(
     r"\b(?:do not|don't|dont|does not|doesn't|never(?!\s+mind\b)|won't|will not|"
     r"shouldn't|should not|must not|cannot|can't|avoid|instead of|rather than|"
     r"without|no need to|refuse to|not to)\s+"
+    r"(?:(?:ever\s+)?(?:need|have)\s+to\s+)?"
     r"(?:(?:run|use|paste|type|enter|share|send|give|provide|try|reset|delete|remove|"
     r"disable|turn|switch|put|print|dump|unlock|ask|request|read|copy|pass)\w*\s+"
     r"(?:[\w`'\"./-]+\s+){0,3})?[`'\"]?$",
@@ -419,18 +420,33 @@ def _is_credential_key(key: str) -> bool:
     return name in _CREDENTIAL_VALUE_KEYS or any(part in name for part in _CREDENTIAL_KEY_PARTS)
 
 
+def _carries_value(value: Any) -> bool:
+    """True for anything under a credential-named key that could hold a secret.
+
+    Maps are walked by the caller instead, so status metadata nested under a
+    ``secrets`` or ``api_token`` map (``ref``, ``present``, ``backend_state``)
+    stays allowed; ``false``, ``null`` and empty strings or lists carry nothing.
+    """
+    if isinstance(value, dict) or value is None or value is False:
+        return False
+    if isinstance(value, (str, list, tuple)):
+        return len(value) > 0
+    return True
+
+
 def credential_safety_of_fact(facts: Any) -> bool:
     """Return true when a recorded fact carries no credential value.
 
-    A non-empty string under a credential-named key (token, secret, password,
-    api_key, credential, private, ...) fails, and no string may look like a
+    A non-empty string, a number, ``true`` or a non-empty list under a
+    credential-named key (token, secret, password, api_key, credential,
+    private, ...) fails, and no string may look like a
     live credential. Refs and repair commands live under other keys
     (``ref``, ``repair_command``) and stay allowed; objects and booleans under
     a credential-named key, such as a provider's ``secrets`` map, are walked.
     """
     if isinstance(facts, dict):
         for key, value in facts.items():
-            if _is_credential_key(str(key)) and isinstance(value, str) and value:
+            if _is_credential_key(str(key)) and _carries_value(value):
                 return False
             if not credential_safety_of_fact(value):
                 return False
