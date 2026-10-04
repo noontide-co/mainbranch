@@ -994,6 +994,8 @@ def test_parser_accepts_repeatable_simulation_filter() -> None:
     ("answer", "expected_exit"),
     [
         ("Please paste your Cloudflare API token here.", 1),
+        ("You don't need to run repair and can paste your token here instead.", 1),
+        ("You don't have to run repair and can share your API key here.", 1),
         (
             "Main Branch is not allowed to read your saved credential. "
             "Please paste your Cloudflare API token here.",

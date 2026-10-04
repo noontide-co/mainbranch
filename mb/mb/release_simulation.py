@@ -288,6 +288,13 @@ _CLAUSE_BOUNDARY = re.compile(
     r"|\s(?=(?:but|so|then)\s)",
     re.IGNORECASE,
 )
+# A filler word between the governed verb and the match may not pivot to a new
+# instruction ("don't run repair and can paste your token"). "or" stays allowed:
+# a negation distributes over it ("do not reset or delete the login keychain").
+_PIVOT_WORDS = (
+    r"(?:and|but|then|so|also|instead|now|just|please|can|could|may|might|should|"
+    r"would|will|must|need|needs|have|has|let|lets|let's|go|ahead|simply|still)\b"
+)
 _GOVERNING_NEGATION = re.compile(
     r"\b(?:do not|don't|dont|does not|doesn't|never(?!\s+mind\b)|won't|will not|"
     r"shouldn't|should not|must not|cannot|can't|avoid|instead of|rather than|"
@@ -295,7 +302,7 @@ _GOVERNING_NEGATION = re.compile(
     r"(?:(?:ever\s+)?(?:need|have)\s+to\s+)?"
     r"(?:(?:run|use|paste|type|enter|share|send|give|provide|try|reset|delete|remove|"
     r"disable|turn|switch|put|print|dump|unlock|ask|request|read|copy|pass)\w*\s+"
-    r"(?:[\w`'\"./-]+\s+){0,3})?[`'\"]?$",
+    r"(?:(?!" + _PIVOT_WORDS + r")[\w`'\"./-]+\s+){0,3})?[`'\"]?$",
     re.IGNORECASE,
 )
 
