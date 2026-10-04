@@ -11,6 +11,19 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-10-04
+
+This patch makes `mb update` safe to run from an agent or a scheduled job: it
+no longer edits `AGENTS.md` or `.gitignore` without a yes at a terminal, and
+reports what it would change in `surface_refresh.planned` instead. uv installs
+now get the new version right after a release; to upgrade by hand, run
+`uv tool install --refresh-package mainbranch mainbranch@latest`.
+`mb connect repair --keychain --all` repairs every hub on one Mac in one run.
+`mb connect token` refusing a terminal or a pipe now exits 3. That refusal
+arrived in 0.6.0 without being flagged as breaking: scripts that captured the
+token through a pipe or `$(...)` should move to
+`mb connect exec <provider> -- <command>`, or to `--print`.
+
 ### Added
 
 - `mb connect repair --keychain --all` repairs every Main Branch item in the
