@@ -387,6 +387,9 @@ the operator asks for plumbing.
   leads flow unattended -> `mb canary init`. A recurring daily read on the
   business -> `mb pulse init` (deterministic collectors + a judgment skill:
   scorecard, anomalies, exactly ONE recommended action, read-only).
+  A question that spans several repos or sites (what is deployed, is CI red,
+  what is behind) -> `mb fleet status` (read-only; `mb fleet refresh` first;
+  needs Python 3.11+).
   "Show me the business" ->
   `mb dashboard open` (local, read-only, never committed). Commands that
   need a credential -> `mb connect exec <provider> -- <command>` (the secret

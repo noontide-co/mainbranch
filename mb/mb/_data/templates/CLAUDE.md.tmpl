@@ -295,9 +295,10 @@ agents choose the right account:
 Never commit API keys, OAuth refresh tokens, service-account JSON, webhook
 secrets, MCP tokens, or bearer tokens. Put secrets in the runtime's local
 config, an OS keychain, 1Password, `.env`, or `.claude/settings.local.json`;
-those files should stay gitignored. If a tool can spend money, publish, email,
-or mutate a customer account, verify that it is tethered to this repo before
-using it.
+those files should stay gitignored. Use a stored credential through
+`mb connect exec <provider> -- <command>`; never print it. If a tool can spend money, publish,
+email, or mutate a customer account, verify that it is tethered to this repo
+before using it.
 
 ## Helpful commands
 
