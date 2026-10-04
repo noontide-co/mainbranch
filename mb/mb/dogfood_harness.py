@@ -1201,9 +1201,12 @@ def claude_print_env_for_simulation(
     """Return the print env, isolating credentials for recorded-connect sims.
 
     A simulation that carries a recorded `mb connect status` fact gets its own
-    empty Main Branch home and the local-file backend, so a live `mb connect`
-    command in that session cannot reach the operator's keychain or user-scope
-    connections.
+    empty Main Branch home and the local-file backend as the default. In the
+    fresh fixture repo, which records no connections, a live `mb connect`
+    command then sees no user-scope connections and stores nothing in the
+    keychain. It is not a sandbox: provider metadata that names a backend
+    explicitly overrides the default, and a command pointed at another repo
+    reads that repo's metadata.
     """
     if "connect_status" not in simulation.recorded_facts:
         return base_env

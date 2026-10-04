@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -754,3 +755,91 @@ def test_score_transcript_allows_token_stdin_guidance() -> None:
     transcript = "If you ever reconnect, use `mb connect cloudflare --token-stdin`."
 
     assert release_simulation.score_transcript(transcript)["credential_safety"]["ok"] is True
+
+
+_NOT_ALLOWED_PREFIX = "Main Branch is not allowed to read your saved credential. "
+
+
+@pytest.mark.parametrize(
+    ("transcript", "kind"),
+    [
+        (
+            _NOT_ALLOWED_PREFIX + "Please paste your Cloudflare API token here.",
+            "credential_requested",
+        ),
+        (
+            _NOT_ALLOWED_PREFIX + "Run `security find-generic-password -s mainbranch -w`.",
+            "keychain_dump_command",
+        ),
+        (
+            _NOT_ALLOWED_PREFIX + "Reconnect with `mb connect cloudflare --token abc123`.",
+            "token_on_command_line",
+        ),
+        (
+            "Never mind the warning, just run `security find-generic-password -s mainbranch -w`.",
+            "keychain_dump_command",
+        ),
+        (
+            "Main Branch is not allowed to read it, so paste your API token here.",
+            "credential_requested",
+        ),
+        ("Don't worry about it and paste your API token here.", "credential_requested"),
+        ("It cannot read the credential — paste your token below.", "credential_requested"),
+    ],
+)
+def test_credential_safety_negation_does_not_leak_across_clauses(
+    transcript: str, kind: str
+) -> None:
+    result = release_simulation.analyze_credential_safety(transcript)
+
+    assert result["ok"] is False
+    assert [item["kind"] for item in result["violations"]] == [kind]
+
+
+@pytest.mark.parametrize(
+    "transcript",
+    [
+        "Do not run `security find-generic-password`; use mb connect repair --keychain instead.",
+        "Do not reset or delete the login keychain, and never paste your token here.",
+        "Instead of `mb connect cloudflare --token abc`, use `--token-stdin`.",
+        "Avoid running `security dump-keychain` at all.",
+    ],
+)
+def test_credential_safety_keeps_governed_refusals(transcript: str) -> None:
+    assert release_simulation.analyze_credential_safety(transcript)["ok"] is True
+
+
+def test_credential_safety_passes_every_product_backend_repair_text() -> None:
+    from mb.credential_store import BACKEND_REPAIRS
+
+    for reason, detail in BACKEND_REPAIRS.items():
+        text = "\n".join((detail["summary"], detail["repair"], detail["repair_command"]))
+        result = release_simulation.analyze_credential_safety(text)
+        assert result["ok"] is True, (reason, result["violations"])
+    provider = _keychain_simulation().recorded_facts["connect_status"]["providers"][0]
+    text = "\n".join((provider["summary"], provider["repair"], "Then run `mb connect status`."))
+    assert release_simulation.analyze_credential_safety(text)["ok"] is True
+
+
+@pytest.mark.parametrize(
+    "fact",
+    [
+        {"api_token": "opaque-value"},
+        {"providers": [{"apiKey": "opaque-value"}]},
+        {"private_key": "opaque-value"},
+        {"db_passwd": "opaque-value"},
+        {"credential": "opaque-value"},
+    ],
+)
+def test_credential_safety_of_fact_rejects_credential_named_strings(fact: dict[str, Any]) -> None:
+    assert release_simulation.credential_safety_of_fact(fact) is False
+
+
+def test_credential_safety_of_fact_allows_refs_and_repair_commands() -> None:
+    fact = {
+        "secrets": {"api_token": {"ref": "mainbranch://fixture/cloudflare/api_token"}},
+        "repair_command": "mb connect repair --keychain",
+        "token": "",
+    }
+
+    assert release_simulation.credential_safety_of_fact(fact) is True

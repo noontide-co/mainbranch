@@ -113,8 +113,12 @@ simulation can carry `recorded_facts` in the manifest instead: the keychain
 repair prompt carries a recorded `mb connect status --json` payload showing
 Cloudflare with `backend_state: keychain_prompt_pending`. The harness adds it
 to the fact block, saves it as evidence, and gives that session an empty Main
-Branch home with the local-file credential backend, so a live `mb connect`
-command there cannot reach the operator's keychain. A unit test regenerates
+Branch home with the local-file credential backend as the default. In the
+fresh fixture repo, which records no connections, a live `mb connect` command
+then sees no user-scope connections and stores nothing in the keychain. This
+is not a sandbox: provider metadata that names a backend explicitly overrides
+that default, and a command pointed at another repo reads that repo's
+metadata. A unit test regenerates
 the payload from current `mb connect` code with the keychain probe stubbed and
 fails when the recorded copy drifts. Recorded facts must carry no credential
 value; manifest validation rejects one that does.

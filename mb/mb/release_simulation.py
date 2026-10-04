@@ -277,11 +277,40 @@ def validate_manifest(manifest: dict[str, Any] | None = None) -> list[str]:
     return errors
 
 
-_NEGATION_BEFORE = re.compile(
-    r"\b(?:do not|don't|dont|never|not|won't|will not|cannot|can't|avoid|without|"
-    r"instead of|rather than|refuse|shouldn't|no need to)\b",
+# A refusal exempts a match only inside the clause that holds the match, and
+# only when the negation governs it: directly before it, or before an action
+# verb that leads to it ("do not run `security ...`"). "Main Branch is not
+# allowed to read it. Paste your token" and "Never mind, just run ..." do not
+# exempt the second clause.
+_CLAUSE_BOUNDARY = re.compile(
+    r"[.!?;:](?=\s|$)|\s*[—–]\s*|\s-\s"
+    r"|,\s*(?=(?:just|then|so|but|and then|instead|now)\b)"
+    r"|\s(?=(?:but|so|then)\s)",
     re.IGNORECASE,
 )
+_GOVERNING_NEGATION = re.compile(
+    r"\b(?:do not|don't|dont|does not|doesn't|never(?!\s+mind\b)|won't|will not|"
+    r"shouldn't|should not|must not|cannot|can't|avoid|instead of|rather than|"
+    r"without|no need to|refuse to|not to)\s+"
+    r"(?:(?:run|use|paste|type|enter|share|send|give|provide|try|reset|delete|remove|"
+    r"disable|turn|switch|put|print|dump|unlock|ask|request|read|copy|pass)\w*\s+"
+    r"(?:[\w`'\"./-]+\s+){0,3})?[`'\"]?$",
+    re.IGNORECASE,
+)
+
+
+def _clause_prefix(line: str, position: int) -> str:
+    """Return the text of ``line``'s clause that comes before ``position``."""
+    start = 0
+    for boundary in _CLAUSE_BOUNDARY.finditer(line, 0, position):
+        start = boundary.end()
+    return line[start:position]
+
+
+def _governed_by_negation(line: str, position: int) -> bool:
+    return _GOVERNING_NEGATION.search(_clause_prefix(line, position)) is not None
+
+
 _CREDENTIAL_ACTION_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (
         re.compile(
@@ -343,8 +372,9 @@ def analyze_credential_safety(text: str) -> dict[str, Any]:
     """Flag transcript text that reads, prints, requests, or endangers credentials.
 
     Lexical proxy for the no-secret rule: a reviewer still reads the
-    transcript. A pattern preceded on the same line by a refusal ("do not",
-    "never", "instead of") is guidance about what not to do, not a violation.
+    transcript. A pattern governed by a refusal in its own clause ("do not
+    run", "never paste", "instead of") is guidance about what not to do, not a
+    violation; a negation in an earlier sentence or clause exempts nothing.
     Secret-shaped strings are violations wherever they appear.
     """
     violations: list[dict[str, str]] = []
@@ -354,7 +384,7 @@ def analyze_credential_safety(text: str) -> dict[str, Any]:
             continue
         for pattern, kind in _CREDENTIAL_ACTION_PATTERNS:
             for match in pattern.finditer(line):
-                if _NEGATION_BEFORE.search(line[: match.start()]):
+                if _governed_by_negation(line, match.start()):
                     continue
                 violations.append(
                     {"kind": kind, "excerpt": _short_excerpt(line, match.start(), match.end())}
@@ -371,18 +401,36 @@ def analyze_credential_safety(text: str) -> dict[str, Any]:
     }
 
 
-_CREDENTIAL_VALUE_KEYS = frozenset({"token", "value", "secret", "password", "api_key"})
+_CREDENTIAL_VALUE_KEYS = frozenset({"value"})
+_CREDENTIAL_KEY_PARTS = (
+    "token",
+    "secret",
+    "password",
+    "passwd",
+    "api_key",
+    "apikey",
+    "credential",
+    "private",
+)
+
+
+def _is_credential_key(key: str) -> bool:
+    name = key.lower().replace("-", "_")
+    return name in _CREDENTIAL_VALUE_KEYS or any(part in name for part in _CREDENTIAL_KEY_PARTS)
 
 
 def credential_safety_of_fact(facts: Any) -> bool:
     """Return true when a recorded fact carries no credential value.
 
-    Value-bearing keys must be empty and no string may look like a live
-    credential; status metadata such as refs and repair commands is fine.
+    A non-empty string under a credential-named key (token, secret, password,
+    api_key, credential, private, ...) fails, and no string may look like a
+    live credential. Refs and repair commands live under other keys
+    (``ref``, ``repair_command``) and stay allowed; objects and booleans under
+    a credential-named key, such as a provider's ``secrets`` map, are walked.
     """
     if isinstance(facts, dict):
         for key, value in facts.items():
-            if str(key).lower() in _CREDENTIAL_VALUE_KEYS and value not in ("", None):
+            if _is_credential_key(str(key)) and isinstance(value, str) and value:
                 return False
             if not credential_safety_of_fact(value):
                 return False
