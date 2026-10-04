@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -471,7 +472,8 @@ def _codex_repo_writes(plan: dict[str, Any], repo: Path) -> list[str]:
 
 
 def _repo_flag(repo: Path) -> str:
-    return "" if repo == Path.cwd().resolve() else f" --repo {repo}"
+    """` --repo <path>` for a command the operator may paste, shell-quoted."""
+    return "" if repo == Path.cwd().resolve() else f" --repo {shlex.quote(str(repo))}"
 
 
 def _base_result(

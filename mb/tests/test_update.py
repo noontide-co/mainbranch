@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 import shutil
 import subprocess
 from collections.abc import Callable
@@ -1926,3 +1927,54 @@ def test_uv_update_command_refreshes_the_package_index() -> None:
         "mainbranch@latest",
     ]
     assert " ".join(update_mod.UV_UPDATE_COMMAND) == update_mod.UV_UPDATE_COMMAND_TEXT
+
+
+def test_emitted_commands_quote_a_repo_path_with_spaces_and_parens(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = tmp_path / "My Business (old)"
+    repo.mkdir()
+    real = str(repo.resolve())
+
+    def fake_run(
+        args: list[str], *, cwd: Path | None = None, timeout: float = 0.0
+    ) -> subprocess.CompletedProcess[str]:
+        if args[:3] == ["mb", "skill", "link"] and "--plan" in args:
+            return _completed(
+                args, stdout=json.dumps({"ok": True, "tracked_writes": [".gitignore"]})
+            )
+        if args[:3] == ["mb", "doctor", "repair"] and "--plan" in args:
+            plan = {"ok": True, "actions": [{"id": "codex-agents-md", "writes": ["AGENTS.md"]}]}
+            return _completed(args, stdout=json.dumps(plan))
+        return _completed(args, returncode=1, stderr="must not apply without a terminal")
+
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "wheel")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: None)
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+
+    result = update_mod.run(repo=repo, interactive=False)
+
+    planned = result["surface_refresh"]["planned"]
+    assert planned["consent"] == "no_terminal"
+    emitted = [
+        *planned["apply_commands"],
+        *[a for a in result["next_actions"] if a.startswith("mb ") and "--repo" in a],
+        result["surface_refresh"]["claude"]["command"],
+        result["surface_refresh"]["codex"]["command"],
+    ]
+    assert len(planned["apply_commands"]) == 2
+    assert any("--plan --only codex" in command for command in emitted)
+    for command in emitted:
+        argv = shlex.split(command)
+        assert argv[argv.index("--repo") + 1] == real, command
+
+    update_mod.render_human(result)
+    printed = [
+        line.removeprefix("next: ")
+        for line in capsys.readouterr().out.splitlines()
+        if line.startswith("next: mb ") and "--repo" in line
+    ]
+    assert len(printed) == 3
+    for command in printed:
+        argv = shlex.split(command)
+        assert argv[argv.index("--repo") + 1] == real, command
