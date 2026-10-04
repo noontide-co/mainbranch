@@ -11,6 +11,16 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-04
+
+This release adds three commands. `mb fleet` shows every site across your hubs
+in one read-only table. `mb connect exec` runs a command with a stored
+credential in its environment, so an agent can use a key without ever seeing
+it, and `mb connect token` now refuses to print to a terminal or a pipe.
+`mb feedback` keeps a local log of friction with `mb`, including each
+`mb connect` refusal, and rolls it up for a maintainer. `/mb-ads` gains the
+Meta pack loop, text slots, media specs and a Google Ads check.
+
 ### Added
 
 - `mb fleet refresh` and `mb fleet status [--json]`: a read-only view of every
@@ -71,8 +81,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 ### Changed
 
 - `mb connect token` refuses to print to a terminal or a pipe unless `--print`
-  is passed, and points at `exec`. Redirecting to a file with `--print` still
-  works for scripts that need the raw value.
+  is passed, and points at `exec`. A redirect to a file still works for
+  scripts that need the raw value.
 - `mb connect --metadata` judges the value, not the key name: a value with a
   credential prefix, a JWT shape, a bearer string or a high-entropy token
   shape is refused and the rule is named, never the value. Labels such as
