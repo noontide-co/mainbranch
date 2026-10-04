@@ -1904,6 +1904,11 @@ def connect_cmd(
                 err=True,
             )
             raise typer.Exit(2)
+        typer.echo(
+            "macOS may ask once per credential. Choose Always Allow; Allow lets only this "
+            "read through.",
+            err=True,
+        )
         try:
             result = connect_mod.repair_keychain(repo, interactive=True)
         except ValueError as exc:

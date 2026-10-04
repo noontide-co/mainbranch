@@ -57,8 +57,11 @@ def _keychain_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 class _RecordingHelper:
     """Stands in for the helper subprocess and records every payload."""
 
-    def __init__(self, get_state: str = "ready") -> None:
+    def __init__(self, get_state: str = "ready", *, always_allow: bool = True) -> None:
         self.get_state = get_state
+        # Always Allow trusts this Python from then on; Allow passes one read.
+        self.always_allow = always_allow
+        self.trusted: set[str] = set()
         self.calls: list[dict[str, Any]] = []
 
     def run(self, args: list[str], **kwargs: Any) -> SimpleNamespace:
@@ -67,8 +70,12 @@ class _RecordingHelper:
         self.calls.append({"action": action, "payload": payload, "timeout": kwargs["timeout"]})
         if action == "get":
             state = self.get_state
+            if payload["ref"] in self.trusted:
+                state = "ready"
             if state == "prompt-pending" and payload.get("interactive") is True:
                 state = "ready"
+                if self.always_allow:
+                    self.trusted.add(payload["ref"])
             if state == "ready":
                 return SimpleNamespace(returncode=0, stdout='{"state":"ready","value":"fixture"}')
             return SimpleNamespace(returncode=1, stdout=json.dumps({"state": state}))
@@ -125,26 +132,150 @@ def test_every_unattended_caller_reads_with_interaction_off(
         assert call["timeout"] <= store_mod.CREDENTIAL_HELPER_TIMEOUT_SECONDS
 
 
-def test_only_the_keychain_repair_passes_interactive_true() -> None:
-    """A source guard: a new interactive caller must be a deliberate choice."""
+# Calls that carry `interactive` into the keychain helper.
+CREDENTIAL_CALLS = {
+    "_run_helper",
+    "set",
+    "probe",
+    "_probe_secret_ref",
+    "repair_keychain",
+    "_MacSecurity",
+}
 
-    offenders: list[str] = []
+
+def _call_name(call: ast.Call) -> str:
+    func = call.func
+    if isinstance(func, ast.Attribute):
+        return func.attr
+    return func.id if isinstance(func, ast.Name) else ""
+
+
+def _interactive_keywords() -> list[tuple[str, str, ast.expr, bool]]:
+    """Every ``interactive=`` keyword passed into the credential path.
+
+    Returned as (file, function, value, in_repair_branch).
+    """
+
+    found: list[tuple[str, str, ast.expr, bool]] = []
     for path in sorted(MB_PACKAGE.rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"))
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.FunctionDef):
+        for function in ast.walk(tree):
+            if not isinstance(function, ast.FunctionDef):
                 continue
-            for call in ast.walk(node):
-                if not isinstance(call, ast.Call):
+            repair_calls: set[int] = set()
+            for node in ast.walk(function):
+                # The exact `if target == "repair":` branch of `mb connect`.
+                if (
+                    isinstance(node, ast.If)
+                    and isinstance(node.test, ast.Compare)
+                    and isinstance(node.test.left, ast.Name)
+                    and node.test.left.id == "target"
+                    and len(node.test.comparators) == 1
+                    and isinstance(node.test.comparators[0], ast.Constant)
+                    and node.test.comparators[0].value == "repair"
+                ):
+                    for inner in node.body:
+                        repair_calls.update(id(call) for call in ast.walk(inner))
+            for call in ast.walk(function):
+                if not isinstance(call, ast.Call) or _call_name(call) not in CREDENTIAL_CALLS:
                     continue
                 for keyword in call.keywords:
-                    if (
-                        keyword.arg == "interactive"
-                        and isinstance(keyword.value, ast.Constant)
-                        and keyword.value.value is True
-                    ):
-                        offenders.append(f"{path.name}:{node.name}")
-    assert sorted(set(offenders)) == ["cli.py:connect_cmd", "connect.py:repair_keychain"]
+                    if keyword.arg == "interactive":
+                        found.append(
+                            (path.name, function.name, keyword.value, id(call) in repair_calls)
+                        )
+    return found
+
+
+def _forwards_false_default(path: str, function: str) -> bool:
+    tree = ast.parse((MB_PACKAGE / path).read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name == function:
+            for arg, default in zip(node.args.kwonlyargs, node.args.kw_defaults, strict=True):
+                if arg.arg == "interactive":
+                    return isinstance(default, ast.Constant) and default.value is False
+    return False
+
+
+def test_only_the_keychain_repair_passes_interactive_true() -> None:
+    """A source guard: a new interactive caller must be a deliberate choice.
+
+    ``interactive=True`` is allowed only in ``repair_keychain`` and in the exact
+    ``mb connect repair`` CLI branch. Elsewhere the value must be ``False`` or a
+    parameter named ``interactive`` that itself defaults to ``False``. The one
+    computed value is the helper reading its payload, which only accepts JSON
+    ``true``.
+    """
+
+    offenders: list[str] = []
+    literal_true: list[str] = []
+    for path, function, value, in_repair_branch in _interactive_keywords():
+        where = f"{path}:{function}"
+        if isinstance(value, ast.Constant) and value.value is False:
+            continue
+        if isinstance(value, ast.Constant) and value.value is True:
+            literal_true.append(where)
+            if where == "connect.py:repair_keychain" or (
+                where == "cli.py:connect_cmd" and in_repair_branch
+            ):
+                continue
+        elif isinstance(value, ast.Name) and value.id == "interactive":
+            if _forwards_false_default(path, function):
+                continue
+        elif where == "_credential_helper.py:_macos" and ast.unparse(value) == (
+            "payload.get('interactive') is True"
+        ):
+            continue
+        offenders.append(f"{where}: interactive={ast.unparse(value)}")
+    assert offenders == []
+    assert sorted(set(literal_true)) == ["cli.py:connect_cmd", "connect.py:repair_keychain"]
+
+
+class _OrderedLibrary:
+    """A fake Security/CoreFoundation library that logs calls in order."""
+
+    def __init__(self, log: list[str]) -> None:
+        object.__setattr__(self, "_log", log)
+
+    def __getattr__(self, name: str) -> Any:
+        log = self._log
+
+        def call(*args: Any) -> int:
+            log.append(name)
+            if name == "SecKeychainGetStatus":
+                args[1]._obj.value = helper_mod.KEYCHAIN_UNLOCKED_STATUS
+                return 0
+            if name in {"SecKeychainSetUserInteractionAllowed", "SecKeychainCopyDefault"}:
+                return 0
+            return 1
+
+        fn: Any = call
+        object.__setattr__(self, name, fn)
+        return fn
+
+
+@pytest.mark.parametrize("action", ["health", "get", "set", "delete"])
+def test_helper_disables_interaction_before_any_keychain_call(
+    monkeypatch: pytest.MonkeyPatch, action: str
+) -> None:
+    monkeypatch.delenv(helper_mod.TEST_KEYCHAIN_ENV, raising=False)
+    monkeypatch.setattr(platform, "system", lambda: "Darwin")
+    log: list[str] = []
+    monkeypatch.setattr(ctypes, "CDLL", lambda path: _OrderedLibrary(log))
+    monkeypatch.setattr(helper_mod._MacSecurity, "_constant", staticmethod(lambda lib, name: 1))
+
+    helper_mod._macos(action, {"ref": "fixture-ref", "value": "fixture"})
+
+    keychain_calls = [
+        index
+        for index, name in enumerate(log)
+        if name.startswith(("SecKeychain", "SecItem"))
+        and name != "SecKeychainSetUserInteractionAllowed"
+    ]
+    assert keychain_calls, log
+    assert log.index("SecKeychainSetUserInteractionAllowed") < keychain_calls[0]
+    if action != "health":
+        assert any(name.startswith("SecItem") for name in log), log
 
 
 def test_denied_read_on_unlocked_keychain_is_prompt_pending() -> None:
@@ -288,8 +419,8 @@ def test_keychain_repair_asks_only_for_pending_items(
 
     assert result["ok"] is True
     assert [(item["provider"], item["state"]) for item in result["items"]] == [
-        ("cloudflare", "ready"),
-        ("resend", "ready"),
+        ("cloudflare", "repaired"),
+        ("resend", "repaired"),
     ]
     interactive = [call for call in helper.calls if call["payload"]["interactive"]]
     assert len(interactive) == 2
@@ -297,6 +428,31 @@ def test_keychain_repair_asks_only_for_pending_items(
         call["timeout"] == store_mod.INTERACTIVE_CREDENTIAL_TIMEOUT_SECONDS for call in interactive
     )
     assert "fixture" not in json.dumps(result)
+
+
+def test_keychain_repair_after_allow_once_is_still_pending(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _keychain_repo(tmp_path, monkeypatch)
+    helper = _RecordingHelper(get_state="prompt-pending", always_allow=False)
+    helper.install(monkeypatch)
+
+    result = connect_mod.repair_keychain(repo, interactive=True)
+
+    assert result["ok"] is False
+    assert [item["state"] for item in result["items"]] == ["still_pending", "still_pending"]
+    assert all("Always Allow" in item["summary"] for item in result["items"])
+    assert result["repair_command"] == "mb connect repair --keychain"
+    # Each item: unattended probe, interactive read, fresh unattended verify.
+    assert [call["payload"]["interactive"] for call in helper.calls] == [
+        False,
+        True,
+        False,
+    ] * 2
+
+
+def test_prompt_pending_repair_text_says_always_allow() -> None:
+    assert "Always Allow" in store_mod.backend_repair("keychain_prompt_pending")["repair"]
 
 
 def test_keychain_repair_without_consent_never_asks(
@@ -347,6 +503,68 @@ def test_test_keychain_seam_refuses_anything_but_a_throwaway_file(
 
     with pytest.raises(RuntimeError):
         helper_mod._test_keychain_path()
+
+
+@pytest.mark.parametrize("value", ["", "   "])
+def test_test_keychain_seam_refuses_an_empty_value(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    monkeypatch.setenv(helper_mod.TEST_KEYCHAIN_ENV, value)
+
+    with pytest.raises(RuntimeError):
+        helper_mod._test_keychain_path()
+
+
+def test_test_keychain_seam_absent_means_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv(helper_mod.TEST_KEYCHAIN_ENV, raising=False)
+
+    assert helper_mod._test_keychain_path() is None
+
+
+def test_test_keychain_seam_refuses_a_hard_link(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Synthetic files under a mocked home only; never the real login keychain.
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    keychains = tmp_path / "home" / "Library" / "Keychains"
+    keychains.mkdir(parents=True)
+    protected = keychains / "login.keychain-db"
+    protected.write_text("", encoding="utf-8")
+    alias = tmp_path / "mbtest-alias.keychain-db"
+    os.link(protected, alias)
+    monkeypatch.setenv(helper_mod.TEST_KEYCHAIN_ENV, str(alias))
+
+    with pytest.raises(RuntimeError):
+        helper_mod._test_keychain_path()
+
+
+@pytest.mark.parametrize("target", ["missing", "symlink"])
+def test_test_keychain_seam_refuses_missing_files_and_symlinks_into_keychains(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, target: str
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    keychains = tmp_path / "home" / "Library" / "Keychains"
+    keychains.mkdir(parents=True)
+    alias = tmp_path / "mbtest-alias.keychain-db"
+    if target == "symlink":
+        protected = keychains / "mbtest-login.keychain-db"
+        protected.write_text("", encoding="utf-8")
+        alias.symlink_to(protected)
+    monkeypatch.setenv(helper_mod.TEST_KEYCHAIN_ENV, str(alias))
+
+    with pytest.raises(RuntimeError):
+        helper_mod._test_keychain_path()
+
+
+def test_test_keychain_seam_accepts_a_single_throwaway_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    path = tmp_path / "mbtest-ok.keychain-db"
+    path.write_text("", encoding="utf-8")
+    monkeypatch.setenv(helper_mod.TEST_KEYCHAIN_ENV, str(path))
+
+    assert helper_mod._test_keychain_path() == str(path.resolve())
 
 
 def test_test_keychain_seam_refuses_the_user_keychains_directory(

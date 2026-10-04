@@ -65,13 +65,17 @@ def _denied_state(status: int, *, health: str) -> str:
 def _test_keychain_path() -> str | None:
     """Return the throwaway keychain named by the test seam, if any.
 
-    Raises when the variable is set to anything that is not a throwaway
-    keychain, so a typo can never fall through to the login keychain.
+    Absent means the user's keychain. Present means a throwaway keychain or
+    nothing: an empty value, a wrong name, a path under ``~/Library/Keychains``,
+    a symlink into it, or a hard-linked file all raise, so the seam can never
+    fall through to, or alias, the login keychain.
     """
 
-    raw = os.environ.get(TEST_KEYCHAIN_ENV, "")
-    if not raw:
+    if TEST_KEYCHAIN_ENV not in os.environ:
         return None
+    raw = os.environ[TEST_KEYCHAIN_ENV]
+    if not raw.strip():
+        raise RuntimeError("refusing test keychain")
     path = Path(raw).expanduser().resolve()
     keychains = (Path.home() / "Library" / "Keychains").resolve()
     if (
@@ -79,6 +83,7 @@ def _test_keychain_path() -> str | None:
         or not path.name.endswith(".keychain-db")
         or path.is_relative_to(keychains)
         or not path.is_file()
+        or path.stat().st_nlink != 1
     ):
         raise RuntimeError("refusing test keychain")
     return str(path)

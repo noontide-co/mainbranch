@@ -52,8 +52,8 @@ BACKEND_REPAIRS: dict[str, dict[str, str]] = {
             "(keychain prompt pending). Unattended runs do not wait on that dialog."
         ),
         "repair": (
-            f"From a terminal in this hub, run `{KEYCHAIN_REPAIR_COMMAND}` and allow access "
-            "when macOS asks. "
+            f"From a terminal in this hub, run `{KEYCHAIN_REPAIR_COMMAND}` and choose "
+            "Always Allow (not Allow) when macOS asks. "
             f"{KEYCHAIN_RESET_WARNING}"
         ),
         "repair_command": KEYCHAIN_REPAIR_COMMAND,

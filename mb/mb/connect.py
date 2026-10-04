@@ -2096,26 +2096,29 @@ def repair_keychain(repo: str | Path = ".", *, interactive: bool = False) -> dic
                 continue
             probe = _probe_secret_ref(backend, ref)
             before = probe.reason or ("ready" if probe.present else "missing")
+            state = before
             if probe.reason == "keychain_prompt_pending" and interactive:
-                probe = _probe_secret_ref(backend, ref, interactive=True)
-            state = probe.reason or ("ready" if probe.present else "missing")
+                answered = _probe_secret_ref(backend, ref, interactive=True)
+                if answered.present:
+                    # "Allow" (once) lets this read through but leaves the item
+                    # untrusted. Only a fresh unattended read proves the repair.
+                    after = _probe_secret_ref(backend, ref)
+                    state = "repaired" if after.present else "still_pending"
+                else:
+                    state = answered.reason or "missing"
             items.append(
                 {
                     "provider": provider_id,
                     "field": field,
                     "before": before,
                     "state": state,
-                    "summary": (
-                        "readable without a prompt"
-                        if state == "ready"
-                        else _backend_repair(state)["summary"]
-                        if state != "missing"
-                        else "no stored value"
-                    ),
+                    "summary": _keychain_repair_summary(state),
                 }
             )
-    pending = [item for item in items if item["state"] == "keychain_prompt_pending"]
-    failed = [item for item in items if item["state"] not in {"ready", "missing"}]
+    pending = [
+        item for item in items if item["state"] in {"keychain_prompt_pending", "still_pending"}
+    ]
+    failed = [item for item in items if item["state"] not in {"ready", "repaired", "missing"}]
     return {
         "ok": not failed,
         "repo": str(target),
@@ -2125,6 +2128,21 @@ def repair_keychain(repo: str | Path = ".", *, interactive: bool = False) -> dic
         "safe_to_share": True,
         "repair_command": KEYCHAIN_REPAIR_COMMAND if pending else "",
     }
+
+
+def _keychain_repair_summary(state: str) -> str:
+    if state == "ready":
+        return "readable without a prompt"
+    if state == "repaired":
+        return "allowed; unattended reads now work"
+    if state == "still_pending":
+        return (
+            "read once, but unattended reads still need a prompt: choose Always Allow "
+            f"(not Allow) and run `{KEYCHAIN_REPAIR_COMMAND}` again"
+        )
+    if state == "missing":
+        return "no stored value"
+    return _backend_repair(state)["summary"]
 
 
 def render_keychain_repair(result: dict[str, Any]) -> None:
@@ -2137,7 +2155,10 @@ def render_keychain_repair(result: dict[str, Any]) -> None:
             note = f"{note} (was {state_label(item['before'])})"
         print(f"  {item['provider']}.{item['field']}: {state_label(item['state'])}  {note}")
     if result.get("repair_command"):
-        print(f"next: run `{result['repair_command']}` from a terminal and allow access")
+        print(
+            f"next: run `{result['repair_command']}` from a terminal and choose Always Allow "
+            "when macOS asks"
+        )
 
 
 def _entry_secret_probe(

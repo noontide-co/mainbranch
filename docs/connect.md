@@ -363,7 +363,8 @@ prompt fails at once with the `keychain_prompt_pending` state instead of
 running into the safety deadline. A locked keychain fails at once with
 `keychain_locked`, since unlocking would also need a dialog.
 
-To answer the prompts, run this once from a terminal in the hub, at the screen:
+To answer the prompts, run this once from a terminal in the hub, at the screen,
+and choose **Always Allow** (Allow lets only that one read through):
 
 ```bash
 mb connect repair --keychain
@@ -371,7 +372,8 @@ mb connect repair --keychain
 
 It is the only command that lets macOS show the keychain dialog. It refuses to
 run without a terminal, waits up to 60 seconds per credential, and never prints
-a value. Never reset or delete the login keychain to repair one item.
+a value. It reports a credential as repaired only after a fresh unattended read
+succeeds; otherwise it says the prompt is still pending. Never reset or delete the login keychain to repair one item.
 
 On Linux, Main Branch uses the existing Secret Service default collection. It
 checks collection and item lock state and never calls an unlock method. Unlock
