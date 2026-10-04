@@ -79,16 +79,26 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - name: Install package + dev extras
+      - name: Install uv and a non-framework Python
+        # setup-python's macOS Python is a framework build: bin/python only
+        # launches Python.app, so the tests' re-signed "foreign" interpreter
+        # would still be the same app to the keychain. uv's managed Python
+        # is a plain executable, like the maintainers' local runs.
+        env:
+          UV_MANAGED_PYTHON: "1"
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          python -m pip install "uv==0.12.22"
+          uv python install 3.12
+          uv venv --python 3.12 .venv-keychain
+          uv pip install --python .venv-keychain/bin/python -e ".[dev]"
+          .venv-keychain/bin/python -c "import sysconfig, sys; fw = sysconfig.get_config_var('PYTHONFRAMEWORK'); print(sys.version, 'framework=' + repr(fw)); sys.exit(1 if fw else 0)"
 
       - name: Keychain integration tests
         env:
           MB_KEYCHAIN_INTEGRATION: "1"
         run: >-
-          python -m pytest tests/test_keychain_unattended.py -k macos -v -rs
+          .venv-keychain/bin/python -m pytest tests/test_keychain_unattended.py -k macos -v -rs
           --junitxml=keychain-junit.xml
 
       - name: Fail if any keychain integration test was skipped

@@ -17,6 +17,7 @@ import secrets
 import shutil
 import subprocess
 import sys
+import sysconfig
 import time
 from pathlib import Path
 from types import SimpleNamespace
@@ -1313,6 +1314,10 @@ def _require_seam(path: Path) -> None:
 def _foreign_python(tmp_path: Path) -> list[str]:
     """An interpreter the keychain sees as a different app (new code hash)."""
 
+    if sysconfig.get_config_var("PYTHONFRAMEWORK"):
+        # In a framework build bin/python only launches Python.app, so a
+        # re-signed copy of it still runs as the same app to the keychain.
+        pytest.skip("framework Python: use a non-framework (for example uv-managed) Python")
     copy = tmp_path / "foreign-python"
     shutil.copy2(Path(sys.executable).resolve(), copy)
     subprocess.run(
