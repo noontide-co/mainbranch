@@ -119,11 +119,15 @@ def _emit(
         payload["value"] = value
     if refs is not None:
         payload["refs"] = refs
-    if found is not None and refs is not None and found > len(refs):
-        # A listing cut at LIST_LIMIT says so, with how many refs it found.
-        payload["truncated"] = True
+    if refs is not None:
+        # Every listing says how many refs it found and the cap, complete or
+        # not: the parent accepts a listing as complete only when `found`
+        # equals the refs it got, so a helper that predates this protocol can
+        # never pass off a capped listing as the whole keychain.
+        payload["found"] = found if found is not None else len(refs)
         payload["limit"] = LIST_LIMIT
-        payload["found"] = found
+        if payload["found"] > len(refs):
+            payload["truncated"] = True
     if migrated:
         payload["migrated"] = True
     if owner:

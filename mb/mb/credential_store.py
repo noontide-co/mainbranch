@@ -327,19 +327,20 @@ class KeychainListing(NamedTuple):
     """Main Branch refs found in the macOS Keychain (attributes only)."""
 
     refs: list[str]
-    # True when the helper found more refs than its cap (``limit``) and
-    # returned only the first ``limit`` of ``found``.
-    truncated: bool = False
+    # False unless the helper proved the listing whole: `found` equal to the
+    # refs returned. A capped listing, or one from a helper that does not
+    # report `found` (another mb version), is incomplete.
+    complete: bool
+    # Refs the helper found in all, when it said; None when it did not.
+    found: int | None
     limit: int = 0
-    found: int = 0
 
 
 def list_keychain_refs(*, deadline: float | None = None) -> KeychainListing:
     """Every Main Branch ref in the macOS Keychain, staged copies included.
 
     The helper asks for item attributes only, never data, with keychain
-    interaction off, so nothing is decrypted and no dialog can appear. Past
-    the helper's cap the listing says ``truncated``. Raises
+    interaction off, so nothing is decrypted and no dialog can appear. Raises
     ``CredentialStoreError`` when the keychain cannot be listed.
     """
 
@@ -352,16 +353,18 @@ def list_keychain_refs(*, deadline: float | None = None) -> KeychainListing:
     if not isinstance(refs, list) or not all(isinstance(ref, str) for ref in refs):
         raise CredentialStoreError(_reason_for(backend, "unavailable"))
 
-    def count(key: str) -> int:
+    def count(key: str) -> int | None:
         value = result.get(key)
-        return value if isinstance(value, int) and not isinstance(value, bool) else 0
+        return value if isinstance(value, int) and not isinstance(value, bool) else None
 
-    found = max(count("found"), len(refs))
+    found = count("found")
+    if found is not None and found < len(refs):
+        found = None
     return KeychainListing(
         list(refs),
-        result.get("truncated") is True or found > len(refs),
-        count("limit"),
-        found,
+        complete=found == len(refs) and result.get("truncated") is not True,
+        found=found,
+        limit=count("limit") or 0,
     )
 
 

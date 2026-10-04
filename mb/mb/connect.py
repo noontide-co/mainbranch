@@ -2239,10 +2239,11 @@ def repair_keychain_all(repo: str | Path = ".", *, interactive: bool = False) ->
     which finishes or undoes the interrupted move. Items are labelled with the
     hub and provider when a known hub records the ref, otherwise by the ref.
 
-    A listing cut at the helper's cap is never a clean pass: the result says
-    ``complete: false`` with how many items were left out, is not ``ok``, and
-    points at the per-hub repair for the rest, since a rerun lists the same
-    first items again.
+    A listing cut at the helper's cap, or one that does not say it is whole
+    (a helper from another mb version), is never a clean pass: the result says
+    ``complete: false`` with how many items were left out when known, is not
+    ``ok``, and points at the per-hub repair for the rest, since a rerun lists
+    the same first items again.
     """
 
     target = Path(repo).resolve()
@@ -2277,16 +2278,19 @@ def repair_keychain_all(repo: str | Path = ".", *, interactive: bool = False) ->
         counts[item["state"]] = counts.get(item["state"], 0) + 1
     pending = [item for item in items if item["state"] in KEYCHAIN_PENDING_STATES]
     failed = [item for item in items if item["state"] not in {"ready", "repaired", "missing"}]
-    unlisted = max(listing.found - len(listed), 0) if listing.truncated else 0
+    # None: the helper did not say how many it found, so the gap is unknown.
+    unlisted: int | None = 0
+    if not listing.complete:
+        unlisted = listing.found - len(listed) if listing.found is not None else None
     repair_command = ""
     if pending:
         repair_command = KEYCHAIN_REPAIR_ALL_COMMAND
-    elif listing.truncated:
+    elif not listing.complete:
         # A rerun of --all lists the same first items, so name the per-hub path.
         repair_command = KEYCHAIN_REPAIR_COMMAND
     return {
-        "ok": not failed and not listing.truncated,
-        "complete": not listing.truncated,
+        "ok": not failed and listing.complete,
+        "complete": listing.complete,
         "listed": len(listed),
         "unlisted": unlisted,
         "list_limit": listing.limit,
@@ -2372,10 +2376,19 @@ def _render_keychain_repair_all(result: dict[str, Any]) -> None:
             "`mb fleet` hub list records them"
         )
     if not result["complete"]:
+        if result["unlisted"] is None:
+            reason = (
+                f"the keychain listing did not say whether it is complete ({result['listed']} "
+                "listed; a helper from another mb version does this, and `mb update` fixes it)"
+            )
+        else:
+            reason = (
+                "the keychain holds more Main Branch items than one pass lists "
+                f"({result['listed']} listed, {result['unlisted']} not checked)"
+            )
         print(
-            f"incomplete: the keychain holds more Main Branch items than one pass lists "
-            f"({result['listed']} listed, {result['unlisted']} not checked). Run "
-            f"`{KEYCHAIN_REPAIR_COMMAND}` from a terminal in each hub for the rest"
+            f"incomplete: {reason}. Run `{KEYCHAIN_REPAIR_COMMAND}` from a terminal in each "
+            "hub for the rest"
         )
     if result.get("repair_command"):
         print(

@@ -48,7 +48,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   listing now says it was cut and how many items it found, and the repair
   reports `complete: false` with the number not checked, exits 1, and points
   at `mb connect repair --keychain` in each hub for the rest, since a rerun
-  would list the same first items. No value is read to count them.
+  would list the same first items. No value is read to count them. A listing
+  counts as whole only when it says how many items it found and that matches
+  what it returned, so a helper from another mb version (files replaced
+  mid-upgrade) can never produce a clean pass either.
 
 ## [0.6.1] - 2026-10-04
 
