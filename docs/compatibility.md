@@ -272,7 +272,7 @@ Which install modes `mb update` upgrades for you:
 |---|---|
 | `pipx` | Runs `pipx upgrade mainbranch` automatically. |
 | Git clone | Runs `git pull --ff-only origin main` automatically. |
-| `uv` tool install | Prints `uv tool install mainbranch@latest` and runs it only after you answer yes at an interactive prompt. Use `@latest` rather than `uv tool upgrade`: it also clears an exact-version pin left by an earlier `uv tool install mainbranch==X`. Agent surfaces are refreshed either way. |
+| `uv` tool install | Prints `uv tool install --refresh-package mainbranch mainbranch@latest` and runs it only after you answer yes at an interactive prompt. Use `@latest` rather than `uv tool upgrade`: it also clears an exact-version pin left by an earlier `uv tool install mainbranch==X`. `--refresh-package mainbranch` makes uv re-read the package index, so a run minutes after a release gets the new version instead of the cached one; the tool keeps the Python it already uses. Agent surfaces are refreshed either way. |
 | Any other wheel install (for example `pip install mainbranch`) | Prints `pip install --upgrade mainbranch` for you to run in the environment that owns the install. Agent surfaces are refreshed either way. |
 
 `mb update` never replaces a uv tool install without an explicit yes. When it
@@ -285,15 +285,33 @@ whether the package itself changed.
 **`mb update` writes, on every install mode.** The surface refresh is not
 scoped to the business repo. It touches:
 
-- this repo's Claude Code wiring under `.claude/`;
-- this repo's `AGENTS.md`;
+- this repo's Claude Code wiring under `.claude/` (gitignored skill links and
+  `.claude/settings.local.json`);
+- this repo's `.gitignore` and `AGENTS.md`, which git tracks;
 - your per-user Codex skill bundle under `~/.codex/skills`.
 
 Those writes are conditional repairs, so a repo and a skill bundle that are
-already current see no change on disk. Use `--no-refresh-surfaces` to update
-the package without touching any of them, and `mb update --check` when you want
-the facts and no writes at all: `--check` never runs an installer and never
-refreshes a surface.
+already current see no change on disk.
+
+**Tracked files change only after a yes at a terminal.** `mb update` plans
+each surface first (`mb skill link --plan`, `mb doctor repair --plan --only
+codex`). Gitignored links and the per-user Codex bundle refresh on their own.
+When the refresh would change a tracked file (`.gitignore`, `AGENTS.md`):
+
+- at an interactive terminal, it lists those files and asks once (default no);
+- without one, and always with `--json`, it changes no tracked file. It
+  reports the plan in `surface_refresh.planned` and puts the apply commands in
+  `next_actions`. Applying them is the operator's step.
+
+`surface_refresh.planned` has `consent` (`not_needed`, `no_terminal`,
+`declined` or `approved`), `tracked_files` (the repo files that would change)
+and `apply_commands` (what is left to run). `surface_refresh.claude` and
+`surface_refresh.codex` each carry `applied`; a surface left alone also
+carries its `tracked_writes` and `plan`.
+
+Use `--no-refresh-surfaces` to update the package without touching any
+surface, and `mb update --check` when you want the facts and no writes at all:
+`--check` never runs an installer and never refreshes a surface.
 
 Inside Claude Code, `/mb-update` calls `mb update` for this mechanical step and keeps
 ownership of the human-readable "what's new" summary. Codex users should open a

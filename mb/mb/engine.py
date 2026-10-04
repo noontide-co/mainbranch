@@ -691,6 +691,117 @@ def inspect_personal_skill_conflicts(
     }
 
 
+def _link_gitignore_entries() -> tuple[list[str], list[str]]:
+    """The `.gitignore` lines `link_skills` keeps, and the retired ones it drops."""
+    entries = [
+        ".claude/settings.local.json",
+        ".claude/worktrees/",
+        *[f".claude/skills/{name}" for name in bundled_skills()],
+    ]
+    retired = [
+        f".claude/skills/{name}"
+        for name in sorted(set(LEGACY_SKILL_NAMES) | set(RETIRED_PROJECT_SKILL_LINK_NAMES))
+        if name not in bundled_skills()
+    ]
+    return entries, retired
+
+
+def _git_tracked_paths(repo: Path, paths: list[str]) -> list[str]:
+    """The subset of ``paths`` that git tracks in ``repo`` (empty outside git)."""
+    if not paths:
+        return []
+    try:
+        proc = subprocess.run(
+            ["git", "ls-files", "-z", "--", *paths],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+    if proc.returncode != 0:
+        return []
+    tracked = {item for item in proc.stdout.split("\0") if item}
+    return [
+        path
+        for path in paths
+        if path in tracked or any(item.startswith(path.rstrip("/") + "/") for item in tracked)
+    ]
+
+
+def plan_link_skills(repo: str | Path) -> dict[str, Any]:
+    """What `link_skills` would change, without writing anything.
+
+    ``tracked_writes`` lists the repo files the link would change that are not
+    gitignored local wiring: `.gitignore` whenever its Main Branch block needs a
+    line added or removed, plus any wiring path git already tracks. `mb update`
+    links automatically only when this list is empty (#1012).
+    """
+    target = Path(repo).expanduser().resolve()
+    root = engine_root()
+    if root is None:
+        return {
+            "ok": False,
+            "plan": True,
+            "repo": str(target),
+            "engine_root": None,
+            "linked": [],
+            "skipped": [],
+            "gitignore_add": [],
+            "gitignore_remove": [],
+            "tracked_writes": [],
+            "errors": ["could not locate bundled Main Branch engine root"],
+        }
+
+    skill_link_dir = target / ".claude" / "skills"
+    linked: list[str] = []
+    skipped: list[str] = []
+    for name in bundled_skills():
+        source = root / ".claude" / "skills" / name
+        dest = skill_link_dir / name
+        rel = f".claude/skills/{name}"
+        if dest.is_symlink():
+            try:
+                if dest.resolve(strict=True) == source.resolve(strict=True):
+                    continue
+            except FileNotFoundError:
+                pass
+            linked.append(rel)
+        elif dest.exists():
+            skipped.append(rel)
+        else:
+            linked.append(rel)
+
+    entries, retired = _link_gitignore_entries()
+    gitignore = target / ".gitignore"
+    existing_lines = (
+        set(gitignore.read_text(encoding="utf-8").splitlines()) if gitignore.exists() else set()
+    )
+    gitignore_add = [entry for entry in entries if entry not in existing_lines]
+    gitignore_remove = [entry for entry in retired if entry in existing_lines]
+
+    tracked_writes: list[str] = []
+    if gitignore_add or gitignore_remove:
+        tracked_writes.append(".gitignore")
+    wiring_paths = [".claude/settings.local.json", *linked]
+    tracked_writes.extend(_git_tracked_paths(target, wiring_paths))
+
+    return {
+        "ok": True,
+        "plan": True,
+        "repo": str(target),
+        "engine_root": str(root),
+        "linked": linked,
+        "skipped": skipped,
+        "gitignore_add": gitignore_add,
+        "gitignore_remove": gitignore_remove,
+        "tracked_writes": tracked_writes,
+        "errors": [],
+    }
+
+
 def link_skills(repo: str | Path) -> dict[str, Any]:
     """Wire bundled skills into a business repo for Claude Code discovery."""
     target = Path(repo).resolve()
@@ -750,16 +861,7 @@ def link_skills(repo: str | Path) -> dict[str, Any]:
         elif mode == "skipped":
             skipped.append(rel)
 
-    gitignore_entries = [
-        ".claude/settings.local.json",
-        ".claude/worktrees/",
-        *[f".claude/skills/{name}" for name in bundled_skills()],
-    ]
-    retired_gitignore_entries = [
-        f".claude/skills/{name}"
-        for name in sorted(set(LEGACY_SKILL_NAMES) | set(RETIRED_PROJECT_SKILL_LINK_NAMES))
-        if name not in bundled_skills()
-    ]
+    gitignore_entries, retired_gitignore_entries = _link_gitignore_entries()
     if _remove_gitignore_entries(target, retired_gitignore_entries):
         created.append(".gitignore")
     if _append_unique_gitignore(target, gitignore_entries):

@@ -3230,10 +3230,30 @@ def skill_link_cmd(
             ".claude/settings.json (parallel rail; symlinks still written)."
         ),
     ),
+    plan: bool = typer.Option(
+        False,
+        "--plan",
+        help="Report what would change, including tracked files, and write nothing.",
+    ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """Wire bundled skills into a business repo for Claude Code discovery."""
-    from mb.engine import link_skills, write_plugin_wiring
+    from mb.engine import link_skills, plan_link_skills, write_plugin_wiring
+
+    if plan:
+        if plugin:
+            typer.echo("mb skill link: --plan cannot be combined with --plugin", err=True)
+            raise typer.Exit(2)
+        planned = plan_link_skills(repo)
+        if json_out:
+            typer.echo(json.dumps(planned, indent=2))
+        else:
+            typer.echo(f"would link {len(planned['linked'])} skill(s) in {planned['repo']}")
+            for path in planned["tracked_writes"]:
+                typer.echo(f"  would change tracked file: {path}")
+            for error in planned["errors"]:
+                typer.echo(f"  - {error}", err=True)
+        raise typer.Exit(0 if planned["ok"] else 1)
 
     result = link_skills(repo)
     plugin_result: dict[str, Any] | None = None
