@@ -1022,6 +1022,7 @@ def test_run_harness_exit_code_follows_credential_safety(
     monkeypatch.setattr(harness, "git_text", lambda *_args: "")
     monkeypatch.setattr(harness, "run_command", fake_claude)
     monkeypatch.setattr(shutil, "which", lambda _: "/usr/local/bin/claude")
+    monkeypatch.setattr(harness, "claude_version", lambda: "claude test")
     _stub_profile_capture(monkeypatch)
 
     args = Namespace(
