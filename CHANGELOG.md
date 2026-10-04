@@ -52,16 +52,19 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   counts as whole only when it says how many items it found and that matches
   what it returned, so a helper from another mb version (files replaced
   mid-upgrade) can never produce a clean pass either.
-
 - `mb update` no longer changes tracked files in your business repo without
   asking. Run by an agent or a scheduled job, it used to rewrite `AGENTS.md`
   and `.gitignore` on its own. Now, without an interactive terminal (and always
   with `--json`), it leaves every tracked file as it was, reports what it would
   change in `surface_refresh.planned`, and hands back the commands that apply it
   in `next_actions`; applying them is your step. At a terminal it lists the
-  files and asks once, default no. Gitignored skill links and the per-user
-  Codex skills still refresh on their own. `mb skill link --plan` shows what a
-  link would change without writing anything. (#1012)
+  files and asks once, default no, and a yes changes only the files it listed.
+  The plan covers deletions too (old skill links, transitional Codex files) and
+  follows symlinks, so a symlinked `.claude/` or skill folder cannot hide a
+  tracked file. If a tracked file changes anyway, `mb update` reports it as an
+  error instead of succeeding. Gitignored skill links and the per-user Codex
+  skills still refresh on their own. `mb skill link --plan` shows what a link
+  would change without writing anything. (#1012)
 - `mb update` on a uv tool install now gets the new version even minutes after
   a release. The command it runs or hands back is
   `uv tool install --refresh-package mainbranch mainbranch@latest`; before, uv

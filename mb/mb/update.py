@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 import re
 import shlex
 import shutil
@@ -89,6 +91,8 @@ def _run_command(
         return subprocess.run(
             args,
             cwd=str(cwd) if cwd is not None else None,
+            # Children never read the operator's typing meant for our prompts.
+            stdin=subprocess.DEVNULL,
             text=True,
             capture_output=True,
             check=False,
@@ -449,26 +453,98 @@ def _plan_codex_surface(repo: Path) -> tuple[dict[str, Any] | None, list[str]]:
     )
 
 
-def _codex_repo_writes(plan: dict[str, Any], repo: Path) -> list[str]:
-    """Files inside the business repo that the planned Codex repair would write.
+CODEX_SURFACE_ACTION_IDS = ("codex-agents-md", "codex-global-skill")
+CHANGE_LABELS = {
+    "delete": "delete",
+    "delete_tree": "delete",
+    "replace_link": "replace link",
+    "create_link": "new link",
+    "create": "create",
+}
 
-    The global Codex skill bundle lives outside the repo and stays automatic;
-    `AGENTS.md` is a tracked repo file and needs the operator.
+
+def _changes_from(items: Any) -> list[dict[str, str]] | None:
+    if not isinstance(items, list):
+        return None
+    return [
+        {"path": str(item.get("path") or ""), "op": str(item.get("op") or "")}
+        for item in items
+        if isinstance(item, dict)
+    ]
+
+
+def _codex_tracked_changes(plan: dict[str, Any]) -> list[dict[str, str]] | None:
+    """Tracked files the planned Codex repair would change, or None if unknown.
+
+    `mb doctor repair --plan` resolves every destination (AGENTS.md, the
+    transitional repo files it removes, each global skill file) through
+    symlinks and asks git whether it is tracked (#1012).
     """
-    writes: list[str] = []
+    changes: list[dict[str, str]] = []
     for action in plan.get("actions", []):
-        if not isinstance(action, dict):
+        if not isinstance(action, dict) or action.get("id") not in CODEX_SURFACE_ACTION_IDS:
             continue
-        for raw in action.get("writes", []):
-            path = Path(str(raw))
-            if not path.is_absolute():
-                writes.append(str(raw))
-                continue
-            try:
-                writes.append(str(path.resolve().relative_to(repo)))
-            except ValueError:
-                continue
-    return list(dict.fromkeys(writes))
+        found = _changes_from(action.get("tracked_changes"))
+        if found is None:
+            return None
+        changes.extend(found)
+    return changes
+
+
+def _change_label(change: dict[str, str]) -> str:
+    label = CHANGE_LABELS.get(change["op"])
+    return f"{change['path']} ({label})" if label else change["path"]
+
+
+def _tracked_snapshot(repo: Path) -> dict[str, str] | None:
+    """Status and content hash of every changed tracked file, or None outside git."""
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(repo), "status", "--porcelain=v1", "-z", "--untracked-files=no"],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+            stdin=subprocess.DEVNULL,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    fields = proc.stdout.split("\0")
+    snapshot: dict[str, str] = {}
+    index = 0
+    while index < len(fields):
+        entry = fields[index]
+        index += 1
+        if len(entry) < 4:
+            continue
+        status, path = entry[:2], entry[3:]
+        if status[0] in "RC":
+            index += 1  # the original path of a rename or copy
+        snapshot[path] = f"{status}:{_content_hash(repo / path)}"
+    return snapshot
+
+
+def _content_hash(path: Path) -> str:
+    try:
+        if path.is_symlink():
+            return "link:" + os.readlink(path)
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return "-"
+
+
+def _unapproved_tracked_changes(
+    before: dict[str, str], after: dict[str, str], allowed: list[str]
+) -> list[str]:
+    changed = sorted(path for path in {*before, *after} if before.get(path) != after.get(path))
+    prefixes = [item.rstrip("/") for item in allowed]
+    return [
+        path
+        for path in changed
+        if not any(path == prefix or path.startswith(prefix + "/") for prefix in prefixes)
+    ]
 
 
 def _repo_flag(repo: Path) -> str:
@@ -676,18 +752,29 @@ def _refresh_surfaces(
     link_plan = link_plan or {}
     codex_plan = codex_plan or {}
 
-    raw_link_writes = link_plan.get("tracked_writes", [])
-    link_writes = (
-        [str(item) for item in raw_link_writes] if isinstance(raw_link_writes, list) else []
+    link_changes = _changes_from(link_plan.get("tracked_changes"))
+    codex_changes = _codex_tracked_changes(codex_plan)
+    if link_changes is None or codex_changes is None:
+        result["ok"] = False
+        result["errors"].append(
+            "the installed `mb` did not report which tracked files the surface refresh "
+            "would change, so nothing was refreshed. Upgrade Main Branch, then run "
+            "`mb update` again."
+        )
+        return
+    link_writes = list(dict.fromkeys(item["path"] for item in link_changes))
+    codex_writes = list(dict.fromkeys(item["path"] for item in codex_changes))
+    tracked_changes = list(
+        {(c["path"], c["op"]): c for c in [*link_changes, *codex_changes]}.values()
     )
-    codex_writes = _codex_repo_writes(codex_plan, target_repo)
     tracked_files = list(dict.fromkeys([*link_writes, *codex_writes]))
     planned["tracked_files"] = tracked_files
+    planned["tracked_changes"] = tracked_changes
 
     approved = False
     if tracked_files:
         if wants_prompt:
-            approved = confirm(target_repo, tracked_files)
+            approved = confirm(target_repo, [_change_label(item) for item in tracked_changes])
             planned["consent"] = "approved" if approved else "declined"
         else:
             planned["consent"] = "no_terminal"
@@ -696,6 +783,8 @@ def _refresh_surfaces(
 
     link_apply_command = f"mb skill link{_repo_flag(target_repo)}"
     codex_apply_command = f"mb doctor repair{_repo_flag(target_repo)} --apply --only codex"
+
+    before = _tracked_snapshot(target_repo) if (apply_link or apply_codex) else None
 
     if not apply_link:
         surface["claude"] = {
@@ -709,7 +798,7 @@ def _refresh_surfaces(
         planned["apply_commands"].append(link_apply_command)
     else:
         linked_count, link_errors, link_warnings, link_payload = _link_skills(target_repo)
-        claude_command = f"mb skill link --repo {target_repo} --json"
+        claude_command = f"mb skill link --repo {shlex.quote(str(target_repo))} --json"
         result["actions"].append(f"ran `{claude_command}`")
         surface["commands"].append(claude_command)
         surface["claude"] = {
@@ -747,7 +836,9 @@ def _refresh_surfaces(
         planned["apply_commands"].append(codex_apply_command)
     else:
         codex_ok, codex_errors, codex_warnings, codex_payload = _repair_codex_surface(target_repo)
-        codex_command = f"mb doctor repair --repo {target_repo} --apply --only codex --json"
+        codex_command = (
+            f"mb doctor repair --repo {shlex.quote(str(target_repo))} --apply --only codex --json"
+        )
         result["actions"].append(f"ran `{codex_command}`")
         surface["commands"].append(codex_command)
         surface["codex"] = {
@@ -763,6 +854,22 @@ def _refresh_surfaces(
         if codex_errors:
             result["ok"] = False
             result["errors"].extend(codex_errors)
+
+    if before is not None:
+        after = _tracked_snapshot(target_repo)
+        unapproved = (
+            _unapproved_tracked_changes(before, after, tracked_files if approved else [])
+            if after is not None
+            else []
+        )
+        if unapproved:
+            result["ok"] = False
+            result["errors"].append(
+                "mb update changed tracked file(s) that were not approved: "
+                + ", ".join(unapproved)
+                + ". Nothing was reverted; review them with `git status` and `git diff`."
+            )
+            planned["unapproved_changes"] = unapproved
 
     if planned["apply_commands"]:
         template = (
@@ -867,8 +974,9 @@ def run(
             )
         if refresh_surfaces:
             surface_commands = [
-                f"mb skill link --repo {target_repo} --json",
-                f"mb doctor repair --repo {target_repo} --apply --only codex --json",
+                f"mb skill link --repo {shlex.quote(str(target_repo))} --json",
+                f"mb doctor repair --repo {shlex.quote(str(target_repo))} "
+                "--apply --only codex --json",
             ]
             result["surface_refresh"]["commands"] = surface_commands
             result["actions"].extend(f"would run `{command}`" for command in surface_commands)

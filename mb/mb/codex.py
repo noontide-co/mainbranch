@@ -2790,33 +2790,44 @@ def global_skill_status(repo: str | Path) -> dict[str, Any]:
     }
 
 
+def global_skill_operations() -> list[dict[str, Any]]:
+    """Every destination `write_global_skill_source` touches, in order (#1012)."""
+
+    operations: list[dict[str, Any]] = []
+    for name in CODEX_GLOBAL_SKILL_NAMES:
+        path = global_skill_file_path(name)
+        expected = render_codex_global_skill_md(name)
+        existing = path.read_text(encoding="utf-8") if path.exists() else ""
+        if existing != expected:
+            operations.append({"op": "write", "path": str(path), "content": expected})
+
+    removable = [global_skill_source_root() / CODEX_LEGACY_GLOBAL_SKILL_NAME]
+    removable.extend(
+        global_skill_source_root() / retired_name
+        for retired_name in CODEX_RETIRED_GLOBAL_SKILL_NAMES
+        if _is_retired_mainbranch_global_skill(
+            global_skill_source_root() / retired_name, retired_name
+        )
+    )
+    removable.append(global_plugin_source_root())
+    for path in removable:
+        if path.is_dir() or path.is_file():
+            operations.append({"op": "delete_tree", "path": str(path)})
+    return operations
+
+
 def write_global_skill_source() -> dict[str, Any]:
     """Write the global Main Branch Codex skill bundle and remove old surfaces."""
 
     changed_paths: list[str] = []
-    for name in CODEX_GLOBAL_SKILL_NAMES:
-        path = global_skill_file_path(name)
-        expected = render_codex_global_skill_md(name)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        existing = path.read_text(encoding="utf-8") if path.exists() else ""
-        if existing != expected:
-            path.write_text(expected, encoding="utf-8")
+    for item in global_skill_operations():
+        path = Path(item["path"])
+        if item["op"] == "write":
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(item["content"], encoding="utf-8")
             changed_paths.append(str(path))
-
-    legacy_skill = global_skill_source_root() / CODEX_LEGACY_GLOBAL_SKILL_NAME
-    if _remove_generated_tree(legacy_skill):
-        changed_paths.append(str(legacy_skill))
-
-    for retired_name in CODEX_RETIRED_GLOBAL_SKILL_NAMES:
-        retired_path = global_skill_source_root() / retired_name
-        if _is_retired_mainbranch_global_skill(
-            retired_path, retired_name
-        ) and _remove_generated_tree(retired_path):
-            changed_paths.append(str(retired_path))
-
-    plugin_root = global_plugin_source_root()
-    if _remove_generated_tree(plugin_root):
-        changed_paths.append(str(plugin_root))
+        elif _remove_generated_tree(path):
+            changed_paths.append(str(path))
 
     return {
         "ok": True,
@@ -2972,21 +2983,17 @@ def _remove_generated_tree(path: Path) -> bool:
     return False
 
 
-def remove_repo_local_codex_plugin_files(repo: str | Path) -> list[str]:
-    """Remove generated repo-local Codex plugin files from the transitional model."""
-
-    target = Path(repo).expanduser().resolve()
-    removed: list[str] = []
-    for relative in (
+def _transitional_repo_paths() -> tuple[str, ...]:
+    return (
         CODEX_PLUGIN_DIR_RELATIVE_PATH,
         CODEX_LEGACY_PLUGIN_DIR_RELATIVE_PATH,
         CODEX_MARKETPLACE_RELATIVE_PATH,
         CODEX_SKILL_DIR_RELATIVE_PATH,
         ".agents/skills/main-branch",
-    ):
-        path = target / relative
-        if _remove_generated_tree(path):
-            removed.append(relative)
+    )
+
+
+def _remove_empty_transitional_dirs(target: Path) -> None:
     for maybe_empty in (
         target / ".agents" / "plugins",
         target / ".agents" / "skills",
@@ -2997,6 +3004,18 @@ def remove_repo_local_codex_plugin_files(repo: str | Path) -> list[str]:
                 maybe_empty.rmdir()
         except OSError:
             pass
+
+
+def remove_repo_local_codex_plugin_files(repo: str | Path) -> list[str]:
+    """Remove generated repo-local Codex plugin files from the transitional model."""
+
+    target = Path(repo).expanduser().resolve()
+    removed: list[str] = []
+    for relative in _transitional_repo_paths():
+        path = target / relative
+        if _remove_generated_tree(path):
+            removed.append(relative)
+    _remove_empty_transitional_dirs(target)
     return removed
 
 
@@ -3213,6 +3232,35 @@ def human_readiness_label(readiness_report: dict[str, Any]) -> str:
     return "not ready"
 
 
+def agents_md_operations(
+    repo: str | Path,
+    *,
+    name: str = "",
+    gh_username: str = "",
+) -> list[dict[str, Any]]:
+    """Every destination `write_agents_md` touches, in order (#1012).
+
+    The AGENTS.md write, then each transitional repo-local Codex file it
+    removes.
+    """
+
+    target = Path(repo).expanduser().resolve()
+    path = agents_path(target)
+    rendered = render_agents_md(target, name=name, gh_username=gh_username)
+    existing = path.read_text(encoding="utf-8") if path.exists() else ""
+    updated = _merge_agents_md(existing, rendered)
+    operations: list[dict[str, Any]] = []
+    if existing != updated:
+        operations.append(
+            {"op": "write", "path": str(path), "rel": AGENTS_RELATIVE_PATH, "content": updated}
+        )
+    for relative in _transitional_repo_paths():
+        candidate = target / relative
+        if candidate.is_dir() or candidate.is_file():
+            operations.append({"op": "delete_tree", "path": str(candidate), "rel": relative})
+    return operations
+
+
 def write_agents_md(
     repo: str | Path,
     *,
@@ -3220,18 +3268,14 @@ def write_agents_md(
     gh_username: str = "",
 ) -> dict[str, Any]:
     target = Path(repo).expanduser().resolve()
-    path = agents_path(target)
-    rendered = render_agents_md(target, name=name, gh_username=gh_username)
-    existing = path.read_text(encoding="utf-8") if path.exists() else ""
-    updated = _merge_agents_md(existing, rendered)
-    changed = existing != updated
     changed_paths: list[str] = []
-    if changed:
-        atomic_write_text(path, updated)
-        changed_paths.append(AGENTS_RELATIVE_PATH)
-
-    removed_paths = remove_repo_local_codex_plugin_files(target)
-    changed_paths.extend(f"removed:{path}" for path in removed_paths)
+    for item in agents_md_operations(target, name=name, gh_username=gh_username):
+        if item["op"] == "write":
+            atomic_write_text(Path(item["path"]), item["content"])
+            changed_paths.append(AGENTS_RELATIVE_PATH)
+        elif _remove_generated_tree(Path(item["path"])):
+            changed_paths.append(f"removed:{item['rel']}")
+    _remove_empty_transitional_dirs(target)
     return {
         "ok": True,
         "path": AGENTS_RELATIVE_PATH,

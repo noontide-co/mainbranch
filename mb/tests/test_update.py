@@ -144,7 +144,9 @@ def _surface_refresh_runner(
     ) -> subprocess.CompletedProcess[str]:
         calls.append(args)
         if args[:3] == ["mb", "skill", "link"]:
-            return _completed(args, stdout=json.dumps({"ok": True, "linked": ["mb-start"]}))
+            return _completed(
+                args, stdout=json.dumps({"ok": True, "linked": ["mb-start"], "tracked_changes": []})
+            )
         if args[:3] == ["mb", "doctor", "repair"]:
             return _codex_repair_completed(args)
         if args[1:] == ["--version"]:
@@ -330,6 +332,7 @@ def test_update_pipx_runs_upgrade_then_relinks(monkeypatch: Any, tmp_path: Path)
                         "copied": [],
                         "skipped": [".claude/skills/mb-update"],
                         "errors": [],
+                        "tracked_changes": [],
                     }
                 ),
             )
@@ -398,7 +401,14 @@ def test_update_points_to_scoped_codex_repair_when_adapter_missing(
             return _completed(
                 args,
                 stdout=json.dumps(
-                    {"ok": True, "linked": [], "copied": [], "skipped": [], "errors": []}
+                    {
+                        "ok": True,
+                        "linked": [],
+                        "copied": [],
+                        "skipped": [],
+                        "errors": [],
+                        "tracked_changes": [],
+                    }
                 ),
             )
         if args[:3] == ["mb", "doctor", "repair"]:
@@ -462,7 +472,14 @@ def test_update_points_to_scoped_codex_repair_when_global_skills_are_missing(
             return _completed(
                 args,
                 stdout=json.dumps(
-                    {"ok": True, "linked": [], "copied": [], "skipped": [], "errors": []}
+                    {
+                        "ok": True,
+                        "linked": [],
+                        "copied": [],
+                        "skipped": [],
+                        "errors": [],
+                        "tracked_changes": [],
+                    }
                 ),
             )
         if args[:3] == ["mb", "doctor", "repair"]:
@@ -533,7 +550,14 @@ def test_update_does_not_gate_ready_codex_on_slash_commands(
             return _completed(
                 args,
                 stdout=json.dumps(
-                    {"ok": True, "linked": [], "copied": [], "skipped": [], "errors": []}
+                    {
+                        "ok": True,
+                        "linked": [],
+                        "copied": [],
+                        "skipped": [],
+                        "errors": [],
+                        "tracked_changes": [],
+                    }
                 ),
             )
         if args[:3] == ["mb", "doctor", "repair"]:
@@ -611,7 +635,14 @@ def test_update_surfaces_fresh_codex_thread_when_plugin_commands_were_refreshed(
             return _completed(
                 args,
                 stdout=json.dumps(
-                    {"ok": True, "linked": [], "copied": [], "skipped": [], "errors": []}
+                    {
+                        "ok": True,
+                        "linked": [],
+                        "copied": [],
+                        "skipped": [],
+                        "errors": [],
+                        "tracked_changes": [],
+                    }
                 ),
             )
         if args[:3] == ["mb", "doctor", "repair"]:
@@ -740,6 +771,7 @@ def test_update_clone_pulls_engine_root_then_relinks(monkeypatch: Any, tmp_path:
                         "copied": [],
                         "skipped": [".claude/skills/mb-start"],
                         "errors": [],
+                        "tracked_changes": [],
                     }
                 ),
             )
@@ -1054,7 +1086,9 @@ def test_update_uv_accepted_prompt_runs_install_then_relinks(
     def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
         calls.append(args)
         if args[:3] == ["mb", "skill", "link"]:
-            return _completed(args, stdout=json.dumps({"ok": True, "linked": ["mb-start"]}))
+            return _completed(
+                args, stdout=json.dumps({"ok": True, "linked": ["mb-start"], "tracked_changes": []})
+            )
         if args[:3] == ["mb", "doctor", "repair"]:
             return _codex_repair_completed(args)
         if args[1:] == ["--version"]:
@@ -1200,7 +1234,9 @@ def test_update_pipx_mode_still_upgrades_automatically(monkeypatch: Any, tmp_pat
     def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
         calls.append(args)
         if args[:3] == ["mb", "skill", "link"]:
-            return _completed(args, stdout=json.dumps({"ok": True, "linked": ["mb-start"]}))
+            return _completed(
+                args, stdout=json.dumps({"ok": True, "linked": ["mb-start"], "tracked_changes": []})
+            )
         if args[:3] == ["mb", "doctor", "repair"]:
             return _codex_repair_completed(args)
         return _completed(args, stdout="mb 9.9.9\n")
@@ -1520,7 +1556,9 @@ def test_update_warns_when_installed_claude_plugin_is_stale(
         if args == ["mb", "--version"]:
             return _completed(args, stdout="mb 0.4.2\n")
         if args[:3] == ["mb", "skill", "link"]:
-            return _completed(args, stdout=json.dumps({"ok": True, "linked": ["mb-start"]}))
+            return _completed(
+                args, stdout=json.dumps({"ok": True, "linked": ["mb-start"], "tracked_changes": []})
+            )
         if args[:4] == ["mb", "doctor", "repair", "--repo"]:
             return _codex_repair_completed(args)
         return _completed(args)
@@ -1941,10 +1979,14 @@ def test_emitted_commands_quote_a_repo_path_with_spaces_and_parens(
     ) -> subprocess.CompletedProcess[str]:
         if args[:3] == ["mb", "skill", "link"] and "--plan" in args:
             return _completed(
-                args, stdout=json.dumps({"ok": True, "tracked_writes": [".gitignore"]})
+                args,
+                stdout=json.dumps(
+                    {"ok": True, "tracked_changes": [{"path": ".gitignore", "op": "write"}]}
+                ),
             )
         if args[:3] == ["mb", "doctor", "repair"] and "--plan" in args:
-            plan = {"ok": True, "actions": [{"id": "codex-agents-md", "writes": ["AGENTS.md"]}]}
+            change = {"path": "AGENTS.md", "op": "write"}
+            plan = {"ok": True, "actions": [{"id": "codex-agents-md", "tracked_changes": [change]}]}
             return _completed(args, stdout=json.dumps(plan))
         return _completed(args, returncode=1, stderr="must not apply without a terminal")
 
@@ -1978,3 +2020,134 @@ def test_emitted_commands_quote_a_repo_path_with_spaces_and_parens(
     for command in printed:
         argv = shlex.split(command)
         assert argv[argv.index("--repo") + 1] == real, command
+
+
+# --- #1015 review: deletions, aliases and transitional cleanup ---------------
+
+
+def _commit_all(repo: Path, message: str) -> None:
+    _git(repo, "add", "-A")
+    _git(
+        repo,
+        "-c",
+        "user.name=Test",
+        "-c",
+        "user.email=test@example.invalid",
+        "commit",
+        "-q",
+        "-m",
+        message,
+    )
+
+
+def _probe_repo(repo: Path, tmp_path: Path, kind: str) -> str:
+    """Set up one review reproduction; return the tracked path it puts at risk."""
+    entries, _ = engine_mod._link_gitignore_entries()
+    (repo / ".gitignore").write_text("\n".join(entries) + "\n", encoding="utf-8")
+    at_risk = ""
+    if kind == "legacy_link":
+        old = repo / ".claude" / "skills" / "start"
+        old.parent.mkdir(parents=True)
+        old.symlink_to(tmp_path / "missing-old-engine")
+        _git(repo, "add", "-f", ".claude/skills/start")
+        at_risk = ".claude/skills/start"
+    elif kind == "claude_alias":
+        shared = repo / "shared-claude"
+        shared.mkdir()
+        (shared / "settings.local.json").write_text("{}\n", encoding="utf-8")
+        (repo / ".claude").symlink_to(shared, target_is_directory=True)
+        at_risk = "shared-claude/settings.local.json"
+    elif kind == "codex_alias":
+        codex_mod.write_agents_md(repo)
+        shared = repo / "shared-codex" / "mb-start"
+        shared.mkdir(parents=True)
+        (shared / "SKILL.md").write_text("stale\n", encoding="utf-8")
+        global_root = codex_mod.global_skill_source_root()
+        global_root.mkdir(parents=True, exist_ok=True)
+        (global_root / "mb-start").symlink_to(shared, target_is_directory=True)
+        at_risk = "shared-codex/mb-start/SKILL.md"
+    elif kind == "codex_cleanup":
+        legacy = repo / ".agents" / "skills" / "main-branch" / "SKILL.md"
+        legacy.parent.mkdir(parents=True)
+        legacy.write_text("legacy skill\n", encoding="utf-8")
+        at_risk = ".agents/skills/main-branch"
+    _commit_all(repo, "Probe setup")
+    assert _git(repo, "status", "--porcelain") == ""
+    return at_risk
+
+
+def _changed_tracked(repo: Path) -> list[str]:
+    status = _git(repo, "status", "--porcelain", "--untracked-files=no")
+    return sorted(line[3:] for line in status.splitlines())
+
+
+REVIEW_PROBES = ["legacy_link", "claude_alias", "codex_alias", "codex_cleanup"]
+
+
+@pytest.mark.parametrize("kind", REVIEW_PROBES)
+def test_review_probe_unattended_changes_no_tracked_file_and_plans_it(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path, kind: str
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    at_risk = _probe_repo(business_repo, tmp_path, kind)
+
+    result = update_mod.run(repo=business_repo, interactive=False)
+
+    assert _changed_tracked(business_repo) == []
+    assert _git(business_repo, "status", "--porcelain") == ""
+    planned = result["surface_refresh"]["planned"]
+    assert planned["consent"] == "no_terminal", planned
+    assert at_risk in planned["tracked_files"], planned
+    assert result["ok"] is True, result["errors"]
+
+
+@pytest.mark.parametrize("kind", REVIEW_PROBES)
+def test_review_probe_yes_changes_only_listed_files(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path, kind: str
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    at_risk = _probe_repo(business_repo, tmp_path, kind)
+    asked: list[list[str]] = []
+
+    def say_yes(repo: Path, files: list[str]) -> bool:
+        asked.append(files)
+        return True
+
+    result = update_mod.run(repo=business_repo, interactive=True, confirm_surfaces=say_yes)
+
+    assert len(asked) == 1
+    listed = result["surface_refresh"]["planned"]["tracked_files"]
+    assert at_risk in listed
+    changed = _changed_tracked(business_repo)
+    assert changed, "the approved plan should have changed something"
+    for path in changed:
+        assert any(path == item or path.startswith(item.rstrip("/") + "/") for item in listed), (
+            path,
+            listed,
+        )
+    assert result["ok"] is True, result["errors"]
+
+
+def test_unattended_guard_reports_a_tracked_change_the_plan_missed(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    entries, _ = engine_mod._link_gitignore_entries()
+    (business_repo / ".gitignore").write_text("\n".join(entries) + "\n", encoding="utf-8")
+    _commit_all(business_repo, "Current gitignore")
+    # A deliberately wrong plan: it misses the AGENTS.md write the apply makes.
+    monkeypatch.setattr(
+        update_mod,
+        "_plan_codex_surface",
+        lambda repo: ({"ok": True, "actions": []}, []),
+    )
+
+    result = update_mod.run(repo=business_repo, interactive=False)
+
+    assert _changed_tracked(business_repo) == ["AGENTS.md"]
+    assert result["ok"] is False
+    assert result["surface_refresh"]["planned"]["unapproved_changes"] == ["AGENTS.md"]
+    assert any("not approved: AGENTS.md" in error for error in result["errors"])

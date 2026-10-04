@@ -44,7 +44,8 @@ If the result includes warnings, show them after the main status.
 tracked file in the business repo (`AGENTS.md`, `.gitignore`). When the refresh
 would change one, it leaves it alone and reports it:
 `surface_refresh.planned.consent` is `no_terminal`,
-`surface_refresh.planned.tracked_files` names the files, and
+`surface_refresh.planned.tracked_files` names the files (writes and
+deletions), and
 `surface_refresh.planned.apply_commands` (also in `next_actions`) holds the
 commands that would apply them. Tell the user which files would change and
 give them those commands. Applying them is the operator's step: do not run

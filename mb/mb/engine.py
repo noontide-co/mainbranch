@@ -372,13 +372,13 @@ def is_stale_engine_path(value: str, active_root: Path) -> bool:
     return _is_stale_engine_path(value, active_root)
 
 
-def _write_settings(repo: Path, root: Path) -> tuple[bool, list[str], str]:
-    settings_path = repo / ".claude" / "settings.local.json"
+def _render_settings(settings_path: Path, root: Path) -> tuple[str | None, list[str], str]:
+    """The refreshed `.claude/settings.local.json` text, or None when unchanged."""
     try:
         data = _read_settings(settings_path, strict=True)
     except CorruptStateError as exc:
         return (
-            False,
+            None,
             [],
             (
                 f"{settings_path} is not valid JSON ({exc.detail}); refused to "
@@ -407,45 +407,7 @@ def _write_settings(repo: Path, root: Path) -> tuple[bool, list[str], str]:
 
     rendered = json.dumps(data, indent=2, sort_keys=True) + "\n"
     changed = not settings_path.exists() or settings_path.read_text(encoding="utf-8") != rendered
-    if changed:
-        atomic_write_text(settings_path, rendered)
-    return changed, removed_stale, ""
-
-
-def _append_unique_gitignore(repo: Path, entries: list[str]) -> bool:
-    gitignore = repo / ".gitignore"
-    existing_text = gitignore.read_text(encoding="utf-8") if gitignore.exists() else ""
-    existing_lines = set(existing_text.splitlines())
-
-    to_add = [entry for entry in entries if entry not in existing_lines]
-    if not to_add:
-        return False
-
-    prefix = "" if not existing_text or existing_text.endswith("\n") else "\n"
-    block = [GITIGNORE_HEADER, *to_add]
-    if GITIGNORE_HEADER in existing_lines:
-        block = to_add
-    atomic_write_text(gitignore, existing_text + prefix + "\n".join(block) + "\n")
-    return True
-
-
-def _remove_gitignore_entries(repo: Path, entries: list[str]) -> bool:
-    gitignore = repo / ".gitignore"
-    if not gitignore.exists():
-        return False
-
-    existing_text = gitignore.read_text(encoding="utf-8")
-    remove = set(entries)
-    lines = existing_text.splitlines()
-    kept = [line for line in lines if line not in remove]
-    if kept == lines:
-        return False
-
-    rendered = "\n".join(kept)
-    if rendered:
-        rendered += "\n"
-    atomic_write_text(gitignore, rendered)
-    return True
+    return (rendered if changed else None), removed_stale, ""
 
 
 def _link_or_copy(source: Path, dest: Path) -> str:
@@ -469,18 +431,6 @@ def _link_or_copy(source: Path, dest: Path) -> str:
             ignore=shutil.ignore_patterns("__pycache__", ".DS_Store"),
         )
         return "copied"
-
-
-def _remove_legacy_project_links(skill_link_dir: Path) -> list[str]:
-    """Remove old project-local bridge symlinks after the bundled rename."""
-    removed: list[str] = []
-    removable_names = sorted(set(LEGACY_SKILL_NAMES) | set(RETIRED_PROJECT_SKILL_LINK_NAMES))
-    for name in removable_names:
-        dest = skill_link_dir / name
-        if dest.is_symlink():
-            dest.unlink()
-            removed.append(f".claude/skills/{name}")
-    return removed
 
 
 def _personal_skills_dir() -> Path:
@@ -618,12 +568,14 @@ def inspect_personal_skill_conflicts(
     *,
     apply: bool = False,
     personal_skills_dir: Path | None = None,
+    only_names: set[str] | None = None,
 ) -> dict[str, Any]:
     """Inspect or repair personal Claude Code skills that can shadow Main Branch.
 
     ``apply`` only moves stale Main Branch symlinks and broken symlinks matching
     Main Branch's current or legacy skill names. User-authored or third-party
-    skills are reported but never changed.
+    skills are reported but never changed. ``only_names`` limits the repair to
+    names a plan already listed.
     """
     target = Path(repo).expanduser().resolve()
     global_dir = personal_skills_dir or _personal_skills_dir()
@@ -641,7 +593,7 @@ def inspect_personal_skill_conflicts(
                     kind="active-shadow",
                     global_dir=global_dir,
                     repo=target,
-                    apply=apply,
+                    apply=apply and (only_names is None or name in only_names),
                     timestamp=timestamp,
                 )
             )
@@ -656,7 +608,7 @@ def inspect_personal_skill_conflicts(
                     kind="legacy-global",
                     global_dir=global_dir,
                     repo=target,
-                    apply=apply,
+                    apply=apply and (only_names is None or name in only_names),
                     timestamp=timestamp,
                 )
             )
@@ -706,57 +658,192 @@ def _link_gitignore_entries() -> tuple[list[str], list[str]]:
     return entries, retired
 
 
-def _git_tracked_paths(repo: Path, paths: list[str]) -> list[str]:
-    """The subset of ``paths`` that git tracks in ``repo`` (empty outside git)."""
-    if not paths:
-        return []
-    try:
-        proc = subprocess.run(
-            ["git", "ls-files", "-z", "--", *paths],
-            cwd=repo,
-            capture_output=True,
-            text=True,
-            timeout=10,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return []
-    if proc.returncode != 0:
-        return []
-    tracked = {item for item in proc.stdout.split("\0") if item}
-    return [
-        path
-        for path in paths
-        if path in tracked or any(item.startswith(path.rstrip("/") + "/") for item in tracked)
-    ]
+class _TrackedIndex:
+    """Answers "does git track this real path?" in whichever repo holds it.
 
-
-def plan_link_skills(repo: str | Path) -> dict[str, Any]:
-    """What `link_skills` would change, without writing anything.
-
-    ``tracked_writes`` lists the repo files the link would change that are not
-    gitignored local wiring: `.gitignore` whenever its Main Branch block needs a
-    line added or removed, plus any wiring path git already tracks. `mb update`
-    links automatically only when this list is empty (#1012).
+    An alias (a symlinked `.claude/`, a global skill folder linked into a repo)
+    can land a write in any git work tree, so the lookup starts from the real
+    destination, not from the business repo. Unknowns count as tracked.
     """
-    target = Path(repo).expanduser().resolve()
-    root = engine_root()
-    if root is None:
-        return {
-            "ok": False,
-            "plan": True,
-            "repo": str(target),
-            "engine_root": None,
-            "linked": [],
-            "skipped": [],
-            "gitignore_add": [],
-            "gitignore_remove": [],
-            "tracked_writes": [],
-            "errors": ["could not locate bundled Main Branch engine root"],
-        }
 
+    def __init__(self) -> None:
+        self._toplevels: dict[str, str | None] = {}
+        self._tracked: dict[str, set[str] | None] = {}
+
+    def _git(self, cwd: str, *args: str) -> subprocess.CompletedProcess[str] | None:
+        try:
+            return subprocess.run(
+                ["git", "-C", cwd, *args],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+                stdin=subprocess.DEVNULL,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return None
+
+    def _toplevel(self, real: str) -> str | None:
+        probe = real
+        while not os.path.isdir(probe):
+            parent = os.path.dirname(probe)
+            if parent == probe:
+                return None
+            probe = parent
+        if probe not in self._toplevels:
+            proc = self._git(probe, "rev-parse", "--show-toplevel")
+            top = proc.stdout.strip() if proc is not None and proc.returncode == 0 else ""
+            self._toplevels[probe] = os.path.realpath(top) if top else None
+        return self._toplevels[probe]
+
+    def _tracked_set(self, top: str) -> set[str] | None:
+        if top not in self._tracked:
+            proc = self._git(top, "ls-files", "-z")
+            self._tracked[top] = (
+                {item for item in proc.stdout.split("\0") if item}
+                if proc is not None and proc.returncode == 0
+                else None
+            )
+        return self._tracked[top]
+
+    def is_tracked(self, real: str) -> bool:
+        top = self._toplevel(real)
+        if top is None:
+            return False
+        rel = os.path.relpath(real, top)
+        if rel == "." or rel.startswith(".."):
+            return True
+        rel = rel.replace(os.sep, "/")
+        if rel == ".git" or rel.startswith(".git/"):
+            return True
+        tracked = self._tracked_set(top)
+        if tracked is None:
+            return True
+        prefix = rel + "/"
+        return rel in tracked or any(item.startswith(prefix) for item in tracked)
+
+
+# Operations whose last path component is followed when written or removed.
+_FOLLOWING_OPS = frozenset({"write", "delete_tree"})
+
+
+def _real_destinations(path: str, op: str) -> list[str]:
+    lexical = os.path.abspath(path)
+    nofollow = os.path.join(os.path.realpath(os.path.dirname(lexical)), os.path.basename(lexical))
+    destinations = [nofollow]
+    if op in _FOLLOWING_OPS and os.path.islink(nofollow):
+        destinations.append(os.path.realpath(nofollow))
+    return destinations
+
+
+def consent_destinations(
+    repo: str | Path, operations: list[dict[str, Any]]
+) -> list[dict[str, str]]:
+    """The planned operations that would change a file git tracks.
+
+    Each destination is resolved through every symlinked parent (and through a
+    symlinked last component when the operation follows it), then looked up in
+    the git work tree that really holds it, whichever repo that is. A path
+    that cannot be resolved needs consent. Paths inside ``repo`` are reported
+    relative to it; anything else is reported as its real absolute path.
+    """
+    repo_real = os.path.realpath(Path(repo).expanduser())
+    index = _TrackedIndex()
+    needed: list[dict[str, str]] = []
+    for operation in operations:
+        op = str(operation.get("op") or "")
+        try:
+            destinations = _real_destinations(str(operation["path"]), op)
+        except (KeyError, OSError, ValueError):
+            needed.append({"path": str(operation.get("path") or ""), "op": op})
+            continue
+        for real in destinations:
+            if not index.is_tracked(real):
+                continue
+            inside = real == repo_real or real.startswith(repo_real + os.sep)
+            shown = os.path.relpath(real, repo_real).replace(os.sep, "/") if inside else real
+            needed.append({"path": shown, "op": op})
+            break
+    unique: dict[tuple[str, str], dict[str, str]] = {}
+    for item in needed:
+        unique.setdefault((item["path"], item["op"]), item)
+    return list(unique.values())
+
+
+def public_operations(operations: list[dict[str, Any]]) -> list[dict[str, str]]:
+    """Operations without their file contents, for plans and JSON."""
+    return [{"op": str(item["op"]), "path": str(item["path"])} for item in operations]
+
+
+def _gitignore_text_after(existing: str, add: list[str], remove: list[str]) -> str:
+    """The `.gitignore` text `link_skills` leaves behind."""
+    text = existing
+    lines = text.splitlines()
+    kept = [line for line in lines if line not in set(remove)]
+    if kept != lines:
+        text = "\n".join(kept)
+        if text:
+            text += "\n"
+    existing_lines = set(text.splitlines())
+    to_add = [entry for entry in add if entry not in existing_lines]
+    if not to_add:
+        return text
+    prefix = "" if not text or text.endswith("\n") else "\n"
+    block = to_add if GITIGNORE_HEADER in existing_lines else [GITIGNORE_HEADER, *to_add]
+    return text + prefix + "\n".join(block) + "\n"
+
+
+def _planned_personal_repairs(global_dir: Path) -> list[str]:
+    """Personal skill names whose stale or broken link `link_skills` may move.
+
+    Planned as if every project skill were present, because the link creates
+    them before the repair runs; the repair is then limited to these names.
+    """
+    current_names = bundled_skills()
+    current_legacy_names = {legacy_skill_name(name) for name in current_names}
+    candidates = [
+        *current_names,
+        *[name for name in LEGACY_SKILL_NAMES if name in current_legacy_names],
+    ]
+    planned: list[str] = []
+    for name in candidates:
+        entry = global_dir / name
+        if not entry.exists() and not entry.is_symlink():
+            continue
+        classification, _ = _classify_personal_skill(entry, name)
+        if classification in {"stale-mainbranch-link", "broken-symlink"}:
+            planned.append(name)
+    return list(dict.fromkeys(planned))
+
+
+def _link_operations(target: Path, root: Path) -> dict[str, Any]:
+    """Every destination `link_skills` will touch, in the order it touches them.
+
+    `link_skills` executes this list and nothing else, so `mb skill link
+    --plan` and `mb update` see exactly what the link will change (#1012).
+    """
     skill_link_dir = target / ".claude" / "skills"
-    linked: list[str] = []
+    operations: list[dict[str, Any]] = []
+    settings_path = target / ".claude" / "settings.local.json"
+    rendered, removed_stale, error = _render_settings(settings_path, root)
+    if error:
+        return {"error": error, "removed_stale_engine_paths": removed_stale}
+    if rendered is not None:
+        operations.append(
+            {
+                "op": "write",
+                "path": str(settings_path),
+                "rel": ".claude/settings.local.json",
+                "content": rendered,
+            }
+        )
+
+    removable_names = sorted(set(LEGACY_SKILL_NAMES) | set(RETIRED_PROJECT_SKILL_LINK_NAMES))
+    for name in removable_names:
+        dest = skill_link_dir / name
+        if dest.is_symlink():
+            operations.append({"op": "delete", "path": str(dest), "rel": f".claude/skills/{name}"})
+
     skipped: list[str] = []
     for name in bundled_skills():
         source = root / ".claude" / "skills" / name
@@ -768,36 +855,96 @@ def plan_link_skills(repo: str | Path) -> dict[str, Any]:
                     continue
             except FileNotFoundError:
                 pass
-            linked.append(rel)
+            op = "replace_link"
         elif dest.exists():
             skipped.append(rel)
+            continue
         else:
-            linked.append(rel)
+            op = "create_link"
+        operations.append({"op": op, "path": str(dest), "rel": rel, "source": str(source)})
 
     entries, retired = _link_gitignore_entries()
     gitignore = target / ".gitignore"
-    existing_lines = (
-        set(gitignore.read_text(encoding="utf-8").splitlines()) if gitignore.exists() else set()
-    )
+    existing = gitignore.read_text(encoding="utf-8") if gitignore.exists() else ""
+    existing_lines = set(existing.splitlines())
     gitignore_add = [entry for entry in entries if entry not in existing_lines]
     gitignore_remove = [entry for entry in retired if entry in existing_lines]
+    updated = _gitignore_text_after(existing, entries, retired)
+    if updated != existing:
+        operations.append(
+            {"op": "write", "path": str(gitignore), "rel": ".gitignore", "content": updated}
+        )
 
-    tracked_writes: list[str] = []
-    if gitignore_add or gitignore_remove:
-        tracked_writes.append(".gitignore")
-    wiring_paths = [".claude/settings.local.json", *linked]
-    tracked_writes.extend(_git_tracked_paths(target, wiring_paths))
+    global_dir = _personal_skills_dir()
+    personal = _planned_personal_repairs(global_dir)
+    for name in personal:
+        operations.append({"op": "delete", "path": str(global_dir / name), "rel": ""})
+        operations.append(
+            {
+                "op": "create",
+                "path": str(global_dir / ".mainbranch-backups" / "pending" / name),
+                "rel": "",
+            }
+        )
 
     return {
-        "ok": True,
-        "plan": True,
-        "repo": str(target),
-        "engine_root": str(root),
-        "linked": linked,
+        "error": "",
+        "operations": operations,
         "skipped": skipped,
         "gitignore_add": gitignore_add,
         "gitignore_remove": gitignore_remove,
-        "tracked_writes": tracked_writes,
+        "personal_repairs": personal,
+        "removed_stale_engine_paths": removed_stale,
+    }
+
+
+def plan_link_skills(repo: str | Path) -> dict[str, Any]:
+    """What `link_skills` would change, without writing anything.
+
+    ``operations`` lists every destination the link touches (write, delete,
+    create or replace a link). ``tracked_changes`` lists the ones that would
+    change a file git tracks, after resolving symlinked parents, and
+    ``tracked_writes`` their paths. `mb update` links unattended only when
+    ``tracked_changes`` is empty (#1012).
+    """
+    target = Path(repo).expanduser().resolve()
+    root = engine_root()
+    empty: dict[str, Any] = {
+        "ok": False,
+        "plan": True,
+        "repo": str(target),
+        "engine_root": str(root) if root is not None else None,
+        "linked": [],
+        "skipped": [],
+        "removed_legacy": [],
+        "gitignore_add": [],
+        "gitignore_remove": [],
+        "operations": [],
+        "tracked_changes": [],
+        "tracked_writes": [],
+    }
+    if root is None:
+        return {**empty, "errors": ["could not locate bundled Main Branch engine root"]}
+    planned = _link_operations(target, root)
+    if planned["error"]:
+        return {**empty, "errors": [planned["error"]]}
+    operations = planned["operations"]
+    tracked = consent_destinations(target, operations)
+    return {
+        **empty,
+        "ok": True,
+        "linked": [
+            item["rel"] for item in operations if item["op"] in {"create_link", "replace_link"}
+        ],
+        "skipped": planned["skipped"],
+        "removed_legacy": [
+            item["rel"] for item in operations if item["op"] == "delete" and item["rel"]
+        ],
+        "gitignore_add": planned["gitignore_add"],
+        "gitignore_remove": planned["gitignore_remove"],
+        "operations": public_operations(operations),
+        "tracked_changes": tracked,
+        "tracked_writes": list(dict.fromkeys(item["path"] for item in tracked)),
         "errors": [],
     }
 
@@ -820,13 +967,8 @@ def link_skills(repo: str | Path) -> dict[str, Any]:
             "errors": ["could not locate bundled Main Branch engine root"],
         }
 
-    claude_dir = target / ".claude"
-    skill_link_dir = claude_dir / "skills"
-    skill_link_dir.mkdir(parents=True, exist_ok=True)
-
-    created: list[str] = []
-    settings_changed, removed_stale_engine_paths, settings_error = _write_settings(target, root)
-    if settings_error:
+    planned = _link_operations(target, root)
+    if planned["error"]:
         return {
             "ok": False,
             "repo": str(target),
@@ -836,36 +978,39 @@ def link_skills(repo: str | Path) -> dict[str, Any]:
             "copied": [],
             "skipped": [],
             "removed_legacy": [],
-            "removed_stale_engine_paths": removed_stale_engine_paths,
-            "errors": [settings_error],
+            "removed_stale_engine_paths": planned["removed_stale_engine_paths"],
+            "errors": [planned["error"]],
         }
-    if settings_changed:
-        created.append(".claude/settings.local.json")
 
+    (target / ".claude" / "skills").mkdir(parents=True, exist_ok=True)
+    created: list[str] = []
     linked: list[str] = []
     copied: list[str] = []
-    skipped: list[str] = []
-    removed_legacy = _remove_legacy_project_links(skill_link_dir)
-
-    for name in bundled_skills():
-        source = root / ".claude" / "skills" / name
-        dest = skill_link_dir / name
-        mode = _link_or_copy(source, dest)
-        rel = f".claude/skills/{name}"
-        if mode == "linked":
-            linked.append(rel)
+    skipped: list[str] = list(planned["skipped"])
+    removed_legacy: list[str] = []
+    for item in planned["operations"]:
+        op = item["op"]
+        path = Path(item["path"])
+        rel = item["rel"]
+        if not rel:
+            continue  # personal skill repairs run below, limited to the plan
+        if op == "write":
+            atomic_write_text(path, item["content"])
             created.append(rel)
-        elif mode == "copied":
-            copied.append(rel)
-            created.append(rel)
-        elif mode == "skipped":
-            skipped.append(rel)
-
-    gitignore_entries, retired_gitignore_entries = _link_gitignore_entries()
-    if _remove_gitignore_entries(target, retired_gitignore_entries):
-        created.append(".gitignore")
-    if _append_unique_gitignore(target, gitignore_entries):
-        created.append(".gitignore")
+        elif op == "delete":
+            if path.is_symlink():
+                path.unlink()
+                removed_legacy.append(rel)
+        else:
+            mode = _link_or_copy(Path(item["source"]), path)
+            if mode == "linked":
+                linked.append(rel)
+                created.append(rel)
+            elif mode == "copied":
+                copied.append(rel)
+                created.append(rel)
+            elif mode == "skipped":
+                skipped.append(rel)
 
     return {
         "ok": True,
@@ -876,9 +1021,11 @@ def link_skills(repo: str | Path) -> dict[str, Any]:
         "copied": copied,
         "skipped": skipped,
         "removed_legacy": removed_legacy,
-        "removed_stale_engine_paths": removed_stale_engine_paths,
+        "removed_stale_engine_paths": planned["removed_stale_engine_paths"],
         "errors": [],
-        "shadow_report": inspect_personal_skill_conflicts(target, apply=True),
+        "shadow_report": inspect_personal_skill_conflicts(
+            target, apply=True, only_names=set(planned["personal_repairs"])
+        ),
     }
 
 

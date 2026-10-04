@@ -247,6 +247,14 @@ def _action(
     }
 
 
+def _attach_operations(
+    action: dict[str, Any], target: Path, operations: list[dict[str, Any]]
+) -> None:
+    """Record every destination an apply touches and which ones git tracks (#1012)."""
+    action["operations"] = engine_mod.public_operations(operations)
+    action["tracked_changes"] = engine_mod.consent_destinations(target, operations)
+
+
 def _section(
     id: str,
     title: str,
@@ -2668,6 +2676,7 @@ def repair_plan(
     ]
     codex_actions: list[dict[str, Any]] = []
     if not codex_instruction_status["ok"]:
+        agents_operations = codex_mod.agents_md_operations(target)
         action = _action(
             id="codex-agents-md",
             title="Refresh Codex AGENTS.md instructions",
@@ -2682,8 +2691,10 @@ def repair_plan(
             ),
             writes=[
                 "AGENTS.md",
+                *[str(item["rel"]) for item in agents_operations if item["op"] == "delete_tree"],
             ],
         )
+        _attach_operations(action, target, agents_operations)
         actions.append(action)
         codex_actions.append(action)
     if not codex_global_skill["ok"]:
@@ -2703,6 +2714,7 @@ def repair_plan(
             ],
             result=codex_global_skill,
         )
+        _attach_operations(action, target, codex_mod.global_skill_operations())
         actions.append(action)
         codex_actions.append(action)
     sections.append(

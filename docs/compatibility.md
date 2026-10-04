@@ -295,8 +295,14 @@ already current see no change on disk.
 
 **Tracked files change only after a yes at a terminal.** `mb update` plans
 each surface first (`mb skill link --plan`, `mb doctor repair --plan --only
-codex`). Gitignored links and the per-user Codex bundle refresh on their own.
-When the refresh would change a tracked file (`.gitignore`, `AGENTS.md`):
+codex`). Each plan lists every destination its apply touches (writes, new or
+replaced links, deletions, including old skill links and transitional Codex
+files), and the apply carries out that same list. Each destination is resolved
+through symlinks and checked against git in whichever repo really holds it, so
+a symlinked `.claude/` or a Codex skill folder linked into a repo cannot slip a
+tracked file past the plan. Gitignored links and the per-user Codex bundle
+refresh on their own. When the refresh would change, delete or replace a
+tracked file:
 
 - at an interactive terminal, it lists those files and asks once (default no);
 - without one, and always with `--json`, it changes no tracked file. It
@@ -304,8 +310,12 @@ When the refresh would change a tracked file (`.gitignore`, `AGENTS.md`):
   `next_actions`. Applying them is the operator's step.
 
 `surface_refresh.planned` has `consent` (`not_needed`, `no_terminal`,
-`declined` or `approved`), `tracked_files` (the repo files that would change)
-and `apply_commands` (what is left to run). `surface_refresh.claude` and
+`declined` or `approved`), `tracked_files` (the repo files that would change),
+`tracked_changes` (each with its `op`: `write`, `delete`, `delete_tree`,
+`create_link`, `replace_link`) and `apply_commands` (what is left to run).
+After applying, `mb update` compares `git status` with what it saw before. If a
+tracked file changed that was not approved, it sets `ok` to false, names the
+file in `errors` and `planned.unapproved_changes`, and reverts nothing. `surface_refresh.claude` and
 `surface_refresh.codex` each carry `applied`; a surface left alone also
 carries its `tracked_writes` and `plan`.
 
