@@ -84,6 +84,10 @@ CLAUDE_PRINT_WRITE_DENY_TOOLS = (
     "Bash(git push *)",
     "Bash(git reset *)",
     "Bash(git checkout *)",
+    "Bash(mb connect repair *)",
+    "Bash(mb connect token *)",
+    "Bash(mb connect * --token *)",
+    "Bash(security *)",
 )
 CLAUDE_PRINT_PROMPT_PREFIX = """Release simulation harness constraints:
 - Work from this disposable fixture repo only.
@@ -399,6 +403,7 @@ def materialize_fixture_profile(
     if profile != "dirty_checkpoint_fixture":
         _commit_profile_baseline(state, profile_repo, profile, record)
     _capture_profile_mb_facts(state, profile_repo, simulation, record)
+    _inject_recorded_facts(state, simulation, record)
     state.fixture_profiles.append(record)
     write_json(
         state.evidence_dir
@@ -424,6 +429,10 @@ def _apply_fixture_profile(repo: Path, profile: str) -> list[str]:
         return _apply_launch_readiness_fixture(repo)
     if profile == "rich_multi_offer_migration_repo":
         return _apply_rich_multi_offer_migration_repo(repo)
+    if profile == "keychain_prompt_pending_fixture":
+        # The provider state lives in the manifest's recorded fact; the repo
+        # stays untouched so no live command can reach a real keychain item.
+        return ["recorded `mb connect status --json` fact; no repo or keychain mutation"]
     raise ValueError(f"unknown fixture profile: {profile}")
 
 
@@ -775,6 +784,60 @@ def _capture_profile_mb_facts(
     record["mb_command_facts"] = _profile_fact_summary(parsed)
 
 
+def _inject_recorded_facts(
+    state: HarnessState,
+    simulation: release_simulation.Simulation,
+    record: dict[str, Any],
+) -> None:
+    """Add a simulation's recorded command facts to its fixture record.
+
+    Recorded facts stand in for state the harness must not create for real,
+    such as a macOS keychain item this Python is not yet trusted to read.
+    """
+    if not simulation.recorded_facts:
+        return
+    if not release_simulation.credential_safety_of_fact(simulation.recorded_facts):
+        raise ValueError(f"{simulation.id} recorded facts carry a credential value")
+    record["recorded_facts"] = sorted(simulation.recorded_facts)
+    facts = record.setdefault("mb_command_facts", {})
+    connect_status = simulation.recorded_facts.get("connect_status")
+    if isinstance(connect_status, dict):
+        write_json(
+            state.evidence_dir
+            / "fixture-profiles"
+            / f"{safe_label(simulation.id)}-connect_status.recorded.json",
+            connect_status,
+        )
+        facts["connect_status"] = _connect_status_fact_summary(connect_status)
+        facts["facts_available"] = True
+
+
+def _connect_status_fact_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    providers = []
+    for item in payload.get("providers", []):
+        if not isinstance(item, dict):
+            continue
+        raw_secrets = item.get("secrets")
+        secrets: dict[str, Any] = raw_secrets if isinstance(raw_secrets, dict) else {}
+        backend_states = sorted(
+            {
+                str(secret.get("backend_state") or "")
+                for secret in secrets.values()
+                if isinstance(secret, dict) and secret.get("backend_state")
+            }
+        )
+        providers.append(
+            {
+                "name": item.get("name") or item.get("provider"),
+                "connected": item.get("connected"),
+                "state": item.get("state"),
+                "backend_states": backend_states,
+                "repair_command": item.get("repair_command", ""),
+            }
+        )
+    return {"recorded": True, "ok": payload.get("ok"), "providers": providers}
+
+
 def _profile_fact_summary(parsed: dict[str, Any]) -> dict[str, Any]:
     doctor = parsed.get("doctor", {})
     repair = parsed.get("doctor_repair_plan", {})
@@ -1083,6 +1146,23 @@ def claude_print_fixture_facts(facts: dict[str, Any] | None) -> str:
         f"{len(facts.get('doctor_repair_actions', []) or [])}",
         f"- `mb checkpoint --plan --json`: dirty {facts.get('checkpoint_plan_dirty', 'unknown')}",
     ]
+    connect_status = facts.get("connect_status")
+    if isinstance(connect_status, dict):
+        lines.append(
+            "- `mb connect status --json` (recorded from the operator's own terminal; "
+            "this sandbox cannot reach that machine's keychain, so a live run here "
+            "will not show the provider): ok "
+            f"{connect_status.get('ok', 'unknown')}"
+        )
+        for provider in connect_status.get("providers", []):
+            backend_states = ", ".join(provider.get("backend_states") or []) or "none"
+            lines.append(
+                f"  - {provider.get('name', 'unknown')}: connected "
+                f"{provider.get('connected', 'unknown')}; state "
+                f"{provider.get('state', 'unknown')}; backend_state {backend_states}; "
+                f"repair_command `{provider.get('repair_command') or 'none'}`; "
+                "credential value not included"
+            )
     if facts.get("migrate_campaign_moves") is not None:
         lines.append(
             "- `mb migrate campaigns --plan --json`: "
@@ -1113,7 +1193,36 @@ def claude_print_env(state: HarnessState) -> dict[str, str]:
     return env
 
 
-def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tier: str) -> None:
+def claude_print_env_for_simulation(
+    state: HarnessState,
+    simulation: release_simulation.Simulation,
+    base_env: dict[str, str],
+) -> dict[str, str]:
+    """Return the print env, isolating credentials for recorded-connect sims.
+
+    A simulation that carries a recorded `mb connect status` fact gets its own
+    empty Main Branch home and the local-file backend, so a live `mb connect`
+    command in that session cannot reach the operator's keychain or user-scope
+    connections.
+    """
+    if "connect_status" not in simulation.recorded_facts:
+        return base_env
+    home = state.root / f"mainbranch-home-{safe_label(simulation.id)}"
+    home.mkdir(parents=True, exist_ok=True)
+    env = dict(base_env)
+    env["MAINBRANCH_HOME"] = str(home)
+    env["MB_CONNECT_SECRET_BACKEND"] = "local-file"
+    env.pop("MB_CREDENTIAL_TEST_KEYCHAIN", None)
+    return env
+
+
+def run_claude_print(
+    state: HarnessState,
+    *,
+    max_budget_usd: str,
+    simulation_tier: str,
+    simulation_ids: Sequence[str] = (),
+) -> None:
     if shutil.which("claude") is None:
         state.warn("Claude Code executable not found; skipped optional print-mode smoke")
         state.claude = {
@@ -1130,6 +1239,13 @@ def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tie
     transcript_parts: list[str] = []
     permission_denials: list[Any] = []
     simulations = release_simulation.simulations_for_tier(simulation_tier)
+    if simulation_ids:
+        unknown = sorted(set(simulation_ids) - {simulation.id for simulation in simulations})
+        if unknown:
+            raise ValueError(f"simulation(s) not in tier {simulation_tier}: {', '.join(unknown)}")
+        simulations = tuple(
+            simulation for simulation in simulations if simulation.id in simulation_ids
+        )
     print_env = claude_print_env(state)
     permission_policy = {
         "mode": "read_only_mb_allowlist",
@@ -1165,7 +1281,7 @@ def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tie
             f"claude-print-{simulation.label}",
             command,
             cwd=profile_repo,
-            env=print_env,
+            env=claude_print_env_for_simulation(state, simulation, print_env),
             timeout=600,
         )
         post_status = git_text(profile_repo, "status", "--short")
@@ -1233,6 +1349,10 @@ def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tie
         observed_unknown_command = bool(skill_discovery.get("observed_unknown_command_failure"))
     if transcript_text and observed_unknown_command:
         state.fail("Claude print-mode transcript reported an unknown command")
+    credential_safety = rubric.get("credential_safety", {})
+    if isinstance(credential_safety, dict) and credential_safety.get("violations"):
+        kinds = sorted({str(item.get("kind")) for item in credential_safety["violations"]})
+        state.fail(f"Claude print-mode transcript failed credential safety: {', '.join(kinds)}")
 
     permission_summary = summarize_permission_denials(permission_denials)
     grounding = classify_print_grounding(
@@ -1251,6 +1371,7 @@ def run_claude_print(state: HarnessState, *, max_budget_usd: str, simulation_tie
         "ran": True,
         "proxy_notice": "Print-mode evidence is not the same as interactive TUI evidence.",
         "simulation_tier": simulation_tier,
+        "simulation_filter": list(simulation_ids),
         "max_budget_usd": max_budget_usd,
         "session_id": session_ids[-1] if session_ids else "",
         "session_ids": session_ids,
@@ -1765,6 +1886,7 @@ def run_harness(args: argparse.Namespace) -> int:
                 state,
                 max_budget_usd=args.max_budget_usd,
                 simulation_tier=args.simulation_tier,
+                simulation_ids=tuple(args.simulation or ()),
             )
     finally:
         collect_post_run_state(state)
@@ -1834,6 +1956,16 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Release simulation prompt tier for --run-claude-print. "
             "PR smoke is intentionally short; release tiers remain proxy evidence."
+        ),
+    )
+    parser.add_argument(
+        "--simulation",
+        action="append",
+        default=[],
+        metavar="ID",
+        help=(
+            "Run only this simulation id from the chosen tier with --run-claude-print. "
+            "Repeat for several. Default: every simulation in the tier."
         ),
     )
     parser.add_argument(

@@ -54,6 +54,58 @@ jobs:
       - name: Pytest with coverage
         run: pytest tests/ -v --cov=mb --cov-report=term-missing --cov-fail-under=79
 
+  macos-keychain:
+    # Opt-in macOS keychain integration tests (#1008). Each test creates a
+    # throwaway mbtest-*.keychain-db under the pytest temp dir, keeps it out
+    # of the user search list, and deletes it afterwards; the login keychain
+    # is never read or written. The interaction-off paths need no GUI session.
+    # No secrets: the throwaway keychain password is generated per test.
+    name: macOS keychain integration
+    runs-on: macos-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: mb
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install package + dev extras
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Keychain integration tests
+        env:
+          MB_KEYCHAIN_INTEGRATION: "1"
+        run: >-
+          python -m pytest tests/test_keychain_unattended.py -k macos -v -rs
+          --junitxml=keychain-junit.xml
+
+      - name: Fail if any keychain integration test was skipped
+        # A skip here means the opt-in gate did not open, which would turn
+        # this job into a silent no-op.
+        run: |
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+
+          suite = ET.parse("keychain-junit.xml").getroot().find("testsuite")
+          tests = int(suite.get("tests", 0))
+          skipped = int(suite.get("skipped", 0))
+          print(f"keychain tests={tests} skipped={skipped}")
+          if tests == 0 or skipped:
+              raise SystemExit("::error::keychain integration tests did not all run")
+          PY
+
   skill-validate:
     name: SKILL.md line-count gate
     runs-on: ubuntu-latest
