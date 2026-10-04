@@ -1283,10 +1283,13 @@ def test_helper_deadline_ends_before_the_parent_stops_waiting(
         assert epoch <= started + call["timeout"] - store_mod.HELPER_EXIT_HEADROOM_SECONDS + 0.5
 
 
+@pytest.mark.parametrize("budget", [0.1, 2.0])
 def test_a_nearly_spent_shared_deadline_never_starts_a_move(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, budget: float
 ) -> None:
-    """status_all shares one deadline; with 0.1 s left the helper may only read."""
+    """status_all shares one deadline; with less than a move's minimum left the
+    helper may only read. At 0.1 s a loaded machine may spend it all before the
+    helper starts (also safe); 2.0 s always reaches the helper."""
 
     repo = _keychain_repo(tmp_path, monkeypatch)
     keychain = _legacy_keychain()
@@ -1302,18 +1305,20 @@ def test_a_nearly_spent_shared_deadline_never_starts_a_move(
         return SimpleNamespace(returncode=0 if state == "ready" else 1, stdout=json.dumps(body))
 
     monkeypatch.setattr(store_mod, "subprocess", _fake_subprocess(run))
-    real_monotonic = time.monotonic
-    start = real_monotonic()
-    monkeypatch.setattr(
-        store_mod,
-        "new_credential_deadline",
-        lambda: start + 0.1,
-    )
-    monkeypatch.setattr(connect_mod, "new_credential_deadline", lambda: start + 0.1)
+
+    # Measured from when status_all takes its deadline, not from test setup:
+    # setup on a loaded machine can itself spend 0.1 s.
+    def nearly_spent() -> float:
+        return time.monotonic() + budget
+
+    monkeypatch.setattr(store_mod, "new_credential_deadline", nearly_spent)
+    monkeypatch.setattr(connect_mod, "new_credential_deadline", nearly_spent)
 
     connect_mod.status_all(repo)
 
-    assert timeouts and max(timeouts) <= 0.1
+    if budget >= 1.0:
+        assert timeouts
+    assert all(timeout <= budget for timeout in timeouts)
     assert keychain.items == {REF: ("legacy", SHORT)}
     assert not any(step.startswith(("ctypes_delete", "security_put")) for step in keychain.log)
 
