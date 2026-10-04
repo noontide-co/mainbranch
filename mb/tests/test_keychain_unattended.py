@@ -150,40 +150,50 @@ def _call_name(call: ast.Call) -> str:
     return func.id if isinstance(func, ast.Name) else ""
 
 
-def _interactive_keywords() -> list[tuple[str, str, ast.expr, bool]]:
-    """Every ``interactive=`` keyword passed into the credential path.
+def _is_repair_branch(node: ast.AST) -> bool:
+    """True only for the exact ``if target == "repair":`` branch of ``mb connect``."""
+
+    return (
+        isinstance(node, ast.If)
+        and isinstance(node.test, ast.Compare)
+        and isinstance(node.test.left, ast.Name)
+        and node.test.left.id == "target"
+        and len(node.test.ops) == 1
+        and isinstance(node.test.ops[0], ast.Eq)
+        and len(node.test.comparators) == 1
+        and isinstance(node.test.comparators[0], ast.Constant)
+        and node.test.comparators[0].value == "repair"
+    )
+
+
+def _keywords_in(tree: ast.AST, filename: str) -> list[tuple[str, str, ast.expr, bool]]:
+    """Every ``interactive=`` keyword passed into the credential path in one module.
 
     Returned as (file, function, value, in_repair_branch).
     """
 
     found: list[tuple[str, str, ast.expr, bool]] = []
-    for path in sorted(MB_PACKAGE.rglob("*.py")):
-        tree = ast.parse(path.read_text(encoding="utf-8"))
-        for function in ast.walk(tree):
-            if not isinstance(function, ast.FunctionDef):
+    for function in ast.walk(tree):
+        if not isinstance(function, ast.FunctionDef):
+            continue
+        repair_calls: set[int] = set()
+        for node in ast.walk(function):
+            if _is_repair_branch(node):
+                for inner in node.body:  # type: ignore[attr-defined]
+                    repair_calls.update(id(call) for call in ast.walk(inner))
+        for call in ast.walk(function):
+            if not isinstance(call, ast.Call) or _call_name(call) not in CREDENTIAL_CALLS:
                 continue
-            repair_calls: set[int] = set()
-            for node in ast.walk(function):
-                # The exact `if target == "repair":` branch of `mb connect`.
-                if (
-                    isinstance(node, ast.If)
-                    and isinstance(node.test, ast.Compare)
-                    and isinstance(node.test.left, ast.Name)
-                    and node.test.left.id == "target"
-                    and len(node.test.comparators) == 1
-                    and isinstance(node.test.comparators[0], ast.Constant)
-                    and node.test.comparators[0].value == "repair"
-                ):
-                    for inner in node.body:
-                        repair_calls.update(id(call) for call in ast.walk(inner))
-            for call in ast.walk(function):
-                if not isinstance(call, ast.Call) or _call_name(call) not in CREDENTIAL_CALLS:
-                    continue
-                for keyword in call.keywords:
-                    if keyword.arg == "interactive":
-                        found.append(
-                            (path.name, function.name, keyword.value, id(call) in repair_calls)
-                        )
+            for keyword in call.keywords:
+                if keyword.arg == "interactive":
+                    found.append((filename, function.name, keyword.value, id(call) in repair_calls))
+    return found
+
+
+def _interactive_keywords() -> list[tuple[str, str, ast.expr, bool]]:
+    found: list[tuple[str, str, ast.expr, bool]] = []
+    for path in sorted(MB_PACKAGE.rglob("*.py")):
+        found.extend(_keywords_in(ast.parse(path.read_text(encoding="utf-8")), path.name))
     return found
 
 
@@ -197,19 +207,14 @@ def _forwards_false_default(path: str, function: str) -> bool:
     return False
 
 
-def test_only_the_keychain_repair_passes_interactive_true() -> None:
-    """A source guard: a new interactive caller must be a deliberate choice.
-
-    ``interactive=True`` is allowed only in ``repair_keychain`` and in the exact
-    ``mb connect repair`` CLI branch. Elsewhere the value must be ``False`` or a
-    parameter named ``interactive`` that itself defaults to ``False``. The one
-    computed value is the helper reading its payload, which only accepts JSON
-    ``true``.
-    """
+def _guard_offenders(
+    keywords: list[tuple[str, str, ast.expr, bool]],
+) -> tuple[list[str], list[str]]:
+    """Apply the interactive guard; return (offenders, literal-True sites)."""
 
     offenders: list[str] = []
     literal_true: list[str] = []
-    for path, function, value, in_repair_branch in _interactive_keywords():
+    for path, function, value, in_repair_branch in keywords:
         where = f"{path}:{function}"
         if isinstance(value, ast.Constant) and value.value is False:
             continue
@@ -227,8 +232,45 @@ def test_only_the_keychain_repair_passes_interactive_true() -> None:
         ):
             continue
         offenders.append(f"{where}: interactive={ast.unparse(value)}")
+    return offenders, literal_true
+
+
+def test_only_the_keychain_repair_passes_interactive_true() -> None:
+    """A source guard: a new interactive caller must be a deliberate choice.
+
+    ``interactive=True`` is allowed only in ``repair_keychain`` and in the exact
+    ``mb connect repair`` CLI branch. Elsewhere the value must be ``False`` or a
+    parameter named ``interactive`` that itself defaults to ``False``. The one
+    computed value is the helper reading its payload, which only accepts JSON
+    ``true``.
+    """
+
+    offenders, literal_true = _guard_offenders(_interactive_keywords())
     assert offenders == []
     assert sorted(set(literal_true)) == ["cli.py:connect_cmd", "connect.py:repair_keychain"]
+
+
+@pytest.mark.parametrize(
+    ("test", "allowed"),
+    [
+        ('target == "repair"', True),
+        ('target != "repair"', False),
+        ('target is "repair"', False),
+        ('"repair" == target', False),
+        ('target == "test"', False),
+        ('target == "repair" == other', False),
+    ],
+)
+def test_guard_accepts_only_the_exact_repair_branch(test: str, allowed: bool) -> None:
+    source = (
+        "def connect_cmd(target, repo, other):\n"
+        f"    if {test}:\n"
+        "        connect_mod.repair_keychain(repo, interactive=True)\n"
+    )
+
+    offenders, _ = _guard_offenders(_keywords_in(ast.parse(source), "cli.py"))
+
+    assert (offenders == []) is allowed
 
 
 class _OrderedLibrary:
