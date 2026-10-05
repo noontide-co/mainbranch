@@ -498,8 +498,8 @@ choices: [docs/dependency-choices.md](docs/dependency-choices.md).
 ## Community
 
 - [Skool community](https://skool.com/main) - watch us build with Main Branch
-- [GitHub Issues](https://github.com/noontide-co/mainbranch/issues) - bugs and feature requests
-- [GitHub Discussions](https://github.com/noontide-co/mainbranch/discussions) - ideas
+- [GitHub Issues](https://github.com/noontide-co/mainbranch/issues) - bugs, feature requests and ideas
+- [Good first issues](https://github.com/noontide-co/mainbranch/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) - small, scoped issues for a first pull request
 
 ---
 
