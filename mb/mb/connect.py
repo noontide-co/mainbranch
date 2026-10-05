@@ -171,6 +171,8 @@ class ConfigCorruptError(ValueError):
 # Optional `google` slot holding one OAuth grant (client and refresh token) as
 # a single credential-store item. Its presence makes the connection OAuth mode.
 GOOGLE_OAUTH_GRANT_SLOT = "oauth_grant"
+# Repo metadata key the sign-in writes: the Google products it granted.
+GOOGLE_OAUTH_GRANTS_METADATA = "oauth_grants"
 
 
 @dataclass(frozen=True)
@@ -1544,6 +1546,20 @@ def connect_provider(
     if not token and provider.id not in providers:
         raw_existing_entry = _user_scope_provider_entry(repo_id, provider.id)
     existing_entry = raw_existing_entry if isinstance(raw_existing_entry, dict) else {}
+    oauth_candidate: Any = None
+    if token and GOOGLE_OAUTH_GRANT_SLOT in provider.optional_secrets:
+        # A token reconnect rebuilds `secrets` from the primary slot only, which
+        # would drop the grant ref and orphan its credential-store item.
+        oauth_candidate = providers.get(provider.id)
+        if not isinstance(oauth_candidate, dict):
+            oauth_candidate = _user_scope_provider_entry(repo_id, provider.id)
+    if _records_oauth_grant(provider, oauth_candidate):
+        _refuse(
+            "oauth_connection_exists",
+            f"this {provider.name} connection uses a Google sign-in (OAuth). Storing a token "
+            "here would drop the sign-in and orphan its stored grant. Renew the sign-in with "
+            "`mb connect google --oauth --reauth`. Nothing was stored.",
+        )
     if source:
         if not metadata_pairs:
             raw_existing_metadata = existing_entry.get("metadata")
@@ -1594,6 +1610,17 @@ def connect_provider(
                     for field, raw_secret in existing_secrets.items()
                     if isinstance(raw_secret, dict)
                 }
+                if _records_oauth_grant(provider, existing_entry):
+                    # Which Google products the sign-in granted is recorded by
+                    # the sign-in itself; a metadata edit neither drops nor sets it.
+                    metadata.pop(GOOGLE_OAUTH_GRANTS_METADATA, None)
+                    raw_existing_metadata = existing_entry.get("metadata")
+                    if isinstance(raw_existing_metadata, dict) and raw_existing_metadata.get(
+                        GOOGLE_OAUTH_GRANTS_METADATA
+                    ):
+                        metadata[GOOGLE_OAUTH_GRANTS_METADATA] = str(
+                            raw_existing_metadata[GOOGLE_OAUTH_GRANTS_METADATA]
+                        )
             else:
                 # A tokenless first connect records metadata and source only.
                 # No ref points at an item that was never written, and the
@@ -1700,6 +1727,16 @@ def _secret_statuses(
     return secrets, missing
 
 
+def _records_oauth_grant(provider: Provider, entry: Any) -> bool:
+    """Does this entry record a Google OAuth grant (OAuth mode)?"""
+
+    if GOOGLE_OAUTH_GRANT_SLOT not in provider.optional_secrets or not isinstance(entry, dict):
+        return False
+    stored_secrets = entry.get("secrets")
+    raw = stored_secrets.get(GOOGLE_OAUTH_GRANT_SLOT) if isinstance(stored_secrets, dict) else None
+    return isinstance(raw, dict) and bool(raw.get("ref"))
+
+
 def _credential_mode(provider: Provider, entry: dict[str, Any]) -> dict[str, str]:
     """``credential_mode`` for providers with optional slots, else nothing.
 
@@ -1709,10 +1746,7 @@ def _credential_mode(provider: Provider, entry: dict[str, Any]) -> dict[str, str
 
     if GOOGLE_OAUTH_GRANT_SLOT not in provider.optional_secrets:
         return {}
-    stored_secrets = entry.get("secrets") if isinstance(entry.get("secrets"), dict) else {}
-    raw = stored_secrets.get(GOOGLE_OAUTH_GRANT_SLOT) if isinstance(stored_secrets, dict) else None
-    recorded = isinstance(raw, dict) and bool(raw.get("ref"))
-    return {"credential_mode": "oauth" if recorded else "access_token"}
+    return {"credential_mode": "oauth" if _records_oauth_grant(provider, entry) else "access_token"}
 
 
 def _secret_presence(probe: SecretProbe) -> str:
@@ -2824,6 +2858,13 @@ def rotate_provider(
             "rotate_not_connected",
             f"{provider.name} is not connected. Connect it with a source first: "
             f"`{_connect_command(provider, token_stdin=True)} --source op://vault/item/field`.",
+        )
+    if _records_oauth_grant(provider, entry):
+        _refuse(
+            "rotate_oauth_use_reauth",
+            f"this {provider.name} connection uses a Google sign-in (OAuth), which has no "
+            "source to re-read. Renew it with `mb connect google --oauth --reauth` when status "
+            "says reauth_required. Nothing was changed.",
         )
     raw_metadata = entry.get("metadata")
     metadata = raw_metadata if isinstance(raw_metadata, dict) else {}

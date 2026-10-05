@@ -16,6 +16,7 @@ import threading
 import urllib.error
 import urllib.parse
 from collections.abc import Callable, Iterator, Mapping
+from contextlib import suppress
 from typing import Any
 
 import pytest
@@ -167,7 +168,7 @@ def _query(**fields: str) -> str:
     "text",
     [
         f"http://127.0.0.1:8085/?{_query(state='S1', code=CODE, scope='x')}",
-        f"  http://localhost:8085/?{_query(code=CODE, state='S1')}\n",
+        f"  http://127.0.0.1:8085/?{_query(code=CODE, state='S1')}\n",
         _query(code=CODE, state="S1"),
         "?" + _query(code=CODE, state="S1"),
         "/?" + _query(code=CODE, state="S1"),
@@ -188,6 +189,11 @@ def test_paste_parser_accepts_url_or_query(text: str) -> None:
         (f"code={CODE}&code=other&state=S1", "redirect_ambiguous", go.STATE_INVALID),
         (
             f"https://evil.example/?{_query(code=CODE, state='S1')}",
+            "redirect_host",
+            go.STATE_INVALID,
+        ),
+        (
+            f"http://localhost:8085/?{_query(code=CODE, state='S1')}",
             "redirect_host",
             go.STATE_INVALID,
         ),
@@ -353,39 +359,108 @@ def test_receiver_refusals(
     assert_no_sentinel(captured.out + captured.err + str(outcome))
 
 
-def test_receiver_wrong_path_rejected_and_closed(run_receiver: Any) -> None:
-    receiver, outcome, statuses = run_receiver(
-        lambda port: _get(port, f"/favicon.ico?{_query(state='S1', code=CODE)}")
-    )
-    assert isinstance(outcome, go.GoogleOAuthError)
-    assert outcome.rule == "callback_rejected"
-    assert statuses == [404]
-    _assert_closed(receiver.port)
-
-
-@pytest.mark.parametrize("method", ["POST", "PUT", "DELETE", "HEAD", "OPTIONS"])
-def test_receiver_non_get_rejected(run_receiver: Any, method: str) -> None:
-    receiver, outcome, statuses = run_receiver(
-        lambda port: _request(port, method, f"/?{_query(state='S1', code=CODE)}")
-    )
-    assert isinstance(outcome, go.GoogleOAuthError)
-    assert outcome.rule == "callback_rejected"
-    assert statuses == [405]
-    _assert_closed(receiver.port)
-
-
-def test_receiver_unknown_method_rejected(
+def test_receiver_wrong_path_answered_404_then_real_callback_succeeds(
     run_receiver: Any, capfd: pytest.CaptureFixture[str]
 ) -> None:
-    receiver, outcome, statuses = run_receiver(
-        lambda port: _request(port, "BREW", f"/?{_query(state='S1', code=CODE)}")
-    )
-    assert isinstance(outcome, go.GoogleOAuthError)
-    assert outcome.rule == "callback_rejected"
-    assert statuses == [501]
+    def act(port: int) -> list[int]:
+        return [
+            _get(port, f"/favicon.ico?{_query(state='S1', code=CODE)}"),
+            _get(port, "/robots.txt"),
+            _get(port, f"/?{_query(state='S1', code=CODE)}"),
+        ]
+
+    receiver, outcome, statuses = run_receiver(act)
+    assert outcome == CODE
+    assert statuses == [[404, 404, 200]]
     _assert_closed(receiver.port)
     captured = capfd.readouterr()
     assert_no_sentinel(captured.out + captured.err)
+
+
+@pytest.mark.parametrize("method", ["POST", "PUT", "DELETE", "HEAD", "OPTIONS", "BREW"])
+def test_receiver_wrong_method_answered_then_real_callback_succeeds(
+    run_receiver: Any, capfd: pytest.CaptureFixture[str], method: str
+) -> None:
+    def act(port: int) -> list[int]:
+        return [
+            _request(port, method, f"/?{_query(state='S1', code=CODE)}"),
+            _get(port, f"/?{_query(state='S1', code=CODE)}"),
+        ]
+
+    receiver, outcome, statuses = run_receiver(act)
+    assert outcome == CODE
+    assert statuses == [[501 if method == "BREW" else 405, 200]]
+    _assert_closed(receiver.port)
+    captured = capfd.readouterr()
+    assert_no_sentinel(captured.out + captured.err)
+
+
+def _raw_exchange(port: int, payload: bytes) -> bytes:
+    with socket.create_connection(("127.0.0.1", port), timeout=5) as conn:
+        conn.sendall(payload)
+        chunks = []
+        while True:
+            chunk = conn.recv(4096)
+            if not chunk:
+                break
+            chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def test_receiver_malformed_request_line_is_not_echoed(run_receiver: Any) -> None:
+    replies: list[bytes] = []
+
+    def act(port: int) -> int:
+        replies.append(_raw_exchange(port, f"GET /?code={CODE} BOGUS/9 extra\r\n\r\n".encode()))
+        return _get(port, f"/?{_query(state='S1', code=CODE)}")
+
+    receiver, outcome, statuses = run_receiver(act)
+    assert outcome == CODE
+    assert statuses == [200]
+    # A request line that does not parse gets the fixed failure page only.
+    assert replies and go._FAILURE_PAGE in replies[0]
+    assert CODE.encode() not in replies[0]
+    assert b"BOGUS" not in replies[0]
+
+
+def test_receiver_send_error_page_is_fixed_text() -> None:
+    handler = go._CallbackHandler.__new__(go._CallbackHandler)
+    sent: list[tuple[int, bytes]] = []
+    handler._reply = lambda status, body: sent.append((status, body))  # type: ignore[method-assign]
+    handler.send_error(400, f"Bad request version ('{CODE}')", CODE)
+    assert sent == [(400, go._FAILURE_PAGE)]
+    assert handler.close_connection is True
+
+
+def test_receiver_trickled_request_is_bounded_by_the_deadline() -> None:
+    import time as _time
+
+    receiver = go.LoopbackReceiver("S1", timeout=1.5)
+    port = receiver.port
+    stop = threading.Event()
+
+    def trickle() -> None:
+        with suppress(OSError), socket.create_connection(("127.0.0.1", port), timeout=5) as conn:
+            for byte in b"GET /?state=S1&code=" + b"x" * 200:
+                if stop.is_set():
+                    return
+                conn.sendall(bytes([byte]))
+                _time.sleep(0.2)
+
+    thread = threading.Thread(target=trickle)
+    thread.start()
+    started = _time.monotonic()
+    try:
+        with pytest.raises(go.GoogleOAuthError) as caught:
+            receiver.wait()
+    finally:
+        stop.set()
+        thread.join(timeout=5)
+    elapsed = _time.monotonic() - started
+    assert caught.value.rule == "bootstrap_timeout"
+    # One trickler gets at most the wait's own deadline, not 5 s per byte.
+    assert elapsed < 3.0
+    _assert_closed(port)
 
 
 def test_receiver_ignores_idle_connection_then_succeeds(run_receiver: Any) -> None:
@@ -547,6 +622,26 @@ def test_exchange_code_returns_only_token_fields() -> None:
         "grant_type": ["authorization_code"],
         "redirect_uri": ["http://127.0.0.1:8085"],
     }
+
+
+def test_token_response_never_shows_values() -> None:
+    sender = FakeSender(
+        200, {"access_token": ACCESS, "refresh_token": REFRESH, "scope": go.SCOPE_ANALYTICS}
+    )
+    tokens = go.exchange_code(
+        client_id=CLIENT_ID,
+        client_secret=CLIENT_SECRET,
+        code=CODE,
+        code_verifier=VERIFIER,
+        redirect_uri="http://127.0.0.1:8085",
+        sender=sender,
+    )
+    assert isinstance(tokens, go.TokenResponse)
+    assert not isinstance(tokens, dict)
+    assert tokens["refresh_token"] == REFRESH
+    for shown in (repr(tokens), str(tokens), f"{tokens}", repr([tokens]), repr({"t": tokens})):
+        assert_no_sentinel(shown)
+        assert "refresh_token" in shown
 
 
 def test_exchange_code_omits_absent_client_secret() -> None:
