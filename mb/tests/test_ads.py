@@ -100,10 +100,14 @@ def _fake_meta_runner(calls: list[list[str]]):
     ) -> dict[str, Any]:
         calls.append(args)
         assert env is not None
-        assert env["ACCESS_TOKEN"] == "meta-secret-token"
-        assert env["AD_ACCOUNT_ID"] == "act_123456789"
-        if "BUSINESS_ID" in env:
-            assert env["BUSINESS_ID"] == "biz_987654321"
+        # Read only the checked keys so a failure never prints the whole environment.
+        access_token = env.get("ACCESS_TOKEN")
+        ad_account_id = env.get("AD_ACCOUNT_ID")
+        business_id = env.get("BUSINESS_ID")
+        assert access_token == "meta-secret-token"
+        assert ad_account_id == "act_123456789"
+        if business_id is not None:
+            assert business_id == "biz_987654321"
         if args[:4] == ["meta", "-o", "json", "ads"] and args[4:6] == [
             "adaccount",
             "list",

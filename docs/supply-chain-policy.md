@@ -91,7 +91,7 @@ human approval over clever automation.
   would force premature compatibility breaks. The `minimum-dependencies`
   CI job installs every declared floor
   (`uv pip install --resolution lowest-direct`) on the lowest supported
-  Python and loads the CLI, so a floor `mb` cannot run on fails the PR.
+  Python and on 3.12 and loads the CLI, so a floor `mb` cannot run on fails the PR.
 - The dev extras (`ruff`, `mypy`, `pytest`, `pytest-cov`,
   `types-PyYAML`) are pinned by compatibility-friendly ranges
   (`~=`, `>=,<`).

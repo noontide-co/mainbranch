@@ -2999,6 +2999,40 @@ def test_status_readiness_mentions_due_bets(tmp_path: Path) -> None:
     assert any("active bets" in action for action in readiness["next_actions"])
 
 
+@pytest.mark.parametrize(
+    ("mode", "repair"),
+    [
+        ("pipx", "Run `pipx upgrade mainbranch`."),
+        ("uv", "Run `uv tool install --refresh-package mainbranch mainbranch@latest`."),
+        ("wheel", "Run `pip install --upgrade mainbranch`."),
+        ("unknown", status_mod.MODE_NEUTRAL_UPDATE_TEXT),
+    ],
+)
+def test_status_readiness_install_repair_names_the_install_mode(
+    tmp_path: Path, mode: str, repair: str
+) -> None:
+    # The non-required install repair follows the detected mode, not always pipx (#1028).
+    report = {
+        "repo": {"looks_like_mainbranch_repo": True},
+        "git": {"inside_work_tree": True, "dirty": False},
+        "install": {"ok": False, "mode": mode},
+        "update": {"severity": "current", "command": ""},
+        "runtime": {
+            "skill_wiring": {"ok": True, "repair": ""},
+            "claude_code": {"found": True, "repair": ""},
+        },
+        "brain": status_mod._brain(tmp_path),
+        "onboarding": {"summary": {"status": "ready"}},
+        "integrations": {"providers": []},
+        "github": {"authenticated": True, "context": {"ok": True}},
+    }
+
+    readiness = status_mod._readiness(report)
+
+    assert repair in readiness["next_actions"]
+    assert not any("pipx install mainbranch" in action for action in readiness["next_actions"])
+
+
 def test_status_ranker_mentions_due_bets(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(status_mod, "_which", lambda name: f"/usr/bin/{name}")
     monkeypatch.setattr(

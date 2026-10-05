@@ -45,6 +45,8 @@ _PEP440_RE = re.compile(
     re.VERBOSE | re.IGNORECASE,
 )
 _PRE_RANK = {"a": 0, "alpha": 0, "b": 1, "beta": 1, "c": 2, "rc": 2, "pre": 2, "preview": 2}
+# A release version as PyPI publishes it: 0.6.3, 0.6.3rc1, 0.6.3.post1, 0.7.0.dev2.
+_RELEASE_VERSION_RE = re.compile(r"^\d+(\.\d+)*((a|b|rc)\d+)?(\.post\d+)?(\.dev\d+)?$")
 
 
 def version_key(version: str) -> tuple[int, ...]:
@@ -92,8 +94,22 @@ def _pep440_key(version: str) -> tuple[Any, ...]:
     )
 
 
+def checked_release_version(version: Any) -> str | None:
+    """``version`` stripped when it reads as a published release version, else None.
+
+    `compare_versions` cannot order text it does not recognise, so callers pass
+    PyPI's answer through this first and treat None as "latest unknown" (#1028).
+    """
+    text = version.strip() if isinstance(version, str) else ""
+    return text if _RELEASE_VERSION_RE.fullmatch(text) else None
+
+
 def compare_versions(left: str, right: str) -> int:
-    """Return -1, 0 or 1 as ``left`` is older than, equal to or newer than ``right``."""
+    """Return -1, 0 or 1 as ``left`` is older than, equal to or newer than ``right``.
+
+    Both sides should be release versions (see `checked_release_version`); an
+    unparseable one sorts below every release, which is not a meaningful answer.
+    """
     left_key = _pep440_key(left)
     right_key = _pep440_key(right)
     return (left_key > right_key) - (left_key < right_key)
@@ -148,11 +164,15 @@ def package_update_status(
         latest_source = "pypi_json" if latest else "unavailable"
     if latest is _LATEST_AUTO:
         latest = None
-    latest_text = latest if isinstance(latest, str) else ""
+    # An answer that is not a release version cannot be ordered, so it counts
+    # as unknown rather than as older or newer than the install (#1028).
+    latest_text = checked_release_version(latest) or ""
+    latest_unreadable = isinstance(latest, str) and bool(latest.strip()) and not latest_text
+    if latest_unreadable and latest_source == "pypi_json":
+        latest_source = "unavailable"
 
     installed_key = version_key(installed_version)
     minimum_key = version_key(minimum_supported)
-    latest_key = version_key(latest_text) if latest_text else ()
 
     severity = "current"
     command = ""
@@ -167,11 +187,11 @@ def package_update_status(
             reason = "Installed version predates mb update and the current skill-link repair flow."
         else:
             reason = "Installed version is below the minimum supported Main Branch version."
-    elif latest_text and latest_key > installed_key:
+    elif latest_text and compare_versions(latest_text, installed_version) > 0:
         severity = "recommended"
         command = "mb update"
         reason = "A newer compatible Main Branch package is available."
-    elif latest_version is _LATEST_AUTO and mode not in {"clone", "source"} and not latest_text:
+    elif latest_unreadable or (latest_version is _LATEST_AUTO and not latest_text):
         severity = "unknown"
         reason = "Could not check PyPI for the latest Main Branch version."
     elif latest_text:

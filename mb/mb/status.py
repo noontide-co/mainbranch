@@ -27,6 +27,7 @@ from mb import validate as validate_mod
 from mb.engine import install_mode, link_status
 from mb.freshness import (
     MODE_NEUTRAL_UPDATE_TEXT,
+    REQUIRED_UPDATE_COMMANDS,
     format_update_alert,
     package_update_status,
 )
@@ -4388,6 +4389,12 @@ def _business_memory_readiness(report: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _install_repair(mode: str) -> str:
+    """Install repair copy that names the detected install mode's command (#965, #1028)."""
+    command = REQUIRED_UPDATE_COMMANDS.get(mode)
+    return f"Run `{command}`." if command else MODE_NEUTRAL_UPDATE_TEXT
+
+
 def _readiness(report: dict[str, Any]) -> dict[str, Any]:
     checks = [
         {
@@ -4408,7 +4415,7 @@ def _readiness(report: dict[str, Any]) -> dict[str, Any]:
             "weight": 15,
             "repair": (report["update"]["command"] or MODE_NEUTRAL_UPDATE_TEXT)
             if report["update"]["severity"] == "required"
-            else "Reinstall Main Branch with `pipx install mainbranch`.",
+            else _install_repair(str(report["install"].get("mode") or "")),
         },
         {
             "name": "skill_wiring",

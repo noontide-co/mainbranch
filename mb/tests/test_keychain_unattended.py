@@ -1307,7 +1307,9 @@ def throwaway_keychain(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
 def _require_seam(path: Path) -> None:
     """Refuse to touch any keychain unless the seam names the throwaway one."""
 
-    assert os.environ.get(helper_mod.TEST_KEYCHAIN_ENV) == str(path)
+    # Read only the seam key so a failure never prints the whole environment (#1025).
+    seam = os.environ.get(helper_mod.TEST_KEYCHAIN_ENV)
+    assert seam == str(path)
     assert helper_mod._test_keychain_path() == str(path.resolve())
 
 

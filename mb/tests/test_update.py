@@ -1344,6 +1344,35 @@ def test_update_pipx_local_wheel_parse_failure_surfaces_force_install(
     assert result["next_actions"] == ["pipx install --force mainbranch==9.9.9"]
 
 
+def test_update_pipx_parse_failure_recovery_reuses_the_one_pypi_lookup(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    # One PyPI lookup per `mb update` run, including the pipx recovery path (#1028).
+    lookups: list[str] = []
+
+    def fake_latest() -> str:
+        lookups.append("pypi")
+        return "9.9.9"
+
+    def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        return _completed(
+            args,
+            returncode=1,
+            stderr="Unable to parse package spec: /tmp/dist/mainbranch-0.3.39-py3-none-any.whl",
+        )
+
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", fake_latest)
+    monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+
+    result = update_mod.run(repo=tmp_path / "biz")
+
+    assert result["next_actions"] == ["pipx install --force mainbranch==9.9.9"]
+    assert lookups == ["pypi"]
+
+
 def test_update_render_human_failure_prints_next_action(capsys: Any) -> None:
     update_mod.render_human(
         {

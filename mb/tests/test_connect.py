@@ -2184,7 +2184,9 @@ def test_connect_exec_uses_no_shell(tmp_path: Path, monkeypatch) -> None:
     }
     assert seen["args"] == ["wrangler", "whoami"]
     assert "shell" not in seen["kwargs"]
-    assert seen["kwargs"]["env"]["CLOUDFLARE_API_TOKEN"] == "cf-fixture-0000"
+    # Read only the checked key so a failure never prints the whole environment.
+    token = seen["kwargs"]["env"].get("CLOUDFLARE_API_TOKEN")
+    assert token == "cf-fixture-0000"
     assert "cf-fixture-0000" not in json.dumps(outcome)
 
 

@@ -40,6 +40,7 @@ from mb.freshness import (
     UV_UPDATE_COMMAND_TEXT as UV_UPDATE_COMMAND_TEXT,
 )
 from mb.freshness import (
+    checked_release_version,
     compare_versions,
     release_notes_url,
     version_key,
@@ -98,8 +99,6 @@ LATEST_UNKNOWN_MESSAGE = (
     "install ({installed}) alone. Installing without that check could replace it "
     "with an older version. Check your connection, then run `{retry}` again."
 )
-# A release version as PyPI publishes it: 0.6.3, 0.6.3rc1, 0.6.3.post1, 0.7.0.dev2.
-_RELEASE_VERSION_RE = re.compile(r"^\d+(\.\d+)*((a|b|rc)\d+)?(\.post\d+)?(\.dev\d+)?$")
 GITHUB_RELEASE_API_URL_TEMPLATE = (
     "https://api.github.com/repos/noontide-co/mainbranch/releases/tags/oe-v{version}"
 )
@@ -263,8 +262,7 @@ def _checked_latest_version() -> str | None:
     release version. Callers treat None as "freshness unknown", never as
     permission to install.
     """
-    latest = (_latest_pypi_version() or "").strip()
-    return latest if _RELEASE_VERSION_RE.fullmatch(latest) else None
+    return checked_release_version(_latest_pypi_version())
 
 
 def _note_latest_unknown(result: dict[str, Any], *, retry: str) -> None:
@@ -342,8 +340,7 @@ def _looks_like_pipx_package_spec_parse_failure(
     return ".whl" in output or "/" in output or "\\" in output
 
 
-def _pipx_force_install_recovery_command() -> str:
-    latest = (_latest_pypi_version() or "").strip()
+def _pipx_force_install_recovery_command(latest: str | None) -> str:
     if latest:
         return f"pipx install --force mainbranch=={latest}"
     return "pipx install --force mainbranch"
@@ -352,10 +349,12 @@ def _pipx_force_install_recovery_command() -> str:
 def _add_pipx_package_spec_recovery(
     result: dict[str, Any],
     upgrade: subprocess.CompletedProcess[str],
+    latest: str | None,
 ) -> None:
     if not _looks_like_pipx_package_spec_parse_failure(upgrade):
         return
-    command = _pipx_force_install_recovery_command()
+    # Reuses the run's one PyPI lookup rather than asking again (#1028).
+    command = _pipx_force_install_recovery_command(latest)
     result["warnings"].append(
         "pipx could not parse the saved Main Branch install spec. This can happen "
         "after installing from a local wheel path. Approve a forced pipx reinstall "
@@ -1128,7 +1127,7 @@ def run(
             result["ok"] = False
             result["new_version"] = result["old_version"]
             result["errors"].append(_command_error("pipx upgrade mainbranch", upgrade))
-            _add_pipx_package_spec_recovery(result, upgrade)
+            _add_pipx_package_spec_recovery(result, upgrade, latest)
             return result
         result["new_version"] = _version_from_mb_command() or result["old_version"]
         result["upgrade_performed"] = True

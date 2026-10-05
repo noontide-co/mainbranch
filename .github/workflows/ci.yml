@@ -118,16 +118,21 @@ jobs:
 
   minimum-dependencies:
     # Installs every runtime dependency mb/pyproject.toml declares at its
-    # lowest allowed version on the lowest supported Python, then loads the
-    # CLI. `lowest-direct`, not `lowest`: transitive floors (for example
-    # cryptography 2.0 under SecretStorage on Linux) no longer build.
-    # Catches a declared floor that mb cannot actually run on (#997).
+    # lowest allowed version on the lowest supported Python and on 3.12, then
+    # loads the CLI. `lowest-direct`, not `lowest`: transitive floors (for
+    # example cryptography 2.0 under SecretStorage on Linux) no longer build.
+    # Catches a declared floor that mb cannot actually run on (#997), including
+    # one that only fails to build on a newer Python (pyyaml 6.0 on 3.12, #1028).
     # No secrets; read-only token.
     name: Minimum dependency floors
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
     defaults:
       run:
         working-directory: mb
@@ -136,10 +141,10 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Python 3.10
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v7
         with:
-          python-version: "3.10"
+          python-version: ${{ matrix.python-version }}
 
       - name: Install mb at its declared minimum dependencies
         run: |

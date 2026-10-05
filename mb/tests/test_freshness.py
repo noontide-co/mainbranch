@@ -6,7 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from mb.freshness import compare_versions, format_update_alert, package_update_status
+from mb import freshness as freshness_mod
+from mb.freshness import (
+    checked_release_version,
+    compare_versions,
+    format_update_alert,
+    package_update_status,
+)
 
 
 def test_required_update_status_for_version_below_minimum(tmp_path: Path) -> None:
@@ -154,3 +160,61 @@ def test_required_update_does_not_apply_to_clone_or_source(mode: str) -> None:
 )
 def test_compare_versions_follows_pep440(left: str, right: str, expected: int) -> None:
     assert compare_versions(left, right) == expected
+
+
+@pytest.mark.parametrize(
+    ("installed", "latest", "severity"),
+    [
+        ("0.6.3rc1", "0.6.3", "recommended"),
+        ("0.6.3.dev2", "0.6.3", "recommended"),
+        ("0.6.3", "0.6.3rc1", "current"),
+        ("0.6.3", "0.6.3.post1", "recommended"),
+    ],
+)
+def test_recommended_update_orders_pre_releases_like_installers(
+    installed: str, latest: str, severity: str
+) -> None:
+    # "recommended" uses the same PEP 440 ordering as `mb update` (#1028).
+    update = package_update_status(
+        None, installed_version=installed, latest_version=latest, mode="pipx"
+    )
+
+    assert update["severity"] == severity
+
+
+@pytest.mark.parametrize("latest", ["not-a-version", "<html>", "0.6.x"])
+def test_unparseable_latest_version_counts_as_unknown(latest: str) -> None:
+    update = package_update_status(
+        None, installed_version="0.6.3", latest_version=latest, mode="pipx"
+    )
+
+    assert update["severity"] == "unknown"
+    assert update["latest"] == ""
+    assert update["command"] == ""
+    assert update["release_notes_url"] == ""
+
+
+def test_unparseable_pypi_answer_counts_as_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(freshness_mod, "latest_pypi_version", lambda: "<html>")
+
+    update = package_update_status(None, installed_version="0.6.3", mode="pipx")
+
+    assert update["severity"] == "unknown"
+    assert update["latest"] == ""
+    assert update["latest_source"] == "unavailable"
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("0.6.3", "0.6.3"),
+        (" 0.6.3rc1\n", "0.6.3rc1"),
+        ("0.7.0.dev2", "0.7.0.dev2"),
+        ("0.6.3.post1", "0.6.3.post1"),
+        ("not-a-version", None),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_checked_release_version(raw: object, expected: str | None) -> None:
+    assert checked_release_version(raw) == expected
