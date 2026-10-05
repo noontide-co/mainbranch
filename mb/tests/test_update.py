@@ -2663,7 +2663,8 @@ def _probe_repo(repo: Path, tmp_path: Path, kind: str) -> str:
     elif kind == "codex_cleanup":
         legacy = repo / ".agents" / "skills" / "main-branch" / "SKILL.md"
         legacy.parent.mkdir(parents=True)
-        legacy.write_text("legacy skill\n", encoding="utf-8")
+        # #1052: only a file `mb` wrote there is removed.
+        legacy.write_text(codex_mod.render_codex_global_skill_md("main-branch"), encoding="utf-8")
         at_risk = ".agents/skills/main-branch"
     _commit_all(repo, "Probe setup")
     assert _git(repo, "status", "--porcelain") == ""
@@ -2722,6 +2723,71 @@ def test_review_probe_yes_changes_only_listed_files(
             listed,
         )
     assert result["ok"] is True, result["errors"]
+
+
+def _agents_md_missing_end_marker(repo: Path) -> str:
+    codex_mod.write_agents_md(repo)
+    text = (repo / "AGENTS.md").read_text(encoding="utf-8")
+    # Guidance from an older template, so the repair is due.
+    stale = text.replace(codex_mod.guidance_template_hash(), "0000000000000000")
+    broken = stale.replace(codex_mod.AGENTS_MANAGED_END + "\n", "") + "\n## Our notes\n\nKeep.\n"
+    (repo / "AGENTS.md").write_text(broken, encoding="utf-8")
+    _commit_all(repo, "Notes under the guidance")
+    return broken
+
+
+@pytest.mark.parametrize("interactive", [False, True])
+def test_update_reports_a_refused_codex_repair_and_writes_nothing(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, interactive: bool
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    _with_current_gitignore(business_repo)
+    broken = _agents_md_missing_end_marker(business_repo)
+    asked: list[list[str]] = []
+
+    def say_yes(repo: Path, files: list[str]) -> bool:
+        asked.append(files)
+        return True
+
+    result = update_mod.run(repo=business_repo, interactive=interactive, confirm_surfaces=say_yes)
+
+    assert (business_repo / "AGENTS.md").read_text(encoding="utf-8") == broken
+    assert _git(business_repo, "status", "--porcelain") == ""
+    assert not any("--apply" in args and "codex" in args for args in calls)
+    assert all("AGENTS.md" not in files for files in asked)
+    codex_surface = result["surface_refresh"]["codex"]
+    assert codex_surface["applied"] is False
+    assert codex_surface["blocked"] is True
+    assert "no end marker" in codex_surface["reason"]
+    assert "AGENTS.md" not in result["surface_refresh"]["planned"]["tracked_files"]
+    entries = [item for item in result["operator_actions"] if item.get("id") == "codex-agents-md"]
+    assert len(entries) == 1
+    entry = entries[0]
+    assert entry["command"] == f"mb doctor repair --repo {business_repo} --apply --only codex"
+    assert entry["changes"] == ["AGENTS.md"]
+    assert codex_mod.AGENTS_MANAGED_END in entry["manual_step"]
+    assert entry["manual_step"] in entry["note"]
+    assert not any(
+        item["note"] == update_mod.SURFACE_CODEX_APPLY_NOTE for item in result["operator_actions"]
+    )
+    assert f"mb doctor repair --repo {business_repo} --plan --only codex" in result["next_actions"]
+    assert any(entry["reason"] in warning for warning in result["warnings"])
+    assert result["ok"] is True, result["errors"]
+
+
+def test_update_codex_follow_up_names_the_manual_step(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path
+) -> None:
+    _agents_md_missing_end_marker(business_repo)
+    result: dict[str, Any] = {"operator_actions": [], "warnings": [], "next_actions": []}
+
+    update_mod._add_codex_follow_up(result, business_repo)
+
+    entries = [item for item in result["operator_actions"] if item.get("id") == "codex-agents-md"]
+    assert len(entries) == 1
+    assert codex_mod.AGENTS_MANAGED_END in entries[0]["manual_step"]
+    assert entries[0]["command"] == codex_mod.CODEX_REPAIR_COMMAND
 
 
 def test_unattended_guard_reports_a_tracked_change_the_plan_missed(

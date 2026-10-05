@@ -36,6 +36,18 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- `mb doctor repair --apply --only codex` (and the same Codex refresh from
+  `mb update`) no longer deletes what a person wrote. In an `AGENTS.md` from
+  before the managed markers it replaces only the old generated text, matched
+  against the template its metadata names, and keeps the person's sections
+  after the new block; if that text was edited, it refuses. It also refuses
+  when a begin or end marker is missing or out of order. It never replaces
+  the whole file. In the old repo-local Codex paths it deletes only files
+  Main Branch wrote and leaves the rest, along with their folders. While the
+  repair would refuse or leave a person's files, `codex-agents-md` is not
+  `safe_to_apply`, and `mb doctor repair` and `mb update` list it in
+  `operator_actions` with the reason and the manual step; `mb update` makes
+  no Codex write. JSON keys are additive (#1052).
 - `mb`'s own usage errors (an unknown option, an unexpected extra argument,
   an invalid value) no longer repeat command-line input that could be a
   credential: it is replaced with `(not shown: it may be a credential)`, on

@@ -1752,19 +1752,141 @@ def _managed_agents_content(text: str) -> str:
     return text[body_start + 1 : end].strip() + "\n"
 
 
-def _merge_agents_md(existing: str, rendered: str) -> str:
+_GUIDANCE_METADATA_RE = re.compile(r"<!--\s*mainbranch:codex-guidance\s+[^>]*-->")
+_OWNER_LINE_RE = re.compile(r"^`@[^`\s]*`$")
+AGENTS_RERUN_STEP = "then run `mb doctor repair --plan --only codex` again."
+
+
+def _agents_refusal(code: str, reason: str, manual_step: str) -> dict[str, str]:
+    return {
+        "path": AGENTS_RELATIVE_PATH,
+        "code": code,
+        "reason": reason,
+        "manual_step": manual_step,
+    }
+
+
+def _marker_refusal(existing: str) -> dict[str, str] | None:
+    """Refuse any managed-marker layout other than one begin before one end (#1052).
+
+    Without both markers in order, Main Branch cannot tell where its guidance
+    ends and a person's notes begin, so it writes nothing.
+    """
+
+    begins = existing.count(AGENTS_MANAGED_BEGIN)
+    ends = existing.count(AGENTS_MANAGED_END)
+    if begins == 0 and ends == 0:
+        return None
+    if (
+        begins == 1
+        and ends == 1
+        and existing.find(AGENTS_MANAGED_BEGIN) < existing.find(AGENTS_MANAGED_END)
+    ):
+        return None
+    if begins == 1 and ends == 0:
+        return _agents_refusal(
+            "missing_end_marker",
+            "AGENTS.md has the Main Branch begin marker but no end marker, so Main "
+            "Branch cannot tell where its guidance ends and your own notes begin. "
+            "It left the file unchanged.",
+            f"Put `{AGENTS_MANAGED_END}` on its own line right after the Main Branch "
+            f"guidance (above any notes of your own), {AGENTS_RERUN_STEP}",
+        )
+    if begins == 0 and ends == 1:
+        return _agents_refusal(
+            "missing_begin_marker",
+            "AGENTS.md has the Main Branch end marker but no begin marker, so Main "
+            "Branch cannot tell where its guidance starts. It left the file unchanged.",
+            f"Put `{AGENTS_MANAGED_BEGIN}` on its own line right before the Main "
+            f"Branch guidance (below any notes of your own), {AGENTS_RERUN_STEP}",
+        )
+    return _agents_refusal(
+        "marker_mismatch",
+        f"AGENTS.md has {begins} Main Branch begin marker(s) and {ends} end "
+        "marker(s), not one of each in order, so Main Branch cannot tell which text "
+        "is its guidance. It left the file unchanged.",
+        f"Keep exactly one `{AGENTS_MANAGED_BEGIN}` above the Main Branch guidance "
+        f"and one `{AGENTS_MANAGED_END}` below it, {AGENTS_RERUN_STEP}",
+    )
+
+
+def _unrendered_template_hash(body: str) -> str:
+    """The template hash of rendered guidance text, with its two fields put back.
+
+    Every template that carried the metadata comment had one `# {{BUSINESS_NAME}}`
+    heading as its first line and one `` `@{{GH_USERNAME}}` `` line as its last.
+    """
+
+    lines = body.replace("\r\n", "\n").strip().split("\n")
+    if len(lines) < 2 or not lines[0].startswith("# ") or not _OWNER_LINE_RE.match(lines[-1]):
+        return ""
+    lines[0] = "# {{BUSINESS_NAME}}"
+    lines[-1] = "`@{{GH_USERNAME}}`"
+    return hashlib.sha256(("\n".join(lines) + "\n").encode("utf-8")).hexdigest()[:16]
+
+
+def _old_generated_span(existing: str) -> tuple[int, int] | None:
+    """Where an older generated AGENTS.md sits inside `existing`, or None (#1052).
+
+    Before the managed markers, `mb` wrote the whole file from the template
+    with the metadata comment on top. A span counts only when the text from
+    that comment to an owner line, with the business name and owner put back,
+    hashes to the `template_hash` the comment names: exactly the generated
+    text, unedited. Anything before or after it was written by a person.
+    """
+
+    match = _GUIDANCE_METADATA_RE.search(existing)
+    digest = parse_guidance_metadata(existing).get("template_hash", "")
+    if not match or not digest:
+        return None
+    offset = match.end()
+    for line in existing[match.end() :].splitlines(keepends=True):
+        offset += len(line)
+        if not _OWNER_LINE_RE.match(line.strip()):
+            continue
+        if _unrendered_template_hash(existing[match.end() : offset]) == digest:
+            return match.start(), offset
+    return None
+
+
+def _merge_agents_md(existing: str, rendered: str) -> tuple[str, dict[str, str] | None]:
+    """The new AGENTS.md text, or the unchanged text and why it was refused.
+
+    Only Main Branch's own guidance is replaced: the text between the managed
+    markers, or an older generated file recognised by its template hash.
+    Everything else in the file is kept. When the guidance cannot be told apart
+    from a person's notes, nothing is written (#1052).
+    """
+
     block = _managed_agents_block(rendered)
+    refusal = _marker_refusal(existing)
+    if refusal is not None:
+        return existing, refusal
     start = existing.find(AGENTS_MANAGED_BEGIN)
     if start != -1:
         end = existing.find(AGENTS_MANAGED_END, start)
-        if end != -1:
-            tail_start = end + len(AGENTS_MANAGED_END)
-            return existing[:start] + block.rstrip("\n") + existing[tail_start:]
+        tail_start = end + len(AGENTS_MANAGED_END)
+        return existing[:start] + block.rstrip("\n") + existing[tail_start:], None
     if not existing.strip():
-        return block
-    if parse_guidance_metadata(existing):
-        return block
-    return block + "\n" + existing
+        return block, None
+    if not parse_guidance_metadata(existing):
+        return block + "\n" + existing, None
+    span = _old_generated_span(existing)
+    if span is None:
+        return existing, _agents_refusal(
+            "unrecognised_generated_text",
+            "AGENTS.md was written by an older Main Branch (it has the guidance "
+            "metadata comment but no begin and end markers), and its text no longer "
+            "matches the template that comment names, so Main Branch cannot separate "
+            "its guidance from text you wrote. It left the file unchanged.",
+            f"Put `{AGENTS_MANAGED_BEGIN}` on its own line above the Main Branch "
+            f"guidance and `{AGENTS_MANAGED_END}` below it, keeping your own notes "
+            f"outside the markers, {AGENTS_RERUN_STEP}",
+        )
+    kept = (existing[: span[0]] + existing[span[1] :]).strip("\n")
+    if not kept.strip():
+        return block, None
+    return block + "\n" + kept + "\n", None
 
 
 def _markdown_section(text: str, heading: str) -> str:
@@ -3009,15 +3131,133 @@ def _remove_empty_transitional_dirs(target: Path) -> None:
             pass
 
 
+_MAINBRANCH_PLUGIN_NAMES = frozenset({CODEX_PLUGIN_NAME, CODEX_LEGACY_PLUGIN_NAME})
+_MAINBRANCH_MARKETPLACE_NAMES = frozenset({CODEX_MARKETPLACE_NAME, "main-branch-local"})
+_MAINBRANCH_SKILL_NAME_RE = re.compile(r"^name:\s*(main-branch|main-branch-owner-loop)\s*$", re.M)
+
+
+def _is_mainbranch_transitional_file(path: Path) -> bool:
+    """Whether `mb` wrote this file into a transitional repo-local Codex path (#1052).
+
+    The repo-local copies (0.3.2x) carried no single ownership marker, and
+    their text embeds the `mb` version, so no content hash fits every release.
+    Each file is matched by the name `mb` gave it plus text every release of
+    that file carried. Anything else is treated as a person's file.
+    """
+
+    if path.is_symlink() or not path.is_file():
+        return False
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return False
+    name = path.name
+    if name == "SKILL.md":
+        return bool(_MAINBRANCH_SKILL_NAME_RE.search(text)) and "Main Branch" in text
+    if name == "workflow-inventory.md":
+        return text.startswith("# Main Branch Codex Workflow Inventory")
+    if path.parent.name == "commands" and name.startswith("mb-") and name.endswith(".md"):
+        return "Main Branch" in text
+    if name not in {"plugin.json", "marketplace.json"}:
+        return False
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        return False
+    if not isinstance(payload, dict):
+        return False
+    if name == "plugin.json":
+        return payload.get("name") in _MAINBRANCH_PLUGIN_NAMES and "noontide-co/mainbranch" in str(
+            payload.get("repository", "")
+        )
+    plugins = payload.get("plugins")
+    return (
+        payload.get("name") in _MAINBRANCH_MARKETPLACE_NAMES
+        and isinstance(plugins, list)
+        and bool(plugins)
+        and all(
+            isinstance(item, dict) and item.get("name") in _MAINBRANCH_PLUGIN_NAMES
+            for item in plugins
+        )
+    )
+
+
+def _transitional_cleanup(target: Path) -> tuple[list[dict[str, Any]], list[str]]:
+    """Removals for the transitional repo-local Codex paths, and the files kept.
+
+    A path is removed whole only when every file in it is one `mb` wrote. When
+    a person's file sits inside, only the `mb` files are removed one by one and
+    the person's files (and their folders) stay (#1052). A symlink at a
+    transitional path is removed as a link, never followed.
+    """
+
+    operations: list[dict[str, Any]] = []
+    kept: list[str] = []
+    for relative in _transitional_repo_paths():
+        candidate = target / relative
+        if (candidate.is_symlink() and candidate.exists()) or (
+            candidate.is_file() and _is_mainbranch_transitional_file(candidate)
+        ):
+            operations.append({"op": "delete_tree", "path": str(candidate), "rel": relative})
+            continue
+        if candidate.is_file():
+            kept.append(relative)
+            continue
+        if not candidate.is_dir():
+            continue
+        owned: list[Path] = []
+        person: list[Path] = []
+        for root, dirs, files in os.walk(candidate):
+            base = Path(root)
+            for entry in [*files, *(name for name in dirs if (base / name).is_symlink())]:
+                path = base / entry
+                (owned if _is_mainbranch_transitional_file(path) else person).append(path)
+        if not person:
+            operations.append({"op": "delete_tree", "path": str(candidate), "rel": relative})
+            continue
+        kept.extend(sorted(path.relative_to(target).as_posix() for path in person))
+        operations.extend(
+            {"op": "delete", "path": str(path), "rel": path.relative_to(target).as_posix()}
+            for path in sorted(owned)
+        )
+    return operations, kept
+
+
+def _remove_transitional_file(path: Path, target: Path) -> bool:
+    """Remove one `mb` file, then any folders it leaves empty, up to the repo."""
+
+    if not path.is_file() or path.is_symlink():
+        return False
+    path.unlink()
+    parent = path.parent
+    while parent != target and target in parent.parents:
+        try:
+            parent.rmdir()
+        except OSError:
+            break
+        parent = parent.parent
+    return True
+
+
+def _apply_transitional_operation(item: dict[str, Any], target: Path) -> bool:
+    path = Path(item["path"])
+    if item["op"] == "delete":
+        return _remove_transitional_file(path, target)
+    return _remove_generated_tree(path)
+
+
 def remove_repo_local_codex_plugin_files(repo: str | Path) -> list[str]:
-    """Remove generated repo-local Codex plugin files from the transitional model."""
+    """Remove generated repo-local Codex plugin files from the transitional model.
+
+    Only files `mb` wrote are removed; a person's files stay (#1052).
+    """
 
     target = Path(repo).expanduser().resolve()
     removed: list[str] = []
-    for relative in _transitional_repo_paths():
-        path = target / relative
-        if _remove_generated_tree(path):
-            removed.append(relative)
+    operations, _kept = _transitional_cleanup(target)
+    for item in operations:
+        if _apply_transitional_operation(item, target):
+            removed.append(str(item["rel"]))
     _remove_empty_transitional_dirs(target)
     return removed
 
@@ -3235,33 +3475,78 @@ def human_readiness_label(readiness_report: dict[str, Any]) -> str:
     return "not ready"
 
 
-def agents_md_operations(
+def agents_md_plan(
     repo: str | Path,
     *,
     name: str = "",
     gh_username: str = "",
-) -> list[dict[str, Any]]:
-    """Every destination `write_agents_md` touches, in order (#1012).
+) -> dict[str, Any]:
+    """What `write_agents_md` would do, what it refuses, and what it leaves (#1052).
 
-    The AGENTS.md write, then each transitional repo-local Codex file it
-    removes.
+    `operations` lists every destination it touches, in order (#1012): the
+    AGENTS.md write, then each transitional repo-local Codex path or file it
+    removes. `refused` names an AGENTS.md it will not touch, with the reason
+    and the manual step; then nothing is written at all. `kept` lists the
+    person's files left in transitional paths.
     """
 
     target = Path(repo).expanduser().resolve()
     path = agents_path(target)
     rendered = render_agents_md(target, name=name, gh_username=gh_username)
     existing = path.read_text(encoding="utf-8") if path.exists() else ""
-    updated = _merge_agents_md(existing, rendered)
+    updated, refusal = _merge_agents_md(existing, rendered)
+    if refusal is not None:
+        return {"operations": [], "refused": [refusal], "kept": []}
     operations: list[dict[str, Any]] = []
     if existing != updated:
         operations.append(
             {"op": "write", "path": str(path), "rel": AGENTS_RELATIVE_PATH, "content": updated}
         )
-    for relative in _transitional_repo_paths():
-        candidate = target / relative
-        if candidate.is_dir() or candidate.is_file():
-            operations.append({"op": "delete_tree", "path": str(candidate), "rel": relative})
-    return operations
+    removals, kept = _transitional_cleanup(target)
+    operations.extend(removals)
+    return {"operations": operations, "refused": [], "kept": kept}
+
+
+def agents_md_operations(
+    repo: str | Path,
+    *,
+    name: str = "",
+    gh_username: str = "",
+) -> list[dict[str, Any]]:
+    """Every destination `write_agents_md` touches, in order (#1012)."""
+
+    return list(agents_md_plan(repo, name=name, gh_username=gh_username)["operations"])
+
+
+def agents_md_operator_action(plan: dict[str, Any]) -> dict[str, Any] | None:
+    """The `operator_actions` entry while the Codex AGENTS.md repair needs a person.
+
+    None when the plan only replaces Main Branch's own guidance. Otherwise it
+    names the reason and the manual step (#1052).
+    """
+
+    refused = plan.get("refused") or []
+    kept = plan.get("kept") or []
+    if refused:
+        reason = str(refused[0]["reason"])
+        manual_step = str(refused[0]["manual_step"])
+        changes = [AGENTS_RELATIVE_PATH]
+    elif kept:
+        reason = (
+            "Old repo-local Codex folders hold files Main Branch did not write: "
+            + ", ".join(kept)
+            + ". The repair removes only the Main Branch files and leaves these."
+        )
+        manual_step = (
+            "Move or delete those files yourself if you no longer need them, then "
+            "run the command to remove the Main Branch copies."
+        )
+        changes = [str(item["rel"]) for item in plan.get("operations", [])]
+    else:
+        return None
+    action = engine_mod.operator_action(CODEX_REPAIR_COMMAND, changes, f"{reason} {manual_step}")
+    action.update({"id": "codex-agents-md", "reason": reason, "manual_step": manual_step})
+    return action
 
 
 def write_agents_md(
@@ -3271,18 +3556,22 @@ def write_agents_md(
     gh_username: str = "",
 ) -> dict[str, Any]:
     target = Path(repo).expanduser().resolve()
+    plan = agents_md_plan(target, name=name, gh_username=gh_username)
     changed_paths: list[str] = []
-    for item in agents_md_operations(target, name=name, gh_username=gh_username):
+    for item in plan["operations"]:
         if item["op"] == "write":
             atomic_write_text(Path(item["path"]), item["content"])
             changed_paths.append(AGENTS_RELATIVE_PATH)
-        elif _remove_generated_tree(Path(item["path"])):
+        elif _apply_transitional_operation(item, target):
             changed_paths.append(f"removed:{item['rel']}")
-    _remove_empty_transitional_dirs(target)
+    if not plan["refused"]:
+        _remove_empty_transitional_dirs(target)
     return {
-        "ok": True,
+        "ok": not plan["refused"],
         "path": AGENTS_RELATIVE_PATH,
         "changed": bool(changed_paths),
         "changed_paths": changed_paths,
+        "refused": plan["refused"],
+        "kept": plan["kept"],
         "status": instructions_status(target),
     }

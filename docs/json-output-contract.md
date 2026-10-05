@@ -111,7 +111,19 @@ Entries today:
   entry's `changes` comes from that surface's tracked writes. The same
   commands stay in `surface_refresh.planned.apply_commands`; they are not in
   `next_actions`. The read-only `mb doctor repair --plan --only codex` stays in
-  `next_actions` so an agent can show the plan first.
+  `next_actions` so an agent can show the plan first;
+- the Codex `AGENTS.md` repair while it needs a person first
+  (`mb doctor repair` and `mb update`, #1052). This entry also has
+  `id: "codex-agents-md"`, `reason` and `manual_step` (also folded into
+  `note`). It appears when the repair would refuse to touch `AGENTS.md`
+  (managed markers missing or out of order, or older generated guidance that
+  no longer matches the template its metadata names), or when old repo-local
+  Codex paths hold files Main Branch did not write. The repair removes only
+  files Main Branch wrote there and never touches the person's files. While
+  this entry is present, doctor's `codex-agents-md` action has
+  `safe_to_apply: false` with the additive `refused` and `kept` lists, and
+  `mb update` makes no Codex write (`surface_refresh.codex.blocked: true` and
+  a `reason`) and asks no consent for it.
 
 ```json
 {
@@ -132,7 +144,8 @@ Entries today:
 
 The list is empty when there is nothing for a person to run.
 `mb doctor repair --apply` never performs an operator action, and
-`mb doctor repair --only codex` leaves the plugin switch out.
+`mb doctor repair --only codex` lists only the Codex entries (it leaves the
+plugin switch out).
 
 ### MoneyPath Proof Quality
 
