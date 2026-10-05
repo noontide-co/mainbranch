@@ -90,9 +90,7 @@ REFERENCE_COMPAT_LINKS = {
 STATE_ORDER = {"ok": 0, "info": 1, "warn": 2, "error": 3}
 AUDIENCE_VALUES = frozenset({"mechanical", "operator_decision", "informational"})
 AGENT_REPAIR_SCOPES = frozenset({"claude", "codex"})
-CLAUDE_ACTION_IDS = frozenset(
-    {"skill-link", "plugin-wiring", "skill-shadow-repair", "legacy-claude-link-repair"}
-)
+CLAUDE_ACTION_IDS = frozenset({"skill-link", "skill-shadow-repair", "legacy-claude-link-repair"})
 CODEX_ACTION_IDS = frozenset({"codex-agents-md", "codex-global-skill"})
 AGENT_ACTION_IDS = CLAUDE_ACTION_IDS | CODEX_ACTION_IDS
 AGENT_SECTION_IDS = frozenset({"claude-wiring", "codex-wiring", "git"})
@@ -2088,6 +2086,7 @@ def _not_business_folder_guard(target: Path, *, mode: str = "plan") -> dict[str,
             )
         ],
         "actions": [],
+        "operator_actions": [],
         "applied_actions": [],
         "post_apply": {
             "structural_verification": "mb onboard",
@@ -2118,6 +2117,7 @@ def repair_plan(
         return guard
     doctor_report = run(str(target))
     actions: list[dict[str, Any]] = []
+    operator_actions: list[dict[str, Any]] = []
     sections: list[dict[str, Any]] = []
 
     update = doctor_report.get("update", {})
@@ -2540,26 +2540,10 @@ def repair_plan(
             )
         )
     if not engine_mod.plugin_wiring_status(target).get("wired"):
-        # Plan/apply parity: repair_apply writes plugin wiring when unwired
-        # (gated on apply_claude), so the plan must surface it too — otherwise
-        # `--plan` shows nothing while `--apply` writes a tracked file, breaking
-        # the review-before-apply contract precisely on the Stage-3 migration.
-        actions.append(
-            _action(
-                id="plugin-wiring",
-                title="Wire the Main Branch plugin into tracked settings",
-                state="warn",
-                mode="write",
-                command="mb skill link --repo . --plugin --json",
-                safe_to_apply=True,
-                reason=(
-                    "wires the worktree-durable, cross-surface plugin rail (Claude "
-                    "Desktop + CLI + IDEs) so skill discovery survives worktrees; "
-                    "symlinks remain the fallback (decision 2026-06-10, Stage 3)"
-                ),
-                writes=[".claude/settings.json"],
-            )
-        )
+        # #1042: the plugin-rail switch writes the tracked `.claude/settings.json`,
+        # so it is a step for a person at a terminal, never a repair an agent
+        # applies. Report it the way `mb update` does, in `operator_actions`.
+        operator_actions.append(engine_mod.plugin_switch_operator_action())
     if int(shadow_report.get("summary", {}).get("repairable", 0) or 0):
         actions.append(
             _action(
@@ -2942,6 +2926,8 @@ def repair_plan(
         },
         "sections": sections,
         "actions": actions,
+        # Steps for a person at a terminal, never run by an agent (#1042).
+        "operator_actions": [] if only == "codex" else operator_actions,
         "applied_actions": applied_actions or [],
         "agent_surfaces": agent_surfaces,
         "receipt": _repair_receipt(
@@ -3097,26 +3083,8 @@ def repair_apply(
             )
         )
 
-    if apply_claude and not engine_mod.plugin_wiring_status(target).get("wired"):
-        plugin_wiring = engine_mod.write_plugin_wiring(target)
-        applied.append(
-            _action(
-                id="plugin-wiring",
-                title="Wired the Main Branch plugin into tracked settings",
-                state="ok" if plugin_wiring["ok"] else "error",
-                mode="write",
-                command="mb skill link --repo . --plugin --json",
-                safe_to_apply=True,
-                reason=(
-                    "wired the worktree-durable, cross-surface plugin rail (Claude "
-                    "Desktop + CLI + IDEs) so skill discovery survives worktrees; "
-                    "symlinks remain the fallback (decision 2026-06-10, Stage 3)"
-                ),
-                writes=[".claude/settings.json"],
-                applied=True,
-                result=plugin_wiring,
-            )
-        )
+    # #1042: never switch a repo to the plugin rail here. The switch writes the
+    # tracked `.claude/settings.json`; the plan lists it in `operator_actions`.
 
     legacy_links = _legacy_claude_symlinks(target)
     repaired_links = (
@@ -3320,6 +3288,12 @@ def render_repair(report: dict[str, Any]) -> None:
             console.print(f"    why: {action['reason']}")
     else:
         console.print("\n[green]No repair actions needed.[/green]")
+    if report.get("operator_actions"):
+        console.print("\n[bold]For you to run[/bold]")
+        for item in report["operator_actions"]:
+            console.print(f"  - {item['command']}", markup=False)
+            if item.get("note"):
+                console.print(f"    {item['note']}", markup=False)
     console.print("\n[bold]After apply[/bold]")
     console.print(f"  structural: {report['post_apply']['structural_verification']}")
     console.print(f"  validation: {report['post_apply']['validation_frontmatter_debt']}")

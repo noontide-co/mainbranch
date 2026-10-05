@@ -26,6 +26,8 @@ from mb.engine import (
     engine_root,
     install_mode,
     looks_like_uv_tool_install,
+    operator_action,
+    plugin_switch_operator_action,
     plugin_wiring_status,
 )
 
@@ -63,14 +65,6 @@ UV_UPDATE_COMMAND = [
     PACKAGE_NAME,
     f"{PACKAGE_NAME}@latest",
 ]
-# The plugin-rail switch writes a tracked file, so `mb update` lists it in
-# `operator_actions` for a person, never in `next_actions` (#1023).
-PLUGIN_SWITCH_COMMAND = "mb skill link --repo . --plugin"
-PLUGIN_SWITCH_NOTE = (
-    "For a person to run at a terminal, not an agent: switches this repo to the "
-    "Main Branch plugin rail by writing the tracked `.claude/settings.json`. "
-    "Restart Claude Code afterwards."
-)
 UV_MANUAL_MESSAGE = (
     "Main Branch was installed as a uv tool. Upgrading replaces the installed "
     "command, so it only runs after an explicit yes at an interactive prompt. "
@@ -95,6 +89,15 @@ SURFACE_PLAN_NO_TERMINAL_MESSAGE = (
 )
 SURFACE_PLAN_DECLINED_MESSAGE = (
     "Left tracked files unchanged: {files}. Run the commands below whenever you want these changes."
+)
+SURFACE_LINK_APPLY_NOTE = (
+    "For a person to run at a terminal, not an agent: refreshes this repo's "
+    "Claude Code skill links, which writes the tracked files listed in `changes`."
+)
+SURFACE_CODEX_APPLY_NOTE = (
+    "For a person to run at a terminal, not an agent: refreshes this repo's "
+    "Codex guidance, which writes or deletes the tracked files listed in "
+    "`changes`. Review the read-only plan in `next_actions` first."
 )
 AHEAD_OF_PYPI_MESSAGE = (
     "Installed Main Branch {installed} is newer than PyPI's latest release "
@@ -729,10 +732,21 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
                 "`mb doctor repair --plan --only codex`, review it, then approve "
                 "`mb doctor repair --apply --only codex`."
             )
-            next_actions = [
-                "mb doctor repair --plan --only codex",
-                "mb doctor repair --apply --only codex",
-            ]
+            next_actions = ["mb doctor repair --plan --only codex"]
+            # #1049: the apply rewrites the tracked AGENTS.md, so it is a step
+            # for a person; the surface refresh may already have listed it.
+            if not any(
+                "--apply --only codex" in str(item.get("command", ""))
+                for item in result["operator_actions"]
+            ):
+                changes = [str(op["rel"]) for op in codex_mod.agents_md_operations(repo)]
+                result["operator_actions"].append(
+                    operator_action(
+                        codex_mod.CODEX_REPAIR_COMMAND,
+                        changes or ["AGENTS.md"],
+                        SURFACE_CODEX_APPLY_NOTE,
+                    )
+                )
         elif not codex.get("global_skill_ok", False):
             message = (
                 "The global Main Branch Codex skills are not ready, so `mb-*` "
@@ -782,19 +796,12 @@ def _add_plugin_follow_up(result: dict[str, Any], repo: Path) -> None:
         result["warnings"].append(
             "This repo is on symlink-only skill wiring. The Main Branch plugin is "
             "the default cross-surface rail (Claude Desktop and the terminal, and "
-            "it survives git worktrees). Migrate when you're ready with "
-            "`mb skill link --repo . --plugin` (or `mb doctor repair --apply "
-            "--all-agents`), then restart Claude Code."
+            "it survives git worktrees). The switch writes a tracked file, so it "
+            "is listed under `operator_actions` for a person to run at a terminal."
         )
         # #1023: the switch writes tracked `.claude/settings.json`, so it is a
         # step for a person at a terminal, never an unattended next action.
-        result["operator_actions"].append(
-            {
-                "command": PLUGIN_SWITCH_COMMAND,
-                "changes": [".claude/settings.json"],
-                "note": PLUGIN_SWITCH_NOTE,
-            }
-        )
+        result["operator_actions"].append(plugin_switch_operator_action())
 
     install_state = str(install.get("state") or "")
     if install_state in {"stale", "installed_not_enabled", "disabled", "not_installed"}:
@@ -992,7 +999,17 @@ def _refresh_surfaces(
             result["next_actions"].append(
                 f"mb doctor repair{_repo_flag(target_repo)} --plan --only codex"
             )
-        result["next_actions"].extend(planned["apply_commands"])
+        # #1049: each apply command writes tracked files `mb update` declined
+        # to change without a person, so it is a step for a person, not an
+        # unattended next action. `apply_commands` keeps them for readers.
+        if not apply_link:
+            result["operator_actions"].append(
+                operator_action(link_apply_command, link_writes, SURFACE_LINK_APPLY_NOTE)
+            )
+        if not apply_codex:
+            result["operator_actions"].append(
+                operator_action(codex_apply_command, codex_writes, SURFACE_CODEX_APPLY_NOTE)
+            )
 
 
 def run(
@@ -1012,8 +1029,8 @@ def run(
 
     The surface refresh changes tracked files in the business repo (`AGENTS.md`,
     `.gitignore`) only after one explicit yes at an interactive prompt. Without
-    one, it plans those changes into `surface_refresh.planned` and hands back
-    the apply commands as `next_actions` (#1012).
+    one, it plans those changes into `surface_refresh.planned` and lists the
+    apply commands in `operator_actions` for a person (#1012, #1049).
     """
     target_repo = Path(repo).resolve()
     wants_prompt = _is_interactive_terminal() if interactive is None else interactive

@@ -88,6 +88,52 @@ business verb, a required object, and an optional result segment:
 the shortened example above is illustrative. `legacy_prefixes` are readable in
 history but are not accepted for new checkpoint subjects.
 
+### Operator Actions
+
+`mb update --json` and `mb doctor repair --json` include an `operator_actions`
+list: steps that change tracked files in the business repo, so a person runs
+them at a terminal. An agent shows each entry to the person and never runs it,
+even when it runs `next_actions` or applies doctor repairs. Each entry has:
+
+- `command`: the command for the person to run.
+- `changes`: the tracked files the command writes.
+- `note`: a short explanation for the person.
+
+Entries today:
+
+- the plugin-rail switch for a repo still on symlink-only skill wiring
+  (`mb update` and `mb doctor repair`);
+- from `mb update` only, each surface-refresh apply command it declined to run
+  without a person (no terminal, `--json`, or a "no" at the prompt): the
+  skill-link refresh (`mb skill link --repo .`, usually `.gitignore`) and the
+  Codex refresh (`mb doctor repair --repo . --apply --only codex`, which
+  writes `AGENTS.md` and can delete tracked transitional plugin copies). Each
+  entry's `changes` comes from that surface's tracked writes. The same
+  commands stay in `surface_refresh.planned.apply_commands`; they are not in
+  `next_actions`. The read-only `mb doctor repair --plan --only codex` stays in
+  `next_actions` so an agent can show the plan first.
+
+```json
+{
+  "operator_actions": [
+    {
+      "command": "mb skill link --repo . --plugin",
+      "changes": [".claude/settings.json"],
+      "note": "For a person to run at a terminal, not an agent: ..."
+    },
+    {
+      "command": "mb doctor repair --repo . --apply --only codex",
+      "changes": ["AGENTS.md"],
+      "note": "For a person to run at a terminal, not an agent: ..."
+    }
+  ]
+}
+```
+
+The list is empty when there is nothing for a person to run.
+`mb doctor repair --apply` never performs an operator action, and
+`mb doctor repair --only codex` leaves the plugin switch out.
+
 ### MoneyPath Proof Quality
 
 `money_path.objects.proof` has two layers:
