@@ -168,13 +168,20 @@ class ConfigCorruptError(ValueError):
     """Raised when local connect metadata cannot be parsed safely."""
 
 
+# Optional `google` slot holding one OAuth grant (client and refresh token) as
+# a single credential-store item. Its presence makes the connection OAuth mode.
+GOOGLE_OAUTH_GRANT_SLOT = "oauth_grant"
+
+
 @dataclass(frozen=True)
 class Provider:
     """Provider registry entry.
 
     ``required_secrets`` names are local credential slots, not values. They are
     safe to write into repo metadata because actual secret material is stored
-    through ``SecretStore``.
+    through ``SecretStore``. ``optional_secrets`` are slots a connection may
+    record; status reports one only when the entry records it, and a missing
+    optional slot never makes a connection ``missing_secret``.
     """
 
     id: str
@@ -189,6 +196,7 @@ class Provider:
     # Used to refuse malformed credentials at intake without ever echoing
     # the value itself.
     key_prefixes: tuple[str, ...] = ()
+    optional_secrets: tuple[str, ...] = ()
 
 
 PROVIDERS: tuple[Provider, ...] = (
@@ -201,6 +209,7 @@ PROVIDERS: tuple[Provider, ...] = (
         metadata_fields=("account_email", "workspace"),
         description="Google Workspace, Drive, Docs, Sheets, Slides, and future analytics sync.",
         env_vars=("GOOGLE_APPLICATION_CREDENTIALS", "GOOGLE_OAUTH_TOKEN"),
+        optional_secrets=(GOOGLE_OAUTH_GRANT_SLOT,),
     ),
     Provider(
         id="meta",
@@ -1656,7 +1665,43 @@ def _secret_statuses(
             "backend_ok": probe.backend_ok,
             "backend_state": probe.reason or "ready",
         }
+    for field in provider.optional_secrets:
+        raw = stored_secrets.get(field) if isinstance(stored_secrets, dict) else None
+        raw = raw if isinstance(raw, dict) else {}
+        ref = str(raw.get("ref") or "")
+        if not ref:
+            # Only a slot the entry records is reported, so connections that
+            # never used it keep their status output unchanged.
+            continue
+        backend = str(raw.get("backend") or "local-file")
+        probe = probes.get(field) if probes is not None else None
+        if probe is None:
+            probe = _probe_secret_ref(backend, ref, deadline=deadline)
+        secrets[field] = {
+            "present": _present_value(probe),
+            "presence": _secret_presence(probe),
+            "ref": ref,
+            "backend": backend,
+            "backend_ok": probe.backend_ok,
+            "backend_state": probe.reason or "ready",
+            "optional": True,
+        }
     return secrets, missing
+
+
+def _credential_mode(provider: Provider, entry: dict[str, Any]) -> dict[str, str]:
+    """``credential_mode`` for providers with optional slots, else nothing.
+
+    `google` reads ``oauth`` once its entry records an OAuth grant and
+    ``access_token`` otherwise. Other providers carry no key at all.
+    """
+
+    if GOOGLE_OAUTH_GRANT_SLOT not in provider.optional_secrets:
+        return {}
+    stored_secrets = entry.get("secrets") if isinstance(entry.get("secrets"), dict) else {}
+    raw = stored_secrets.get(GOOGLE_OAUTH_GRANT_SLOT) if isinstance(stored_secrets, dict) else None
+    recorded = isinstance(raw, dict) and bool(raw.get("ref"))
+    return {"credential_mode": "oauth" if recorded else "access_token"}
 
 
 def _secret_presence(probe: SecretProbe) -> str:
@@ -1738,6 +1783,7 @@ def _unhydrated_status(
         "ok": ok,
         "state": state,
         "stored": bool(provider.required_secrets) and not missing and not backend_reason,
+        **_credential_mode(provider, entry),
         "has_probe": has_provider_probe(provider.id),
         "provider_verified": _provider_verified(stored_validation),
         "verified_at": _verified_at(stored_validation),
@@ -2001,6 +2047,7 @@ def status_provider(
         "ok": ok,
         "state": state,
         "stored": stored,
+        **_credential_mode(provider, entry),
         "has_probe": has_provider_probe(provider.id),
         "provider_verified": _provider_verified(validation),
         "verified_at": _verified_at(validation),

@@ -228,6 +228,12 @@ what is stored:
   means the credential backend could not answer (`backend_ok: false`, with
   the reason in `backend_state`); `present` is then `null`, never `false`.
   `present: false` always means the credential is known to be absent.
+- Optional slots: a provider can have slots it does not require, such as
+  Google's `oauth_grant`. One shows in `secrets` with `optional: true` only
+  when the entry records it, and a missing optional slot never makes a
+  provider `missing_secret` or changes `stored`. Google entries also carry
+  `credential_mode`: `oauth` when the entry records an `oauth_grant`,
+  otherwise `access_token`.
 
 `mb connect status --json` also carries a top-level `credential_backend`
 block (`backend`, `ok`, `state`, `summary`, `repair`, `repair_command`), even

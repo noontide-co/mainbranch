@@ -5053,3 +5053,106 @@ def test_tokenless_first_connect_still_counts_in_probe_gap(tmp_path: Path, monke
     report = connect_mod.doctor(repo)
 
     assert report["probe_gap"]["providers"] == ["resend"]
+
+
+def _record_google_oauth_grant(repo: Path, *, user_scope: bool = False) -> str:
+    """Store a fake grant in the local-file backend and record its ref."""
+
+    config = connect_mod._read_config(repo.resolve())
+    repo_id = str(config["repo_id"])
+    ref = connect_mod._secret_ref(repo_id, "google", connect_mod.GOOGLE_OAUTH_GRANT_SLOT)
+    credential_store_mod.SecretStore("local-file").set(ref, "fake-oauth-grant-json")
+    slot = {"ref": ref, "backend": "local-file"}
+    if user_scope:
+        data = connect_mod._read_user_scope()
+        entry = data["repos"][repo_id]["providers"]["google"]
+        entry["secrets"][connect_mod.GOOGLE_OAUTH_GRANT_SLOT] = slot
+        connect_mod._write_user_scope(data)
+    else:
+        config["providers"]["google"]["secrets"][connect_mod.GOOGLE_OAUTH_GRANT_SLOT] = slot
+        connect_mod._write_config(repo.resolve(), config)
+    return ref
+
+
+def test_google_access_token_entry_status_keeps_one_slot(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("google", repo=repo, token="google-token")
+    connect_mod.connect_provider("resend", repo=repo, token="re_live_key_abc")
+
+    result = runner.invoke(app, ["connect", "status", "--repo", str(repo), "--json"])
+
+    items = {item["provider"]: item for item in json.loads(result.stdout)["providers"]}
+    google = items["google"]
+    assert sorted(google["secrets"]) == ["access_token"]
+    assert "optional" not in google["secrets"]["access_token"]
+    assert google["credential_mode"] == "access_token"
+    assert google["stored"] is True
+    assert google["state"] == "unvalidated"
+    # Providers without optional slots carry no credential_mode key at all.
+    assert "credential_mode" not in items["resend"]
+
+
+def test_google_recorded_oauth_grant_is_optional_and_oauth_mode(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("google", repo=repo, token="google-token")
+    ref = _record_google_oauth_grant(repo)
+
+    result = runner.invoke(app, ["connect", "status", "google", "--repo", str(repo), "--json"])
+
+    assert "fake-oauth-grant-json" not in result.stdout
+    item = json.loads(result.stdout)
+    grant = item["secrets"][connect_mod.GOOGLE_OAUTH_GRANT_SLOT]
+    assert grant["optional"] is True
+    assert grant["presence"] == "present"
+    assert grant["ref"] == ref
+    assert item["credential_mode"] == "oauth"
+    assert item["stored"] is True
+    assert item["state"] == "unvalidated"
+
+
+def test_google_missing_oauth_grant_is_never_missing_secret(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("google", repo=repo, token="google-token")
+    ref = _record_google_oauth_grant(repo)
+    # The entry records the grant but the item is gone from the store.
+    credential_store_mod.SecretStore("local-file").delete(ref)
+
+    item = connect_mod.status_provider("google", repo)
+
+    grant = item["secrets"][connect_mod.GOOGLE_OAUTH_GRANT_SLOT]
+    assert grant["optional"] is True
+    assert grant["presence"] == "absent"
+    assert item["state"] != "missing_secret"
+    assert item["stored"] is True
+    assert "oauth_grant" not in item["repair"]
+
+
+def test_google_user_scope_oauth_grant_survives_hydrate(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("google", repo=repo, token="google-token", scope="user")
+    _record_google_oauth_grant(repo, user_scope=True)
+    config = connect_mod._read_config(repo.resolve())
+    config["providers"].pop("google", None)
+    connect_mod._write_config(repo.resolve(), config)
+
+    unhydrated = connect_mod.status_provider("google", repo)
+    assert unhydrated["state"] == "needs_hydration"
+    assert unhydrated["credential_mode"] == "oauth"
+    assert unhydrated["secrets"][connect_mod.GOOGLE_OAUTH_GRANT_SLOT]["optional"] is True
+
+    hydrated = connect_mod.hydrate(repo, provider_id="google")
+
+    assert hydrated["hydrated"] == ["google"]
+    item = hydrated["statuses"][0]
+    assert item["credential_mode"] == "oauth"
+    assert item["secrets"][connect_mod.GOOGLE_OAUTH_GRANT_SLOT]["presence"] == "present"
