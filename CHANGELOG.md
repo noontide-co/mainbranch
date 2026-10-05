@@ -53,6 +53,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   terminal; `mb update`'s symlink-only warning points there instead of naming
   commands; and `docs/json-output-contract.md` documents `operator_actions`
   (#1042).
+- `mb update` lists the surface-refresh apply commands it declined to run
+  without a person (`mb skill link --repo ...` and
+  `mb doctor repair --repo ... --apply --only codex`) in `operator_actions`,
+  with the tracked files each one changes, instead of `next_actions`. Its Codex
+  follow-up does the same for `mb doctor repair --apply --only codex`. The
+  read-only `--plan --only codex` stays in `next_actions`, and
+  `surface_refresh.planned.apply_commands` is unchanged (#1049).
 - `mainbranch` now requires `pyyaml>=6.0.1`. PyYAML 6.0 does not build on
   Python 3.12, and the minimum-dependency CI job now also runs on 3.12 so a
   floor like that fails the PR (#1028).

@@ -1573,13 +1573,14 @@ PLUGIN_SWITCH_NOTE = (
 )
 
 
+def operator_action(command: str, changes: list[str], note: str) -> dict[str, Any]:
+    """One `operator_actions` entry: a tracked-file write for a person to run."""
+    return {"command": command, "changes": list(changes), "note": note}
+
+
 def plugin_switch_operator_action() -> dict[str, Any]:
     """The `operator_actions` entry for a repo still on symlink-only wiring."""
-    return {
-        "command": PLUGIN_SWITCH_COMMAND,
-        "changes": [".claude/settings.json"],
-        "note": PLUGIN_SWITCH_NOTE,
-    }
+    return operator_action(PLUGIN_SWITCH_COMMAND, [".claude/settings.json"], PLUGIN_SWITCH_NOTE)
 
 
 def write_plugin_wiring(repo: str | Path) -> dict[str, Any]:
