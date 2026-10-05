@@ -723,6 +723,9 @@ def _is_interactive_terminal() -> bool:
 
 
 CONNECT_JSON_SCHEMA = "mainbranch.connect"
+# `mb connect google --oauth --timeout`; kept here so the CLI does not import
+# the OAuth modules until --oauth is used. Matches google_connect.
+GOOGLE_OAUTH_TIMEOUT_DEFAULT = 300
 
 
 def _connect_failure(
@@ -1753,6 +1756,118 @@ def _no_secret_traceback(func: _F) -> _F:
     return wrapper  # type: ignore[return-value]
 
 
+def _connect_google_oauth(
+    *,
+    target: str,
+    provider: str,
+    repo: str,
+    account_label: str,
+    scope: str,
+    metadata: list[str],
+    client_file: str,
+    client_stdin: bool,
+    reauth: bool,
+    paste: bool,
+    no_browser: bool,
+    port: int,
+    timeout: int,
+    replace_access_token: bool,
+    conflicts: list[str],
+    json_out: bool,
+) -> NoReturn:
+    """`mb connect google --oauth`: the one-time Google sign-in (#1004).
+
+    Runs inside `connect_cmd`, so `_no_secret_traceback` covers it; Ctrl-C
+    gets a fixed line here too. Every message below is fixed text.
+    """
+    from mb import google_connect as google_connect_mod
+    from mb import google_oauth as google_oauth_mod
+
+    command = "mb connect google"
+    if target != "google" or provider:
+        _connect_usage_exit(
+            "mb connect", "--oauth is only for `mb connect google`", json_out=json_out
+        )
+    if conflicts:
+        _connect_usage_exit(
+            command, f"--oauth cannot be combined with {', '.join(conflicts)}", json_out=json_out
+        )
+    if client_file and client_stdin:
+        _connect_usage_exit(
+            command, "choose one of --client-file and --client-stdin", json_out=json_out
+        )
+    if paste and client_stdin:
+        _connect_usage_exit(
+            command,
+            "--paste reads the redirect from the terminal; pass the client with --client-file",
+            json_out=json_out,
+        )
+    try:
+        if client_file:
+            client_json: str | None = google_connect_mod.read_client_file(client_file)
+        elif client_stdin:
+            client_json = sys.stdin.read(google_connect_mod.CLIENT_JSON_MAX_BYTES + 1)
+        else:
+            client_json = None
+        result = google_connect_mod.bootstrap(
+            repo,
+            client_json=client_json,
+            metadata_pairs=metadata,
+            reauth=reauth,
+            paste=paste,
+            no_browser=no_browser,
+            port=port,
+            timeout=float(timeout),
+            replace_access_token=replace_access_token,
+            account_label=account_label,
+            scope=scope,
+            emit=lambda line: typer.echo(line, err=True),
+        )
+    except KeyboardInterrupt:
+        _connect_failure(
+            command,
+            "Google sign-in cancelled. Nothing was stored.",
+            json_out=json_out,
+            exit_code=130,
+            state="cancelled",
+        )
+    except google_oauth_mod.GoogleOAuthError as exc:
+        _connect_failure(
+            command,
+            f"{exc} Nothing was stored.",
+            json_out=json_out,
+            exit_code=2 if exc.rule == "paste_needs_tty" else 1,
+            state=exc.state,
+            rule=exc.rule,
+            repair=exc.repair,
+            repair_command=exc.repair if exc.repair.startswith("mb ") else "",
+        )
+    except google_connect_mod.GoogleConnectError as exc:
+        _connect_failure(
+            command,
+            str(exc),
+            json_out=json_out,
+            exit_code=1,
+            state=exc.state,
+            rule=exc.rule,
+            backend_state=exc.backend_state,
+        )
+    except (
+        connect_mod.ConnectRefusal,
+        connect_mod.ConfigBoundaryError,
+        connect_mod.ConfigCorruptError,
+    ) as exc:
+        _connect_error_exit(command, exc, json_out=json_out)
+    except connect_mod.KeychainError as exc:
+        _connect_runtime_exit(command, exc, json_out=json_out)
+    # Any other error goes to `_no_secret_traceback`: its text is never shown.
+    if json_out:
+        typer.echo(json.dumps(result, indent=2))
+    else:
+        google_connect_mod.render_result(result)
+    raise typer.Exit(0 if result["ok"] else 1)
+
+
 @app.command("connect")
 @_no_secret_traceback
 def connect_cmd(
@@ -1799,6 +1914,64 @@ def connect_cmd(
         ),
     ),
     metadata: list[str] = CONNECT_METADATA_OPTION,
+    oauth: bool = typer.Option(
+        False,
+        "--oauth",
+        help=(
+            "With `mb connect google`: sign in to Google in a browser for read-only Search "
+            "Console and GA4. A person runs this, never an agent."
+        ),
+    ),
+    client_file: str = typer.Option(
+        "",
+        "--client-file",
+        help="With --oauth, path to the Desktop app OAuth client JSON from Google Cloud.",
+    ),
+    client_stdin: bool = typer.Option(
+        False,
+        "--client-stdin",
+        help="With --oauth, read the OAuth client JSON from stdin.",
+    ),
+    reauth: bool = typer.Option(
+        False,
+        "--reauth",
+        help="With --oauth, renew this repo's Google sign-in (only when status says so).",
+    ),
+    paste: bool = typer.Option(
+        False,
+        "--paste",
+        help=(
+            "With --oauth, no local browser: open the printed URL anywhere, then paste the "
+            "127.0.0.1 address it lands on. Needs a real terminal."
+        ),
+    ),
+    no_browser: bool = typer.Option(
+        False,
+        "--no-browser",
+        help="With --oauth, print the sign-in URL instead of opening a browser.",
+    ),
+    port: int = typer.Option(
+        0,
+        "--port",
+        min=0,
+        max=65535,
+        help="With --oauth, fixed 127.0.0.1 port for the sign-in redirect (0 picks one).",
+    ),
+    oauth_timeout: int = typer.Option(
+        GOOGLE_OAUTH_TIMEOUT_DEFAULT,
+        "--timeout",
+        min=10,
+        max=3600,
+        help="With --oauth, seconds to wait for the browser sign-in.",
+    ),
+    replace_access_token: bool = typer.Option(
+        False,
+        "--replace-access-token",
+        help=(
+            "With --oauth, replace a stored Google access token; its Drive, Docs and Sheets "
+            "use stops working."
+        ),
+    ),
     all_providers: bool = typer.Option(
         False,
         "--all",
@@ -1842,6 +2015,45 @@ def connect_cmd(
         _connect_usage_exit(
             "mb connect",
             f"unexpected extra argument {connect_mod.quoted_input(command[0])}",
+            json_out=json_out,
+        )
+    oauth_only = {
+        "--client-file": bool(client_file),
+        "--client-stdin": client_stdin,
+        "--reauth": reauth,
+        "--paste": paste,
+        "--no-browser": no_browser,
+        "--port": port != 0,
+        "--timeout": oauth_timeout != GOOGLE_OAUTH_TIMEOUT_DEFAULT,
+        "--replace-access-token": replace_access_token,
+    }
+    if oauth or any(oauth_only.values()):
+        if not oauth:
+            used = next(name for name, on in oauth_only.items() if on)
+            _connect_usage_exit("mb connect", f"{used} needs --oauth", json_out=json_out)
+        conflicts = {
+            "--token": bool(token),
+            "--token-stdin": token_stdin,
+            "--from-env": from_env,
+            "--source": bool(source),
+            "--custom": custom,
+        }
+        _connect_google_oauth(
+            target=target,
+            provider=provider,
+            repo=repo,
+            account_label=account_label,
+            scope=scope,
+            metadata=metadata,
+            client_file=client_file,
+            client_stdin=client_stdin,
+            reauth=reauth,
+            paste=paste,
+            no_browser=no_browser,
+            port=port,
+            timeout=oauth_timeout,
+            replace_access_token=replace_access_token,
+            conflicts=[name for name, on in conflicts.items() if on],
             json_out=json_out,
         )
     if not target:

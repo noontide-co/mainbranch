@@ -660,6 +660,159 @@ Use `account_ref` as a business-readable handle. Do not commit raw account
 numbers, routing numbers, statements, transaction rows, tax records, or provider
 payloads.
 
+## Google: Search Console and GA4
+
+`mb connect google --oauth` signs a business repo in to Google once, for
+read-only Search Console and GA4 (scopes `webmasters.readonly` and
+`analytics.readonly`). A person runs it, never a skill or an agent: it ends
+in a Google consent screen that only the account owner can answer. Plain
+`mb connect google` is unchanged and never opens a browser.
+
+This release stores the sign-in only. Nothing checks it against Google yet,
+and `mb connect test google` behaves as before; reading reports through it
+comes in later releases.
+
+### One-time setup in Google Cloud
+
+Do this once per operator, not once per business. One OAuth client can
+serve every business repo you run.
+
+1. Create (or pick) a Google Cloud project you own.
+2. Enable the **Google Search Console API** and the **Google Analytics Data
+   API** in that project.
+3. Set the OAuth consent screen to user type **External** and publishing
+   status **In production**. A project left in **Testing** gets refresh
+   tokens that expire after 7 days, so every repo would need a new sign-in
+   each week.
+4. Create an OAuth client of type **Desktop app** and download its JSON.
+   Keep that file out of every repo.
+
+The app can stay unverified. Google then shows a "Google hasn't verified this
+app" screen once per sign-in; choose to continue, since it is your own app.
+
+The Google account you sign in with must already see the Search Console
+property and have at least read access to the GA4 property.
+
+### Sign in
+
+From the business repo:
+
+```bash
+mb connect google --oauth --client-file ~/Downloads/client_secret_<id>.json \
+  --metadata search_console_site=sc-domain:example.com \
+  --metadata ga4_property_id=123456789
+```
+
+What you see:
+
+```text
+Google sign-in (read-only: Search Console, Analytics)
+Opening your browser. If it does not open, visit:
+  https://accounts.google.com/o/oauth2/v2/auth?...
+Waiting for Google on http://127.0.0.1:<port> (5 min)...
+Granted (read-only): Search Console, Analytics (GA4)
+Stored: yes (stored in the macOS login Keychain)
+metadata: .../.mb/connect.yaml
+Not checked against Google yet: this release stores the sign-in only.
+See it with `mb connect status google`.
+```
+
+- `search_console_site` is the property as Search Console names it:
+  `sc-domain:example.com` for a domain property, or a URL prefix such as
+  `https://www.example.com/` (it must end in `/`).
+- `ga4_property_id` is the numeric property id; `properties/123456789` is
+  accepted and stored as `123456789`. A measurement id (`G-...`) is refused.
+  The separate `ga4` provider (an access token checked against the Admin
+  API) keeps its own `property_id`; the two do not share a connection.
+- `--client-stdin` reads the client JSON from stdin instead of a file. The
+  client JSON is never an argument value.
+- `--timeout SECONDS` (default 300) bounds the wait for the browser.
+- The redirect comes back to `http://127.0.0.1:<port>` on this machine only.
+  The URL carries no secret; PKCE and a one-time `state` protect the code.
+
+What is stored: one credential-store item holds the grant (client id, client
+secret when the client file has one, refresh token), a second holds the
+access token from the sign-in, and `.mb/connect.yaml` records their refs plus
+`search_console_site`, `ga4_property_id` and `oauth_grants` (which products
+you allowed). No token or client secret is ever written to the repo.
+`mb connect status google` then shows `stored` with `credential_mode: oauth`.
+
+If you untick one product on the consent screen, the sign-in is stored with
+the product you allowed, exits 1, and names the missing one; sign in again
+with `--reauth` and tick both boxes. If you decline, the browser wait times
+out, Google returns no refresh token, or the response does not match this
+sign-in, nothing is stored.
+
+### Renew only when asked
+
+Google keeps at most 100 refresh tokens per Google account per OAuth client
+and silently revokes the oldest beyond that. With one client shared by many
+business repos, every extra sign-in can end another repo's access without
+warning. So:
+
+- sign in once per repo; never script retries;
+- renew with `mb connect google --oauth --reauth` only when status says
+  `reauth_required`. `--reauth` reuses the client and metadata already
+  recorded; pass `--client-file` again only if it asks.
+
+Running `--oauth` again on a repo that already has a sign-in refuses with
+`oauth_use_reauth`.
+
+### Which Google account
+
+One personal Google login may serve every business you run. For client or
+agency work, a dedicated Google user with view-only access to just that
+client's properties is recommended.
+
+The scopes are account-wide: Google lets the token read every Search Console
+property and GA4 property that account can see, not only this business's.
+`mb` limits its own reads to the site and property recorded in this repo, but
+anything run through `mb connect exec google -- <command>` is not bound by
+that rule. A view-only user is how you narrow what the token itself can read.
+
+### Without a local browser (SSH, headless)
+
+- `--paste`, in a real terminal (not through an agent and not with `!` in a
+  chat): `mb connect google --oauth --client-file <path> --paste`. Open the
+  printed URL in a browser on any machine and allow access. That browser
+  then fails to load a `http://127.0.0.1:...` page; copy that page's whole
+  address and paste it at the hidden prompt. Never paste that address into
+  a chat or an issue: it carries a one-time code. Paste mode refuses when
+  stdin is not a terminal.
+- Or keep the browser redirect and tunnel the port:
+  `mb connect google --oauth --client-file <path> --no-browser --port 8085`
+  on the server, `ssh -L 8085:127.0.0.1:8085 <server>` from your laptop, then
+  open the printed URL on the laptop.
+
+### What it will not do
+
+- Request indexing in Search Console has no API. It stays in the browser.
+- Nothing is written to Google: no sitemap submit, no property or user
+  changes.
+
+### Refusals
+
+Each exits 2 with fixed text and changes nothing:
+
+| Rule | When |
+| --- | --- |
+| `oauth_replaces_access_token` | The repo stores a plain Google access token. `--oauth` would replace it and its Drive, Docs and Sheets use would stop; add `--replace-access-token` to proceed. |
+| `oauth_use_reauth` | The repo already has a Google sign-in; renew it with `--reauth` only when asked. |
+| `oauth_reauth_without_grant` | `--reauth` with no sign-in to renew. |
+| `oauth_connection_exists` | `mb connect google --token-stdin` (or `--token`, `--from-env`) on a sign-in connection; it would drop the grant. |
+| `rotate_oauth_use_reauth` | `mb connect rotate google` on a sign-in connection; there is no source to re-read. |
+| `oauth_client_required` | No `--client-file` or `--client-stdin`. |
+| `oauth_client_malformed`, `oauth_client_not_desktop`, `oauth_client_unreadable` | The client file is not a Desktop app client JSON, or cannot be read. |
+| `search_console_site_format`, `ga4_property_id_format`, `oauth_metadata_reserved` | A metadata value is not in the shape above, or sets `oauth_grants`. |
+| `paste_needs_tty` | `--paste` without a terminal on stdin. |
+
+A credential-store failure part way through says exactly what is stored. If
+the grant write fails, nothing changed. If a later write fails on a first
+sign-in, the repo does not record the new items and the connection is not
+set up; sign in again once the store is healthy. If it fails during
+`--reauth`, the new grant has already replaced the old one; the message says
+so and points at `mb connect test google`.
+
 ## User Scope
 
 Use user scope when several worktrees for the same business repo should read

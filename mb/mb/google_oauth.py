@@ -9,7 +9,9 @@ Google's installed-app flow, as used here
 - PKCE with ``S256``: the verifier is 43-128 unreserved characters and the
   challenge is the unpadded base64url SHA-256 of the verifier.
 - The redirect is a loopback ``http://127.0.0.1:<port>``. The receiver binds
-  127.0.0.1 only, takes one request, then closes.
+  127.0.0.1 only and closes after the one redirect on ``/``. A request on any
+  other path or with another method gets 404/405 and the wait goes on, all
+  under one absolute deadline that also bounds slow (trickled) reads.
 - The authorization request carries ``client_id``, ``redirect_uri``,
   ``response_type=code``, ``scope``, ``code_challenge``,
   ``code_challenge_method`` and ``state``. Refresh tokens are always returned
@@ -32,16 +34,19 @@ import hashlib
 import hmac
 import http.client
 import http.server
+import io
 import json
 import re
 import secrets
+import socket
 import socketserver
 import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
+from contextlib import suppress
 from dataclasses import dataclass, field
 from typing import Any, TextIO
 
@@ -106,7 +111,6 @@ _RULE_MESSAGES: dict[str, str] = {
     "redirect_host": "The pasted URL is not the 127.0.0.1 sign-in redirect.",
     "consent_denied": "Google sign-in was declined.",
     "authorization_error": "Google returned an error instead of an authorization code.",
-    "callback_rejected": "The sign-in listener received an unexpected request and stopped.",
     "bootstrap_timeout": "Timed out waiting for the Google sign-in to finish.",
     "paste_needs_tty": "Paste mode needs an interactive terminal; run it in a normal terminal.",
     "paste_empty": "No sign-in URL was pasted.",
@@ -255,7 +259,7 @@ def parse_pasted_redirect(text: str, expected_state: str) -> str:
         raise GoogleOAuthError("paste_empty")
     if "://" in pasted:
         parsed = urllib.parse.urlsplit(pasted)
-        if parsed.scheme != "http" or parsed.hostname not in {LOOPBACK_HOST, "localhost"}:
+        if parsed.scheme != "http" or parsed.hostname != LOOPBACK_HOST:
             raise GoogleOAuthError("redirect_host")
         query = parsed.query
     else:
@@ -305,20 +309,56 @@ class _Outcome:
     error: GoogleOAuthError | None = None
 
 
+class _DeadlineSocketIO(io.RawIOBase):
+    """Socket reads that share one absolute deadline.
+
+    A socket timeout applies to each ``recv`` on its own, so a client that
+    trickles one header byte at a time could hold a plain handler for as long
+    as it likes. Re-arming the timeout from a fixed deadline before every
+    ``recv`` bounds the whole request read instead.
+    """
+
+    def __init__(self, sock: socket.socket, deadline: float) -> None:
+        super().__init__()
+        self._sock = sock
+        self._deadline = deadline
+
+    def readable(self) -> bool:
+        return True
+
+    def readinto(self, buffer: Any) -> int:
+        left = self._deadline - time.monotonic()
+        if left <= 0:
+            raise TimeoutError("loopback read deadline")
+        self._sock.settimeout(left)
+        return self._sock.recv_into(buffer)
+
+
 class _CallbackHandler(http.server.BaseHTTPRequestHandler):
     server: _CallbackServer
     server_version = "mb"
     sys_version = ""
-    # An idle socket (a browser preconnect) must not hold the listener forever.
+    # Longest one connection may take to send its request. An idle socket (a
+    # browser preconnect) or a trickled request is cut off after this, or at
+    # the wait's own deadline if that comes first.
     timeout = 5
 
-    def parse_request(self) -> bool:
-        self.server.saw_request = True
-        return super().parse_request()
+    def setup(self) -> None:
+        super().setup()
+        budget = max(0.0, min(float(self.timeout), self.server.read_budget))
+        self.rfile = io.BufferedReader(
+            _DeadlineSocketIO(self.connection, time.monotonic() + budget)
+        )
 
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
         # The default writes the request line, which carries ?code=, to stderr.
         return
+
+    def send_error(self, code: int, message: str | None = None, explain: str | None = None) -> None:
+        # The default error page quotes the request line or method back.
+        self.close_connection = True
+        with suppress(OSError):
+            self._reply(code, _FAILURE_PAGE)
 
     def _reply(self, status: int, body: bytes) -> None:
         self.send_response(status)
@@ -333,7 +373,7 @@ class _CallbackHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
         split = urllib.parse.urlsplit(self.path)
         if split.path != CALLBACK_PATH:
-            self.server.outcome = _Outcome(error=GoogleOAuthError("callback_rejected"))
+            # Not the redirect (a favicon, a probe): answer and keep waiting.
             self._reply(404, _FAILURE_PAGE)
             return
         try:
@@ -346,7 +386,6 @@ class _CallbackHandler(http.server.BaseHTTPRequestHandler):
         self._reply(200, _SUCCESS_PAGE)
 
     def _reject_method(self) -> None:
-        self.server.outcome = _Outcome(error=GoogleOAuthError("callback_rejected"))
         self._reply(405, _FAILURE_PAGE)
 
     do_POST = do_PUT = do_DELETE = do_PATCH = do_HEAD = do_OPTIONS = _reject_method  # noqa: N815
@@ -359,29 +398,23 @@ class _CallbackServer(socketserver.TCPServer):
     def __init__(self, port: int, expected_state: str) -> None:
         self.expected_state = expected_state
         self.outcome: _Outcome | None = None
-        self.saw_request = False
+        # Seconds left on the wait when the current connection was accepted.
+        self.read_budget = float(_CallbackHandler.timeout)
         super().__init__((LOOPBACK_HOST, port), _CallbackHandler)
 
-    def finish_request(self, request: Any, client_address: Any) -> None:
-        super().finish_request(request, client_address)
-        # Any request that got a request line ends the wait, including one the
-        # handler answered itself (501 for an unknown method). A connection
-        # that sent nothing does not count.
-        if self.outcome is None and self.saw_request:
-            self.outcome = _Outcome(error=GoogleOAuthError("callback_rejected"))
-
     def handle_error(self, request: Any, client_address: Any) -> None:
-        # The default prints a traceback to stderr; say nothing instead.
-        if self.outcome is None and self.saw_request:
-            self.outcome = _Outcome(error=GoogleOAuthError("callback_rejected"))
+        # The default prints a traceback to stderr; say nothing and keep waiting.
+        return
 
 
 class LoopbackReceiver:
-    """Wait on ``http://127.0.0.1:<port>`` for exactly one redirect.
+    """Wait on ``http://127.0.0.1:<port>`` for the one redirect.
 
     ``port=0`` picks a free port. ``clock`` is injectable so tests can expire
-    the timeout without waiting. The first request ends the wait: a correct
-    redirect returns the code; anything else raises and the listener closes.
+    the timeout without waiting. A GET on ``/`` ends the wait: a correct
+    redirect returns the code, a wrong ``state`` or an error raises. Any other
+    path or method is answered 404/405 and the wait goes on. The timeout is
+    absolute: a connection that trickles its request is cut off at it.
     """
 
     POLL_SECONDS = 0.25
@@ -415,6 +448,7 @@ class LoopbackReceiver:
                 if remaining <= 0:
                     raise GoogleOAuthError("bootstrap_timeout", STATE_BOOTSTRAP_TIMEOUT)
                 self._server.timeout = min(self.POLL_SECONDS, remaining)
+                self._server.read_budget = remaining
                 self._server.handle_request()
             outcome = self._server.outcome
         finally:
@@ -573,7 +607,35 @@ def classify_error(
     return STATE_INVALID
 
 
-def _token_call(fields: dict[str, str], sender: Sender | None) -> dict[str, Any]:
+class TokenResponse(Mapping[str, Any]):
+    """The token fields Google returned, held so they never show by accident.
+
+    A read-only mapping, not a ``dict`` or a dataclass: ``repr``, ``str`` and
+    pretty printers that expand containers (rich ``show_locals``) see the
+    field names only, never a token value.
+    """
+
+    __slots__ = ("_fields",)
+
+    def __init__(self, fields: Mapping[str, Any]) -> None:
+        self._fields = dict(fields)
+
+    def __getitem__(self, key: str) -> Any:
+        return self._fields[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._fields)
+
+    def __len__(self) -> int:
+        return len(self._fields)
+
+    def __repr__(self) -> str:
+        return f"TokenResponse(fields={sorted(self._fields)!r})"
+
+    __str__ = __repr__
+
+
+def _token_call(fields: dict[str, str], sender: Sender | None) -> TokenResponse:
     result = http_post_form(TOKEN_ENDPOINT, fields, sender=sender)
     if not result.ok:
         rule = (
@@ -587,7 +649,9 @@ def _token_call(fields: dict[str, str], sender: Sender | None) -> dict[str, Any]
         raise GoogleOAuthError(
             "token_response_malformed", STATE_UNVALIDATED, upstream=result.upstream
         )
-    return {name: result.payload[name] for name in TOKEN_FIELDS if name in result.payload}
+    return TokenResponse(
+        {name: result.payload[name] for name in TOKEN_FIELDS if name in result.payload}
+    )
 
 
 def exchange_code(
@@ -598,7 +662,7 @@ def exchange_code(
     code_verifier: str,
     redirect_uri: str,
     sender: Sender | None = None,
-) -> dict[str, Any]:
+) -> TokenResponse:
     """Exchange an authorization code; returns only the token fields."""
 
     fields = {
@@ -619,7 +683,7 @@ def refresh_access_token(
     client_secret: str | None,
     refresh_token: str,
     sender: Sender | None = None,
-) -> dict[str, Any]:
+) -> TokenResponse:
     """Mint an access token from a refresh token; returns only the token fields."""
 
     fields = {

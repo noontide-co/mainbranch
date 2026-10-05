@@ -11,6 +11,18 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- `mb connect google --oauth` signs a business repo in to Google once for
+  read-only Search Console and GA4: browser or `--paste` sign-in with PKCE on
+  `127.0.0.1`, the grant kept in the credential store, `search_console_site`,
+  `ga4_property_id` and the granted products recorded in repo metadata. It
+  refuses to replace a stored Google access token without
+  `--replace-access-token`, and token reconnects and `mb connect rotate` on a
+  sign-in connection refuse instead of dropping the grant. Nothing reads
+  Google yet; setup, the 100-token limit and headless use are in
+  `docs/connect.md` (part of #1004).
+
 ### Changed
 
 - `mb update` lists the plugin-rail switch (`mb skill link --repo . --plugin`)
