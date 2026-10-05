@@ -326,8 +326,9 @@ tracked file:
 
 - at an interactive terminal, it lists those files and asks once (default no);
 - without one, and always with `--json`, it changes no tracked file. It
-  reports the plan in `surface_refresh.planned` and puts the apply commands in
-  `next_actions`. Applying them is the operator's step.
+  reports the plan in `surface_refresh.planned` and lists the apply commands
+  in `operator_actions`, not `next_actions`. Applying them is the operator's
+  step.
 
 `surface_refresh.planned` has `consent` (`not_needed`, `no_terminal`,
 `declined` or `approved`), `tracked_files` (the repo files that would change),

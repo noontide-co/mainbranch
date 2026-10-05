@@ -467,6 +467,15 @@ def test_update_points_to_scoped_codex_repair_when_adapter_missing(
     assert result["ok"] is True
     assert result["codex_adapter"]["ok"] is False
     assert "mb doctor repair --plan --only codex" in result["next_actions"]
+    # #1049: the apply rewrites the tracked AGENTS.md, so a person runs it.
+    assert "mb doctor repair --apply --only codex" not in result["next_actions"]
+    codex_apply = [
+        item
+        for item in result["operator_actions"]
+        if item["command"] == "mb doctor repair --apply --only codex"
+    ]
+    assert len(codex_apply) == 1
+    assert "AGENTS.md" in codex_apply[0]["changes"]
     assert any(
         "Codex AGENTS.md guidance still needs repo repair" in item for item in result["warnings"]
     )
@@ -2390,8 +2399,20 @@ def test_update_without_terminal_leaves_tracked_files_and_reports_plan(
         f"mb doctor repair --repo {business_repo} --apply --only codex",
     ]
     assert planned["apply_commands"] == apply_commands
+    # #1049: the apply commands write tracked files, so they are steps for a
+    # person in `operator_actions`, never unattended `next_actions`.
     for command in apply_commands:
-        assert command in result["next_actions"]
+        assert command not in result["next_actions"]
+    assert not any("--apply" in action for action in result["next_actions"])
+    assert f"mb doctor repair --repo {business_repo} --plan --only codex" in result["next_actions"]
+    surface_actions = [
+        item for item in result["operator_actions"] if item["command"] in apply_commands
+    ]
+    assert [item["command"] for item in surface_actions] == apply_commands
+    assert [item["changes"] for item in surface_actions] == [[".gitignore"], ["AGENTS.md"]]
+    for item in surface_actions:
+        assert set(item) == set(engine_mod.plugin_switch_operator_action())
+        assert item["note"].startswith("For a person to run at a terminal, not an agent")
     assert result["surface_refresh"]["claude"]["applied"] is False
     assert result["surface_refresh"]["claude"]["tracked_writes"] == [".gitignore"]
     assert result["surface_refresh"]["codex"]["applied"] is False
@@ -2440,7 +2461,13 @@ def test_update_terminal_no_leaves_tracked_files(
     assert asked == [[".gitignore", "AGENTS.md"]], result["errors"]
     assert _tracked_state(business_repo) == before
     assert result["surface_refresh"]["planned"]["consent"] == "declined"
-    assert f"mb doctor repair --repo {business_repo} --apply --only codex" in result["next_actions"]
+    codex_apply = f"mb doctor repair --repo {business_repo} --apply --only codex"
+    link_apply = f"mb skill link --repo {business_repo}"
+    assert codex_apply not in result["next_actions"]
+    assert link_apply not in result["next_actions"]
+    commands = [item["command"] for item in result["operator_actions"]]
+    assert link_apply in commands
+    assert codex_apply in commands
 
 
 def test_update_terminal_yes_applies_once_then_unattended_runs_need_no_consent(
@@ -2460,6 +2487,7 @@ def test_update_terminal_yes_applies_once_then_unattended_runs_need_no_consent(
     assert result["ok"] is True, result["errors"]
     assert result["surface_refresh"]["planned"]["consent"] == "approved"
     assert result["surface_refresh"]["planned"]["apply_commands"] == []
+    assert not [item for item in result["operator_actions"] if "--plugin" not in item["command"]]
     changed = sorted(line[3:] for line in _git(business_repo, "status", "--porcelain").splitlines())
     assert changed == [".gitignore", "AGENTS.md"]
     agents_md = (business_repo / "AGENTS.md").read_text(encoding="utf-8")
@@ -2558,6 +2586,7 @@ def test_emitted_commands_quote_a_repo_path_with_spaces_and_parens(
     emitted = [
         *planned["apply_commands"],
         *[a for a in result["next_actions"] if a.startswith("mb ") and "--repo" in a],
+        *[item["command"] for item in result["operator_actions"] if "--repo" in item["command"]],
         result["surface_refresh"]["claude"]["command"],
         result["surface_refresh"]["codex"]["command"],
     ]
@@ -2568,12 +2597,20 @@ def test_emitted_commands_quote_a_repo_path_with_spaces_and_parens(
         assert argv[argv.index("--repo") + 1] == real, command
 
     update_mod.render_human(result)
+    out = capsys.readouterr().out.splitlines()
     printed = [
         line.removeprefix("next: ")
-        for line in capsys.readouterr().out.splitlines()
+        for line in out
         if line.startswith("next: mb ") and "--repo" in line
     ]
-    assert len(printed) == 3
+    assert len(printed) == 1
+    for_you = [
+        line.removeprefix("for you to run: ")
+        for line in out
+        if line.startswith("for you to run: mb ") and "--repo" in line
+    ]
+    assert len(for_you) == 2
+    printed.extend(for_you)
     for command in printed:
         argv = shlex.split(command)
         assert argv[argv.index("--repo") + 1] == real, command

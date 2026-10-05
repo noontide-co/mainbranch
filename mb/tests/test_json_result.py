@@ -279,6 +279,20 @@ def test_operator_actions_are_documented_and_emitted(tmp_path: Path) -> None:
     assert payload["operator_actions"] == []
 
 
+def test_surface_apply_commands_are_documented_as_operator_actions() -> None:
+    # #1049: the codex and skill-link apply commands `mb update` declined to
+    # run are listed in `operator_actions`, not `next_actions`.
+    root = Path(__file__).resolve().parents[2]
+    doc = (root / "docs" / "json-output-contract.md").read_text()
+    section = doc.split("### Operator Actions", 1)[1].split("\n### ", 1)[0]
+    assert "mb skill link --repo ." in section
+    assert "--apply --only codex" in section
+    assert "apply_commands" in section
+    skill = (root / ".claude" / "skills" / "mb-update" / "SKILL.md").read_text()
+    assert "(also in `next_actions`)" not in skill
+    assert "also in `operator_actions`" in skill
+
+
 def test_onboard_json_uses_shared_result_envelope(tmp_path: Path, monkeypatch: Any) -> None:
     monkeypatch.setattr(onboard_mod, "_which", _tool_path)
     monkeypatch.setattr(onboard_mod, "is_interactive", lambda: False)
