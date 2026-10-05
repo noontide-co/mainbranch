@@ -47,6 +47,16 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - No test assert reads straight out of `os.environ` or a captured environment
   any more, so a failing test prints only the checked value, never the whole
   environment; a guard test keeps the pattern out (#1025).
+- `mb update` and `mb update --check` on a uv or pip (wheel) install that
+  already runs PyPI's latest release say "Main Branch is already current"
+  and list no install command, instead of offering to reinstall the same
+  version or asking to confirm one. A behind install still gets its command
+  (#1036).
+- `mb update` treats a PyPI answer that is valid JSON but not an object (a
+  list, `null`, a number or a string) as "latest unknown" instead of stopping
+  with a traceback, and a release-candidate install that sees the final
+  release now gets that release's notes and summary in `mb update --check`
+  (#1039).
 
 ## [0.6.3] - 2026-10-05
 
