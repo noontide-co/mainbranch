@@ -25,7 +25,11 @@ from mb import site as site_mod
 from mb import topology as topology_mod
 from mb import validate as validate_mod
 from mb.engine import install_mode, link_status
-from mb.freshness import format_update_alert, package_update_status
+from mb.freshness import (
+    MODE_NEUTRAL_UPDATE_TEXT,
+    format_update_alert,
+    package_update_status,
+)
 from mb.json_result import json_default
 
 IMPORTANT_DIRS = (
@@ -4402,7 +4406,7 @@ def _readiness(report: dict[str, Any]) -> dict[str, Any]:
             "name": "install",
             "ok": bool(report["install"]["ok"]) and report["update"]["severity"] != "required",
             "weight": 15,
-            "repair": report["update"]["command"]
+            "repair": (report["update"]["command"] or MODE_NEUTRAL_UPDATE_TEXT)
             if report["update"]["severity"] == "required"
             else "Reinstall Main Branch with `pipx install mainbranch`.",
         },

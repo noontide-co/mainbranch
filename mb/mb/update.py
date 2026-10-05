@@ -28,10 +28,25 @@ from mb.engine import (
     looks_like_uv_tool_install,
     plugin_wiring_status,
 )
+
+# Re-exported: callers and tests read these from `mb.update`.
+from mb.freshness import (
+    PIP_UPDATE_COMMAND_TEXT as PIP_UPDATE_COMMAND_TEXT,
+)
+from mb.freshness import (
+    PIPX_UPDATE_COMMAND_TEXT as PIPX_UPDATE_COMMAND_TEXT,
+)
+from mb.freshness import (
+    UV_UPDATE_COMMAND_TEXT as UV_UPDATE_COMMAND_TEXT,
+)
+from mb.freshness import (
+    compare_versions,
+    release_notes_url,
+    version_key,
+)
 from mb.freshness import (
     latest_pypi_version as _latest_pypi_version,
 )
-from mb.freshness import release_notes_url, version_key
 
 VERSION_RE = re.compile(r'__version__\s*=\s*["\']([^"\']+)["\']')
 CLONE_UPDATE_COMMAND = ["git", "pull", "--ff-only", "origin", "main"]
@@ -48,7 +63,6 @@ UV_UPDATE_COMMAND = [
     PACKAGE_NAME,
     f"{PACKAGE_NAME}@latest",
 ]
-UV_UPDATE_COMMAND_TEXT = "uv tool install --refresh-package mainbranch mainbranch@latest"
 UV_MANUAL_MESSAGE = (
     "Main Branch was installed as a uv tool. Upgrading replaces the installed "
     "command, so it only runs after an explicit yes at an interactive prompt. "
@@ -65,7 +79,6 @@ WHEEL_MANUAL_MESSAGE = (
 )
 UV_TOOL_DIR_COMMAND = ["uv", "tool", "dir"]
 UV_TOOL_DIR_TIMEOUT_SECONDS = 10.0
-PIP_UPDATE_COMMAND_TEXT = "pip install --upgrade mainbranch"
 SURFACE_PLAN_NO_TERMINAL_MESSAGE = (
     "Left tracked files unchanged: {files}. Without an interactive terminal, "
     "`mb update` does not change tracked files in the business repo. Applying "
@@ -74,6 +87,11 @@ SURFACE_PLAN_NO_TERMINAL_MESSAGE = (
 )
 SURFACE_PLAN_DECLINED_MESSAGE = (
     "Left tracked files unchanged: {files}. Run the commands below whenever you want these changes."
+)
+AHEAD_OF_PYPI_MESSAGE = (
+    "Installed Main Branch {installed} is newer than PyPI's latest release "
+    "({latest}), so there is nothing to install. Installing the latest release "
+    "would replace this build with an older version."
 )
 GITHUB_RELEASE_API_URL_TEMPLATE = (
     "https://api.github.com/repos/noontide-co/mainbranch/releases/tags/oe-v{version}"
@@ -248,11 +266,32 @@ def _note_manual_update(
     surfaces needs no package upgrade, so the manual paths continue into the
     same surface refresh every other mode gets.
     """
-    result["new_version"] = _latest_pypi_version() or result["old_version"]
+    latest = _latest_pypi_version()
+    if _note_ahead_of_pypi(result, latest):
+        return
+    result["new_version"] = latest or result["old_version"]
     result["manual_update_command"] = command
     result["warnings"].append(message)
     if command not in result["next_actions"]:
         result["next_actions"].append(command)
+
+
+def _note_ahead_of_pypi(result: dict[str, Any], latest: str | None) -> bool:
+    """Record a pre-release or local build that is newer than PyPI's latest (#1022).
+
+    Returns True when the installed version is ahead. The result then keeps
+    `new_version` at the installed version and lists no install command, because
+    every installer's `latest` would be a downgrade.
+    """
+    if latest:
+        result["latest_version"] = latest
+    old = str(result.get("old_version") or "")
+    if not latest or not old or compare_versions(old, latest) <= 0:
+        return False
+    result["installed_ahead_of_latest"] = True
+    result["new_version"] = old
+    result["warnings"].append(AHEAD_OF_PYPI_MESSAGE.format(installed=old, latest=latest))
+    return True
 
 
 def _looks_like_pipx_package_spec_parse_failure(
@@ -569,6 +608,8 @@ def _base_result(
         "engine_root": str(root) if root is not None else None,
         "old_version": _engine_version(root),
         "new_version": None,
+        "latest_version": "",
+        "installed_ahead_of_latest": False,
         "upgrade_performed": False,
         "manual_update_command": "",
         "skills_relinked_count": 0,
@@ -947,10 +988,12 @@ def run(
                 message=WHEEL_MANUAL_MESSAGE,
             )
         elif mode == "pipx":
-            result["new_version"] = _latest_pypi_version() or result["old_version"]
-            result["actions"] = [
-                "would run `pipx upgrade mainbranch`",
-            ]
+            latest = _latest_pypi_version()
+            if not _note_ahead_of_pypi(result, latest):
+                result["new_version"] = latest or result["old_version"]
+                result["actions"] = [
+                    f"would run `{PIPX_UPDATE_COMMAND_TEXT}`",
+                ]
         else:
             if root is None:
                 result["ok"] = False
@@ -972,6 +1015,8 @@ def run(
                     f"would run `git pull --ff-only origin main` in {root}",
                 ]
             )
+        if result["installed_ahead_of_latest"]:
+            result["actions"] = ["would leave this install alone; it is newer than PyPI's latest"]
         if refresh_surfaces:
             surface_commands = [
                 f"mb skill link --repo {shlex.quote(str(target_repo))} --json",
@@ -1017,7 +1062,9 @@ def run(
         _add_plugin_follow_up(result, target_repo)
         return result
 
-    if mode == "pipx":
+    if mode in {"pipx", "uv"} and _note_ahead_of_pypi(result, _latest_pypi_version()):
+        result["actions"].append("left this install alone; it is newer than PyPI's latest")
+    elif mode == "pipx":
         if shutil.which("pipx") is None:
             result["ok"] = False
             result["new_version"] = result["old_version"]
@@ -1116,9 +1163,15 @@ def render_human(result: dict[str, Any]) -> None:
     count = result.get("skills_relinked_count", 0)
     refresh_surfaces = result.get("refresh_surfaces", True)
 
+    ahead = result.get("installed_ahead_of_latest") is True
+    latest = result.get("latest_version") or "unknown"
+
     if result.get("check"):
         print(f"install mode: {mode}")
-        print(f"version: {old} -> {new}")
+        if ahead:
+            print(f"version: {old} (newer than PyPI's latest, {latest})")
+        else:
+            print(f"version: {old} -> {new}")
         raw_release = result.get("release")
         release = raw_release if isinstance(raw_release, dict) else {}
         release_url = str(release.get("url") or "")
@@ -1152,7 +1205,12 @@ def render_human(result: dict[str, Any]) -> None:
         for action in result.get("next_actions", []):
             print(f"next: {action}")
     elif result.get("ok"):
-        print(f"updated Main Branch ({old} -> {new})")
+        if ahead:
+            print(f"Main Branch {old} is newer than PyPI's latest release ({latest}); not changed.")
+        elif old == new:
+            print(f"Main Branch is already current ({new}).")
+        else:
+            print(f"updated Main Branch ({old} -> {new})")
         if refresh_surfaces:
             print(f"refreshed {count} skill link(s)")
             if result.get("codex_repaired"):

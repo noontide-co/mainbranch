@@ -108,6 +108,14 @@ def uv_tool_dir_quiet(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(update_mod, "_uv_tool_dir_holds_this_install", lambda: False)
 
 
+@pytest.fixture(autouse=True)
+def pypi_quiet(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Every install mode now asks PyPI whether this build is ahead of the latest
+    # release (#1022). Tests that care set their own answer; the rest stay off
+    # the network and independent of what PyPI currently publishes.
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: None)
+
+
 def _completed(
     args: list[str],
     *,
@@ -1312,7 +1320,7 @@ def test_update_pipx_local_wheel_parse_failure_surfaces_force_install(
 
     monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
-    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "0.3.40")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "9.9.9")
     monkeypatch.setattr(
         update_mod.shutil,  # type: ignore[attr-defined]
         "which",
@@ -1332,7 +1340,7 @@ def test_update_pipx_local_wheel_parse_failure_surfaces_force_install(
         "after installing from a local wheel path. Approve a forced pipx reinstall "
         "to reset the saved install source."
     ]
-    assert result["next_actions"] == ["pipx install --force mainbranch==0.3.40"]
+    assert result["next_actions"] == ["pipx install --force mainbranch==9.9.9"]
 
 
 def test_update_render_human_failure_prints_next_action(capsys: Any) -> None:
@@ -1505,6 +1513,121 @@ def test_update_render_human_success(capsys: Any) -> None:
 
     assert "updated Main Branch (0.1.2 -> 0.2.0)" in output
     assert "refreshed 4 skill link(s)" in output
+
+
+def test_update_render_human_same_version_says_already_current(capsys: Any) -> None:
+    # #974: a successful run that lands the version already installed did not
+    # update anything, so it must not say "updated".
+    update_mod.render_human(
+        {
+            "ok": True,
+            "check": False,
+            "old_version": "0.5.3",
+            "new_version": "0.5.3",
+            "upgrade_performed": True,
+            "skills_relinked_count": 4,
+            "errors": [],
+        }
+    )
+
+    output = capsys.readouterr().out
+
+    assert "Main Branch is already current (0.5.3)." in output
+    assert "updated" not in output
+    assert "refreshed 4 skill link(s)" in output
+
+
+def _ahead_of_pypi(monkeypatch: Any, tmp_path: Path, mode: str) -> None:
+    """A release-candidate build installed while PyPI's latest is the prior release."""
+    monkeypatch.setattr(update_mod, "install_mode", lambda: mode)
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_engine_version", lambda root=None: "0.6.3rc1")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "0.6.2")
+    monkeypatch.setattr(update_mod, "bundled_skills", lambda: ["mb-start"])
+    monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
+
+
+def _assert_ahead_of_pypi(result: dict[str, Any]) -> None:
+    assert result["ok"] is True
+    assert result["old_version"] == "0.6.3rc1"
+    assert result["new_version"] == "0.6.3rc1"
+    assert result["latest_version"] == "0.6.2"
+    assert result["installed_ahead_of_latest"] is True
+    assert result["upgrade_performed"] is False
+    assert result["manual_update_command"] == ""
+    installers = ("uv tool install", "pipx upgrade", "pipx install", "pip install")
+    assert not [a for a in result["next_actions"] if a.startswith(installers)]
+    assert any("newer than PyPI's latest release (0.6.2)" in w for w in result["warnings"])
+
+
+@pytest.mark.parametrize("mode", ["uv", "wheel", "pipx"])
+def test_update_check_json_ahead_of_pypi_lists_no_install_command(
+    monkeypatch: Any, tmp_path: Path, mode: str
+) -> None:
+    # #1022: a pre-release or local build newer than PyPI must not be offered
+    # an install command that would downgrade it.
+    calls: list[list[str]] = []
+    _ahead_of_pypi(monkeypatch, tmp_path, mode)
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    cli = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--check", "--json"])
+
+    assert cli.exit_code == 0
+    payload = json.loads(cli.stdout)
+    _assert_ahead_of_pypi(payload)
+    assert payload["release"]["source"] == "not_newer"
+    assert _installer_calls(calls) == []
+
+
+@pytest.mark.parametrize("mode", ["uv", "wheel", "pipx"])
+def test_update_run_ahead_of_pypi_runs_no_installer(
+    monkeypatch: Any, tmp_path: Path, mode: str, capsys: Any
+) -> None:
+    calls: list[list[str]] = []
+    _ahead_of_pypi(monkeypatch, tmp_path, mode)
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    def never_prompt(command: str, root: Path | None) -> bool:
+        raise AssertionError("must not offer to install an older release")
+
+    result = update_mod.run(repo=tmp_path / "biz", interactive=True, confirm=never_prompt)
+
+    _assert_ahead_of_pypi(result)
+    assert _installer_calls(calls) == []
+    assert result["skills_relinked_count"] == 1
+
+    update_mod.render_human(result)
+    output = capsys.readouterr().out
+    assert "Main Branch 0.6.3rc1 is newer than PyPI's latest release (0.6.2)" in output
+    assert "updated" not in output
+
+
+def test_update_check_human_ahead_of_pypi(monkeypatch: Any, tmp_path: Path) -> None:
+    _ahead_of_pypi(monkeypatch, tmp_path, "uv")
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner([]))
+
+    cli = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--check"])
+
+    assert cli.exit_code == 0
+    assert "version: 0.6.3rc1 (newer than PyPI's latest, 0.6.2)" in cli.stdout
+    assert "next: uv tool install" not in cli.stdout
+
+
+def test_update_dev_build_of_published_release_is_behind_pypi(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    # Versions compare by PEP 440, not by their numeric parts: 0.6.3.dev0
+    # sorts before 0.6.3, so the published release is still an upgrade.
+    _ahead_of_pypi(monkeypatch, tmp_path, "uv")
+    monkeypatch.setattr(update_mod, "_engine_version", lambda root=None: "0.6.3.dev0")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "0.6.3")
+
+    result = update_mod.run(repo=tmp_path / "biz", check=True)
+
+    assert result["installed_ahead_of_latest"] is False
+    assert result["new_version"] == "0.6.3"
+    assert result["manual_update_command"] == update_mod.UV_UPDATE_COMMAND_TEXT
+    assert update_mod.UV_UPDATE_COMMAND_TEXT in result["next_actions"]
 
 
 def test_update_reports_plugin_rail_wired_without_warning(monkeypatch: Any, tmp_path: Path) -> None:

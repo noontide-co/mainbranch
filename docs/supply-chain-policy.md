@@ -88,7 +88,10 @@ human approval over clever automation.
 - `mb/pyproject.toml` declares four runtime dependencies: `openai`, `typer`,
   `pyyaml`, and `rich`. Each has a documented floor (`>=`) and no upper
   bound. Floors come from the lowest version known to work; upper bounds
-  would force premature compatibility breaks.
+  would force premature compatibility breaks. The `minimum-dependencies`
+  CI job installs every floor (`uv pip install --resolution lowest`) on the
+  lowest supported Python and loads the CLI, so a floor `mb` cannot run on
+  fails the PR.
 - The dev extras (`ruff`, `mypy`, `pytest`, `pytest-cov`,
   `types-PyYAML`) are pinned by compatibility-friendly ranges
   (`~=`, `>=,<`).

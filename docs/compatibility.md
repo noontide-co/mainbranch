@@ -282,6 +282,13 @@ surfaces, exits 0, and carries the upgrade command in `next_actions`, so
 an installer. Read `upgrade_performed` rather than the exit code to learn
 whether the package itself changed.
 
+A pre-release or local build newer than PyPI's latest release is left alone on
+every install mode: `mb update` reports `installed_ahead_of_latest: true` with
+PyPI's version in `latest_version`, keeps `new_version` at the installed
+version, and lists no install command, since installing the latest release
+would be a downgrade. Versions compare by PEP 440, so `0.6.3rc1` is newer than
+`0.6.2` and older than `0.6.3`.
+
 **`mb update` writes, on every install mode.** The surface refresh is not
 scoped to the business repo. It touches:
 

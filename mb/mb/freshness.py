@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -18,6 +19,32 @@ MB_UPDATE_AVAILABLE_VERSION = "0.2.0"
 PYPI_PACKAGE_URL = "https://pypi.org/pypi/mainbranch/json"
 GITHUB_RELEASE_URL_TEMPLATE = "https://github.com/noontide-co/mainbranch/releases/tag/oe-v{version}"
 _LATEST_AUTO = object()
+# Required-update command per install mode (#965). `mb update` reuses these, so
+# both surfaces name the same command. `@latest` with `--refresh-package` is the
+# uv form `mb update` runs (#963, #1008).
+PIPX_UPDATE_COMMAND_TEXT = "pipx upgrade mainbranch"
+UV_UPDATE_COMMAND_TEXT = "uv tool install --refresh-package mainbranch mainbranch@latest"
+PIP_UPDATE_COMMAND_TEXT = "pip install --upgrade mainbranch"
+REQUIRED_UPDATE_COMMANDS = {
+    "pipx": PIPX_UPDATE_COMMAND_TEXT,
+    "uv": UV_UPDATE_COMMAND_TEXT,
+    "wheel": PIP_UPDATE_COMMAND_TEXT,
+}
+MODE_NEUTRAL_UPDATE_TEXT = (
+    "Upgrade the mainbranch package with the tool that installed it (pipx, uv or pip)."
+)
+_PEP440_RE = re.compile(
+    r"""^\s*v?
+    (?:(?P<epoch>[0-9]+)!)?
+    (?P<release>[0-9]+(?:\.[0-9]+)*)
+    (?:[-_.]?(?P<pre_l>a|alpha|b|beta|c|rc|pre|preview)[-_.]?(?P<pre_n>[0-9]+)?)?
+    (?P<post>-(?P<post_n1>[0-9]+)|[-_.]?(?:post|rev|r)[-_.]?(?P<post_n2>[0-9]+)?)?
+    (?P<dev>[-_.]?dev[-_.]?(?P<dev_n>[0-9]+)?)?
+    (?:\+(?P<local>[a-z0-9]+(?:[-_.][a-z0-9]+)*))?
+    \s*$""",
+    re.VERBOSE | re.IGNORECASE,
+)
+_PRE_RANK = {"a": 0, "alpha": 0, "b": 1, "beta": 1, "c": 2, "rc": 2, "pre": 2, "preview": 2}
 
 
 def version_key(version: str) -> tuple[int, ...]:
@@ -30,6 +57,46 @@ def version_key(version: str) -> tuple[int, ...]:
             digits += char
         parts.append(int(digits or "0"))
     return tuple(parts)
+
+
+def _pep440_key(version: str) -> tuple[Any, ...]:
+    """Sort key following PEP 440 ordering for the forms Main Branch publishes.
+
+    `version_key` drops pre-release and dev markers, so `0.6.3rc1` and `0.6.3`
+    compare equal. This one orders dev < pre-release < final < post, the way
+    pip and uv do, without adding `packaging` as a runtime dependency.
+    """
+    match = _PEP440_RE.match(version)
+    if match is None:
+        return (0, version_key(version), (3, 0), -1, float("inf"), 0)
+    release = [int(part) for part in match.group("release").split(".")]
+    while len(release) > 1 and release[-1] == 0:
+        release.pop()
+    pre_l = match.group("pre_l")
+    post = match.group("post_n1") or match.group("post_n2")
+    has_post = match.group("post") is not None
+    has_dev = match.group("dev") is not None
+    if pre_l:
+        pre: tuple[int, int] = (_PRE_RANK[pre_l.lower()], int(match.group("pre_n") or 0))
+    elif has_dev and not has_post:
+        pre = (-1, 0)
+    else:
+        pre = (3, 0)
+    return (
+        int(match.group("epoch") or 0),
+        tuple(release),
+        pre,
+        int(post or 0) if has_post else -1,
+        int(match.group("dev_n") or 0) if has_dev else float("inf"),
+        1 if match.group("local") else 0,
+    )
+
+
+def compare_versions(left: str, right: str) -> int:
+    """Return -1, 0 or 1 as ``left`` is older than, equal to or newer than ``right``."""
+    left_key = _pep440_key(left)
+    right_key = _pep440_key(right)
+    return (left_key > right_key) - (left_key < right_key)
 
 
 def latest_pypi_version(timeout: float = 3.0) -> str | None:
@@ -95,7 +162,7 @@ def package_update_status(
         reason = f"Package freshness does not apply in {mode} mode."
     elif installed_key < minimum_key:
         severity = "required"
-        command = "pipx upgrade mainbranch"
+        command = REQUIRED_UPDATE_COMMANDS.get(mode, "")
         if installed_key < version_key(MB_UPDATE_AVAILABLE_VERSION):
             reason = "Installed version predates mb update and the current skill-link repair flow."
         else:
@@ -112,6 +179,7 @@ def package_update_status(
 
     return {
         "installed": installed_version,
+        "install_mode": mode,
         "latest": latest_text,
         "minimum_supported": minimum_supported,
         "severity": severity,
@@ -133,7 +201,7 @@ def format_update_alert(update: dict[str, Any]) -> str:
     if severity not in {"required", "recommended"}:
         return ""
 
-    command = str(update.get("command") or "pipx upgrade mainbranch")
+    command = str(update.get("command") or "")
     post_update = [str(cmd) for cmd in update.get("post_update_commands", [])]
     installed = str(update.get("installed") or "")
     minimum_supported = str(update.get("minimum_supported") or "")
@@ -144,16 +212,17 @@ def format_update_alert(update: dict[str, Any]) -> str:
             "",
             "Your Main Branch install is old enough that setup and skills may not work correctly.",
             "",
-            "Run this first:",
-            f"  {command}",
         ]
+        lines.extend(["Run this first:", f"  {command}"] if command else [MODE_NEUTRAL_UPDATE_TEXT])
         if installed and version_key(installed) < version_key(MB_UPDATE_AVAILABLE_VERSION):
-            lines.extend(
-                [
-                    "",
-                    f"mb update is not available in {installed}; this first update must use pipx.",
-                ]
+            first_update = (
+                "this first update must use pipx"
+                if command == PIPX_UPDATE_COMMAND_TEXT
+                else "this first update must use the command above"
+                if command
+                else "this first update must use your installer"
             )
+            lines.extend(["", f"mb update is not available in {installed}; {first_update}."])
     else:
         lines = [
             "Update recommended.",

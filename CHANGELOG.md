@@ -31,6 +31,19 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   even with no providers, and a locked or unavailable backend no longer
   reports `present: false` for a credential it could not check: `present` is
   `null` and the new `presence` field reads `unknown` (#976).
+- `mb update` on a pre-release or local build newer than PyPI's latest says so
+  and lists no install command, instead of offering one that would downgrade
+  it. `--json` reports `installed_ahead_of_latest` and `latest_version`, and
+  versions compare by PEP 440 (#1022).
+- `mb update` no longer prints `updated Main Branch (X -> X)` when the version
+  did not change; it says Main Branch is already current (#974).
+- The required-update message names the command for your install (pipx, uv
+  tool or pip) instead of always pipx, and gives install-neutral copy when the
+  install mode is unknown (#965).
+- `typer` floor raised from 0.12 to 0.15.4, the lowest release `mb` loads on
+  with every Click it accepts. A new `minimum-dependencies` CI job installs all
+  declared floors on Python 3.10 and runs `mb --help` and `mb skill list`
+  (#997).
 
 ### Changed
 

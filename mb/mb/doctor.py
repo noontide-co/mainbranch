@@ -36,6 +36,7 @@ from mb import topology as topology_mod
 from mb import validate as validate_mod
 from mb.engine import install_mode, link_status
 from mb.freshness import (
+    MODE_NEUTRAL_UPDATE_TEXT,
     format_update_alert,
     package_update_status,
     version_key,
@@ -726,7 +727,7 @@ def _mainbranch_version_check(update: dict[str, Any]) -> dict[str, Any]:
             "ok": False,
             "detail": (
                 f"installed {installed}; minimum supported is {update['minimum_supported']}. "
-                f"Run `{update['command']}`."
+                + (f"Run `{update['command']}`." if update["command"] else MODE_NEUTRAL_UPDATE_TEXT)
             ),
             "severity": "error",
         }

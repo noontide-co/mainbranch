@@ -18,7 +18,11 @@ from mb import status as status_mod
 from mb import topology as topology_mod
 from mb import vocabulary
 from mb.engine import install_mode, link_status
-from mb.freshness import format_update_alert, package_update_status
+from mb.freshness import (
+    MODE_NEUTRAL_UPDATE_TEXT,
+    format_update_alert,
+    package_update_status,
+)
 from mb.status import _looks_like_mainbranch_repo, push_facts
 
 
@@ -188,7 +192,7 @@ def _build_checks(
             "ok": update_severity not in {"required", "recommended"},
             "severity": update_check_severity,
             "detail": update["reason"],
-            "repair": update["command"],
+            "repair": update["command"] or MODE_NEUTRAL_UPDATE_TEXT,
         },
         {
             "name": "claude_code",
