@@ -1878,9 +1878,9 @@ def connect_cmd(
                     "token_print",
                     "refusing to print the secret to a terminal or a pipe, where it lands "
                     "in a transcript. Run the command with it instead: "
-                    f"`mb connect exec {provider} -- <command>`. A script that must write "
-                    f"the raw value to a file can use `mb connect token {provider} --print "
-                    "> file`.",
+                    f"`mb connect exec {provider} -- <command>`. A plain redirect to a file "
+                    f"needs no flag: `mb connect token {provider} > file`. `--print` is only "
+                    "for a terminal or a pipe, when no agent or log reads the output.",
                 )
         except connect_mod.ConnectRefusal as exc:
             # Its own exit code, so a script can tell this from a missing credential.

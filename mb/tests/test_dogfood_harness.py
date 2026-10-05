@@ -229,7 +229,8 @@ def test_run_claude_print_allows_readonly_mb_and_denies_write_tools(
     assert "Bash(mb checkpoint --plan *)" in allowed
     assert "Bash(mb checkpoint --message *)" in disallowed
     assert "Bash(git commit *)" in disallowed
-    assert captured["env"]["PATH"].split(os.pathsep)[0] == str(state.mb_path.parent)
+    first_path_entry = captured["env"]["PATH"].split(os.pathsep)[0]
+    assert first_path_entry == str(state.mb_path.parent)
     assert state.claude["permission_policy"]["bypass_permissions"] is False
     assert state.claude["permission_policy"]["mode"] == "read_only_mb_allowlist"
     assert state.claude["session_strategy"] == "fresh_session_per_simulation"
@@ -896,6 +897,7 @@ def test_keychain_simulation_injects_recorded_status_and_isolates_credentials(
     )
     monkeypatch.setattr(harness, "run_command", _fake_claude_runner(tmp_path, calls, answer))
     monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "operator-home"))
+    monkeypatch.delenv("MB_CONNECT_SECRET_BACKEND", raising=False)
     _stub_profile_capture(monkeypatch)
 
     harness.run_claude_print(state, max_budget_usd="0.01", simulation_tier="release_acceptance")
@@ -910,14 +912,18 @@ def test_keychain_simulation_injects_recorded_status_and_isolates_credentials(
     assert "repair_command `mb connect repair --keychain`" in prompt
     assert "credential value not included" in prompt
     assert "mb connect status --json` (recorded" not in other_call["command"][-1]
-    isolated_home = Path(keychain_call["env"]["MAINBRANCH_HOME"])
+    # Read only the checked keys so a failure never prints the whole environment.
+    keychain_env = keychain_call["env"]
+    other_env = other_call["env"]
+    isolated_home = Path(keychain_env.get("MAINBRANCH_HOME", ""))
+    keychain_backend = keychain_env.get("MB_CONNECT_SECRET_BACKEND")
+    other_home = other_env.get("MAINBRANCH_HOME")
+    other_backend = other_env.get("MB_CONNECT_SECRET_BACKEND")
     assert isolated_home.parent == tmp_path
     assert isolated_home.is_dir()
-    assert keychain_call["env"]["MB_CONNECT_SECRET_BACKEND"] == "local-file"
-    assert other_call["env"]["MAINBRANCH_HOME"] == str(tmp_path / "operator-home")
-    assert "MB_CONNECT_SECRET_BACKEND" not in other_call["env"] or (
-        other_call["env"]["MB_CONNECT_SECRET_BACKEND"] != "local-file"
-    )
+    assert keychain_backend == "local-file"
+    assert other_home == str(tmp_path / "operator-home")
+    assert other_backend != "local-file"
     for denied in ("Bash(mb connect repair *)", "Bash(mb connect token *)", "Bash(security *)"):
         assert denied in disallowed
     profile = next(

@@ -11,6 +11,21 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Fixed
+
+- The keychain release-simulation test no longer depends on the caller's
+  `MB_CONNECT_SECRET_BACKEND`, and the dogfood harness tests print only the
+  environment keys they check when an assertion fails, never the whole
+  environment (#1019).
+
+### Changed
+
+- `docs/migrating.md` names both skill backup locations: `mb skill link` uses
+  `~/.claude/skills/.mainbranch-backups/skill-link/<name>`, and
+  `mb skill repair --apply` keeps its timestamped folder. `docs/connect.md` and
+  the `mb connect token` refusal now say a plain redirect to a file works
+  without `--print`; the flag is only for a terminal or a pipe (#1020).
+
 ## [0.6.2] - 2026-10-04
 
 This patch makes `mb update` safe to run from an agent or a scheduled job: it

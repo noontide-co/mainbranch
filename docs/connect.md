@@ -84,15 +84,15 @@ still the command's business: avoid commands that echo their environment.
 `mb connect token <provider>` prints the raw credential with no added newline.
 It refuses when stdout is a terminal or a pipe, because both put the secret
 into some other process's text: a transcript, a log, a variable an agent later
-prints. The refusal points at `exec` on stderr. A script that must write the
-raw value to a file can still do so explicitly:
+prints. The refusal points at `exec` on stderr. A plain redirect to a file is
+neither, so it works without any flag:
 
 ```bash
-mb connect token stripe --print > "$private_tmp/stripe-key"
+mb connect token stripe > "$private_tmp/stripe-key"
 ```
 
-`--print` also lifts the refusal for a terminal or a pipe. Use it only when
-nothing reading that output is an agent or a log.
+`--print` is needed only for a terminal or a pipe: it lifts the refusal there.
+Use it only when nothing reading that output is an agent or a log.
 
 Exit codes, stable for scripts. The checks run in this order, and the first
 that fails decides the code:
@@ -128,10 +128,11 @@ same code as usage errors; from 0.6.2 it exits 3, so a wrapper can tell
 - Run the command with the credential instead:
   `mb connect exec <provider> -- <command>`. The value reaches only that
   command's environment (see `exec` above).
-- Where a script must hold the raw value, add `--print`, preferably writing
-  to a private file: `mb connect token <provider> --print > file`.
-  `TOKEN=$(mb connect token <provider> --print)` also works, but keeps the
-  value in the shell.
+- Where a script must hold the raw value, prefer a plain redirect to a private
+  file: `mb connect token <provider> > file`. That needs no flag, because a
+  file is neither a terminal nor a pipe. Command substitution reads through a
+  pipe, so it needs `--print`: `TOKEN=$(mb connect token <provider> --print)`
+  works, but keeps the value in the shell.
 
 The product model behind this surface lives in
 [connection-model.md](connection-model.md).

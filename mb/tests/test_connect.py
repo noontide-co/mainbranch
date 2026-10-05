@@ -1892,6 +1892,7 @@ def test_connect_token_refuses_terminal_or_pipe_without_print(tmp_path: Path, mo
     assert result.stdout == ""
     assert "cf-test-token" not in result.output
     assert "mb connect exec cloudflare -- <command>" in result.stderr
+    assert "mb connect token cloudflare > file" in result.stderr
     assert "--print" in result.stderr
 
 
@@ -1992,6 +1993,28 @@ def test_connect_token_print_still_writes_to_a_real_pipe(tmp_path: Path, monkeyp
 
     assert completed.returncode == 0
     assert completed.stdout == "cf-test-token"
+
+
+def test_connect_token_plain_file_redirect_needs_no_print_flag(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token")
+    out = tmp_path / "token-file"
+
+    with out.open("w") as handle:
+        completed = subprocess.run(
+            [sys.executable, "-m", "mb", "connect", "token", "cloudflare", "--repo", str(repo)],
+            stdout=handle,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=_token_subprocess_env(tmp_path),
+            timeout=60,
+            check=False,
+        )
+
+    assert completed.returncode == 0
+    assert out.read_text() == "cf-test-token"
 
 
 def test_connect_token_refusal_comes_before_the_provider_lookup(
