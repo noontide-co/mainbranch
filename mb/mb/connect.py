@@ -1620,10 +1620,10 @@ def _secret_statuses(
         raw = stored_secrets.get(field) if isinstance(stored_secrets, dict) else None
         raw = raw if isinstance(raw, dict) else {}
         ref = str(raw.get("ref") or "")
-        backend = _recorded_backend(raw, ref)
+        backend = str(raw.get("backend") or "local-file")
         probe = probes.get(field) if probes is not None else None
         if probe is None:
-            probe = _probe_secret_ref(backend or "local-file", ref, deadline=deadline)
+            probe = _probe_secret_ref(backend, ref, deadline=deadline)
         if not probe.present:
             missing.append(field)
         secrets[field] = {
@@ -1635,12 +1635,6 @@ def _secret_statuses(
             "backend_state": probe.reason or "ready",
         }
     return secrets, missing
-
-
-def _recorded_backend(raw: dict[str, Any], ref: str) -> str:
-    """The backend a secret entry names; ``""`` when no secret was ever recorded."""
-
-    return str(raw.get("backend") or ("local-file" if ref else ""))
 
 
 def _secret_presence(probe: SecretProbe) -> str:
@@ -1806,10 +1800,10 @@ def status_provider(
         raw_secret = stored_secrets.get("access_token") if isinstance(stored_secrets, dict) else {}
         raw_secret = raw_secret if isinstance(raw_secret, dict) else {}
         ref = str(raw_secret.get("ref") or "")
-        backend = _recorded_backend(raw_secret, ref)
+        backend = str(raw_secret.get("backend") or "local-file")
         probe = _secret_probes.get("access_token") if _secret_probes is not None else None
         if probe is None:
-            probe = _probe_secret_ref(backend or "local-file", ref, deadline=_credential_deadline)
+            probe = _probe_secret_ref(backend, ref, deadline=_credential_deadline)
         secret_present = probe.present
         meta_backend_reason = "" if probe.backend_ok else (probe.reason or "keychain_unavailable")
         meta_stored = bool(secret_present and not meta_backend_reason)
@@ -4031,7 +4025,9 @@ def _configured_credential_backends(status: dict[str, Any]) -> list[str]:
         for raw_secret in secrets.values():
             secret = raw_secret if isinstance(raw_secret, dict) else {}
             backend = str(secret.get("backend") or "")
-            if backend:
+            # A slot with no ref (a tokenless first connect, #991) never asked
+            # its backend anything, so it cannot vouch for that backend's health.
+            if backend and secret.get("ref"):
                 backends.add(backend)
     return sorted(backends)
 
@@ -4102,7 +4098,9 @@ def _probe_gap(status: dict[str, Any]) -> dict[str, Any]:
     providers = sorted(
         str(item.get("provider") or "")
         for item in status.get("providers") or []
-        if item.get("connected") and item.get("secrets") and not item.get("has_probe")
+        if item.get("configured", item.get("connected"))
+        and item.get("secrets")
+        and not item.get("has_probe")
     )
     if not providers:
         return {"providers": [], "summary": "", "safe_to_share": True}
@@ -4433,7 +4431,9 @@ def business_identity(repo: str | Path = ".") -> dict[str, Any]:
     pmap = provider_map()
     providers_out: list[dict[str, Any]] = []
     for item in status["providers"]:
-        if not item["connected"]:
+        # Configured, not only connected: a metadata-only first connect (#991)
+        # records identity fields before any secret is stored.
+        if not item.get("configured", item["connected"]):
             continue
         provider = pmap.get(item["provider"])
         metadata = item.get("metadata") or {}

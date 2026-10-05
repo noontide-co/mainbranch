@@ -4554,7 +4554,7 @@ def test_tokenless_first_connect_with_metadata_records_no_secret_ref(
     assert status["connected"] is False
     assert status["configured"] is True
     assert status["secrets"]["api_token"]["ref"] == ""
-    assert status["secrets"]["api_token"]["backend"] == ""
+    assert status["secrets"]["api_token"]["backend"] == "local-file"
 
     cli = runner.invoke(app, ["connect", "status", "--repo", str(repo), "--json"])
 
@@ -4852,3 +4852,59 @@ def test_ready_and_missing_secrets_report_known_presence(tmp_path: Path, monkeyp
         "repair_command": "",
         "safe_to_share": True,
     }
+
+
+def test_metadata_only_first_connect_still_appears_in_identity(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "meta", repo=repo, metadata_pairs=["pixel_id=111", "ad_account_id=act_222"]
+    )
+    connect_mod.connect_provider("cloudflare", repo=repo, metadata_pairs=["zone_id=demo-zone"])
+
+    cli = runner.invoke(app, ["connect", "identity", "--repo", str(repo), "--json"])
+    human = runner.invoke(app, ["connect", "identity", "--repo", str(repo)])
+
+    assert cli.exit_code == 0, cli.output
+    by_id = {item["provider"]: item for item in json.loads(cli.stdout)["providers"]}
+    assert set(by_id) == {"meta", "cloudflare"}
+    assert by_id["meta"]["identity"]["pixel_id"] == "111"
+    assert by_id["meta"]["identity"]["ad_account_id"] == "act_222"
+    assert by_id["cloudflare"]["identity"]["zone_id"] == "demo-zone"
+    assert human.exit_code == 0, human.output
+    assert "meta" in human.stdout.lower()
+    assert "cloudflare" in human.stdout.lower()
+    assert "no connected providers" not in human.stdout
+
+
+def test_tokenless_slot_does_not_vouch_for_backend_health(tmp_path: Path, monkeypatch) -> None:
+    # The tokenless entry reports backend local-file, as before, but asked no
+    # backend anything; health still comes from the backend a connect would use.
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "macos-keychain")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "cloudflare", repo=repo, metadata_pairs=["zone_id=abc"], secret_backend="local-file"
+    )
+    _fake_native_store(monkeypatch, "locked")
+
+    status = connect_mod.status_all(repo)
+
+    assert status["providers"][0]["secrets"]["api_token"]["backend"] == "local-file"
+    assert status["credential_backend"]["backend"] == "macos-keychain"
+    assert status["credential_backend"]["state"] == "keychain_locked"
+
+
+def test_tokenless_first_connect_still_counts_in_probe_gap(tmp_path: Path, monkeypatch) -> None:
+    # The probe gap is about the provider, not the stored secret: resend has no
+    # probe whether or not its key is stored yet, as on releases before #991.
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("resend", repo=repo, metadata_pairs=["sender_domain=example.com"])
+
+    report = connect_mod.doctor(repo)
+
+    assert report["probe_gap"]["providers"] == ["resend"]
