@@ -37,9 +37,10 @@ from mb import validate as validate_mod
 from mb.engine import install_mode, link_status
 from mb.freshness import (
     MODE_NEUTRAL_UPDATE_TEXT,
+    checked_release_version,
+    compare_versions,
     format_update_alert,
     package_update_status,
-    version_key,
 )
 from mb.migrate import (
     LATEST_SCHEMA_VERSION,
@@ -732,7 +733,14 @@ def _mainbranch_version_check(update: dict[str, Any]) -> dict[str, Any]:
             "severity": "error",
         }
 
-    if severity == "recommended" or (latest and version_key(latest) > version_key(installed)):
+    # #1043: version_key drops pre-release markers, so 0.6.3rc1 compared
+    # equal to 0.6.3 here and the final release was missed. Compare with
+    # the PEP 440 ordering used by `mb update`, guarded so an unparseable
+    # latest never reads as an update.
+    checked_latest = checked_release_version(latest)
+    if severity == "recommended" or (
+        checked_latest and compare_versions(checked_latest, installed) > 0
+    ):
         return {
             "name": "mainbranch-version",
             "ok": False,
