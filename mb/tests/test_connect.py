@@ -2183,9 +2183,11 @@ def test_connect_exec_uses_no_shell(tmp_path: Path, monkeypatch) -> None:
         "repair_command": "",
     }
     assert seen["args"] == ["wrangler", "whoami"]
-    assert "shell" not in seen["kwargs"]
-    # Read only the checked key so a failure never prints the whole environment.
+    # Read only names and the checked key: `seen["kwargs"]` holds the whole
+    # environment, so a failing assert on it would print every value.
+    kwarg_names = sorted(seen["kwargs"])
     token = seen["kwargs"]["env"].get("CLOUDFLARE_API_TOKEN")
+    assert "shell" not in kwarg_names
     assert token == "cf-fixture-0000"
     assert "cf-fixture-0000" not in json.dumps(outcome)
 
