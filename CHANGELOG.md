@@ -11,6 +11,18 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- `mb connect google --oauth` signs a business repo in to Google once for
+  read-only Search Console and GA4: browser or `--paste` sign-in with PKCE on
+  `127.0.0.1`, the grant kept in the credential store, `search_console_site`,
+  `ga4_property_id` and the granted products recorded in repo metadata. It
+  refuses to replace a stored Google access token without
+  `--replace-access-token`, and token reconnects and `mb connect rotate` on a
+  sign-in connection refuse instead of dropping the grant. Nothing reads
+  Google yet; setup, the 100-token limit and headless use are in
+  `docs/connect.md` (part of #1004).
+
 ### Changed
 
 - `mb update` lists the plugin-rail switch (`mb skill link --repo . --plugin`)
@@ -24,6 +36,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- `mb`'s own usage errors (an unknown option, an unexpected extra argument,
+  an invalid value) no longer repeat command-line input that could be a
+  credential: it is replaced with `(not shown: it may be a credential)`, on
+  `mb`, `mb connect` and every subcommand. An ordinary typo such as `--jsno`
+  is still shown; the exit code (2) and the usage line are unchanged, and
+  `--json` still prints no envelope for these errors (#1037).
+- `mb connect --metadata` refuses a metadata key that looks like a credential
+  (rule `metadata_secret_key`, exit 2), with or without a token, without
+  repeating it, and stores nothing. A key like that already in
+  `.mb/connect.yaml` no longer appears in `mb connect status` or
+  `mb connect identity` output (#1033).
 - `mb doctor repair --apply` no longer switches a symlink-era repo to the
   plugin rail. `mb doctor repair` now lists the switch in a new
   `operator_actions` field, the way `mb update` does, for a person to run at a
@@ -42,6 +65,16 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - No test assert reads straight out of `os.environ` or a captured environment
   any more, so a failing test prints only the checked value, never the whole
   environment; a guard test keeps the pattern out (#1025).
+- `mb update` and `mb update --check` on a uv or pip (wheel) install that
+  already runs PyPI's latest release say "Main Branch is already current"
+  and list no install command, instead of offering to reinstall the same
+  version or asking to confirm one. A behind install still gets its command
+  (#1036).
+- `mb update` treats a PyPI answer that is valid JSON but not an object (a
+  list, `null`, a number or a string) as "latest unknown" instead of stopping
+  with a traceback, and a release-candidate install that sees the final
+  release now gets that release's notes and summary in `mb update --check`
+  (#1039).
 
 ## [0.6.3] - 2026-10-05
 

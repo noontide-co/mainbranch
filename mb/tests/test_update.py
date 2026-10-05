@@ -7,6 +7,7 @@ import os
 import shlex
 import shutil
 import subprocess
+import urllib.request
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,7 @@ from typer.testing import CliRunner
 from mb import __version__
 from mb import codex as codex_mod
 from mb import engine as engine_mod
+from mb import freshness as freshness_mod
 from mb import update as update_mod
 from mb.cli import app
 
@@ -956,6 +958,7 @@ def test_update_wheel_install_json_exits_zero_with_next_action(
 ) -> None:
     monkeypatch.setattr(update_mod, "install_mode", lambda: "wheel")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "9.9.9")
     monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner([]))
 
     invoked = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--json"])
@@ -1107,6 +1110,7 @@ def test_update_uv_accepted_prompt_runs_install_then_relinks(
 
     monkeypatch.setattr(update_mod, "install_mode", lambda: "uv")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "9.9.9")
     monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
     monkeypatch.setattr(update_mod, "_run_command", fake_run)
 
@@ -1140,6 +1144,7 @@ def test_update_uv_install_failure_surfaces_command(monkeypatch: Any, tmp_path: 
 
     monkeypatch.setattr(update_mod, "install_mode", lambda: "uv")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "9.9.9")
     monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
     monkeypatch.setattr(update_mod, "_run_command", fake_run)
 
@@ -1160,6 +1165,7 @@ def test_update_uv_install_failure_surfaces_command(monkeypatch: Any, tmp_path: 
 def test_update_uv_missing_binary_returns_error(monkeypatch: Any, tmp_path: Path) -> None:
     monkeypatch.setattr(update_mod, "install_mode", lambda: "uv")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "9.9.9")
     monkeypatch.setattr("mb.update.shutil.which", lambda name: None)
 
     result = update_mod.run(
@@ -1658,6 +1664,268 @@ def test_update_dev_build_of_published_release_is_behind_pypi(
     assert result["new_version"] == "0.6.3"
     assert result["manual_update_command"] == update_mod.UV_UPDATE_COMMAND_TEXT
     assert update_mod.UV_UPDATE_COMMAND_TEXT in result["next_actions"]
+
+
+# Installed and PyPI versions for each relation the #1036 matrix covers.
+_RELATIONS = {
+    "current": ("0.6.3", "0.6.3"),
+    "behind": ("0.6.2", "0.6.3"),
+    "ahead": ("0.6.4rc1", "0.6.3"),
+}
+_INSTALLER_TEXT = ("uv tool install", "pipx upgrade", "pipx install", "pip install")
+
+
+def _installed_against_pypi(
+    monkeypatch: Any, tmp_path: Path, mode: str, installed: str, latest: str
+) -> None:
+    monkeypatch.setattr(update_mod, "install_mode", lambda: mode)
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_engine_version", lambda root=None: installed)
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: latest)
+    monkeypatch.setattr(update_mod, "_version_from_mb_command", lambda: latest)
+    monkeypatch.setattr(update_mod, "bundled_skills", lambda: ["mb-start"])
+    monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
+
+
+def _install_commands(result: dict[str, Any]) -> list[str]:
+    return [a for a in result["next_actions"] if a.startswith(_INSTALLER_TEXT)]
+
+
+@pytest.mark.parametrize("mode", ["uv", "wheel"])
+def test_update_check_already_current_names_no_install_command(
+    monkeypatch: Any, tmp_path: Path, mode: str
+) -> None:
+    # #1036: a uv or wheel install that already runs PyPI's latest needs no
+    # reinstall, so neither the JSON nor the human check offers one.
+    calls: list[list[str]] = []
+    _installed_against_pypi(monkeypatch, tmp_path, mode, "0.6.3", "0.6.3")
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    cli = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--check", "--json"])
+    human = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--check"])
+
+    assert cli.exit_code == 0
+    payload = json.loads(cli.stdout)
+    assert payload["ok"] is True
+    assert payload["old_version"] == "0.6.3"
+    assert payload["new_version"] == "0.6.3"
+    assert payload["latest_version"] == "0.6.3"
+    assert payload["installed_ahead_of_latest"] is False
+    assert payload["latest_version_unknown"] is False
+    assert payload["manual_update_command"] == ""
+    assert _install_commands(payload) == []
+    assert payload["warnings"] == []
+    assert payload["release"]["source"] == "not_newer"
+    assert human.exit_code == 0
+    assert "Main Branch is already current (0.6.3)." in human.stdout
+    assert "0.6.3 -> 0.6.3" not in human.stdout
+    assert "uv tool install" not in human.stdout
+    assert "pip install" not in human.stdout
+    assert _installer_calls(calls) == []
+
+
+@pytest.mark.parametrize("mode", ["uv", "wheel"])
+def test_update_run_already_current_runs_and_asks_nothing(
+    monkeypatch: Any, tmp_path: Path, mode: str, capsys: Any
+) -> None:
+    calls: list[list[str]] = []
+    _installed_against_pypi(monkeypatch, tmp_path, mode, "0.6.3", "0.6.3")
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    def never_prompt(command: str, root: Path | None) -> bool:
+        raise AssertionError("must not offer to reinstall the version already installed")
+
+    result = update_mod.run(repo=tmp_path / "biz", interactive=True, confirm=never_prompt)
+
+    assert result["ok"] is True
+    assert result["new_version"] == "0.6.3"
+    assert result["upgrade_performed"] is False
+    assert result["manual_update_command"] == ""
+    assert _install_commands(result) == []
+    assert result["warnings"] == []
+    assert result["skills_relinked_count"] == 1
+    assert _installer_calls(calls) == []
+
+    update_mod.render_human(result)
+    output = capsys.readouterr().out
+    assert "Main Branch is already current (0.6.3)." in output
+    assert "did not upgrade" not in output
+    assert "next: uv tool install" not in output
+    assert "next: pip install" not in output
+
+
+@pytest.mark.parametrize("mode", ["uv", "wheel"])
+def test_update_cli_json_already_current_names_no_install_command(
+    monkeypatch: Any, tmp_path: Path, mode: str
+) -> None:
+    calls: list[list[str]] = []
+    _installed_against_pypi(monkeypatch, tmp_path, mode, "0.6.3", "0.6.3")
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    cli = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--json"])
+
+    assert cli.exit_code == 0
+    payload = json.loads(cli.stdout)
+    assert payload["new_version"] == "0.6.3"
+    assert payload["manual_update_command"] == ""
+    assert _install_commands(payload) == []
+    assert payload["warnings"] == []
+    assert _installer_calls(calls) == []
+
+
+_EXPECTED_CHECK_COMMAND = {
+    ("uv", "behind"): update_mod.UV_UPDATE_COMMAND_TEXT,
+    ("wheel", "behind"): update_mod.PIP_UPDATE_COMMAND_TEXT,
+}
+
+
+@pytest.mark.parametrize("relation", ["current", "behind", "ahead"])
+@pytest.mark.parametrize("mode", ["uv", "wheel", "pipx"])
+def test_update_check_install_command_by_mode_and_relation(
+    monkeypatch: Any, tmp_path: Path, mode: str, relation: str
+) -> None:
+    # Only a behind uv or wheel install is handed a command. pipx keeps its
+    # "would run" action whenever it is not ahead, as before #1036.
+    installed, latest = _RELATIONS[relation]
+    _installed_against_pypi(monkeypatch, tmp_path, mode, installed, latest)
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner([]))
+
+    result = update_mod.run(repo=tmp_path / "biz", check=True)
+
+    command = _EXPECTED_CHECK_COMMAND.get((mode, relation), "")
+    assert result["manual_update_command"] == command
+    assert _install_commands(result) == ([command] if command else [])
+    assert result["installed_ahead_of_latest"] is (relation == "ahead")
+    assert result["new_version"] == (latest if relation == "behind" else installed)
+    pipx_action = f"would run `{update_mod.PIPX_UPDATE_COMMAND_TEXT}`"
+    assert (pipx_action in result["actions"]) is (mode == "pipx" and relation != "ahead")
+
+
+@pytest.mark.parametrize("relation", ["current", "behind", "ahead"])
+@pytest.mark.parametrize("mode", ["uv", "wheel", "pipx"])
+def test_update_run_installer_by_mode_and_relation(
+    monkeypatch: Any, tmp_path: Path, mode: str, relation: str
+) -> None:
+    # Interactive run: a behind uv install is asked once and installs on yes;
+    # a current or ahead one is never asked. pipx upgrades unless ahead. A
+    # wheel install never runs an installer.
+    calls: list[list[str]] = []
+    prompts: list[str] = []
+    installed, latest = _RELATIONS[relation]
+    _installed_against_pypi(monkeypatch, tmp_path, mode, installed, latest)
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    def confirm(command: str, root: Path | None) -> bool:
+        prompts.append(command)
+        return True
+
+    result = update_mod.run(repo=tmp_path / "biz", interactive=True, confirm=confirm)
+
+    expected_installs = {
+        ("uv", "behind"): [update_mod.UV_UPDATE_COMMAND],
+        ("pipx", "behind"): [["pipx", "upgrade", "mainbranch"]],
+        ("pipx", "current"): [["pipx", "upgrade", "mainbranch"]],
+    }.get((mode, relation), [])
+    assert result["ok"] is True
+    assert _installer_calls(calls) == expected_installs
+    assert prompts == (
+        [update_mod.UV_UPDATE_COMMAND_TEXT] if (mode, relation) == ("uv", "behind") else []
+    )
+    expected_manual = (
+        update_mod.PIP_UPDATE_COMMAND_TEXT if (mode, relation) == ("wheel", "behind") else ""
+    )
+    assert result["manual_update_command"] == expected_manual
+
+
+def _rc_sees_release(monkeypatch: Any, tmp_path: Path, installed: str, latest: str) -> list[str]:
+    looked_up: list[str] = []
+
+    def release_context(version: str) -> dict[str, Any]:
+        looked_up.append(version)
+        return {
+            "version": version,
+            "tag": f"oe-v{version}",
+            "url": f"https://github.com/noontide-co/mainbranch/releases/tag/oe-v{version}",
+            "name": f"Main Branch {version}",
+            "published_at": "2026-10-01T00:00:00Z",
+            "summary": "Test release summary.",
+            "available": True,
+            "source": "github_release",
+        }
+
+    _installed_against_pypi(monkeypatch, tmp_path, "uv", installed, latest)
+    monkeypatch.setattr(update_mod, "_release_context", release_context)
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner([]))
+    return looked_up
+
+
+def test_update_check_rc_install_gets_final_release_context(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    # #1039: 0.6.3 is newer than 0.6.3rc1 under PEP 440, so the check reads the
+    # final release's notes instead of reporting it as not newer.
+    looked_up = _rc_sees_release(monkeypatch, tmp_path, "0.6.3rc1", "0.6.3")
+
+    result = update_mod.run(repo=tmp_path / "biz", check=True)
+
+    assert looked_up == ["0.6.3"]
+    assert result["new_version"] == "0.6.3"
+    assert result["release"]["source"] == "github_release"
+    assert result["release"]["summary"] == "Test release summary."
+    assert result["manual_update_command"] == update_mod.UV_UPDATE_COMMAND_TEXT
+
+
+def test_update_check_final_install_gets_no_release_context_for_same_release(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    looked_up = _rc_sees_release(monkeypatch, tmp_path, "0.6.3", "0.6.3")
+
+    result = update_mod.run(repo=tmp_path / "biz", check=True)
+
+    assert looked_up == []
+    assert result["release"]["source"] == "not_newer"
+
+
+class _PyPIResponse:
+    def __init__(self, body: str) -> None:
+        self._body = body.encode("utf-8")
+
+    def __enter__(self) -> _PyPIResponse:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+    def read(self) -> bytes:
+        return self._body
+
+
+@pytest.mark.parametrize("body", ["[1, 2]", "null", "3", '"x"'])
+@pytest.mark.parametrize("mode", ["uv", "pipx", "wheel"])
+def test_update_with_non_object_pypi_json_reports_latest_unknown(
+    monkeypatch: Any, tmp_path: Path, mode: str, body: str
+) -> None:
+    # #1039: valid JSON that is not an object must read as "latest unknown",
+    # not stop `mb update` with a traceback.
+    calls: list[list[str]] = []
+    _installed_against_pypi(monkeypatch, tmp_path, mode, "0.6.3", "0.6.3")
+    monkeypatch.setattr(
+        urllib.request,
+        "urlopen",
+        lambda url, timeout=0.0: _PyPIResponse(body),
+    )
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", freshness_mod.latest_pypi_version)
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    cli = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--json"])
+
+    assert cli.exit_code == 0
+    assert cli.exception is None
+    payload = json.loads(cli.stdout)
+    assert payload["latest_version_unknown"] is True
+    assert payload["manual_update_command"] == ""
+    assert _install_commands(payload) == []
+    assert _installer_calls(calls) == []
 
 
 def _latest_unknown(monkeypatch: Any, tmp_path: Path, mode: str, latest: str | None) -> None:
