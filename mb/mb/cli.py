@@ -7,13 +7,15 @@ because that's the working pattern.
 
 from __future__ import annotations
 
+import functools
 import json
 import math
 import os
 import sys
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, NoReturn
+from typing import Any, NoReturn, TypeVar
 
 import typer
 
@@ -28,6 +30,8 @@ from mb import connect as connect_mod
 from mb import dashboard as dashboard_mod
 from mb import doctor as doctor_mod
 from mb import educational as educational_mod
+from mb import feedback as feedback_mod
+from mb import fleet as fleet_mod
 from mb import graph as graph_mod
 from mb import image_rail as image_rail_mod
 from mb import init as init_mod
@@ -62,6 +66,9 @@ app = typer.Typer(
     no_args_is_help=False,
     invoke_without_command=True,
     add_completion=False,
+    # Some supported Typer versions print every frame's local variables in a
+    # crash traceback, which for `mb connect` includes stored credentials.
+    pretty_exceptions_show_locals=False,
 )
 
 skill_app = typer.Typer(
@@ -100,6 +107,19 @@ site_app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(site_app, name="site")
+
+fleet_app = typer.Typer(
+    name="fleet",
+    help="Read-only status of every site across your hubs.",
+    no_args_is_help=True,
+)
+app.add_typer(fleet_app, name="fleet")
+fleet_hubs_app = typer.Typer(
+    name="hubs",
+    help="Show the hub list mb fleet reads.",
+    no_args_is_help=True,
+)
+fleet_app.add_typer(fleet_hubs_app, name="hubs")
 
 launch_app = typer.Typer(
     name="launch",
@@ -412,6 +432,97 @@ def ledger_init_cmd(
     raise typer.Exit(0 if result["ok"] else 1)
 
 
+FEEDBACK_WORDS_ARGUMENT = typer.Argument(
+    None,
+    help=(
+        "What went wrong, in plain words. Or `rollup` / `list` / `clear` to read or "
+        "prune the local feedback file."
+    ),
+)
+
+
+@app.command("feedback")
+def feedback_cmd(
+    words: list[str] = FEEDBACK_WORDS_ARGUMENT,
+    about: str = typer.Option(
+        "",
+        "--command",
+        help="The mb command the feedback is about, for example 'mb connect test'.",
+    ),
+    since: str = typer.Option(
+        "",
+        "--since",
+        help="Window for rollup and list: 7d, 12h, 2w or a date. Rollup defaults to 7d.",
+    ),
+    before: str = typer.Option(
+        "", "--before", help="With `clear`, remove entries older than this date."
+    ),
+    kind: str = typer.Option("", "--kind", help="With `list`, show only feedback or refusal."),
+    limit: int = typer.Option(
+        50, "--limit", help="With `list`, newest entries to show; 0 for all."
+    ),
+    repo: str = typer.Option(".", "--repo", help="Repo the feedback was written from."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Log mb friction to a local file and roll it up for the maintainer. Nothing is sent."""
+    args = list(words or [])
+    target = args[0] if args and args[0] in feedback_mod.SUBCOMMANDS else ""
+    command = f"mb feedback {target}".strip()
+    schema_name = "mainbranch.feedback.v1"
+
+    def usage_error(code: str, message: str) -> NoReturn:
+        if json_out:
+            typer.echo(
+                _json_error_payload(
+                    command=command, schema_name=schema_name, code=code, message=message
+                )
+            )
+        else:
+            typer.echo(f"{command}: {message}", err=True)
+        raise typer.Exit(2)
+
+    if target and len(args) > 1:
+        usage_error("unexpected_argument", f"unexpected argument {args[1]!r}")
+    try:
+        if target == "rollup":
+            result = feedback_mod.rollup(since=since or feedback_mod.DEFAULT_SINCE)
+        elif target == "list":
+            if kind and kind not in feedback_mod.KINDS:
+                usage_error("invalid_kind", "--kind must be feedback or refusal")
+            result = feedback_mod.list_entries(since=since or None, kind=kind or None, limit=limit)
+        elif target == "clear":
+            if not before:
+                usage_error("missing_before", "--before <date> is required, for example 2026-10-01")
+            result = feedback_mod.clear(before=before)
+        else:
+            if not args:
+                usage_error(
+                    "empty_feedback",
+                    'say what went wrong, for example: mb feedback "status said X, expected Y"',
+                )
+            result = feedback_mod.record(" ".join(args), command=about or None, repo=repo)
+    except ValueError as exc:
+        code = "invalid_date" if target == "clear" else "invalid_since"
+        usage_error(code, feedback_mod.scrub(str(exc)))
+    if json_out:
+        typer.echo(_json_payload(result, command=command, schema_name=schema_name))
+    elif not result["ok"]:
+        for error in result.get("errors", []):
+            typer.echo(f"{command}: {error['message']}", err=True)
+    elif target == "rollup":
+        typer.echo(result["markdown"], nl=False)
+    elif target == "list":
+        feedback_mod.render_list(result)
+    elif target == "clear":
+        feedback_mod.render_clear(result)
+    else:
+        feedback_mod.render_record(result)
+    if not result["ok"]:
+        codes = {error.get("code") for error in result.get("errors", [])}
+        raise typer.Exit(2 if "empty_feedback" in codes else 1)
+    raise typer.Exit(0)
+
+
 leads_app = typer.Typer(
     name="leads",
     help="Grade lead eligibility and pair raw CPL with ELIGIBLE-lead CPL.",
@@ -553,6 +664,11 @@ workflow_app = typer.Typer(
 )
 app.add_typer(workflow_app, name="workflow")
 
+CONNECT_EXEC_COMMAND_ARGUMENT = typer.Argument(
+    None,
+    help="With `mb connect exec <provider> --`, the command to run and its arguments.",
+    show_default=False,
+)
 CONNECT_METADATA_OPTION = typer.Option(
     [],
     "--metadata",
@@ -606,9 +722,125 @@ def _is_interactive_terminal() -> bool:
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
-def _connect_boundary_exit(command: str, exc: ValueError) -> NoReturn:
-    typer.echo(f"{command}: {exc}", err=True)
-    raise typer.Exit(2) from exc
+CONNECT_JSON_SCHEMA = "mainbranch.connect"
+
+
+def _connect_failure(
+    command: str,
+    message: str,
+    *,
+    json_out: bool,
+    exit_code: int,
+    state: str,
+    rule: str = "",
+    backend_state: str = "",
+    repair: str = "",
+    repair_command: str = "",
+    secrets: tuple[str, ...] = (),
+) -> NoReturn:
+    """Report one `mb connect` failure and exit with ``exit_code``.
+
+    The human text always goes to stderr. With ``--json`` the same failure is
+    also written to stdout as one envelope (#973), so a script never reads an
+    empty stdout; ``state`` is its stable machine code. Neither stream carries
+    a secret: messages never quote secret-shaped input, and both streams get
+    the same redaction, including any value in ``secrets``.
+    """
+    safe_message = connect_mod._redact_sensitive_text(message, secrets)
+    typer.echo(f"{command}: {safe_message}", err=True)
+    if json_out:
+        payload: dict[str, Any] = {
+            "ok": False,
+            "state": state,
+            "summary": safe_message,
+            "repair": repair,
+            "repair_command": repair_command,
+            "exit_code": exit_code,
+            "safe_to_share": True,
+            "errors": [{"code": state, "message": safe_message}],
+        }
+        if rule:
+            payload["rule"] = rule
+        if backend_state:
+            payload["backend_state"] = backend_state
+        typer.echo(_json_payload(payload, command=command, schema_name=CONNECT_JSON_SCHEMA))
+    raise typer.Exit(exit_code)
+
+
+def _connect_usage_exit(command: str, message: str, *, json_out: bool) -> NoReturn:
+    """Exit 2 for a usage error, with a JSON envelope under ``--json``."""
+    _connect_failure(command, message, json_out=json_out, exit_code=2, state="usage_error")
+
+
+def _connect_error_exit(
+    command: str,
+    exc: ValueError,
+    *,
+    code: int = 2,
+    json_out: bool = False,
+    secrets: tuple[str, ...] = (),
+) -> NoReturn:
+    """Exit ``code`` (2 unless a refusal has its own) for a connect error.
+
+    The one place connect refusals are logged. A ``ConnectRefusal`` or a
+    config-boundary error records one refusal line (rule and command only);
+    any other ``ValueError`` records nothing. Library callers that catch
+    refusals themselves never log.
+    """
+    rule = ""
+    if isinstance(exc, connect_mod.ConnectRefusal):
+        feedback_mod.record_refusal(f"connect.{exc.rule}", command)
+        state, rule = "refused", exc.rule
+    elif isinstance(exc, connect_mod.ConfigBoundaryError):
+        feedback_mod.record_refusal("connect.config_boundary", command)
+        state = "config_boundary"
+    elif isinstance(exc, connect_mod.ConfigCorruptError):
+        state = "config_corrupt"
+    else:
+        state = "invalid_request"
+    try:
+        _connect_failure(
+            command,
+            str(exc),
+            json_out=json_out,
+            exit_code=code,
+            state=state,
+            rule=rule,
+            secrets=secrets,
+        )
+    except typer.Exit as exit_exc:
+        raise exit_exc from exc
+
+
+def _connect_runtime_exit(
+    command: str,
+    exc: RuntimeError,
+    *,
+    json_out: bool,
+    secrets: tuple[str, ...] = (),
+) -> NoReturn:
+    """Exit 1 for a credential-backend or other runtime failure."""
+    if isinstance(exc, connect_mod.KeychainError):
+        detail = connect_mod._backend_repair(exc.reason)
+        state = connect_mod.BACKEND_FAILURE_STATE
+        backend_state = exc.reason
+        repair, repair_command = detail["repair"], detail["repair_command"]
+    else:
+        state, backend_state, repair, repair_command = "connect_failed", "", "", ""
+    try:
+        _connect_failure(
+            command,
+            str(exc),
+            json_out=json_out,
+            exit_code=1,
+            state=state,
+            backend_state=backend_state,
+            repair=repair,
+            repair_command=repair_command,
+            secrets=secrets,
+        )
+    except typer.Exit as exit_exc:
+        raise exit_exc from exc
 
 
 def _render_launch_screen() -> None:
@@ -1488,19 +1720,54 @@ def issue_open_cmd(
     raise typer.Exit(0 if result["ok"] else 1)
 
 
+_F = TypeVar("_F", bound=Callable[..., Any])
+
+
+def _no_secret_traceback(func: _F) -> _F:
+    """Turn an unexpected error into a one-line message with no traceback.
+
+    Credential-bearing commands hold secrets in local variables. Whether a
+    crash traceback prints them depends on the installed Typer, Click and
+    Rich, so these commands never let one reach the excepthook.
+    """
+
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        try:
+            return func(*args, **kwargs)
+        except (typer.Exit, typer.Abort):
+            raise
+        except Exception as exc:
+            try:
+                _connect_failure(
+                    f"mb {func.__name__.removesuffix('_cmd')}",
+                    f"unexpected error ({type(exc).__name__}); details are hidden because "
+                    "they may hold a secret",
+                    json_out=bool(kwargs.get("json_out")),
+                    exit_code=1,
+                    state="unexpected_error",
+                )
+            except typer.Exit as exit_exc:
+                raise typer.Exit(exit_exc.exit_code) from None
+
+    return wrapper  # type: ignore[return-value]
+
+
 @app.command("connect")
+@_no_secret_traceback
 def connect_cmd(
     target: str = typer.Argument(
         "",
         help=(
             "Provider to connect, or `list` / `plan` / `status` / `doctor` / `hygiene` / "
-            "`identity` / `test` / `token` / `hydrate`."
+            "`identity` / `test` / `exec` / `rotate` / `token` / `hydrate` / `repair`."
         ),
     ),
     provider: str = typer.Argument(
         "",
         help="Provider for subcommands such as `mb connect test <provider>`.",
     ),
+    command: list[str] = CONNECT_EXEC_COMMAND_ARGUMENT,
     repo: str = typer.Option(".", "--repo", help="Business repo whose metadata is updated."),
     account_label: str = typer.Option("", "--account", "--label", help="Human account label."),
     scope: str = typer.Option(
@@ -1535,19 +1802,53 @@ def connect_cmd(
     all_providers: bool = typer.Option(
         False,
         "--all",
-        help="With `mb connect status`, include providers not connected yet.",
+        help=(
+            "With `mb connect status`, include providers not connected yet. With "
+            "`mb connect repair --keychain`, repair every Main Branch keychain item on this "
+            "machine, not only this repo's."
+        ),
+    ),
+    env_name: str = typer.Option(
+        "",
+        "--env",
+        help="With `mb connect exec`, the variable that carries the secret into the command.",
+    ),
+    source: str = typer.Option(
+        "",
+        "--source",
+        help=(
+            "Non-secret reference to where the credential lives, such as "
+            "op://vault/item/field. Stored as metadata so `mb connect rotate` can re-read it."
+        ),
+    ),
+    print_token: bool = typer.Option(
+        False,
+        "--print",
+        help="With `mb connect token`, print even when stdout is a terminal or a pipe.",
+    ),
+    keychain: bool = typer.Option(
+        False,
+        "--keychain",
+        help=(
+            "With `mb connect repair`, let macOS ask once whether this mb install may read "
+            "each stored credential. Needs a terminal."
+        ),
     ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """Connect provider credentials without committing secrets."""
+    command = command or []
+    if command and target != "exec":
+        _connect_usage_exit(
+            "mb connect",
+            f"unexpected extra argument {connect_mod.quoted_input(command[0])}",
+            json_out=json_out,
+        )
     if not target:
         try:
             result = connect_mod.list_providers(repo)
-        except connect_mod.ConfigBoundaryError as exc:
-            _connect_boundary_exit("mb connect", exc)
         except ValueError as exc:
-            typer.echo(f"mb connect: {exc}", err=True)
-            raise typer.Exit(2) from exc
+            _connect_error_exit("mb connect", exc, json_out=json_out)
         if json_out:
             typer.echo(json.dumps(result, indent=2))
         else:
@@ -1556,11 +1857,8 @@ def connect_cmd(
     if target == "list":
         try:
             result = connect_mod.list_providers(repo)
-        except connect_mod.ConfigBoundaryError as exc:
-            _connect_boundary_exit("mb connect list", exc)
         except ValueError as exc:
-            typer.echo(f"mb connect list: {exc}", err=True)
-            raise typer.Exit(2) from exc
+            _connect_error_exit("mb connect list", exc, json_out=json_out)
         if json_out:
             typer.echo(json.dumps(result, indent=2))
         else:
@@ -1569,11 +1867,8 @@ def connect_cmd(
     if target == "plan":
         try:
             result = connect_mod.provider_plan(repo)
-        except connect_mod.ConfigBoundaryError as exc:
-            _connect_boundary_exit("mb connect plan", exc)
         except ValueError as exc:
-            typer.echo(f"mb connect plan: {exc}", err=True)
-            raise typer.Exit(2) from exc
+            _connect_error_exit("mb connect plan", exc, json_out=json_out)
         if json_out:
             typer.echo(json.dumps(result, indent=2))
         else:
@@ -1586,10 +1881,7 @@ def connect_cmd(
             else:
                 result = connect_mod.status_all(repo, include_all=all_providers)
         except ValueError as exc:
-            typer.echo(f"mb connect status: {exc}", err=True)
-            raise typer.Exit(2) from exc
-        except connect_mod.ConfigBoundaryError as exc:
-            _connect_boundary_exit("mb connect status", exc)
+            _connect_error_exit("mb connect status", exc, json_out=json_out)
         if json_out:
             typer.echo(json.dumps(result, indent=2))
         elif provider:
@@ -1599,23 +1891,20 @@ def connect_cmd(
         if provider:
             needs_action = connect_mod.provider_needs_action(result)
         else:
-            # Scoped to connected providers: with `--all`, the list includes
+            # Scoped to configured providers: with `--all`, the list includes
             # every built-in provider the business never connected, and a
             # provider nobody asked for is not something to act on.
             needs_action = any(
                 connect_mod.provider_needs_action(item)
                 for item in result["providers"]
-                if item.get("connected")
+                if item.get("configured", item.get("connected"))
             )
         raise typer.Exit(1 if needs_action else 0)
     if target == "doctor":
         try:
             result = connect_mod.doctor(repo)
-        except connect_mod.ConfigBoundaryError as exc:
-            _connect_boundary_exit("mb connect doctor", exc)
         except ValueError as exc:
-            typer.echo(f"mb connect doctor: {exc}", err=True)
-            raise typer.Exit(2) from exc
+            _connect_error_exit("mb connect doctor", exc, json_out=json_out)
         if json_out:
             typer.echo(json.dumps(result, indent=2))
         else:
@@ -1632,7 +1921,7 @@ def connect_cmd(
         try:
             result = connect_mod.business_identity(repo)
         except connect_mod.ConfigBoundaryError as exc:
-            _connect_boundary_exit("mb connect identity", exc)
+            _connect_error_exit("mb connect identity", exc, json_out=json_out)
         if json_out:
             typer.echo(json.dumps(result, indent=2))
         else:
@@ -1642,32 +1931,83 @@ def connect_cmd(
         try:
             result = connect_mod.hydrate(repo, provider_id=provider)
         except ValueError as exc:
-            typer.echo(f"mb connect hydrate: {exc}", err=True)
-            raise typer.Exit(2) from exc
-        except connect_mod.ConfigBoundaryError as exc:
-            _connect_boundary_exit("mb connect hydrate", exc)
+            _connect_error_exit("mb connect hydrate", exc, json_out=json_out)
         if json_out:
             typer.echo(json.dumps(result, indent=2))
         else:
             connect_mod.render_hydrate_result(result)
         raise typer.Exit(0 if result["ok"] else 1)
+    if target == "exec":
+        if not provider:
+            _connect_usage_exit("mb connect exec", "provider required", json_out=json_out)
+        if json_out:
+            _connect_failure(
+                "mb connect exec",
+                "--json is not supported; the command's own output is passed through",
+                json_out=json_out,
+                exit_code=2,
+                state="json_not_supported",
+            )
+        try:
+            outcome = connect_mod.exec_with_secret(provider, command, repo, env_name=env_name)
+        except ValueError as exc:
+            _connect_error_exit("mb connect exec", exc, json_out=json_out)
+        if outcome["error"]:
+            typer.echo(f"mb connect exec: {outcome['error']}", err=True)
+            if outcome["repair_command"]:
+                typer.echo(f"repair: {outcome['repair_command']}", err=True)
+        raise typer.Exit(outcome["returncode"])
+    if target == "rotate":
+        if not provider:
+            _connect_usage_exit("mb connect rotate", "provider required", json_out=json_out)
+        try:
+            result = connect_mod.rotate_provider(provider, repo)
+        except ValueError as exc:
+            _connect_error_exit("mb connect rotate", exc, json_out=json_out)
+        except RuntimeError as exc:
+            _connect_runtime_exit("mb connect rotate", exc, json_out=json_out)
+        if json_out:
+            typer.echo(json.dumps(result, indent=2))
+        else:
+            connect_mod.render_rotate_result(result)
+        if not result["stored"]:
+            raise typer.Exit(1)
+        raise typer.Exit(1 if connect_mod.provider_needs_action(result["status"]) else 0)
     if target == "token":
         if not provider:
-            typer.echo("mb connect token: provider required", err=True)
-            raise typer.Exit(2)
+            _connect_usage_exit("mb connect token", "provider required", json_out=json_out)
         if json_out:
-            typer.echo(
-                "mb connect token: --json is not supported; the token is printed raw to stdout",
-                err=True,
+            # A JSON error envelope only: the token itself is never in JSON.
+            _connect_failure(
+                "mb connect token",
+                "--json is not supported; the token is printed raw to stdout",
+                json_out=json_out,
+                exit_code=2,
+                state="json_not_supported",
             )
-            raise typer.Exit(2)
+        try:
+            if not print_token and connect_mod.stdout_exposes_secret():
+                shown = connect_mod.echoable_input(provider) or "<provider>"
+                connect_mod._refuse(
+                    "token_print",
+                    "refusing to print the secret to a terminal or a pipe, where it lands "
+                    "in a transcript. Run the command with it instead: "
+                    f"`mb connect exec {shown} -- <command>`. A plain redirect to a file "
+                    f"needs no flag: `mb connect token {shown} > file`. `--print` is only "
+                    "for a terminal or a pipe, when no agent or log reads the output.",
+                )
+        except connect_mod.ConnectRefusal as exc:
+            # Its own exit code, so a script can tell this from a missing credential.
+            _connect_error_exit(
+                "mb connect token",
+                exc,
+                code=connect_mod.TOKEN_REFUSED_EXIT_CODE,
+                json_out=json_out,
+            )
         try:
             result = connect_mod.read_token(provider, repo)
         except ValueError as exc:
-            typer.echo(f"mb connect token: {exc}", err=True)
-            raise typer.Exit(2) from exc
-        except connect_mod.ConfigBoundaryError as exc:
-            _connect_boundary_exit("mb connect token", exc)
+            _connect_error_exit("mb connect token", exc, json_out=json_out)
         if not result["ok"]:
             typer.echo(f"mb connect token: {result['error']}", err=True)
             if result["repair_command"]:
@@ -1676,23 +2016,64 @@ def connect_cmd(
         # The token is the entire stdout contract; nothing else may print here.
         typer.echo(result["token"], nl=False)
         raise typer.Exit(0)
+    if target == "repair":
+        if provider:
+            _connect_usage_exit(
+                "mb connect repair",
+                f"unexpected extra argument {connect_mod.quoted_input(provider)}",
+                json_out=json_out,
+            )
+        if not keychain:
+            _connect_usage_exit(
+                "mb connect repair", "choose what to repair: --keychain", json_out=json_out
+            )
+        if not sys.stdin.isatty():
+            # The only command that may show a keychain dialog. Without a
+            # terminal there is nobody to answer it, so refuse rather than wait.
+            _connect_failure(
+                "mb connect repair --keychain",
+                "run this from a terminal; macOS may ask you to allow access",
+                json_out=json_out,
+                exit_code=2,
+                state="needs_terminal",
+            )
+        typer.echo(
+            "macOS may ask once per credential. Choose Always Allow; Allow lets only this "
+            "read through.",
+            err=True,
+        )
+        try:
+            if all_providers:
+                result = connect_mod.repair_keychain_all(repo, interactive=True)
+            else:
+                result = connect_mod.repair_keychain(repo, interactive=True)
+        except ValueError as exc:
+            _connect_error_exit("mb connect repair", exc, json_out=json_out)
+        except connect_mod.KeychainError as exc:
+            _connect_runtime_exit("mb connect repair --keychain --all", exc, json_out=json_out)
+        if json_out:
+            typer.echo(json.dumps(result, indent=2))
+        else:
+            connect_mod.render_keychain_repair(result)
+        raise typer.Exit(0 if result["ok"] else 1)
     if target == "test":
         if not provider:
-            typer.echo("mb connect test: provider required", err=True)
-            raise typer.Exit(2)
+            _connect_usage_exit("mb connect test", "provider required", json_out=json_out)
         try:
             result = connect_mod.test_provider(provider, repo)
         except ValueError as exc:
-            typer.echo(f"mb connect test: {exc}", err=True)
-            raise typer.Exit(2) from exc
+            _connect_error_exit("mb connect test", exc, json_out=json_out)
         if json_out:
             typer.echo(json.dumps(result, indent=2))
         else:
             connect_mod.render_test_result(result)
         raise typer.Exit(1 if connect_mod.provider_needs_action(result["status"]) else 0)
     if provider:
-        typer.echo(f"mb connect: unexpected extra argument {provider!r}", err=True)
-        raise typer.Exit(2)
+        _connect_usage_exit(
+            "mb connect",
+            f"unexpected extra argument {connect_mod.quoted_input(provider)}",
+            json_out=json_out,
+        )
 
     try:
         if custom:
@@ -1700,8 +2081,7 @@ def connect_cmd(
         else:
             provider_info = connect_mod.resolve_provider(target, repo)
     except ValueError as exc:
-        typer.echo(f"mb connect: {exc}", err=True)
-        raise typer.Exit(2) from exc
+        _connect_error_exit("mb connect", exc, json_out=json_out)
 
     secret_value = token
     if token_stdin:
@@ -1720,8 +2100,13 @@ def connect_cmd(
                 break
         if not secret_value:
             names = ", ".join(provider_info.env_vars) or "(none registered)"
-            typer.echo(f"mb connect: no credential found in env vars: {names}", err=True)
-            raise typer.Exit(1)
+            _connect_failure(
+                "mb connect",
+                f"no credential found in env vars: {names}",
+                json_out=json_out,
+                exit_code=1,
+                state="missing_env_credential",
+            )
     if not secret_value and provider_info.required_secrets and sys.stdin.isatty():
         secret_value = typer.prompt(
             f"{provider_info.name} {provider_info.required_secrets[0]}",
@@ -1739,17 +2124,16 @@ def connect_cmd(
             metadata_pairs=metadata,
             scope=scope,
             custom=custom,
+            source=source,
         )
         result["credential_source"] = {
             "type": credential_source if secret_value else "missing",
             "env_var": consumed_env_var,
         }
     except ValueError as exc:
-        typer.echo(f"mb connect: {exc}", err=True)
-        raise typer.Exit(2) from exc
+        _connect_error_exit("mb connect", exc, json_out=json_out, secrets=(secret_value,))
     except RuntimeError as exc:
-        typer.echo(f"mb connect: {exc}", err=True)
-        raise typer.Exit(1) from exc
+        _connect_runtime_exit("mb connect", exc, json_out=json_out, secrets=(secret_value,))
     if json_out:
         typer.echo(json.dumps(result, indent=2))
     else:
@@ -2175,15 +2559,103 @@ def site_check_cmd(
         "--repo",
         help="Business repo with offer and provider metadata.",
     ),
+    site: str = typer.Option(
+        "",
+        "--site",
+        help="Check one site from the repo's .mainbranch/repo.json sites list.",
+    ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """Check paid-traffic measurement readiness without mutating provider accounts."""
-    result = site_mod.check(site_repo, business_repo=business_repo or None)
+    try:
+        result = site_mod.check(site_repo, business_repo=business_repo or None, site_slug=site)
+    except site_mod.UnknownSiteError as exc:
+        typer.echo(f"mb site check: {exc}", err=True)
+        raise typer.Exit(2) from exc
     if json_out:
         typer.echo(json.dumps(result, indent=2))
     else:
         site_mod.render_check(result)
     raise typer.Exit(0 if result["ok"] else 1)
+
+
+def _fleet_config_exit(command: str, exc: fleet_mod.FleetConfigError, json_out: bool) -> NoReturn:
+    if json_out:
+        typer.echo(
+            json.dumps(
+                envelope(
+                    {"ok": False, "errors": [str(exc)], "actions": ["edit the hub list"]},
+                    command=command,
+                    schema_name=f"mainbranch.{command.replace('mb ', '').replace(' ', '_')}",
+                ),
+                indent=2,
+            )
+        )
+    else:
+        typer.echo(f"{command}: {exc}", err=True)
+    raise typer.Exit(2) from exc
+
+
+@fleet_app.command("refresh")
+def fleet_refresh_cmd(
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Read every hub, child repo and site, then cache one snapshot. Read-only."""
+    try:
+        result = fleet_mod.refresh()
+    except fleet_mod.FleetConfigError as exc:
+        _fleet_config_exit("mb fleet refresh", exc, json_out)
+    if json_out:
+        typer.echo(
+            json.dumps(
+                envelope(
+                    result, command="mb fleet refresh", schema_name="mainbranch.fleet_refresh"
+                ),
+                indent=2,
+            )
+        )
+    else:
+        fleet_mod.render_refresh(result)
+    raise typer.Exit(0 if result["ok"] else 1)
+
+
+@fleet_app.command("status")
+def fleet_status_cmd(
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Show the cached fleet snapshot: one row per site. Never reads the network."""
+    result = fleet_mod.status()
+    if json_out:
+        typer.echo(
+            json.dumps(
+                envelope(result, command="mb fleet status", schema_name="mainbranch.fleet_status"),
+                indent=2,
+            )
+        )
+    else:
+        fleet_mod.render_status(result)
+    raise typer.Exit(0 if result["ok"] else 1)
+
+
+@fleet_hubs_app.command("list")
+def fleet_hubs_list_cmd(
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """List the hubs in the user-level fleet.toml."""
+    try:
+        result = fleet_mod.hubs_list()
+    except fleet_mod.FleetConfigError as exc:
+        _fleet_config_exit("mb fleet hubs list", exc, json_out)
+    if json_out:
+        typer.echo(
+            json.dumps(
+                envelope(result, command="mb fleet hubs list", schema_name="mainbranch.fleet_hubs"),
+                indent=2,
+            )
+        )
+    else:
+        fleet_mod.render_hubs(result)
+    raise typer.Exit(0)
 
 
 @launch_app.command("check")
@@ -2887,10 +3359,30 @@ def skill_link_cmd(
             ".claude/settings.json (parallel rail; symlinks still written)."
         ),
     ),
+    plan: bool = typer.Option(
+        False,
+        "--plan",
+        help="Report what would change, including tracked files, and write nothing.",
+    ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """Wire bundled skills into a business repo for Claude Code discovery."""
-    from mb.engine import link_skills, write_plugin_wiring
+    from mb.engine import link_skills, plan_link_skills, write_plugin_wiring
+
+    if plan:
+        if plugin:
+            typer.echo("mb skill link: --plan cannot be combined with --plugin", err=True)
+            raise typer.Exit(2)
+        planned = plan_link_skills(repo)
+        if json_out:
+            typer.echo(json.dumps(planned, indent=2))
+        else:
+            typer.echo(f"would link {len(planned['linked'])} skill(s) in {planned['repo']}")
+            for path in planned["tracked_writes"]:
+                typer.echo(f"  would change tracked file: {path}")
+            for error in planned["errors"]:
+                typer.echo(f"  - {error}", err=True)
+        raise typer.Exit(0 if planned["ok"] else 1)
 
     result = link_skills(repo)
     plugin_result: dict[str, Any] | None = None

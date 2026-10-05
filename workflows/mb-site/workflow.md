@@ -143,7 +143,13 @@ Use `mb launch check "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json` for
 broad local launch truth: app stack, deploy rail, commerce rail, email rail,
 measurement summary, and one recommended smoke. Use `mb site check
 "$SITE_REPO" --business-repo "$BUSINESS_REPO" --json` for paid-traffic
-measurement detail once a site repo exists.
+measurement detail once a site repo exists; add `--site <slug>` for one site in
+a repo whose `.mainbranch/repo.json` lists several `sites`. When the operator
+runs several site repos or businesses, `mb fleet status --json` (after
+`mb fleet refresh`) reports each site's framework or engine pin, main's CI,
+what is live (deployed commit, dirty-tree flag, commits behind main) and each
+repo's Dependabot counts. It is read-only and needs a user-level hub list; see
+`docs/fleet.md`.
 
 ## Required JSON Fact Paths
 

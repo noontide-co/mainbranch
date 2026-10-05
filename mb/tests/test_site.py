@@ -918,3 +918,146 @@ def test_site_check_blocks_forked_descriptor_parent_path_leak(tmp_path: Path, mo
     evidence = {item["kind"]: item for item in payload["evidence"]}
     assert evidence["descriptor_identity"]["state"] == "blocked"
     assert payload["state"] == "blocked"
+
+
+def _set_origin(repo: Path, url: str) -> None:
+    import subprocess
+
+    if not (repo / ".git").exists():
+        subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    subprocess.run(["git", "-C", str(repo), "remote", "remove", "origin"], capture_output=True)
+    subprocess.run(["git", "-C", str(repo), "remote", "add", "origin", url], check=True)
+
+
+def _write_site_descriptor_with_parent(site: Path, owner: str, repo: str) -> None:
+    (site / ".mainbranch" / "repo.json").write_text(
+        json.dumps(
+            {
+                "schema": "mb.child_repo.v0",
+                "role": "site",
+                "display_name": "Acme site",
+                "parent": {"github_owner": owner, "repo_name": repo},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def test_site_check_blocks_descriptor_identity_mismatch_via_git_remote(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business = tmp_path / "business"
+    site = tmp_path / "site"
+    init_run(path=str(business), name="Acme")
+    assert not (business / ".mainbranch" / "repo.json").exists()
+    _set_origin(business, "https://github.com/acme-co/acme.git")
+    site.mkdir()
+    _seed_site_for_identity(site)
+    _write_site_descriptor_with_parent(site, "previous-co", "previous-biz")
+
+    result = runner.invoke(
+        app, ["site", "check", str(site), "--business-repo", str(business), "--json"]
+    )
+    payload = json.loads(result.stdout)
+    evidence = {item["kind"]: item for item in payload["evidence"]}
+    assert evidence["descriptor_identity"]["state"] == "blocked"
+    assert "acme-co/acme" in evidence["descriptor_identity"]["summary"]
+    assert payload["state"] == "blocked"
+
+
+def test_site_check_passes_descriptor_identity_match_via_git_remote(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business = tmp_path / "business"
+    site = tmp_path / "site"
+    init_run(path=str(business), name="Acme")
+    _set_origin(business, "git@github.com:acme-co/acme.git")
+    site.mkdir()
+    _seed_site_for_identity(site)
+    _write_site_descriptor_with_parent(site, "acme-co", "acme")
+
+    result = runner.invoke(
+        app, ["site", "check", str(site), "--business-repo", str(business), "--json"]
+    )
+    payload = json.loads(result.stdout)
+    evidence = {item["kind"]: item for item in payload["evidence"]}
+    assert evidence["descriptor_identity"]["state"] == "passed"
+
+
+def test_site_check_no_remote_no_descriptor_has_no_identity_evidence(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business = tmp_path / "business"
+    site = tmp_path / "site"
+    business.mkdir()
+    site.mkdir()
+    _seed_site_for_identity(site)
+    _write_site_descriptor_with_parent(site, "acme-co", "acme")
+
+    result = runner.invoke(
+        app, ["site", "check", str(site), "--business-repo", str(business), "--json"]
+    )
+    payload = json.loads(result.stdout)
+    kinds = [item["kind"] for item in payload["evidence"]]
+    assert "descriptor_identity" not in kinds
+
+
+def _write_multi_site_repo(repo: Path) -> None:
+    (repo / ".mainbranch").mkdir(parents=True)
+    for slug in ("alpha", "beta"):
+        (repo / "clients" / slug).mkdir(parents=True)
+    (repo / ".mainbranch" / "repo.json").write_text(
+        json.dumps(
+            {
+                "schema": "mb.child_repo.v0",
+                "role": "site",
+                "display_name": "Acme client sites",
+                "sites": [
+                    {
+                        "slug": "alpha",
+                        "display_name": "Alpha",
+                        "dir": "clients/alpha",
+                        "domains": ["alpha.example"],
+                        "deploy": {"provider": "cloudflare-pages", "project": "alpha"},
+                        "lifecycle": "active",
+                    },
+                    {"slug": "beta", "dir": "clients/beta"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def test_site_check_site_option_reads_that_sites_dir(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    repo = tmp_path / "acme-sites"
+    _write_multi_site_repo(repo)
+    _seed_site_for_identity(repo / "clients" / "alpha")
+
+    alpha = runner.invoke(app, ["site", "check", str(repo), "--site", "alpha", "--json"])
+    beta = runner.invoke(app, ["site", "check", str(repo), "--site", "beta", "--json"])
+
+    alpha_payload = json.loads(alpha.stdout)
+    beta_payload = json.loads(beta.stdout)
+    assert alpha_payload["site"]["slug"] == "alpha"
+    assert alpha_payload["site"]["deploy"] == {"provider": "cloudflare-pages", "project": "alpha"}
+    assert alpha_payload["facts"]["conversion_kind"] == "lead_form"
+    assert alpha_payload["facts"]["repo_role"] == "site"
+    # beta has no conversion plan of its own; alpha's must not leak into it.
+    assert beta_payload["site"]["slug"] == "beta"
+    assert beta_payload["facts"]["conversion_kind"] == ""
+
+
+def test_site_check_unknown_site_exits_2(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    repo = tmp_path / "acme-sites"
+    _write_multi_site_repo(repo)
+
+    result = runner.invoke(app, ["site", "check", str(repo), "--site", "gamma", "--json"])
+
+    assert result.exit_code == 2
+    assert "gamma" in result.stderr
+    assert "alpha, beta" in result.stderr

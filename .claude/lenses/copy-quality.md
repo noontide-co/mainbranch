@@ -140,3 +140,18 @@ When the business has declared named enemies (check `core/voice.md` for a Named 
 | **Solution is mechanism** | "Here's how we fight complexity: [specific approach]" | "Just stop being complex" |
 
 **Severity:** P3 when enemies exist but aren't used. P2 when enemies are used but vaguely. Not flagged when no enemies are declared.
+
+---
+
+## Slot Pairing and Slop
+
+When an ad carries several text slots (the mb-ads `references/meta-text-slots.md`), Meta pairs any primary with any headline and description.
+
+| Check | Pass | Fail |
+|-------|------|------|
+| **Pairing** | Every headline and description reads right next to every primary, the riskiest one included | Two lines fight when paired, or a headline repeats its own ad's hook |
+| **Angles differ** | Each primary proves a different one-sentence angle | Slots that only reword each other |
+| **Facts from the page** | Every fact is on the live offer or product page today, in its words | A fact the page lacks, or a stronger version of one it has |
+| **No slop forms** | Plain, specific statements | "X, not Y" / "not X but Y" contrasts, "Here's the thing", rule-of-three filler, puffery ("timeless", "elevate", "game-changer") |
+
+**Severity:** P2 for a pairing clash or a fact the page lacks; P3 for slop forms and reworded slots.

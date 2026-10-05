@@ -10,8 +10,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from mb import checkpoint_verbs
-from mb.freshness import looks_like_business_repo
+from mb import checkpoint_verbs, topology
 
 SURFACE_ORDER = [
     "core",
@@ -163,9 +162,7 @@ def _hook_path(repo: Path) -> tuple[Path | None, str | None, Path | None]:
 
 
 def _is_engine_repo(repo: Path) -> bool:
-    pyproject = repo / "mb" / "pyproject.toml"
-    cli = repo / "mb" / "mb" / "cli.py"
-    return pyproject.is_file() and cli.is_file()
+    return topology.is_engine_repo(repo)
 
 
 def _is_managed_hook(text: str) -> bool:
@@ -979,7 +976,7 @@ def plan(repo: str | Path = ".", *, mode: str = "beginner") -> dict[str, Any]:
     blocks = _safety_blocks(root, changes)
     review_required = _review_required(root, changes)
     warnings: list[dict[str, str]] = []
-    if not looks_like_business_repo(root) and not _is_engine_repo(root):
+    if topology.classify_repo(root)["kind"] == "none":
         warnings.append(
             {
                 "code": "not_business_repo",

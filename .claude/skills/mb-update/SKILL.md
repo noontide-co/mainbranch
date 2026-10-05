@@ -40,6 +40,19 @@ Handle the JSON result:
 
 If the result includes warnings, show them after the main status.
 
+**Tracked files.** Run from an agent, `mb update --json` does not change a
+tracked file in the business repo (`AGENTS.md`, `.gitignore`); a post-apply
+check reports any it missed as an error. When the refresh
+would change one, it leaves it alone and reports it:
+`surface_refresh.planned.consent` is `no_terminal`,
+`surface_refresh.planned.tracked_files` names the files (writes and
+deletions), and
+`surface_refresh.planned.apply_commands` (also in `next_actions`) holds the
+commands that would apply them. Tell the user which files would change and
+give them those commands. Applying them is the operator's step: do not run
+them yourself unless the user asks you to in this conversation. Gitignored skill
+links still refresh on their own.
+
 ---
 
 ## Step 2: If Update Fails

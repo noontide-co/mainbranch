@@ -2,17 +2,28 @@
 
 from __future__ import annotations
 
+import email.message
 import hashlib
+import io
 import json
+import os
+import random
+import shutil
 import stat
+import string
+import subprocess
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any
 
 import pytest
+import typer
 import yaml
 from typer.testing import CliRunner
 
+from mb import codex as codex_mod
 from mb import connect as connect_mod
 from mb import credential_store as credential_store_mod
 from mb.cli import app
@@ -1790,7 +1801,7 @@ def test_connect_token_prints_secret_to_stdout(tmp_path: Path, monkeypatch) -> N
     repo.mkdir()
     connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token")
 
-    result = runner.invoke(app, ["connect", "token", "cloudflare", "--repo", str(repo)])
+    result = runner.invoke(app, ["connect", "token", "cloudflare", "--print", "--repo", str(repo)])
 
     assert result.exit_code == 0
     assert result.stdout == "cf-test-token"
@@ -1803,7 +1814,7 @@ def test_connect_token_falls_back_to_user_scope(tmp_path: Path, monkeypatch) -> 
     connect_mod.connect_provider("cloudflare", repo=repo, token="cf-user-token", scope="user")
     (repo / ".mb" / "connect.yaml").unlink()
 
-    result = runner.invoke(app, ["connect", "token", "cloudflare", "--repo", str(repo)])
+    result = runner.invoke(app, ["connect", "token", "cloudflare", "--print", "--repo", str(repo)])
 
     assert result.exit_code == 0
     assert result.stdout == "cf-user-token"
@@ -1814,7 +1825,7 @@ def test_connect_token_not_connected_fails(tmp_path: Path, monkeypatch) -> None:
     repo = tmp_path / "biz"
     repo.mkdir()
 
-    result = runner.invoke(app, ["connect", "token", "cloudflare", "--repo", str(repo)])
+    result = runner.invoke(app, ["connect", "token", "cloudflare", "--print", "--repo", str(repo)])
 
     assert result.exit_code == 1
     assert result.stdout == ""
@@ -1828,7 +1839,7 @@ def test_connect_token_missing_stored_secret_fails(tmp_path: Path, monkeypatch) 
     repo.mkdir()
     connect_mod.connect_provider("cloudflare", repo=repo)
 
-    result = runner.invoke(app, ["connect", "token", "cloudflare", "--repo", str(repo)])
+    result = runner.invoke(app, ["connect", "token", "cloudflare", "--print", "--repo", str(repo)])
 
     assert result.exit_code == 1
     assert result.stdout == ""
@@ -1850,10 +1861,16 @@ def test_connect_token_rejects_json(tmp_path: Path, monkeypatch) -> None:
     repo.mkdir()
     connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token")
 
-    result = runner.invoke(app, ["connect", "token", "cloudflare", "--repo", str(repo), "--json"])
+    result = runner.invoke(
+        app, ["connect", "token", "cloudflare", "--print", "--repo", str(repo), "--json"]
+    )
 
     assert result.exit_code == 2
-    assert result.stdout == ""
+    # A JSON error envelope only (#973); the token never reaches JSON.
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["state"] == "json_not_supported"
+    assert "cf-test-token" not in result.output
     assert "--json is not supported" in result.stderr
 
 
@@ -1862,10 +1879,447 @@ def test_connect_token_rejects_secretless_provider(tmp_path: Path, monkeypatch) 
     repo = tmp_path / "biz"
     repo.mkdir()
 
-    result = runner.invoke(app, ["connect", "token", "hledger", "--repo", str(repo)])
+    result = runner.invoke(app, ["connect", "token", "hledger", "--print", "--repo", str(repo)])
 
     assert result.exit_code == 2
     assert "stores no secrets" in result.stderr
+
+
+def test_connect_token_refuses_terminal_or_pipe_without_print(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token")
+
+    result = runner.invoke(app, ["connect", "token", "cloudflare", "--repo", str(repo)])
+
+    assert result.exit_code == connect_mod.TOKEN_REFUSED_EXIT_CODE
+    assert result.stdout == ""
+    assert "cf-test-token" not in result.output
+    assert "mb connect exec cloudflare -- <command>" in result.stderr
+    assert "mb connect token cloudflare > file" in result.stderr
+    assert "--print" in result.stderr
+
+
+def test_token_refusal_exit_code_is_pinned_and_distinct() -> None:
+    """Scripts match on this number (#1011); changing it is a breaking change."""
+
+    assert connect_mod.TOKEN_REFUSED_EXIT_CODE == 3
+    # 1: credential missing, unreadable or store failure; 2: usage and other refusals.
+    assert connect_mod.TOKEN_REFUSED_EXIT_CODE not in {0, 1, 2}
+
+
+def _token_subprocess_env(tmp_path: Path) -> dict[str, str]:
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if not any(key in provider.env_vars for provider in connect_mod.PROVIDERS)
+    }
+    env["MB_CONNECT_SECRET_BACKEND"] = "local-file"
+    env["MAINBRANCH_HOME"] = str(tmp_path / "home")
+    env["MB_FEEDBACK_LOG"] = "0"
+    return env
+
+
+@pytest.mark.parametrize("stdout_kind", ["pipe", "terminal"])
+def test_connect_token_refusal_exit_code_for_a_real_pipe_and_terminal(
+    tmp_path: Path, monkeypatch, stdout_kind: str
+) -> None:
+    if stdout_kind == "terminal" and sys.platform == "win32":
+        pytest.skip("needs a pty")
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token")
+    argv = [sys.executable, "-m", "mb", "connect", "token", "cloudflare", "--repo", str(repo)]
+    env = _token_subprocess_env(tmp_path)
+
+    if stdout_kind == "pipe":
+        completed = subprocess.run(
+            argv, capture_output=True, text=True, env=env, timeout=60, check=False
+        )
+        returncode, stdout, stderr = completed.returncode, completed.stdout, completed.stderr
+    else:
+        import pty
+
+        leader, follower = pty.openpty()
+        try:
+            completed = subprocess.run(
+                argv,
+                stdout=follower,
+                stderr=subprocess.PIPE,
+                text=True,
+                env=env,
+                timeout=60,
+                check=False,
+            )
+            os.close(follower)
+            follower = -1
+            chunks: list[bytes] = []
+            while True:
+                try:
+                    chunk = os.read(leader, 4096)
+                except OSError:
+                    break
+                if not chunk:
+                    break
+                chunks.append(chunk)
+        finally:
+            if follower != -1:
+                os.close(follower)
+            os.close(leader)
+        returncode, stdout, stderr = (
+            completed.returncode,
+            b"".join(chunks).decode(),
+            completed.stderr,
+        )
+
+    assert returncode == connect_mod.TOKEN_REFUSED_EXIT_CODE == 3
+    assert stdout == ""
+    assert "cf-test-token" not in stdout + stderr
+    assert "mb connect exec cloudflare -- <command>" in stderr
+
+
+def test_connect_token_print_still_writes_to_a_real_pipe(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token")
+
+    completed = subprocess.run(
+        [sys.executable, "-m", "mb", "connect", "token", "cloudflare", "--print"]
+        + ["--repo", str(repo)],
+        capture_output=True,
+        text=True,
+        env=_token_subprocess_env(tmp_path),
+        timeout=60,
+        check=False,
+    )
+
+    assert completed.returncode == 0
+    assert completed.stdout == "cf-test-token"
+
+
+def test_connect_token_plain_file_redirect_needs_no_print_flag(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token")
+    out = tmp_path / "token-file"
+
+    with out.open("w") as handle:
+        completed = subprocess.run(
+            [sys.executable, "-m", "mb", "connect", "token", "cloudflare", "--repo", str(repo)],
+            stdout=handle,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=_token_subprocess_env(tmp_path),
+            timeout=60,
+            check=False,
+        )
+
+    assert completed.returncode == 0
+    assert out.read_text() == "cf-test-token"
+
+
+def test_connect_token_refusal_comes_before_the_provider_lookup(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Exit 1 needs the stdout gate passed: not connected, through a pipe, is still 3."""
+
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    for provider in ("cloudflare", "no-such-provider"):
+        result = runner.invoke(app, ["connect", "token", provider, "--repo", str(repo)])
+        assert result.exit_code == connect_mod.TOKEN_REFUSED_EXIT_CODE, provider
+        assert "not connected" not in result.stderr
+
+
+def test_connect_token_missing_credential_keeps_exit_1(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(app, ["connect", "token", "cloudflare", "--print", "--repo", str(repo)])
+
+    assert result.exit_code == 1
+    assert "not connected" in result.stderr
+
+
+def test_stdout_exposes_secret_for_tty_pipe_and_unknown(tmp_path: Path) -> None:
+    class Tty:
+        def isatty(self) -> bool:
+            return True
+
+    read_fd, write_fd = os.pipe()
+    try:
+        with os.fdopen(write_fd, "w") as pipe:
+            assert connect_mod.stdout_exposes_secret(pipe) is True
+    finally:
+        os.close(read_fd)
+    assert connect_mod.stdout_exposes_secret(Tty()) is True
+    assert connect_mod.stdout_exposes_secret(object()) is True
+    with (tmp_path / "out.txt").open("w") as regular:
+        assert connect_mod.stdout_exposes_secret(regular) is False
+
+
+def test_refuse_raises_named_rule() -> None:
+    with pytest.raises(connect_mod.ConnectRefusal) as caught:
+        connect_mod._refuse("example_rule", "do the other thing")
+
+    assert caught.value.rule == "example_rule"
+    assert str(caught.value) == "do the other thing"
+    assert isinstance(caught.value, ValueError)
+
+
+def _env_probe(name: str, expected: str) -> list[str]:
+    """A child that exits 0 only when ``name`` holds ``expected``, printing nothing."""
+    return [
+        sys.executable,
+        "-c",
+        f"import os, sys; sys.exit(0 if os.environ.get({name!r}) == {expected!r} else 3)",
+    ]
+
+
+def test_connect_exec_puts_secret_in_child_env_only(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token")
+
+    result = runner.invoke(
+        app,
+        [
+            "connect",
+            "exec",
+            "cloudflare",
+            "--repo",
+            str(repo),
+            "--",
+            *_env_probe("CLOUDFLARE_API_TOKEN", "cf-test-token"),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "cf-test-token" not in result.output
+
+
+def test_connect_exec_returns_child_exit_code(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token")
+
+    result = runner.invoke(
+        app,
+        [
+            "connect",
+            "exec",
+            "cloudflare",
+            "--repo",
+            str(repo),
+            "--",
+            sys.executable,
+            "-c",
+            "import sys; sys.exit(7)",
+        ],
+    )
+
+    assert result.exit_code == 7
+
+
+def test_connect_exec_env_override_and_custom_default(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("stripe", repo=repo, token="sk_test_fixture")
+    connect_mod.connect_provider("mercury", repo=repo, token="mercury-fixture", custom=True)
+
+    stripe_default = runner.invoke(
+        app,
+        ["connect", "exec", "stripe", "--repo", str(repo), "--"]
+        + _env_probe("STRIPE_API_KEY", "sk_test_fixture"),
+    )
+    stripe_override = runner.invoke(
+        app,
+        ["connect", "exec", "stripe", "--env", "MY_KEY", "--repo", str(repo), "--"]
+        + _env_probe("MY_KEY", "sk_test_fixture"),
+    )
+    custom_default = runner.invoke(
+        app,
+        ["connect", "exec", "mercury", "--repo", str(repo), "--"]
+        + _env_probe("MB_SECRET", "mercury-fixture"),
+    )
+
+    assert stripe_default.exit_code == 0, stripe_default.output
+    assert stripe_override.exit_code == 0, stripe_override.output
+    assert custom_default.exit_code == 0, custom_default.output
+
+
+def test_connect_exec_uses_no_shell(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-fixture-0000")
+    seen: dict[str, Any] = {}
+
+    def fake_run(args, **kwargs):
+        seen["args"] = args
+        seen["kwargs"] = kwargs
+        return subprocess.CompletedProcess(args, 0)
+
+    outcome = connect_mod.exec_with_secret(
+        "cloudflare", ["wrangler", "whoami"], repo, runner=fake_run
+    )
+
+    assert outcome == {
+        "ok": True,
+        "provider": "cloudflare",
+        "env_name": "CLOUDFLARE_API_TOKEN",
+        "returncode": 0,
+        "error": "",
+        "repair_command": "",
+    }
+    assert seen["args"] == ["wrangler", "whoami"]
+    assert "shell" not in seen["kwargs"]
+    assert seen["kwargs"]["env"]["CLOUDFLARE_API_TOKEN"] == "cf-fixture-0000"
+    assert "cf-fixture-0000" not in json.dumps(outcome)
+
+
+def test_connect_exec_signal_exit_maps_to_shell_convention(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token")
+
+    outcome = connect_mod.exec_with_secret(
+        "cloudflare",
+        ["child"],
+        repo,
+        runner=lambda args, **kwargs: subprocess.CompletedProcess(args, -15),
+    )
+
+    assert outcome["returncode"] == 143
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="ENOEXEC needs a POSIX exec")
+def test_connect_exec_launch_failure_never_prints_secret(tmp_path: Path, monkeypatch) -> None:
+    """A real `mb` process launching an executable text file with no shebang.
+
+    exec fails with ENOEXEC. The fake credential must not reach stdout or
+    stderr, whatever Typer, Click and Rich versions are installed.
+    """
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    fake_secret = "cf-fixture-enoexec-0000"
+    connect_mod.connect_provider("cloudflare", repo=repo, token=fake_secret)
+    script = tmp_path / "no-shebang"
+    script.write_text("echo this file has no interpreter line\n")
+    script.chmod(0o755)
+
+    completed = subprocess.run(
+        [sys.executable, "-m", "mb", "connect", "exec", "cloudflare", "--repo", str(repo)]
+        + ["--", str(script)],
+        capture_output=True,
+        text=True,
+        env=dict(os.environ),
+        check=False,
+        timeout=120,
+    )
+
+    assert completed.returncode == 126, completed.stderr
+    assert fake_secret not in completed.stdout
+    assert fake_secret not in completed.stderr
+    assert "Traceback" not in completed.stderr
+    assert "could not be started (ENOEXEC)" in completed.stderr
+
+
+def test_connect_exec_other_launch_oserror_is_sanitized(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-fixture-oserror-0000")
+
+    def fake_run(args, **kwargs):
+        raise OSError(7, f"Argument list too long: {kwargs['env']['CLOUDFLARE_API_TOKEN']}")
+
+    outcome = connect_mod.exec_with_secret("cloudflare", ["child"], repo, runner=fake_run)
+
+    assert outcome["returncode"] == 126
+    assert outcome["error"] == "command could not be started (E2BIG): child"
+    assert "cf-fixture-oserror-0000" not in json.dumps(outcome)
+
+
+def test_connect_unexpected_error_hides_details(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    def explode(*args, **kwargs):
+        raise KeyError("cf-fixture-crash-0000")
+
+    monkeypatch.setattr(connect_mod, "exec_with_secret", explode)
+
+    result = runner.invoke(
+        app, ["connect", "exec", "cloudflare", "--repo", str(repo), "--", "true"]
+    )
+
+    assert result.exit_code == 1
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+    assert "unexpected error (KeyError)" in result.output
+    assert "cf-fixture-crash-0000" not in result.output
+    assert app.pretty_exceptions_show_locals is False
+
+
+def test_connect_exec_refusals_and_failures(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    not_connected = runner.invoke(
+        app, ["connect", "exec", "cloudflare", "--repo", str(repo), "--", "true"]
+    )
+    assert not_connected.exit_code == 1
+    assert "not connected" in not_connected.stderr
+    assert "mb connect cloudflare --token-stdin" in not_connected.stderr
+
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token")
+    no_command = runner.invoke(app, ["connect", "exec", "cloudflare", "--repo", str(repo)])
+    assert no_command.exit_code == 2
+    assert "needs a command after `--`" in no_command.stderr
+
+    bad_env = runner.invoke(
+        app,
+        ["connect", "exec", "cloudflare", "--env", "1BAD", "--repo", str(repo), "--", "true"],
+    )
+    assert bad_env.exit_code == 2
+    assert "shell variable name" in bad_env.stderr
+
+    as_json = runner.invoke(
+        app, ["connect", "exec", "cloudflare", "--json", "--repo", str(repo), "--", "true"]
+    )
+    assert as_json.exit_code == 2
+
+    missing = runner.invoke(
+        app,
+        ["connect", "exec", "cloudflare", "--repo", str(repo), "--", "mb-no-such-command-985"],
+    )
+    assert missing.exit_code == 127
+    assert "command not found" in missing.stderr
+    for result in (not_connected, no_command, bad_env, as_json, missing):
+        assert "cf-test-token" not in result.output
+
+
+def test_connect_extra_arguments_outside_exec_are_rejected(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+
+    result = runner.invoke(app, ["connect", "test", "cloudflare", "surplus"])
+
+    assert result.exit_code == 2
+    assert "unexpected extra argument" in result.stderr
 
 
 def test_connect_stripe_and_resend_store_and_read_back(tmp_path: Path, monkeypatch) -> None:
@@ -1890,11 +2344,15 @@ def test_connect_stripe_and_resend_store_and_read_back(tmp_path: Path, monkeypat
     assert "sk_test_fixture_not_real" not in config_text
     assert "re_fixture_not_real" not in config_text
 
-    stripe_token = runner.invoke(app, ["connect", "token", "stripe", "--repo", str(repo)])
+    stripe_token = runner.invoke(
+        app, ["connect", "token", "stripe", "--print", "--repo", str(repo)]
+    )
     assert stripe_token.exit_code == 0
     assert stripe_token.stdout == "sk_test_fixture_not_real"
 
-    resend_token = runner.invoke(app, ["connect", "token", "resend", "--repo", str(repo)])
+    resend_token = runner.invoke(
+        app, ["connect", "token", "resend", "--print", "--repo", str(repo)]
+    )
     assert resend_token.exit_code == 0
     assert resend_token.stdout == "re_fixture_not_real"
 
@@ -2011,7 +2469,7 @@ def test_connect_custom_provider_roundtrip(tmp_path: Path, monkeypatch) -> None:
     assert secret not in config_text
     assert "dataforseo" in config_text
 
-    token = runner.invoke(app, ["connect", "token", "dataforseo", "--repo", str(repo)])
+    token = runner.invoke(app, ["connect", "token", "dataforseo", "--print", "--repo", str(repo)])
     assert token.exit_code == 0
     assert _sha256(token.stdout.strip()) == _sha256(secret)
 
@@ -2056,7 +2514,7 @@ def test_connect_custom_provider_roundtrip(tmp_path: Path, monkeypatch) -> None:
         ["connect", "dataforseo", "--repo", str(repo), "--token", "rotated-fixture-token"],
     )
     assert reconnect.exit_code == 0
-    rotated = runner.invoke(app, ["connect", "token", "dataforseo", "--repo", str(repo)])
+    rotated = runner.invoke(app, ["connect", "token", "dataforseo", "--print", "--repo", str(repo)])
     assert _sha256(rotated.stdout.strip()) == _sha256("rotated-fixture-token")
 
 
@@ -2111,7 +2569,7 @@ def test_connect_custom_provider_missing_secret_surfaces_repair(
     assert single_status_payload["state"] == "missing_secret"
     assert single_status_payload["repair_command"] == ("mb connect mercury --custom --token-stdin")
 
-    token = runner.invoke(app, ["connect", "token", "mercury", "--repo", str(repo)])
+    token = runner.invoke(app, ["connect", "token", "mercury", "--print", "--repo", str(repo)])
     assert token.exit_code == 1
     assert token.stdout == ""
     assert "credential is missing from the secret store" in token.stderr
@@ -2170,7 +2628,9 @@ def test_connect_user_scope_custom_provider_hydrates_and_reads(tmp_path: Path, m
     assert before["providers"][0]["state"] == "needs_hydration"
     assert before["providers"][0]["repair_command"] == "mb connect hydrate --repo ."
 
-    token = runner.invoke(app, ["connect", "token", "mercury", "--repo", str(disposable)])
+    token = runner.invoke(
+        app, ["connect", "token", "mercury", "--print", "--repo", str(disposable)]
+    )
     assert token.exit_code == 0
     assert _sha256(token.stdout.strip()) == _sha256(secret)
 
@@ -2227,7 +2687,9 @@ def test_rotation_never_rewrites_same_provider_in_another_repo(tmp_path: Path, m
 
     assert result["rotated_sibling_refs"] == []
     assert result["stale_sibling_refs"] == []
-    token_b = runner.invoke(app, ["connect", "token", "cloudflare", "--repo", str(repo_b)])
+    token_b = runner.invoke(
+        app, ["connect", "token", "cloudflare", "--print", "--repo", str(repo_b)]
+    )
     assert token_b.exit_code == 0
     assert token_b.stdout == "cf-old-token"
 
@@ -2247,7 +2709,7 @@ def test_rotation_does_not_touch_other_providers(tmp_path: Path, monkeypatch) ->
     )
 
     assert result["rotated_sibling_refs"] == []
-    token_b = runner.invoke(app, ["connect", "token", "apify", "--repo", str(repo_b)])
+    token_b = runner.invoke(app, ["connect", "token", "apify", "--print", "--repo", str(repo_b)])
     assert token_b.stdout == "apify-token"
 
 
@@ -3204,3 +3666,1386 @@ def test_connect_doctor_check_detail_separates_testable_from_unverifiable(
     assert "never confirmed with the provider (cloudflare)" in check["detail"]
     assert "Main Branch cannot verify (resend)" in check["detail"]
     assert check["repair_command"] == "mb connect test cloudflare"
+
+
+# Fake values in the shape of each rule. None of these is a real credential.
+FAKE_SECRET_VALUES = {
+    "credential_prefix:sk_": "sk_test_" + "F4k3v4lu3F4k3",
+    "credential_prefix:rk_": "rk_live_" + "F4k3v4lu3F4k3",
+    "credential_prefix:pk_live_": "pk_live_" + "F4k3v4lu3F4k3",
+    "credential_prefix:ghp_": "ghp_" + "F4k3" * 9,
+    "credential_prefix:github_pat_": "github_pat_" + "11F4K3_f4k3v4lu3",
+    "credential_prefix:xox": "xoxb-" + "1111-2222-f4k3",
+    "credential_prefix:AKIA": "AKIA" + "F4K3F4K3F4K3F4K3",
+    "jwt_shape": "eyJhbGciOiJub25lIn0.eyJzdWIiOiJmYWtlIn0.",
+    "high_entropy": "Q2hhbmdlTWVQbGVhc2U4ZjNrMjlYcVdlUnR5VWlPcA",
+    "bearer_credential": "Bearer f4k3",
+}
+
+
+@pytest.mark.parametrize(("rule", "value"), sorted(FAKE_SECRET_VALUES.items()))
+def test_metadata_refuses_secret_values_and_never_echoes_them(
+    rule: str, value: str, tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(
+        app,
+        ["connect", "cloudflare", "--metadata", f"zone_label={value}", "--repo", str(repo)],
+    )
+
+    assert result.exit_code == 2
+    assert f"rule: {rule}" in result.stderr
+    assert "'zone_label'" in result.stderr
+    assert value not in result.output
+    assert not (repo / ".mb" / "connect.yaml").exists()
+    with pytest.raises(connect_mod.ConnectRefusal) as caught:
+        connect_mod._parse_metadata([f"zone_label={value}"])
+    assert caught.value.rule == "metadata_secret_value"
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "0" * 32,
+        "3f2a9c1e7b4d4e0f9a8b7c6d5e4f3a2b",
+        "123e4567-e89b-12d3-a456-426614174000",
+        "act_1234567890",
+        "123456789",
+        "op://Business/Stripe restricted/credential",
+        "https://example.com/Path/To/Thing123",
+        "owner@example.com",
+        "Main Stripe restricted key",
+        "core/finance/books.journal",
+        "re_engagement",
+        "AcmeCorpProductionWorkspace01",
+        "pk_test_publishable",
+        "${STRIPE_API_KEY}",
+        "2026-10-03",
+        "AcmeProductionWorkspace2026",
+        "UsEuUkCaAuNzApiKeyName2026",
+        "UsCaMxBrArClPeCoLatamRegionKey",
+        "HTTPSRedirectCheckerProdV2",
+        "SpringLaunchCampaign2026Q2EU",
+        "AbTestVariantBHeadlineShortV2",
+        "MyAPIKeyForStagingEnvironment",
+        "owner@example.invalid",
+        "https://example.invalid/Path/To/Thing123",
+        "op://ReviewVault/ExampleItem/credential",
+        "2026-10-03T12:00:00Z",
+        "Main restricted key",
+        "Main bearer token reader",
+        "note: renewed after the October audit",
+        "re_engagement_campaign_2026",
+        "CloudflareR2StorageBucket",
+        "B2BMarketingCampaignOctober2026",
+        "S3ProductionBucketUsWest2",
+        "https://example.invalid/?campaign=CloudflareR2StorageBucket",
+        "https://example.invalid/?campaign=SpringLaunch&region=us-west-2#top",
+        "note: https://example.invalid/?campaign=CloudflareR2StorageBucket",
+    ],
+)
+def test_metadata_accepts_ids_labels_and_references(value: str) -> None:
+    assert connect_mod.metadata_value_rule(value) == ""
+
+
+# Fake values only. Each was missed before the provider grammars, the word
+# split and the segment heuristic.
+@pytest.mark.parametrize(
+    ("value", "rule"),
+    [
+        ("ghp_" + "f4k3" * 9, "credential_prefix:ghp_"),
+        ("ghp_" + "a" * 36, "credential_prefix:ghp_"),
+        ("note: " + "sk_live_" + "F4k3v4lu3F4k3", "credential_prefix:sk_"),
+        ("note:" + "ghp_" + "f4k3" * 9, "credential_prefix:ghp_"),
+        ("key for ci " + "Qx7Lm2Pz9Rt4Vb8Nc1Kd6Hs3", "high_entropy"),
+        ("old key, " + "Bearer " + "F4k3T0k3nV4lu3F4k3T0k3n", "bearer_credential"),
+        ("QwErTyUiOpAsDfGhJkLzXcVbNmQwErTyUiOpAsDf", "high_entropy"),
+        ("re_" + "F4k3ab12" + "_" + "F4k3v4lu3F4k3v4lu3", "credential_prefix:re_"),
+    ],
+)
+def test_metadata_refuses_previous_blind_spots(value: str, rule: str) -> None:
+    assert connect_mod.metadata_value_rule(value) == rule
+
+
+# A fake 40-character token. Inside a URL it is judged on its own, wherever
+# the URL puts it.
+_URL_FAKE_TOKEN = "Qx7Lm2Pz9Rt4Vb8Nc1Kd6Hs3Wy5Jf0Gt8Rn2Ls4M"
+_URL_PERCENT_TOKEN = "".join(f"%{ord(char):02X}" for char in _URL_FAKE_TOKEN)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        f"https://example.invalid/?token={_URL_FAKE_TOKEN}",
+        f"https://example.invalid/?campaign=SpringLaunch&token={_URL_FAKE_TOKEN}",
+        f"note: https://example.invalid/?token={_URL_FAKE_TOKEN}",
+        f"https://example.invalid/callback#access_token={_URL_FAKE_TOKEN}",
+        f"https://reader:{_URL_FAKE_TOKEN}@example.invalid/",
+        f"https://example.invalid/{_URL_FAKE_TOKEN}",
+        f"https://example.invalid/token={_URL_FAKE_TOKEN}",
+        f"https://example.invalid/{_URL_PERCENT_TOKEN}",
+        f"https://example.invalid/#token:{_URL_FAKE_TOKEN}",
+        f"https://example.invalid/#{_URL_FAKE_TOKEN}",
+        f"https://example.invalid/#{_URL_PERCENT_TOKEN}",
+        f"https://example.invalid/#/access/{_URL_FAKE_TOKEN}",
+        f"https://{_URL_FAKE_TOKEN}@example.invalid/",
+        f"https://{_URL_PERCENT_TOKEN}@example.invalid/",
+        f"https://{_URL_FAKE_TOKEN}:ordinary@example.invalid/",
+        f"https://example.invalid/?{_URL_FAKE_TOKEN}=ordinary",
+        f"https://example.invalid/?token={_URL_PERCENT_TOKEN}",
+        f"https://example.invalid/?token=ordinary&token={_URL_FAKE_TOKEN}",
+    ],
+)
+def test_metadata_refuses_token_inside_url(value: str) -> None:
+    assert connect_mod.metadata_value_rule(value) == "high_entropy"
+    with pytest.raises(connect_mod.ConnectRefusal) as caught:
+        connect_mod._parse_metadata([f"note={value}"])
+    assert caught.value.rule == "metadata_secret_value"
+    assert connect_mod._safe_status_metadata({"note": value}) == {}
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "https://example.invalid/" + "ghp_" + "a" * 36,
+        "https://" + "ghp_" + "a" * 36 + "@example.invalid/",
+        "https://example.invalid/#" + "ghp_" + "a" * 36,
+    ],
+)
+def test_metadata_refuses_provider_token_inside_url(value: str) -> None:
+    assert connect_mod.metadata_value_rule(value) == "credential_prefix:ghp_"
+    assert connect_mod._safe_status_metadata({"note": value}) == {}
+
+
+def _percent(text: str) -> str:
+    """Percent-encode every character, separators included."""
+    return "".join(f"%{ord(char):02X}" for char in text)
+
+
+_URL_GHP_TOKEN = "ghp_" + "a" * 36
+
+
+# Each shape passed intake and stayed visible in status before URL parts
+# were fully decoded before splitting, nested URLs and host labels judged.
+@pytest.mark.parametrize(
+    ("value", "rule"),
+    [
+        (
+            "https://example.invalid/" + _percent("access/" + _URL_GHP_TOKEN),
+            "credential_prefix:ghp_",
+        ),
+        (
+            "https://example.invalid/?next=" + _percent("https://inner.invalid/" + _URL_GHP_TOKEN),
+            "credential_prefix:ghp_",
+        ),
+        ("https://example.invalid/" + _percent(_URL_PERCENT_TOKEN), "high_entropy"),
+        ("https://" + _percent(_URL_PERCENT_TOKEN) + "@example.invalid/", "high_entropy"),
+        (f"https://{_URL_FAKE_TOKEN}.example.invalid/", "high_entropy"),
+        (f"https://{_URL_FAKE_TOKEN}.example.invalid:bad/", "high_entropy"),
+    ],
+)
+def test_metadata_refuses_encoded_nested_and_host_tokens(value: str, rule: str) -> None:
+    assert connect_mod.metadata_value_rule(value) == rule
+    with pytest.raises(connect_mod.ConnectRefusal) as caught:
+        connect_mod._parse_metadata([f"note={value}"])
+    assert caught.value.rule == "metadata_secret_value"
+    assert connect_mod._safe_status_metadata({"note": value}) == {}
+
+
+def test_metadata_url_with_bad_port_is_judged_from_raw_pieces() -> None:
+    assert connect_mod._url_parts("https://example.invalid:bad/docs") == [
+        "https:",
+        "example.invalid:bad",
+        "docs",
+    ]
+    value = "https://example.invalid:bad/docs/getting-started"
+    assert connect_mod._parse_metadata([f"note={value}"]) == {"note": value}
+    assert connect_mod._safe_status_metadata({"note": value}) == {"note": value}
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "https://example.invalid/docs/getting-started",
+        "https://example.invalid/2026/10/launch",
+        "https://owner@example.invalid/",
+        "https://example.invalid/#section-two",
+        "https://example.invalid/?campaign=CloudflareR2StorageBucket",
+        "https://example.invalid/" + _percent("blog/how-we-cut-our-onboarding-time-in-half"),
+        "https://example.invalid/?next=" + _percent("https://inner.invalid/docs/getting-started"),
+        "https://[2001:db8::1]:8443/docs/getting-started",
+        "https://192.0.2.10:8080/status",
+        "https://xn--bcher-kva.example.invalid/docs",
+        "https://a1b2.example.invalid/",
+        "https://shop-eu-west-2.storefront.example.invalid/",
+    ],
+)
+def test_metadata_url_labels_pass_intake_and_status(value: str) -> None:
+    assert connect_mod._parse_metadata([f"note={value}"]) == {"note": value}
+    assert connect_mod._safe_status_metadata({"note": value}) == {"note": value}
+
+
+# Constructed pronounceable runs around a short code with a generated tail.
+# A code counts as a word only when the rest of the value reads as words.
+# Metadata detection is a heuristic: a value built only from invented
+# pronounceable words still passes (see docs/connect.md).
+@pytest.mark.parametrize("code", ["R2", "B2B", "S3"])
+@pytest.mark.parametrize(
+    ("left", "right"), [("Amoriavena", "Ulenavopira"), ("Evolinaroa", "Pavirelona")]
+)
+def test_metadata_refuses_code_between_words_with_generated_tail(
+    code: str, left: str, right: str
+) -> None:
+    value = left + code + right + "Qe7Lo"
+    assert connect_mod.metadata_value_rule(value) == "high_entropy"
+    assert connect_mod._safe_status_metadata({"note": value}) == {}
+
+
+def test_metadata_invented_words_around_a_code_are_a_known_pass() -> None:
+    """Documented limit: invented pronounceable words read as a label."""
+    assert connect_mod.metadata_value_rule("AmoriavenaR2UlenavopiraPavirelona") == ""
+
+
+def _random_values(alphabet: str, length: int, count: int = 10_000) -> list[str]:
+    rng = random.Random(987)
+    return ["".join(rng.choice(alphabet) for _ in range(length)) for _ in range(count)]
+
+
+def test_metadata_high_entropy_miss_rates_match_docs() -> None:
+    """The miss rates published in docs/connect.md, measured with a fixed seed."""
+    alnum = string.ascii_letters + string.digits
+    measured = {
+        "alnum24": _random_values(alnum, 24),
+        "base64_24": _random_values(alnum + "+/", 24),
+        "letters40": _random_values(string.ascii_letters, 40),
+    }
+    missed = {
+        name: sum(1 for value in values if not connect_mod.metadata_value_rule(value))
+        for name, values in measured.items()
+    }
+
+    assert missed == {"alnum24": 33, "base64_24": 37, "letters40": 168}
+    docs = (Path(__file__).resolve().parents[2] / "docs" / "connect.md").read_text()
+    assert "33 of 10,000" in docs
+    assert "37 of 10,000" in docs
+    assert "168 of 10,000" in docs
+
+
+def test_metadata_key_names_alone_never_refuse(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = connect_mod.connect_provider(
+        "stripe",
+        repo=repo,
+        token="sk_test_fixture",
+        metadata_pairs=[
+            "key_name=Main restricted key",
+            "onepassword_item=Stripe restricted",
+            "source=op://Business/Stripe/credential",
+            "api_key_label=checkout",
+            "mode=test",
+        ],
+    )
+
+    stored = result["status"]["metadata"]
+    assert stored["key_name"] == "Main restricted key"
+    assert stored["onepassword_item"] == "Stripe restricted"
+    assert stored["source"] == "op://Business/Stripe/credential"
+    assert "source" in connect_mod.SAFE_METADATA_KEYS
+
+
+def test_metadata_without_equals_does_not_echo_the_argument() -> None:
+    bare = "sk_live_" + "F4k3v4lu3F4k3"
+
+    with pytest.raises(connect_mod.ConnectRefusal) as caught:
+        connect_mod._parse_metadata([bare])
+
+    assert caught.value.rule == "metadata_format"
+    assert bare not in str(caught.value)
+
+
+def test_status_hides_hand_edited_secret_values(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token")
+    config_path = repo / ".mb" / "connect.yaml"
+    config = yaml.safe_load(config_path.read_text())
+    leaked = FAKE_SECRET_VALUES["credential_prefix:sk_"]
+    config["providers"]["cloudflare"]["metadata"] = {"zone_label": leaked, "zone_id": "abc123"}
+    config_path.write_text(yaml.safe_dump(config))
+
+    status = connect_mod.status_provider("cloudflare", repo)
+
+    assert "zone_label" not in status["metadata"]
+    assert status["metadata"]["zone_id"] == "abc123"
+    assert leaked not in json.dumps(status)
+
+
+def _fake_op(value: str = "cf-rotated-token", *, ok: bool = True, stderr: str = ""):
+    calls: list[list[str]] = []
+
+    def run(args, cwd=None, timeout=5.0, *, env=None):
+        calls.append(list(args))
+        return {
+            "ok": ok,
+            "returncode": 0 if ok else 1,
+            "stdout": value if ok else "",
+            "stderr": stderr,
+        }
+
+    return run, calls
+
+
+def _ok_http(monkeypatch) -> None:
+    monkeypatch.setattr(
+        connect_mod,
+        "_http_get_json",
+        lambda url, headers=None, **kwargs: {
+            "ok": True,
+            "state": "ready",
+            "summary": "simulated provider response",
+            "safe_to_share": True,
+            "upstream": {"endpoint_family": kwargs["endpoint_family"], "safe_to_share": True},
+        },
+    )
+
+
+def test_connect_source_is_stored_and_merges_existing_metadata(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "cloudflare", repo=repo, token="cf-test-token", metadata_pairs=["zone_id=abc123"]
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "connect",
+            "cloudflare",
+            "--source",
+            "op://Business/Cloudflare/credential",
+            "--repo",
+            str(repo),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    metadata = json.loads(result.stdout)["status"]["metadata"]
+    assert metadata == {"zone_id": "abc123", "source": "op://Business/Cloudflare/credential"}
+    assert connect_mod.read_token("cloudflare", repo)["token"] == "cf-test-token"
+
+
+def test_connect_source_refuses_a_secret_value(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    leaked = FAKE_SECRET_VALUES["credential_prefix:sk_"]
+
+    result = runner.invoke(
+        app, ["connect", "stripe", "--source", leaked, "--repo", str(repo)], input=""
+    )
+
+    assert result.exit_code == 2
+    assert "--source looks like a secret" in result.stderr
+    assert leaked not in result.output
+
+
+def test_rotate_reads_op_ref_stores_and_probes(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    _ok_http(monkeypatch)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "cloudflare",
+        repo=repo,
+        token="cf-old-token",
+        account_label="Main",
+        metadata_pairs=["zone_id=abc123"],
+        source="op://Business/Cloudflare/credential",
+    )
+    run, calls = _fake_op("cf-rotated-token\n")
+
+    result = connect_mod.rotate_provider(
+        "cloudflare", repo, which_func=lambda name: f"/usr/bin/{name}", command_runner=run
+    )
+
+    assert calls == [["op", "read", "--no-newline", "op://Business/Cloudflare/credential"]]
+    assert result["ok"] is True
+    assert result["provider_verified"] is True
+    assert connect_mod.read_token("cloudflare", repo)["token"] == "cf-rotated-token"
+    status = connect_mod.status_provider("cloudflare", repo)
+    assert status["account_label"] == "Main"
+    assert status["metadata"]["zone_id"] == "abc123"
+    assert "cf-rotated-token" not in json.dumps(result)
+    assert "cf-old-token" not in json.dumps(result)
+
+
+def test_rotate_cli_json_never_carries_the_secret(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    _ok_http(monkeypatch)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "cloudflare",
+        repo=repo,
+        token="cf-old-token",
+        source="op://Business/Cloudflare/credential",
+    )
+    run, _calls = _fake_op("cf-rotated-token")
+    monkeypatch.setattr(connect_mod, "_run_command", run)
+    monkeypatch.setattr(shutil, "which", lambda name: f"/usr/bin/{name}")
+
+    result = runner.invoke(app, ["connect", "rotate", "cloudflare", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout)["provider_verified"] is True
+    assert "cf-rotated-token" not in result.output
+
+
+def test_rotate_without_source_explains(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token")
+
+    result = runner.invoke(app, ["connect", "rotate", "cloudflare", "--repo", str(repo)])
+
+    assert result.exit_code == 2
+    assert "no recorded source" in result.stderr
+    assert "--source op://vault/item/field" in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("source", "which", "ok", "stderr", "rule"),
+    [
+        ("vault://elsewhere/item", "/usr/bin/op", True, "", "rotate_unsupported_source"),
+        ("op://Business/Item/field", None, True, "", "rotate_op_missing"),
+        (
+            "op://Business/Item/field",
+            "/usr/bin/op",
+            False,
+            "[ERROR] You are not currently signed in.",
+            "rotate_op_signed_out",
+        ),
+        (
+            "op://Business/Item/field",
+            "/usr/bin/op",
+            False,
+            "item not found",
+            "rotate_op_read_failed",
+        ),
+    ],
+)
+def test_rotate_refusals(
+    source: str,
+    which: str | None,
+    ok: bool,
+    stderr: str,
+    rule: str,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token", source=source)
+    run, _calls = _fake_op(ok=ok, stderr=stderr)
+
+    with pytest.raises(connect_mod.ConnectRefusal) as caught:
+        connect_mod.rotate_provider(
+            "cloudflare", repo, which_func=lambda name: which, command_runner=run
+        )
+
+    assert caught.value.rule == rule
+    assert connect_mod.read_token("cloudflare", repo)["token"] == "cf-test-token"
+
+
+def test_rotate_not_connected(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    with pytest.raises(connect_mod.ConnectRefusal) as caught:
+        connect_mod.rotate_provider("cloudflare", repo)
+
+    assert caught.value.rule == "rotate_not_connected"
+
+
+def _fake_http(
+    responses: dict[str, tuple[int | None, dict[str, str]]], calls: list[dict[str, Any]]
+):
+    """Answer `_http_get_json` by endpoint family: (http_status or None, headers)."""
+
+    def fake(url, headers=None, **kwargs):
+        family = kwargs["endpoint_family"]
+        calls.append({"url": url, "family": family, "headers": dict(headers or {})})
+        status, response_headers = responses.get(family, (None, {}))
+        ok = status is not None and 200 <= status < 300
+        if status is None:
+            state = "unvalidated"
+        elif ok:
+            state = "ready"
+        else:
+            state = "invalid" if status in {400, 401, 403, 404} else "unvalidated"
+        return {
+            "ok": ok,
+            "state": state,
+            "summary": f"simulated {family}",
+            "safe_to_share": True,
+            "upstream": {
+                "endpoint_family": family,
+                "http_status": status,
+                "response_received": status is not None,
+                "error_codes": [],
+                "error_messages": [],
+                "safe_to_share": True,
+            },
+            "headers": response_headers,
+        }
+
+    return fake
+
+
+def test_registry_includes_github_and_ga4_with_probes() -> None:
+    providers = {provider["id"]: provider for provider in connect_mod.provider_registry()}
+
+    assert providers["github"]["required_secrets"] == ["api_key"]
+    assert "GITHUB_TOKEN" in providers["github"]["env_vars"]
+    assert providers["ga4"]["metadata_fields"] == ["property_id"]
+    assert {"stripe", "github", "ga4"} <= connect_mod.PROBE_PROVIDERS
+    assert connect_mod.exec_env_name("github") == "GITHUB_TOKEN"
+    assert connect_mod.exec_env_name("ga4") == "MB_SECRET"
+
+
+@pytest.mark.parametrize(
+    ("provider_id", "expected"),
+    [
+        ("cloudflare", "CLOUDFLARE_API_TOKEN"),
+        ("stripe", "STRIPE_API_KEY"),
+        ("github", "GITHUB_TOKEN"),
+        ("resend", "RESEND_API_KEY"),
+        ("apify", "APIFY_TOKEN"),
+        ("meta", "ACCESS_TOKEN"),
+        ("postiz", "POSTIZ_API_KEY"),
+        ("transcription", "OPENAI_API_KEY"),
+        ("google", "GOOGLE_OAUTH_TOKEN"),
+        ("ga4", "MB_SECRET"),
+        ("mercury", "MB_SECRET"),
+    ],
+)
+def test_exec_default_env_is_the_providers_own_variable(provider_id: str, expected: str) -> None:
+    assert connect_mod.exec_env_name(provider_id) == expected
+    assert connect_mod.exec_env_name(provider_id, "OVERRIDE") == "OVERRIDE"
+
+
+def test_stripe_probe_reports_restricted_key_scopes(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    calls: list[dict[str, Any]] = []
+    monkeypatch.setattr(
+        connect_mod,
+        "_http_get_json",
+        _fake_http(
+            {
+                "stripe_products_read": (200, {}),
+                "stripe_prices_read": (200, {}),
+                "stripe_customers_read": (403, {}),
+                "stripe_charges_read": (403, {}),
+                "stripe_balance_read": (200, {}),
+            },
+            calls,
+        ),
+    )
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    secret = "rk_test_" + "F4k3v4lu3F4k3"
+    connect_mod.connect_provider("stripe", repo=repo, token=secret)
+
+    result = runner.invoke(app, ["connect", "test", "stripe", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["provider_verified"] is True
+    assert payload["validation"]["scopes"] == {
+        "products": "allowed",
+        "prices": "allowed",
+        "customers": "refused",
+        "charges": "refused",
+        "balance": "allowed",
+    }
+    assert "refused: customers, charges" in payload["validation"]["summary"]
+    assert [call["family"] for call in calls] == [
+        f"stripe_{name}_read" for name, _url in connect_mod.STRIPE_SCOPE_PROBES
+    ]
+    assert all(call["url"].startswith("https://api.stripe.com/v1/") for call in calls)
+    assert secret not in result.output
+    status = connect_mod.status_provider("stripe", repo)
+    assert status["validation"]["scopes"]["customers"] == "refused"
+
+    human = runner.invoke(app, ["connect", "test", "stripe", "--repo", str(repo)])
+    assert "reads: products=allowed" in human.stdout
+
+
+def test_stripe_probe_stops_on_rejected_key(tmp_path: Path, monkeypatch) -> None:
+    calls: list[dict[str, Any]] = []
+    monkeypatch.setattr(
+        connect_mod,
+        "_http_get_json",
+        _fake_http({"stripe_products_read": (401, {})}, calls),
+    )
+    provider = connect_mod.normalize_provider("stripe")
+
+    result = connect_mod._validate_with_provider(provider, "sk_test_fake")
+
+    assert result["ok"] is False
+    assert result["state"] == "invalid"
+    assert result["provider_verified"] is False
+    assert len(calls) == 1
+
+
+def test_stripe_probe_unreachable_is_unvalidated(monkeypatch) -> None:
+    calls: list[dict[str, Any]] = []
+    monkeypatch.setattr(connect_mod, "_http_get_json", _fake_http({}, calls))
+
+    result = connect_mod._validate_with_provider(
+        connect_mod.normalize_provider("stripe"), "sk_test_fake"
+    )
+
+    assert result["state"] == "unvalidated"
+    assert set(result["scopes"].values()) == {"unknown"}
+
+
+def test_github_probe_reports_classic_scopes(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    calls: list[dict[str, Any]] = []
+    monkeypatch.setattr(
+        connect_mod,
+        "_http_get_json",
+        _fake_http(
+            {"github_authenticated_user": (200, {"X-OAuth-Scopes": "repo, read:org"})}, calls
+        ),
+    )
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    secret = "ghp_" + "F4k3" * 9
+    connect_mod.connect_provider("github", repo=repo, token=secret)
+
+    result = connect_mod.test_provider("github", repo)
+
+    assert result["ok"] is True
+    assert result["validation"]["token_kind"] == "classic"
+    assert result["validation"]["token_scopes"] == ["repo", "read:org"]
+    assert "scopes: repo, read:org" in result["validation"]["summary"]
+    assert calls[0]["url"] == "https://api.github.com/user"
+    assert calls[0]["headers"]["Authorization"] == f"Bearer {secret}"
+    assert secret not in json.dumps(result)
+
+
+def test_github_probe_fine_grained_explains_permissions(monkeypatch) -> None:
+    calls: list[dict[str, Any]] = []
+    monkeypatch.setattr(
+        connect_mod,
+        "_http_get_json",
+        _fake_http({"github_authenticated_user": (200, {})}, calls),
+    )
+
+    result = connect_mod._validate_with_provider(
+        connect_mod.normalize_provider("github"), "github_pat_" + "11F4K3_f4k3"
+    )
+
+    assert result["ok"] is True
+    assert result["token_kind"] == "fine_grained"
+    assert result["token_scopes"] == []
+    assert "token's settings" in result["summary"]
+
+
+def test_github_custom_connection_keeps_resolving_as_builtin(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("github", repo=repo, token="ghp_" + "F4k3" * 9, custom=False)
+
+    assert connect_mod.read_token("github", repo)["field"] == "api_key"
+    assert connect_mod.read_token("github", repo)["ok"] is True
+
+
+@pytest.mark.parametrize("property_id", ["", "G-ABC123", "123; drop"])
+def test_ga4_probe_needs_numeric_property_id(property_id: str, monkeypatch) -> None:
+    calls: list[dict[str, Any]] = []
+    monkeypatch.setattr(connect_mod, "_http_get_json", _fake_http({}, calls))
+
+    result = connect_mod._validate_with_provider(
+        connect_mod.normalize_provider("ga4"), "ya29.fake", {"property_id": property_id}
+    )
+
+    assert result["state"] == "unvalidated"
+    assert result["repair_command"] == "mb connect ga4 --metadata property_id=<property-id>"
+    assert calls == []
+
+
+def test_ga4_probe_reads_the_configured_property(monkeypatch) -> None:
+    calls: list[dict[str, Any]] = []
+    monkeypatch.setattr(
+        connect_mod,
+        "_http_get_json",
+        _fake_http({"ga4_property_read": (200, {})}, calls),
+    )
+
+    result = connect_mod._validate_with_provider(
+        connect_mod.normalize_provider("ga4"), "ya29.fake", {"property_id": "properties/123456"}
+    )
+
+    assert result["ok"] is True
+    assert calls[0]["url"] == "https://analyticsadmin.googleapis.com/v1beta/properties/123456"
+
+
+def test_http_get_json_returns_only_named_headers(monkeypatch) -> None:
+    class FakeResponse:
+        status = 200
+        headers = {"X-OAuth-Scopes": "repo", "Set-Cookie": "session=f4k3"}
+
+        def read(self, size: int) -> bytes:
+            return b'{"login": "someone"}'
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args) -> None:
+            return None
+
+    seen: dict[str, Any] = {}
+
+    def fake_urlopen(request, timeout):
+        seen["method"] = request.get_method()
+        return FakeResponse()
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    result = connect_mod._http_get_json(
+        "https://api.example.test/user",
+        {"Authorization": "Bearer f4k3"},
+        endpoint_family="example",
+        response_headers=("X-OAuth-Scopes",),
+    )
+
+    assert seen["method"] == "GET"
+    assert result["ok"] is True
+    assert result["headers"] == {"X-OAuth-Scopes": "repo"}
+    assert "someone" not in json.dumps(result)
+
+
+def _hostile_headers(secret: str) -> email.message.Message:
+    headers = email.message.Message()
+    headers["X-OAuth-Scopes"] = f"repo, {secret}, read:org, Bearer {secret}"
+    return headers
+
+
+@pytest.mark.parametrize("status", [200, 401])
+def test_github_probe_redacts_secret_reflected_in_scope_header(monkeypatch, status: int) -> None:
+    """A hostile response echoing the request token never reaches output."""
+    secret = "ghp_" + "F4k3" * 9
+
+    class FakeResponse:
+        def __init__(self) -> None:
+            self.status = status
+            self.headers = _hostile_headers(secret)
+
+        def read(self, size: int) -> bytes:
+            return b"{}"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args) -> None:
+            return None
+
+    def fake_urlopen(request, timeout):
+        if status >= 400:
+            raise urllib.error.HTTPError(
+                request.full_url,
+                status,
+                "Unauthorized",
+                _hostile_headers(secret),
+                io.BytesIO(b"{}"),
+            )
+        return FakeResponse()
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    result = connect_mod._validate_with_provider(connect_mod.normalize_provider("github"), secret)
+
+    assert secret not in json.dumps(result)
+    assert result["token_scopes"] == ["repo", "read:org"]
+    assert result["token_scopes_withheld"] == 2
+    if status == 200:
+        assert result["ok"] is True
+        assert "scopes: repo, read:org (2 unrecognized value(s) withheld)" in result["summary"]
+    else:
+        assert result["ok"] is False
+        assert result["state"] == "invalid"
+
+
+def test_http_get_json_redacts_and_caps_returned_headers(monkeypatch) -> None:
+    secret = "f4k3-request-secret-0000"
+
+    def fake_urlopen(request, timeout):
+        headers = email.message.Message()
+        headers["X-OAuth-Scopes"] = f"repo,{secret}," + "x" * 2000
+        raise urllib.error.HTTPError(request.full_url, 403, "Forbidden", headers, io.BytesIO(b""))
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    result = connect_mod._http_get_json(
+        "https://api.example.test/user",
+        {"Authorization": f"Bearer {secret}"},
+        endpoint_family="example",
+        response_headers=("X-OAuth-Scopes",),
+    )
+
+    returned = result["headers"]["X-OAuth-Scopes"]
+    assert secret not in returned
+    assert "<redacted>" in returned
+    assert len(returned) <= connect_mod.RESPONSE_HEADER_MAX_CHARS
+
+
+def test_generated_agents_guidance_routes_credentials_to_exec(tmp_path: Path) -> None:
+    """Generated AGENTS.md sends agents to `exec`, never to `token` output."""
+    rendered = codex_mod.render_agents_md(tmp_path, name="Example Co")
+
+    text = " ".join(rendered.split())
+    assert "need a credential -> `mb connect exec <provider> -- <command>`" in text
+    assert "token to stdout" not in text
+    assert "credentials -> `mb connect token`" not in text
+    assert text.count("mb connect token") == text.count("`mb connect token` refuses")
+
+
+# --- #991: a tokenless first connect records no secret it never stored ---------
+
+
+def _stored_entry(repo: Path, provider_id: str) -> dict[str, Any]:
+    config = yaml.safe_load((repo / ".mb" / "connect.yaml").read_text(encoding="utf-8"))
+    entry: dict[str, Any] = config["providers"][provider_id]
+    return entry
+
+
+def test_tokenless_first_connect_with_metadata_records_no_secret_ref(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = connect_mod.connect_provider("cloudflare", repo=repo, metadata_pairs=["zone_id=abc"])
+
+    entry = _stored_entry(repo, "cloudflare")
+    assert entry["connected"] is False
+    assert entry["secrets"] == {}
+    assert entry["metadata"] == {"zone_id": "abc"}
+    assert result["ok"] is False
+    status = result["status"]
+    assert status["state"] == "missing_secret"
+    assert status["repair_command"] == "mb connect cloudflare --token-stdin"
+    assert status["connected"] is False
+    assert status["configured"] is True
+    assert status["secrets"]["api_token"]["ref"] == ""
+    assert status["secrets"]["api_token"]["backend"] == "local-file"
+
+    cli = runner.invoke(app, ["connect", "status", "--repo", str(repo), "--json"])
+
+    # Still counted and still actionable, so status keeps exiting 1.
+    assert cli.exit_code == 1, cli.output
+    payload = json.loads(cli.stdout)
+    assert payload["summary"]["configured"] == 1
+    assert payload["summary"]["needs_repair"] == 1
+    assert payload["providers"][0]["state"] == "missing_secret"
+
+
+def test_tokenless_first_connect_with_source_then_rotate_connects(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    _ok_http(monkeypatch)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    source = "op://Business/Cloudflare/credential"
+
+    first = runner.invoke(
+        app,
+        ["connect", "cloudflare", "--source", source, "--repo", str(repo), "--json"],
+        input="",
+    )
+
+    assert first.exit_code == 1, first.output
+    assert json.loads(first.stdout)["status"]["state"] == "missing_secret"
+    entry = _stored_entry(repo, "cloudflare")
+    assert entry["connected"] is False
+    assert entry["secrets"] == {}
+    assert entry["metadata"] == {"source": source}
+
+    run, calls = _fake_op("cf-rotated-token")
+    rotated = connect_mod.rotate_provider(
+        "cloudflare", repo, which_func=lambda name: f"/usr/bin/{name}", command_runner=run
+    )
+
+    assert calls == [["op", "read", "--no-newline", source]]
+    assert rotated["stored"] is True
+    entry = _stored_entry(repo, "cloudflare")
+    assert entry["connected"] is True
+    assert entry["secrets"]["api_token"]["ref"]
+    assert connect_mod.read_token("cloudflare", repo)["token"] == "cf-rotated-token"
+
+
+def test_tokenless_reconnect_keeps_existing_connected_entry(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token")
+    before = _stored_entry(repo, "cloudflare")["secrets"]
+
+    connect_mod.connect_provider("cloudflare", repo=repo, metadata_pairs=["zone_id=abc"])
+
+    entry = _stored_entry(repo, "cloudflare")
+    assert entry["connected"] is True
+    assert entry["secrets"] == before
+    assert entry["metadata"] == {"zone_id": "abc"}
+    assert connect_mod.read_token("cloudflare", repo)["token"] == "cf-test-token"
+
+
+def test_entry_written_with_a_dangling_ref_still_reads_missing_secret(
+    tmp_path: Path, monkeypatch
+) -> None:
+    # The shape releases before #991 wrote for a tokenless first connect.
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    (repo / ".mb").mkdir(parents=True)
+    (repo / ".mb" / "connect.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "version": 1,
+                "providers": {
+                    "cloudflare": {
+                        "provider": "cloudflare",
+                        "connected": True,
+                        "scope": "repo",
+                        "secrets": {
+                            "api_token": {
+                                "ref": "mainbranch:connect:demo:cloudflare:api_token",
+                                "backend": "local-file",
+                            }
+                        },
+                        "metadata": {"zone_id": "abc"},
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    status = connect_mod.status_provider("cloudflare", repo)
+
+    assert status["state"] == "missing_secret"
+    assert status["connected"] is True
+    assert status["configured"] is True
+    assert status["secrets"]["api_token"]["present"] is False
+    assert status["secrets"]["api_token"]["presence"] == "absent"
+    assert status["repair_command"] == "mb connect cloudflare --token-stdin"
+
+
+# --- #973: every --json failure prints one envelope on stdout --------------------
+
+
+def _assert_json_failure(result: Any, *, exit_code: int, state: str) -> dict[str, Any]:
+    assert result.exit_code == exit_code, (result.stdout, result.stderr)
+    payload: dict[str, Any] = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["state"] == state
+    assert payload["result_status"] == "error"
+    assert payload["errors"][0]["code"] == state
+    assert payload["exit_code"] == exit_code
+    assert payload["mb_command"].startswith("mb connect")
+    assert payload["safe_to_share"] is True
+    # The human text is unchanged and stays on stderr.
+    assert result.stderr.startswith(payload["mb_command"] + ": ")
+    return payload
+
+
+@pytest.mark.parametrize(
+    ("argv", "exit_code", "state"),
+    [
+        (["status", "no-such-provider"], 2, "invalid_request"),
+        (["test"], 2, "usage_error"),
+        (["rotate"], 2, "usage_error"),
+        (["token", "cloudflare"], 2, "json_not_supported"),
+        (["exec", "cloudflare", "--", "true"], 2, "json_not_supported"),
+        (["repair"], 2, "usage_error"),
+        (["repair", "--keychain"], 2, "needs_terminal"),
+        (["status", "cloudflare", "extra-arg"], 2, "usage_error"),
+        (["stripe", "--from-env"], 1, "missing_env_credential"),
+    ],
+)
+def test_connect_json_failure_paths_print_an_envelope(
+    tmp_path: Path, monkeypatch, argv: list[str], exit_code: int, state: str
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    # Options first, so the exec case's `--` keeps them out of its command.
+    with_json = runner.invoke(app, ["connect", "--repo", str(repo), "--json", *argv], input="")
+    plain = runner.invoke(app, ["connect", "--repo", str(repo), *argv], input="")
+
+    _assert_json_failure(with_json, exit_code=exit_code, state=state)
+    if state == "json_not_supported":
+        return  # Only --json itself fails here; the plain run is another command.
+    # Without --json nothing changes: stdout stays empty, same exit, same text.
+    assert plain.exit_code == exit_code
+    assert plain.stdout == ""
+    assert plain.stderr == with_json.stderr
+
+
+def test_connect_json_refusal_names_its_rule_without_the_value(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    leaked = FAKE_SECRET_VALUES["credential_prefix:sk_"]
+
+    result = runner.invoke(
+        app, ["connect", "stripe", "--source", leaked, "--repo", str(repo), "--json"], input=""
+    )
+
+    payload = _assert_json_failure(result, exit_code=2, state="refused")
+    assert payload["rule"] == "source_secret_value"
+    assert leaked not in result.output
+
+
+# Credential-shaped dummy for the stderr tests; built here, never printed.
+STDERR_DUMMY_CREDENTIAL = "sk_live_" + "Q" * 32
+
+
+@pytest.mark.parametrize("json_flag", [["--json"], []])
+def test_connect_failure_keeps_a_credential_off_both_streams(
+    tmp_path: Path, monkeypatch, json_flag: list[str]
+) -> None:
+    """The 0.6.3 release-gate scenario: the stdin credential reused as a metadata key."""
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    dummy = STDERR_DUMMY_CREDENTIAL
+
+    result = runner.invoke(
+        app,
+        [
+            "connect",
+            "stripe",
+            "--token-stdin",
+            "--metadata",
+            f"{dummy}={dummy}",
+            "--repo",
+            str(repo),
+            *json_flag,
+        ],
+        input=dummy,
+    )
+
+    assert result.exit_code == 2
+    assert dummy not in result.stdout
+    assert dummy not in result.stderr
+    assert "--metadata argument 1" in result.stderr
+    if json_flag:
+        payload = _assert_json_failure(result, exit_code=2, state="refused")
+        assert payload["rule"] == "metadata_secret_value"
+    else:
+        assert result.stdout == ""
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        # A secret-shaped metadata key with a refused value, no stdin credential.
+        ["connect", "cloudflare", "--metadata", "{dummy}=" + FAKE_SECRET_VALUES["high_entropy"]],
+        ["connect", "{dummy}"],
+        ["connect", "--custom", "{dummy}"],
+        ["connect", "stripe", "{dummy}"],
+        ["connect", "repair", "{dummy}"],
+    ],
+)
+def test_connect_failure_messages_never_quote_secret_shaped_input(
+    tmp_path: Path, monkeypatch, argv: list[str]
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    dummy = STDERR_DUMMY_CREDENTIAL
+    args = [arg.replace("{dummy}", dummy) for arg in argv]
+
+    for json_flag in (["--json"], []):
+        result = runner.invoke(app, [*args, "--repo", str(repo), *json_flag], input="")
+
+        assert result.exit_code == 2, result.stderr
+        assert dummy not in result.stdout
+        assert dummy not in result.stderr
+        assert FAKE_SECRET_VALUES["high_entropy"] not in result.output
+        assert connect_mod.HIDDEN_INPUT in result.stderr
+
+
+def test_connect_token_refusal_never_quotes_a_secret_shaped_provider(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    monkeypatch.setattr(connect_mod, "stdout_exposes_secret", lambda: True)
+    dummy = STDERR_DUMMY_CREDENTIAL
+
+    result = runner.invoke(app, ["connect", "token", dummy, "--repo", str(tmp_path)])
+
+    assert result.exit_code == connect_mod.TOKEN_REFUSED_EXIT_CODE
+    assert dummy not in result.output
+    assert "mb connect exec <provider> -- <command>" in result.stderr
+
+
+def test_connect_exec_never_quotes_a_secret_shaped_command(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-fixture-notfound-0000")
+    dummy = STDERR_DUMMY_CREDENTIAL
+
+    def fake_run(args, **kwargs):
+        raise FileNotFoundError(2, "No such file or directory", args[0])
+
+    outcome = connect_mod.exec_with_secret("cloudflare", [dummy], repo, runner=fake_run)
+
+    assert outcome["returncode"] == 127
+    assert outcome["error"] == f"command not found: {connect_mod.HIDDEN_INPUT}"
+    assert dummy not in json.dumps(outcome)
+
+
+def test_connect_failure_redacts_stderr_like_the_json_copy(capsys) -> None:
+    """The reporter redacts the human line too, not only the JSON envelope."""
+    from mb import cli as cli_mod
+
+    dummy = STDERR_DUMMY_CREDENTIAL
+    for json_out in (True, False):
+        with pytest.raises(typer.Exit):
+            cli_mod._connect_failure(
+                "mb connect",
+                f"upstream said {dummy}; Authorization: Bearer {dummy}",
+                json_out=json_out,
+                exit_code=1,
+                state="connect_failed",
+                secrets=(dummy,),
+            )
+        captured = capsys.readouterr()
+        assert dummy not in captured.out
+        assert dummy not in captured.err
+        assert connect_mod.SECRET_REPLACEMENT in captured.err
+
+
+@pytest.mark.parametrize(
+    ("value", "shown"),
+    [
+        ("cloudflare", True),
+        ("my-custom-provider", True),
+        ("/usr/local/bin/stripe", True),
+        (STDERR_DUMMY_CREDENTIAL, False),
+        (FAKE_SECRET_VALUES["high_entropy"], False),
+        (FAKE_SECRET_VALUES["jwt_shape"], False),
+        ("x" * 65, False),
+        ("two words", False),
+    ],
+)
+def test_echoable_input_only_shows_plain_short_names(value: str, shown: bool) -> None:
+    assert (connect_mod.echoable_input(value) == value) is shown
+    assert (value in connect_mod.quoted_input(value)) is shown
+
+
+@pytest.mark.parametrize(
+    ("native_state", "backend_state"),
+    [("locked", "keychain_locked"), ("unavailable", "keychain_unavailable")],
+)
+def test_connect_json_backend_failure_carries_sanitized_state(
+    tmp_path: Path, monkeypatch, native_state: str, backend_state: str
+) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "macos-keychain")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    _fake_native_store(monkeypatch, native_state)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(
+        app,
+        ["connect", "resend", "--token-stdin", "--repo", str(repo), "--json"],
+        input="re_secret_token\n",
+    )
+
+    payload = _assert_json_failure(result, exit_code=1, state="backend_unavailable")
+    assert payload["backend_state"] == backend_state
+    assert payload["repair_command"] == connect_mod._backend_repair(backend_state)["repair_command"]
+    assert "Nothing was stored" in payload["summary"]
+    assert "re_secret_token" not in result.output
+    assert not (repo / ".mb" / "connect.yaml").exists()
+
+
+def test_connect_json_unexpected_error_prints_an_envelope(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    def boom(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise KeyError("sk_live_should_never_print")
+
+    monkeypatch.setattr(connect_mod, "status_all", boom)
+
+    result = runner.invoke(app, ["connect", "status", "--repo", str(repo), "--json"])
+
+    payload = _assert_json_failure(result, exit_code=1, state="unexpected_error")
+    assert "KeyError" in payload["summary"]
+    assert "sk_live_should_never_print" not in result.output
+
+
+# --- #976: backend health without providers; unknown is not absent -------------
+
+
+def test_status_reports_backend_health_with_no_providers(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(app, ["connect", "status", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["providers"] == []
+    backend = payload["credential_backend"]
+    assert backend["backend"] == "local-file"
+    assert backend["ok"] is True
+    assert backend["state"] == "ready"
+
+
+def test_status_reports_locked_backend_with_no_providers(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "macos-keychain")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    _fake_native_store(monkeypatch, "locked")
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    status = connect_mod.status_all(repo)
+
+    assert status["providers"] == []
+    backend = status["credential_backend"]
+    assert backend["backend"] == "macos-keychain"
+    assert backend["ok"] is False
+    assert backend["state"] == "keychain_locked"
+    assert backend["repair_command"].startswith("security unlock-keychain")
+    assert '"locked"' not in json.dumps(backend)
+
+
+def test_locked_backend_reports_presence_unknown_not_absent(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("resend", repo=repo, token="re_secret_token")
+    config_path = repo / ".mb" / "connect.yaml"
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    config["providers"]["resend"]["secrets"]["api_key"]["backend"] = "macos-keychain"
+    config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
+    _fake_native_store(monkeypatch, "locked")
+
+    status = connect_mod.status_all(repo)
+
+    secret = status["providers"][0]["secrets"]["api_key"]
+    assert secret["present"] is None
+    assert secret["presence"] == "unknown"
+    assert secret["backend_ok"] is False
+    assert secret["backend_state"] == "keychain_locked"
+    assert status["providers"][0]["state"] == "backend_unavailable"
+    assert status["credential_backend"]["ok"] is False
+    assert status["credential_backend"]["state"] == "keychain_locked"
+    assert "re_secret_token" not in json.dumps(status)
+
+
+def test_ready_and_missing_secrets_report_known_presence(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("resend", repo=repo, token="re_secret_token")
+    connect_mod.connect_provider("cloudflare", repo=repo, metadata_pairs=["zone_id=abc"])
+
+    status = connect_mod.status_all(repo)
+
+    by_id = {item["provider"]: item for item in status["providers"]}
+    stored = by_id["resend"]["secrets"]["api_key"]
+    assert (stored["present"], stored["presence"]) == (True, "present")
+    missing = by_id["cloudflare"]["secrets"]["api_token"]
+    assert (missing["present"], missing["presence"]) == (False, "absent")
+    assert status["credential_backend"] == {
+        "backend": "local-file",
+        "ok": True,
+        "state": "ready",
+        "summary": "Configured credential backend(s) are ready: local-file.",
+        "repair": "",
+        "repair_command": "",
+        "safe_to_share": True,
+    }
+
+
+def test_metadata_only_first_connect_still_appears_in_identity(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "meta", repo=repo, metadata_pairs=["pixel_id=111", "ad_account_id=act_222"]
+    )
+    connect_mod.connect_provider("cloudflare", repo=repo, metadata_pairs=["zone_id=demo-zone"])
+
+    cli = runner.invoke(app, ["connect", "identity", "--repo", str(repo), "--json"])
+    human = runner.invoke(app, ["connect", "identity", "--repo", str(repo)])
+
+    assert cli.exit_code == 0, cli.output
+    by_id = {item["provider"]: item for item in json.loads(cli.stdout)["providers"]}
+    assert set(by_id) == {"meta", "cloudflare"}
+    assert by_id["meta"]["identity"]["pixel_id"] == "111"
+    assert by_id["meta"]["identity"]["ad_account_id"] == "act_222"
+    assert by_id["cloudflare"]["identity"]["zone_id"] == "demo-zone"
+    assert human.exit_code == 0, human.output
+    assert "meta" in human.stdout.lower()
+    assert "cloudflare" in human.stdout.lower()
+    assert "no connected providers" not in human.stdout
+
+
+def test_tokenless_slot_does_not_vouch_for_backend_health(tmp_path: Path, monkeypatch) -> None:
+    # The tokenless entry reports backend local-file, as before, but asked no
+    # backend anything; health still comes from the backend a connect would use.
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "macos-keychain")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider(
+        "cloudflare", repo=repo, metadata_pairs=["zone_id=abc"], secret_backend="local-file"
+    )
+    _fake_native_store(monkeypatch, "locked")
+
+    status = connect_mod.status_all(repo)
+
+    assert status["providers"][0]["secrets"]["api_token"]["backend"] == "local-file"
+    assert status["credential_backend"]["backend"] == "macos-keychain"
+    assert status["credential_backend"]["state"] == "keychain_locked"
+
+
+def test_tokenless_first_connect_still_counts_in_probe_gap(tmp_path: Path, monkeypatch) -> None:
+    # The probe gap is about the provider, not the stored secret: resend has no
+    # probe whether or not its key is stored yet, as on releases before #991.
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("resend", repo=repo, metadata_pairs=["sender_domain=example.com"])
+
+    report = connect_mod.doctor(repo)
+
+    assert report["probe_gap"]["providers"] == ["resend"]

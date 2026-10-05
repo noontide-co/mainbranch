@@ -132,6 +132,16 @@ default, use one of these sources:
 Output a concise continue/change/stop recommendation and write findings to the
 push review or outcome file when the operator approves.
 
+For a recurring read, use the scored checks:
+
+- Meta packs: the daily read, stop rules, day-14 verdicts and retro in
+  [meta-pack-loop.md](meta-pack-loop.md).
+- Google Ads: the daily money and tracking check and the Monday deep read in
+  [google-ads-check.md](google-ads-check.md).
+
+Both prepare pauses and proposals for the operator; neither mutates an
+account.
+
 ## Approval Boundary
 
 Do not:

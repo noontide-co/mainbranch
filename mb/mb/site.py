@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -184,10 +185,15 @@ def _descriptor_identity_evidence(
         except (OSError, ValueError):
             return None
 
-    # Secondary: parent github identity vs the business's own descriptor.
+    # Secondary: parent github identity vs the business's own descriptor, or
+    # its git origin remote when the business has no descriptor handle (#915).
     business_descriptor = topology_mod.read_child_descriptor(business)
     biz_owner = _string_value(business_descriptor.get("github_owner"))
     biz_repo = _string_value(business_descriptor.get("repo_name"))
+    if not (biz_owner and biz_repo):
+        remote_full = topology_mod.normalize_remote(_git_origin_remote(business))
+        if remote_full:
+            biz_owner, biz_repo = remote_full.split("/", 1)
     parent_owner = str(parent.get("github_owner") or "")
     parent_repo = str(parent.get("repo_name") or "")
     if biz_owner and biz_repo and parent_owner and parent_repo:
@@ -213,6 +219,34 @@ def _descriptor_identity_evidence(
             "summary": "Inherited descriptor's parent checkout matches this business.",
         }
     return None
+
+
+def _git_origin_remote(repo: Path) -> str:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repo), "config", "--get", "remote.origin.url"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+class UnknownSiteError(ValueError):
+    """``--site`` named a slug the repo's descriptor does not list."""
+
+
+def _select_site(site_repo: Path, slug: str) -> dict[str, Any]:
+    descriptor = topology_mod.read_child_descriptor(site_repo)
+    sites = descriptor.get("sites") or []
+    for entry in sites:
+        if entry.get("slug") == slug:
+            return dict(entry)
+    known = ", ".join(str(entry.get("slug")) for entry in sites) or "none"
+    raise UnknownSiteError(f"site {slug!r} is not in .mainbranch/repo.json sites (known: {known})")
 
 
 def _site_source(site_repo: Path) -> tuple[dict[str, Any], str]:
@@ -757,10 +791,19 @@ def check(
     site_repo: str | Path = ".",
     *,
     business_repo: str | Path | None = None,
+    site_slug: str = "",
 ) -> dict[str, Any]:
-    """Check static paid-traffic measurement readiness without mutating providers."""
+    """Check static paid-traffic measurement readiness without mutating providers.
+
+    ``site_slug`` checks one entry of a multi-site repo's ``sites`` list: the
+    descriptor and source link come from the repo root, the conversion plan and
+    built HTML from that site's ``dir``. Raises :class:`UnknownSiteError` when
+    the slug is not listed.
+    """
 
     site = Path(site_repo).resolve()
+    selected_site = _select_site(site, site_slug) if site_slug else None
+    site_dir = (site / selected_site["dir"]).resolve() if selected_site else site
     source, source_error = _site_source(site)
     child_descriptor, child_descriptor_error = _child_repo_descriptor(site)
     raw_source_business = source.get("business_repo") if source else ""
@@ -780,7 +823,7 @@ def check(
     site_role = _string_value(site_descriptor.get("role")) or topology_mod.infer_role_from_signals(
         site
     )
-    conversion, conversion_error = _read_json(site / CONVERSION_RELATIVE_PATH)
+    conversion, conversion_error = _read_json(site_dir / CONVERSION_RELATIVE_PATH)
     offer = _merged_offer_metadata(business)
     provider_status = connect_mod.status_all(business or site, include_all=True)
     providers = provider_status.get("providers") or []
@@ -948,7 +991,7 @@ def check(
         )
 
     html_evidence, html_details = _check_html(
-        site,
+        site_dir,
         gtm_container_id=gtm_id,
         expected_events=expected_events,
     )
@@ -1057,6 +1100,7 @@ def check(
             "version": "1.0",
         },
         "site_repo": str(site),
+        "site": selected_site,
         "business_repo": str(business) if business else "",
         "source": source,
         "child_descriptor": child_descriptor,
@@ -1081,6 +1125,9 @@ def render_check(result: dict[str, Any]) -> None:
     """Render a concise human paid-traffic readiness report."""
 
     print(f"mb site check  {result['site_repo']}")
+    selected = result.get("site")
+    if isinstance(selected, dict):
+        print(f"site: {selected.get('slug')} ({selected.get('dir')})")
     print(f"state: {result['state']}")
     print(result["summary"])
     print("")

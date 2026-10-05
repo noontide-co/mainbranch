@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import platform
+import signal
 import subprocess
 import sys
 import time
@@ -22,7 +23,17 @@ from mb.durable import atomic_write_text
 
 SERVICE_NAME = "mainbranch"
 CREDENTIAL_HELPER_TIMEOUT_SECONDS = 8
+# Only `mb connect repair --keychain` runs the helper interactively: a human at
+# a terminal needs time to answer a macOS dialog. Every other caller keeps the
+# short deadline and never lets the helper show a dialog.
+INTERACTIVE_CREDENTIAL_TIMEOUT_SECONDS = 60
+KEYCHAIN_REPAIR_COMMAND = "mb connect repair --keychain"
+KEYCHAIN_REPAIR_ALL_COMMAND = "mb connect repair --keychain --all"
+HELPER_STATES = {"ready", "missing", "locked", "auth-failed", "prompt-pending", "unavailable"}
 HELPER_OUTPUT_LIMIT = 1024 * 1024
+# The helper's own deadline ends this long before the parent stops waiting, so
+# it can finish or undo a step and stop its `security` children first.
+HELPER_EXIT_HEADROOM_SECONDS = 1.0
 SUPPORTED_BACKENDS = {"auto", "macos-keychain", "secret-service", "keyring", "local-file"}
 
 KEYCHAIN_RESET_WARNING = (
@@ -39,6 +50,19 @@ BACKEND_REPAIRS: dict[str, dict[str, str]] = {
             f"{KEYCHAIN_RESET_WARNING}"
         ),
         "repair_command": "security unlock-keychain ~/Library/Keychains/login.keychain-db",
+    },
+    "keychain_prompt_pending": {
+        "summary": (
+            "macOS is asking whether this mb install may read the stored credential "
+            "(keychain prompt pending). Unattended runs do not wait on that dialog."
+        ),
+        "repair": (
+            f"From a terminal in this hub, run `{KEYCHAIN_REPAIR_COMMAND}` and choose "
+            "Always Allow (not Allow) when macOS asks. It moves the credential to the macOS "
+            "security tool, so later Python or mb updates do not ask again. "
+            f"{KEYCHAIN_RESET_WARNING}"
+        ),
+        "repair_command": KEYCHAIN_REPAIR_COMMAND,
     },
     "keychain_auth_failed": {
         "summary": (
@@ -138,6 +162,11 @@ class SecretProbe(NamedTuple):
     present: bool
     backend_ok: bool
     reason: str
+    # True when this read moved a legacy macOS item to /usr/bin/security.
+    migrated: bool = False
+    # macOS only: "security" when /usr/bin/security owns the item (Python
+    # changes cannot prompt), "legacy" when a Python interpreter does.
+    owner: str = ""
 
 
 def select_secret_backend(requested: str | None = None) -> str:
@@ -181,11 +210,25 @@ class SecretStore:
     def __init__(self, backend: str | None = None) -> None:
         self.backend = select_secret_backend(backend)
 
-    def set(self, ref: str, value: str, *, deadline: float | None = None) -> None:
+    def set(
+        self,
+        ref: str,
+        value: str,
+        *,
+        deadline: float | None = None,
+        interactive: bool = False,
+    ) -> None:
         if self.backend == "local-file":
             _local_set(ref, value)
             return
-        result = _run_helper(self.backend, "set", ref=ref, value=value, deadline=deadline)
+        result = _run_helper(
+            self.backend,
+            "set",
+            ref=ref,
+            value=value,
+            deadline=deadline,
+            interactive=interactive,
+        )
         state = str(result.get("state") or "unavailable")
         if state != "ready":
             raise CredentialStoreError(_reason_for(self.backend, state))
@@ -193,7 +236,13 @@ class SecretStore:
     def get(self, ref: str) -> str:
         return self.probe(ref).value
 
-    def probe(self, ref: str, *, deadline: float | None = None) -> SecretProbe:
+    def probe(
+        self,
+        ref: str,
+        *,
+        deadline: float | None = None,
+        interactive: bool = False,
+    ) -> SecretProbe:
         if not ref:
             return SecretProbe("", False, True, "")
         if self.backend == "local-file":
@@ -204,7 +253,9 @@ class SecretStore:
             if ref not in data:
                 return SecretProbe("", False, True, "")
             return SecretProbe(data[ref], True, True, "")
-        result = _run_helper(self.backend, "get", ref=ref, deadline=deadline)
+        result = _run_helper(
+            self.backend, "get", ref=ref, deadline=deadline, interactive=interactive
+        )
         state = str(result.get("state") or "unavailable")
         if state == "missing":
             return SecretProbe("", False, True, "")
@@ -213,7 +264,15 @@ class SecretStore:
         value = result.get("value")
         if not isinstance(value, str):
             return SecretProbe("", False, False, _reason_for(self.backend, "unavailable"))
-        return SecretProbe(value, True, True, "")
+        owner = result.get("owner")
+        return SecretProbe(
+            value,
+            True,
+            True,
+            "",
+            result.get("migrated") is True,
+            owner if owner in {"security", "legacy"} else "",
+        )
 
     def health(self, *, deadline: float | None = None) -> dict[str, Any]:
         reason = ""
@@ -264,6 +323,51 @@ class SecretStore:
             raise CredentialStoreError(_reason_for(self.backend, state))
 
 
+class KeychainListing(NamedTuple):
+    """Main Branch refs found in the macOS Keychain (attributes only)."""
+
+    refs: list[str]
+    # False unless the helper proved the listing whole: `found` equal to the
+    # refs returned. A capped listing, or one from a helper that does not
+    # report `found` (another mb version), is incomplete.
+    complete: bool
+    # Refs the helper found in all, when it said; None when it did not.
+    found: int | None
+    limit: int = 0
+
+
+def list_keychain_refs(*, deadline: float | None = None) -> KeychainListing:
+    """Every Main Branch ref in the macOS Keychain, staged copies included.
+
+    The helper asks for item attributes only, never data, with keychain
+    interaction off, so nothing is decrypted and no dialog can appear. Raises
+    ``CredentialStoreError`` when the keychain cannot be listed.
+    """
+
+    backend = select_secret_backend("macos-keychain")
+    result = _run_helper(backend, "list", deadline=deadline)
+    state = str(result.get("state") or "unavailable")
+    if state != "ready":
+        raise CredentialStoreError(_reason_for(backend, state))
+    refs = result.get("refs")
+    if not isinstance(refs, list) or not all(isinstance(ref, str) for ref in refs):
+        raise CredentialStoreError(_reason_for(backend, "unavailable"))
+
+    def count(key: str) -> int | None:
+        value = result.get(key)
+        return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+    found = count("found")
+    if found is not None and found < len(refs):
+        found = None
+    return KeychainListing(
+        list(refs),
+        complete=found == len(refs) and result.get("truncated") is not True,
+        found=found,
+        limit=count("limit") or 0,
+    )
+
+
 def _reason_for(backend: str, state: str) -> str:
     if state == "timed-out":
         return "credential_store_timeout"
@@ -272,11 +376,13 @@ def _reason_for(backend: str, state: str) -> str:
     if backend == "macos-keychain":
         if state == "locked":
             return "keychain_locked"
+        if state == "prompt-pending":
+            return "keychain_prompt_pending"
         if state == "auth-failed":
             return "keychain_auth_failed"
         return "keychain_unavailable"
     if backend == "secret-service":
-        if state in {"locked", "auth-failed"}:
+        if state in {"locked", "auth-failed", "prompt-pending"}:
             return "secret_service_locked"
         return "secret_service_unavailable"
     return "local_file_unavailable"
@@ -289,31 +395,36 @@ def _run_helper(
     ref: str = "",
     value: str | None = None,
     deadline: float | None = None,
+    interactive: bool = False,
 ) -> dict[str, Any]:
-    payload: dict[str, Any] = {"ref": ref}
+    # The helper treats anything but an explicit true as non-interactive.
+    payload: dict[str, Any] = {"ref": ref, "interactive": interactive is True}
     if value is not None:
         payload["value"] = value
-    timeout = float(CREDENTIAL_HELPER_TIMEOUT_SECONDS)
+    timeout = float(
+        INTERACTIVE_CREDENTIAL_TIMEOUT_SECONDS
+        if interactive is True
+        else CREDENTIAL_HELPER_TIMEOUT_SECONDS
+    )
     if deadline is not None:
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             return {"state": "timed-out"}
         timeout = min(timeout, remaining)
+    # An absolute wall-clock deadline: the helper refuses to start a move it
+    # cannot finish, and stops its own `security` calls, before this process
+    # gives up on it. A pending dialog is then reported as such.
+    payload["deadline_epoch"] = time.time() + timeout - HELPER_EXIT_HEADROOM_SECONDS
     try:
-        completed = subprocess.run(
+        returncode, stdout = _invoke_helper(
             [sys.executable, "-m", "mb._credential_helper", backend, action],
-            check=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            input=json.dumps(payload),
-            timeout=timeout,
+            json.dumps(payload),
+            timeout,
         )
     except subprocess.TimeoutExpired:
         return {"state": "timed-out"}
     except (OSError, subprocess.SubprocessError):
         return {"state": "unavailable"}
-    stdout = completed.stdout or ""
     if len(stdout) > HELPER_OUTPUT_LIMIT:
         return {"state": "unavailable"}
     try:
@@ -323,11 +434,57 @@ def _run_helper(
     if not isinstance(result, dict):
         return {"state": "unavailable"}
     state = result.get("state")
-    if state not in {"ready", "missing", "locked", "auth-failed", "unavailable"}:
+    if state not in HELPER_STATES:
         return {"state": "unavailable"}
-    if completed.returncode != (0 if state in {"ready", "missing"} else 1):
+    if returncode != (0 if state in {"ready", "missing"} else 1):
         return {"state": "unavailable"}
     return result
+
+
+def _helper_cwd() -> str:
+    """The directory that holds this ``mb`` package.
+
+    ``python -m`` puts the working directory first on ``sys.path``. Starting
+    the helper here makes ``mb._credential_helper`` resolve to this package,
+    whatever directory the command was run from.
+    """
+
+    return str(Path(__file__).resolve().parent.parent)
+
+
+def _invoke_helper(args: list[str], stdin: str, timeout: float) -> tuple[int, str]:
+    """Run the helper in its own process group; on timeout kill the whole group.
+
+    Killing only the helper could leave a `security` child it started running
+    (and, in the worst case, holding a dialog). The group takes them all.
+    """
+
+    process = subprocess.Popen(
+        args,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        start_new_session=True,
+        cwd=_helper_cwd(),
+    )
+    try:
+        stdout, _ = process.communicate(stdin, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        _kill_group(process)
+        raise
+    return int(process.returncode or 0), stdout or ""
+
+
+def _kill_group(process: Any) -> None:
+    pid = getattr(process, "pid", None)
+    if isinstance(pid, int) and pid > 1:
+        with suppress(OSError):
+            os.killpg(pid, signal.SIGKILL)
+    with suppress(Exception):
+        process.kill()
+    with suppress(Exception):
+        process.communicate(timeout=2)
 
 
 def _local_secret_path() -> Path:

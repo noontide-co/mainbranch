@@ -80,8 +80,11 @@ the row in the provider.
 
 ## Read vs write, always separate
 
-`mb connect` read paths (`status`, `doctor`, `identity`, `token`, `test`) never
-mutate a provider. Write surfaces are the ones this contract governs. An agent
+`mb connect` read paths (`status`, `doctor`, `identity`, `token`, `test`,
+`rotate`) never mutate a provider. `mb connect exec` runs whatever command it
+is given, so a write command run through it is a write surface like any other:
+the credential reaching the command is not approval to write. Write surfaces
+are the ones this contract governs. An agent
 that can read a provider has not been granted permission to write it — the
 write needs its own plan and its own approval, every time.
 

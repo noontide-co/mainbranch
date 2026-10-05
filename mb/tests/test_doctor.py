@@ -262,6 +262,30 @@ def test_doctor_json_and_human_output_include_required_update(
     assert "pipx upgrade mainbranch" in output
 
 
+def test_doctor_required_update_unknown_install_is_mode_neutral(
+    tmp_path: Path, monkeypatch
+) -> None:
+    # #965: with no known install mode there is no command to name, and the
+    # check must not render an empty one.
+    from mb.freshness import package_update_status
+
+    monkeypatch.setattr(
+        doctor_mod,
+        "package_update_status",
+        lambda repo: package_update_status(
+            repo, installed_version="0.1.0", latest_version="0.6.2", mode="unknown"
+        ),
+    )
+
+    report = doctor_mod.run(path=str(tmp_path))
+
+    version_check = next(
+        check for check in report["checks"] if check["name"] == "mainbranch-version"
+    )
+    assert "Run ``" not in version_check["detail"]
+    assert "with the tool that installed it" in version_check["detail"]
+
+
 def test_doctor_command_still_runs_after_repair_subcommand_added(tmp_path: Path) -> None:
     result = runner.invoke(app, ["doctor", str(tmp_path), "--json"])
 

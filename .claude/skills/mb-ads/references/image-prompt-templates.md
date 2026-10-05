@@ -31,7 +31,7 @@ All templates follow the same JSON structure. Placeholders are filled at generat
     "saturation": "vivid | muted | desaturated"
   },
   "composition": {
-    "critical_content_zone": "center 1:1 area",
+    "critical_content_zone": "14%-65% of height (9:16 safe area)",
     "text_overlay_space": "{{where to leave space for text}}",
     "key_elements": ["{{element_1}}", "{{element_2}}"]
   },
@@ -69,7 +69,7 @@ Central element: {{headline_or_framework}} displayed as large, readable text.
 Style: Modern editorial design, magazine-quality layout.
 Background: {{primary_color}} to {{secondary_color}} gradient or solid.
 Text treatment: High contrast, sans-serif feel, professional.
-Composition: Text centered in the 1:1 safe zone. Supporting graphic elements
+Composition: Text inside the 9:16 safe area (14%-65% of the height). Supporting graphic elements
 in top and bottom margins. No clutter — let the text breathe.
 Color grading: {{mood}}, {{temperature}}, high contrast.
 {{style_directives}}
@@ -92,7 +92,7 @@ No professional studio look. Think: someone shared this on social media.
 Subject: {{subject_description}} in a natural, everyday setting.
 Color grading: Slightly warm, natural tones. NOT filtered or over-processed.
 If brand colors apply: subtle presence only (clothing, background element).
-Composition: Subject in center 1:1 zone. Context fills margins.
+Composition: Subject inside the 9:16 safe area. Context fills margins.
 Leave clean space for text overlay: {{text_space_location}}.
 Mood: Approachable, relatable, trustworthy.
 ```
@@ -114,7 +114,7 @@ NOT polished corporate. Think: billboard art meets meme culture.
 Key element: {{interrupt_element}} — the thing that makes someone pause.
 Color grading: High saturation, dramatic contrast.
 Colors: {{accent_color}} dominant, dark background for maximum pop.
-Composition: Key element fills the 1:1 center zone aggressively.
+Composition: Key element fills the 9:16 safe area aggressively.
 Minimal negative space. The visual should feel almost too close.
 Text overlay space: Small area — interrupt images rely on visual, not text.
 Mood: Provocative, surprising, impossible to ignore.
@@ -138,7 +138,7 @@ Style: {{background_style}} — supports readability of overlaid white or light 
 Color grading: {{mood}}, darker tones preferred for text contrast.
 Primary background color: {{primary_color}} or complementary dark tone.
 Composition: Simple, uncluttered. The background supports the text, not competes.
-Center 1:1 zone should be especially clean — this is where the text overlay will go.
+The 9:16 safe area should be especially clean — this is where the text overlay will go.
 Subtle visual interest in margins (texture, gradient, atmospheric elements).
 ```
 

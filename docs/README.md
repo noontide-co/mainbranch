@@ -36,6 +36,9 @@ Pick the route that matches what you are doing.
 - [`markdown-link-conventions.md`](markdown-link-conventions.md) — markdown and link rules.
 - [`source-ingestion.md`](source-ingestion.md) — manifest-first privacy rail for transcripts, authenticated sources, and provider exports.
 - [`issue-drafting.md`](issue-drafting.md) — privacy-safe `mb issue` flow.
+- [`connect.md`](connect.md) — `mb connect`: store a credential, run commands with it through `exec`, probe what it can reach.
+- [`connection-model.md`](connection-model.md) — why agents use secrets without seeing them.
+- [`feedback.md`](feedback.md) — `mb feedback`: log mb friction and self-logged refusals locally, roll them up weekly.
 - [`session-excavation.md`](session-excavation.md) — turn transcripts, chat exports, and session logs into prioritized public-safe follow-ups.
 
 ### Schemas and contracts
@@ -45,6 +48,7 @@ Pick the route that matches what you are doing.
 - [`json-output-contract.md`](json-output-contract.md) — `mb --json` envelope.
 - [`data-source-registry.md`](data-source-registry.md) — `type: data_source` records.
 - [`child-repo-descriptors.md`](child-repo-descriptors.md) — `.mainbranch/repo.json`.
+- [`fleet.md`](fleet.md) — `mb fleet`: read-only status of every site across your hubs.
 - [`checks-and-review-model.md`](checks-and-review-model.md) — local + CI + agent checks.
 - [`delivery-truth.md`](delivery-truth.md) — acceptance ≠ delivery: message ids, delivery_state, webhook + reconcile, page on failure.
 - [`provider-mutation-contract.md`](provider-mutation-contract.md) — preview → approve → apply → verify for external-account writes; sanitized plans, minimal scope, no private rows in git.

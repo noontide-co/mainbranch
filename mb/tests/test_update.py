@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import shlex
 import shutil
 import subprocess
 from collections.abc import Callable
@@ -19,6 +21,10 @@ from mb import update as update_mod
 from mb.cli import app
 
 runner = CliRunner()
+
+# Captured before the autouse stub below replaces it, so the fixture-repo
+# tests can run doctor's real Codex checks.
+_REAL_CODEX_READINESS = codex_mod.readiness
 
 
 @pytest.fixture(autouse=True)
@@ -102,6 +108,15 @@ def uv_tool_dir_quiet(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(update_mod, "_uv_tool_dir_holds_this_install", lambda: False)
 
 
+@pytest.fixture(autouse=True)
+def pypi_quiet(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Every install mode now asks PyPI whether this build is ahead of the latest
+    # release (#1022). Tests that care set their own answer; the rest stay off
+    # the network and see a lookup that worked and matches this build. A failed
+    # lookup (None) leaves the install alone, so tests of that path set it.
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: __version__)
+
+
 def _completed(
     args: list[str],
     *,
@@ -139,7 +154,9 @@ def _surface_refresh_runner(
     ) -> subprocess.CompletedProcess[str]:
         calls.append(args)
         if args[:3] == ["mb", "skill", "link"]:
-            return _completed(args, stdout=json.dumps({"ok": True, "linked": ["mb-start"]}))
+            return _completed(
+                args, stdout=json.dumps({"ok": True, "linked": ["mb-start"], "tracked_changes": []})
+            )
         if args[:3] == ["mb", "doctor", "repair"]:
             return _codex_repair_completed(args)
         if args[1:] == ["--version"]:
@@ -325,6 +342,7 @@ def test_update_pipx_runs_upgrade_then_relinks(monkeypatch: Any, tmp_path: Path)
                         "copied": [],
                         "skipped": [".claude/skills/mb-update"],
                         "errors": [],
+                        "tracked_changes": [],
                     }
                 ),
             )
@@ -353,6 +371,18 @@ def test_update_pipx_runs_upgrade_then_relinks(monkeypatch: Any, tmp_path: Path)
     assert calls == [
         ["pipx", "upgrade", "mainbranch"],
         ["mb", "--version"],
+        ["mb", "skill", "link", "--repo", str(repo.resolve()), "--plan", "--json"],
+        [
+            "mb",
+            "doctor",
+            "repair",
+            "--repo",
+            str(repo.resolve()),
+            "--plan",
+            "--only",
+            "codex",
+            "--json",
+        ],
         ["mb", "skill", "link", "--repo", str(repo.resolve()), "--json"],
         [
             "mb",
@@ -381,7 +411,14 @@ def test_update_points_to_scoped_codex_repair_when_adapter_missing(
             return _completed(
                 args,
                 stdout=json.dumps(
-                    {"ok": True, "linked": [], "copied": [], "skipped": [], "errors": []}
+                    {
+                        "ok": True,
+                        "linked": [],
+                        "copied": [],
+                        "skipped": [],
+                        "errors": [],
+                        "tracked_changes": [],
+                    }
                 ),
             )
         if args[:3] == ["mb", "doctor", "repair"]:
@@ -445,7 +482,14 @@ def test_update_points_to_scoped_codex_repair_when_global_skills_are_missing(
             return _completed(
                 args,
                 stdout=json.dumps(
-                    {"ok": True, "linked": [], "copied": [], "skipped": [], "errors": []}
+                    {
+                        "ok": True,
+                        "linked": [],
+                        "copied": [],
+                        "skipped": [],
+                        "errors": [],
+                        "tracked_changes": [],
+                    }
                 ),
             )
         if args[:3] == ["mb", "doctor", "repair"]:
@@ -516,7 +560,14 @@ def test_update_does_not_gate_ready_codex_on_slash_commands(
             return _completed(
                 args,
                 stdout=json.dumps(
-                    {"ok": True, "linked": [], "copied": [], "skipped": [], "errors": []}
+                    {
+                        "ok": True,
+                        "linked": [],
+                        "copied": [],
+                        "skipped": [],
+                        "errors": [],
+                        "tracked_changes": [],
+                    }
                 ),
             )
         if args[:3] == ["mb", "doctor", "repair"]:
@@ -594,7 +645,14 @@ def test_update_surfaces_fresh_codex_thread_when_plugin_commands_were_refreshed(
             return _completed(
                 args,
                 stdout=json.dumps(
-                    {"ok": True, "linked": [], "copied": [], "skipped": [], "errors": []}
+                    {
+                        "ok": True,
+                        "linked": [],
+                        "copied": [],
+                        "skipped": [],
+                        "errors": [],
+                        "tracked_changes": [],
+                    }
                 ),
             )
         if args[:3] == ["mb", "doctor", "repair"]:
@@ -723,6 +781,7 @@ def test_update_clone_pulls_engine_root_then_relinks(monkeypatch: Any, tmp_path:
                         "copied": [],
                         "skipped": [".claude/skills/mb-start"],
                         "errors": [],
+                        "tracked_changes": [],
                     }
                 ),
             )
@@ -897,6 +956,7 @@ def test_update_wheel_install_json_exits_zero_with_next_action(
 ) -> None:
     monkeypatch.setattr(update_mod, "install_mode", lambda: "wheel")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner([]))
 
     invoked = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--json"])
 
@@ -926,8 +986,13 @@ def test_update_uv_check_names_command_without_running_installer(
     assert result["ok"] is True
     assert result["mode"] == "uv"
     assert result["new_version"] == "9.9.9"
-    assert "uv tool install mainbranch@latest" in result["next_actions"]
-    assert any("would run `uv tool install mainbranch@latest`" in a for a in result["actions"])
+    assert (
+        "uv tool install --refresh-package mainbranch mainbranch@latest" in result["next_actions"]
+    )
+    assert any(
+        "would run `uv tool install --refresh-package mainbranch mainbranch@latest`" in a
+        for a in result["actions"]
+    )
     assert calls == []
 
 
@@ -942,7 +1007,9 @@ def test_update_uv_check_json_exits_zero_with_next_action(monkeypatch: Any, tmp_
     payload = json.loads(invoked.stdout)
     assert payload["mode"] == "uv"
     assert payload["errors"] == []
-    assert "uv tool install mainbranch@latest" in payload["next_actions"]
+    assert (
+        "uv tool install --refresh-package mainbranch mainbranch@latest" in payload["next_actions"]
+    )
 
 
 def test_update_uv_non_interactive_prints_command_and_exits_zero(
@@ -964,7 +1031,9 @@ def test_update_uv_non_interactive_prints_command_and_exits_zero(
     assert result["ok"] is True
     assert result["upgrade_performed"] is False
     assert result["new_version"] == "9.9.9"
-    assert "uv tool install mainbranch@latest" in result["next_actions"]
+    assert (
+        "uv tool install --refresh-package mainbranch mainbranch@latest" in result["next_actions"]
+    )
     assert _installer_calls(calls) == []
     assert result["skills_relinked_count"] == 1
 
@@ -988,7 +1057,9 @@ def test_update_uv_json_never_prompts(monkeypatch: Any, tmp_path: Path) -> None:
     assert invoked.exit_code == 0
     payload = json.loads(invoked.stdout)
     assert payload["upgrade_performed"] is False
-    assert "uv tool install mainbranch@latest" in payload["next_actions"]
+    assert (
+        "uv tool install --refresh-package mainbranch mainbranch@latest" in payload["next_actions"]
+    )
     assert _installer_calls(calls) == []
 
 
@@ -1008,10 +1079,12 @@ def test_update_uv_declined_prompt_leaves_install_alone(monkeypatch: Any, tmp_pa
 
     result = update_mod.run(repo=tmp_path / "biz", interactive=True, confirm=decline)
 
-    assert asked == ["uv tool install mainbranch@latest"]
+    assert asked == ["uv tool install --refresh-package mainbranch mainbranch@latest"]
     assert result["ok"] is True
     assert result["upgrade_performed"] is False
-    assert "uv tool install mainbranch@latest" in result["next_actions"]
+    assert (
+        "uv tool install --refresh-package mainbranch mainbranch@latest" in result["next_actions"]
+    )
     assert _installer_calls(calls) == []
 
 
@@ -1023,7 +1096,9 @@ def test_update_uv_accepted_prompt_runs_install_then_relinks(
     def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
         calls.append(args)
         if args[:3] == ["mb", "skill", "link"]:
-            return _completed(args, stdout=json.dumps({"ok": True, "linked": ["mb-start"]}))
+            return _completed(
+                args, stdout=json.dumps({"ok": True, "linked": ["mb-start"], "tracked_changes": []})
+            )
         if args[:3] == ["mb", "doctor", "repair"]:
             return _codex_repair_completed(args)
         if args[1:] == ["--version"]:
@@ -1044,9 +1119,19 @@ def test_update_uv_accepted_prompt_runs_install_then_relinks(
     assert result["ok"] is True
     assert result["upgrade_performed"] is True
     assert result["new_version"] == "9.9.9"
-    assert ["uv", "tool", "install", "mainbranch@latest"] in calls
+    assert [
+        "uv",
+        "tool",
+        "install",
+        "--refresh-package",
+        "mainbranch",
+        "mainbranch@latest",
+    ] in calls
     assert result["skills_relinked_count"] == 1
-    assert any("ran `uv tool install mainbranch@latest`" in a for a in result["actions"])
+    assert any(
+        "ran `uv tool install --refresh-package mainbranch mainbranch@latest`" in a
+        for a in result["actions"]
+    )
 
 
 def test_update_uv_install_failure_surfaces_command(monkeypatch: Any, tmp_path: Path) -> None:
@@ -1067,7 +1152,9 @@ def test_update_uv_install_failure_surfaces_command(monkeypatch: Any, tmp_path: 
     assert result["ok"] is False
     assert result["upgrade_performed"] is False
     assert "network unreachable" in result["errors"][0]
-    assert "uv tool install mainbranch@latest" in result["next_actions"]
+    assert (
+        "uv tool install --refresh-package mainbranch mainbranch@latest" in result["next_actions"]
+    )
 
 
 def test_update_uv_missing_binary_returns_error(monkeypatch: Any, tmp_path: Path) -> None:
@@ -1083,7 +1170,9 @@ def test_update_uv_missing_binary_returns_error(monkeypatch: Any, tmp_path: Path
 
     assert result["ok"] is False
     assert "`uv` is not on PATH" in result["errors"][0]
-    assert "uv tool install mainbranch@latest" in result["next_actions"]
+    assert (
+        "uv tool install --refresh-package mainbranch mainbranch@latest" in result["next_actions"]
+    )
 
 
 def test_update_uses_uv_tool_dir_when_path_detection_is_inconclusive(
@@ -1097,7 +1186,9 @@ def test_update_uses_uv_tool_dir_when_path_detection_is_inconclusive(
     result = update_mod.run(repo=tmp_path / "biz", check=True)
 
     assert result["mode"] == "uv"
-    assert "uv tool install mainbranch@latest" in result["next_actions"]
+    assert (
+        "uv tool install --refresh-package mainbranch mainbranch@latest" in result["next_actions"]
+    )
 
 
 def _uv_tool_dir_probe(
@@ -1153,7 +1244,9 @@ def test_update_pipx_mode_still_upgrades_automatically(monkeypatch: Any, tmp_pat
     def fake_run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
         calls.append(args)
         if args[:3] == ["mb", "skill", "link"]:
-            return _completed(args, stdout=json.dumps({"ok": True, "linked": ["mb-start"]}))
+            return _completed(
+                args, stdout=json.dumps({"ok": True, "linked": ["mb-start"], "tracked_changes": []})
+            )
         if args[:3] == ["mb", "doctor", "repair"]:
             return _codex_repair_completed(args)
         return _completed(args, stdout="mb 9.9.9\n")
@@ -1228,7 +1321,7 @@ def test_update_pipx_local_wheel_parse_failure_surfaces_force_install(
 
     monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
-    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "0.3.40")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "9.9.9")
     monkeypatch.setattr(
         update_mod.shutil,  # type: ignore[attr-defined]
         "which",
@@ -1248,7 +1341,7 @@ def test_update_pipx_local_wheel_parse_failure_surfaces_force_install(
         "after installing from a local wheel path. Approve a forced pipx reinstall "
         "to reset the saved install source."
     ]
-    assert result["next_actions"] == ["pipx install --force mainbranch==0.3.40"]
+    assert result["next_actions"] == ["pipx install --force mainbranch==9.9.9"]
 
 
 def test_update_render_human_failure_prints_next_action(capsys: Any) -> None:
@@ -1291,7 +1384,7 @@ def test_update_relink_invalid_json_is_reported(monkeypatch: Any, tmp_path: Path
 
     assert result["ok"] is False
     assert result["skills_relinked_count"] == 0
-    assert result["errors"] == ["mb skill link returned invalid JSON"]
+    assert result["errors"] == ["mb skill link --plan returned invalid JSON"]
 
 
 def test_update_relink_payload_errors_are_reported(monkeypatch: Any, tmp_path: Path) -> None:
@@ -1423,6 +1516,238 @@ def test_update_render_human_success(capsys: Any) -> None:
     assert "refreshed 4 skill link(s)" in output
 
 
+def test_update_render_human_same_version_says_already_current(capsys: Any) -> None:
+    # #974: a successful run that lands the version already installed did not
+    # update anything, so it must not say "updated".
+    update_mod.render_human(
+        {
+            "ok": True,
+            "check": False,
+            "old_version": "0.5.3",
+            "new_version": "0.5.3",
+            "upgrade_performed": True,
+            "skills_relinked_count": 4,
+            "errors": [],
+        }
+    )
+
+    output = capsys.readouterr().out
+
+    assert "Main Branch is already current (0.5.3)." in output
+    assert "updated" not in output
+    assert "refreshed 4 skill link(s)" in output
+
+
+def _ahead_of_pypi(monkeypatch: Any, tmp_path: Path, mode: str) -> None:
+    """A release-candidate build installed while PyPI's latest is the prior release."""
+    monkeypatch.setattr(update_mod, "install_mode", lambda: mode)
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_engine_version", lambda root=None: "0.6.3rc1")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "0.6.2")
+    monkeypatch.setattr(update_mod, "bundled_skills", lambda: ["mb-start"])
+    monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
+
+
+def _assert_ahead_of_pypi(result: dict[str, Any]) -> None:
+    assert result["ok"] is True
+    assert result["old_version"] == "0.6.3rc1"
+    assert result["new_version"] == "0.6.3rc1"
+    assert result["latest_version"] == "0.6.2"
+    assert result["installed_ahead_of_latest"] is True
+    assert result["upgrade_performed"] is False
+    assert result["manual_update_command"] == ""
+    installers = ("uv tool install", "pipx upgrade", "pipx install", "pip install")
+    assert not [a for a in result["next_actions"] if a.startswith(installers)]
+    assert any("newer than PyPI's latest release (0.6.2)" in w for w in result["warnings"])
+
+
+@pytest.mark.parametrize("mode", ["uv", "wheel", "pipx"])
+def test_update_check_json_ahead_of_pypi_lists_no_install_command(
+    monkeypatch: Any, tmp_path: Path, mode: str
+) -> None:
+    # #1022: a pre-release or local build newer than PyPI must not be offered
+    # an install command that would downgrade it.
+    calls: list[list[str]] = []
+    _ahead_of_pypi(monkeypatch, tmp_path, mode)
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    cli = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--check", "--json"])
+
+    assert cli.exit_code == 0
+    payload = json.loads(cli.stdout)
+    _assert_ahead_of_pypi(payload)
+    assert payload["release"]["source"] == "not_newer"
+    assert _installer_calls(calls) == []
+
+
+@pytest.mark.parametrize("mode", ["uv", "wheel", "pipx"])
+def test_update_run_ahead_of_pypi_runs_no_installer(
+    monkeypatch: Any, tmp_path: Path, mode: str, capsys: Any
+) -> None:
+    calls: list[list[str]] = []
+    _ahead_of_pypi(monkeypatch, tmp_path, mode)
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    def never_prompt(command: str, root: Path | None) -> bool:
+        raise AssertionError("must not offer to install an older release")
+
+    result = update_mod.run(repo=tmp_path / "biz", interactive=True, confirm=never_prompt)
+
+    _assert_ahead_of_pypi(result)
+    assert _installer_calls(calls) == []
+    assert result["skills_relinked_count"] == 1
+
+    update_mod.render_human(result)
+    output = capsys.readouterr().out
+    assert "Main Branch 0.6.3rc1 is newer than PyPI's latest release (0.6.2)" in output
+    assert "updated" not in output
+
+
+def test_update_check_human_ahead_of_pypi(monkeypatch: Any, tmp_path: Path) -> None:
+    _ahead_of_pypi(monkeypatch, tmp_path, "uv")
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner([]))
+
+    cli = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--check"])
+
+    assert cli.exit_code == 0
+    assert "version: 0.6.3rc1 (newer than PyPI's latest, 0.6.2)" in cli.stdout
+    assert "next: uv tool install" not in cli.stdout
+
+
+def test_update_dev_build_of_published_release_is_behind_pypi(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    # Versions compare by PEP 440, not by their numeric parts: 0.6.3.dev0
+    # sorts before 0.6.3, so the published release is still an upgrade.
+    _ahead_of_pypi(monkeypatch, tmp_path, "uv")
+    monkeypatch.setattr(update_mod, "_engine_version", lambda root=None: "0.6.3.dev0")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "0.6.3")
+
+    result = update_mod.run(repo=tmp_path / "biz", check=True)
+
+    assert result["installed_ahead_of_latest"] is False
+    assert result["new_version"] == "0.6.3"
+    assert result["manual_update_command"] == update_mod.UV_UPDATE_COMMAND_TEXT
+    assert update_mod.UV_UPDATE_COMMAND_TEXT in result["next_actions"]
+
+
+def _latest_unknown(monkeypatch: Any, tmp_path: Path, mode: str, latest: str | None) -> None:
+    """The 0.6.3 release-gate scenario: 0.6.3 installed, PyPI's answer unusable."""
+    monkeypatch.setattr(update_mod, "install_mode", lambda: mode)
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_engine_version", lambda root=None: "0.6.3")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: latest)
+    monkeypatch.setattr(update_mod, "_version_from_mb_command", lambda: "0.6.2")
+    monkeypatch.setattr(update_mod, "bundled_skills", lambda: ["mb-start"])
+    monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
+
+
+def _assert_latest_unknown(result: dict[str, Any], *, retry: str) -> None:
+    assert result["ok"] is True
+    assert result["old_version"] == "0.6.3"
+    assert result["new_version"] == "0.6.3"
+    assert result["latest_version"] == ""
+    assert result["latest_version_unknown"] is True
+    assert result["installed_ahead_of_latest"] is False
+    assert result["upgrade_performed"] is False
+    assert result["manual_update_command"] == ""
+    installers = ("uv tool install", "pipx upgrade", "pipx install", "pip install")
+    assert not [a for a in result["next_actions"] if a.startswith(installers)]
+    assert retry in result["next_actions"]
+    assert any("could not check PyPI for the latest version" in w for w in result["warnings"])
+
+
+@pytest.mark.parametrize("latest", [None, "", "not-a-version", "<html>"])
+@pytest.mark.parametrize("mode", ["uv", "pipx", "wheel"])
+def test_update_run_with_unknown_latest_runs_no_installer(
+    monkeypatch: Any, tmp_path: Path, mode: str, latest: str | None, capsys: Any
+) -> None:
+    # A failed or unusable PyPI lookup is not permission to install: `@latest`
+    # could be older than the installed build.
+    calls: list[list[str]] = []
+    _latest_unknown(monkeypatch, tmp_path, mode, latest)
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    def never_prompt(command: str, root: Path | None) -> bool:
+        raise AssertionError("must not offer an install when freshness is unknown")
+
+    result = update_mod.run(repo=tmp_path / "biz", interactive=True, confirm=never_prompt)
+
+    _assert_latest_unknown(result, retry="mb update")
+    assert _installer_calls(calls) == []
+    assert result["skills_relinked_count"] == 1
+
+    update_mod.render_human(result)
+    output = capsys.readouterr().out
+    assert (
+        "Main Branch 0.6.3 was not changed; PyPI's latest version could not be checked." in output
+    )
+    assert "updated" not in output
+    assert "already current" not in output
+
+
+@pytest.mark.parametrize("mode", ["uv", "pipx", "wheel"])
+def test_update_cli_json_with_unknown_latest_exits_zero(
+    monkeypatch: Any, tmp_path: Path, mode: str
+) -> None:
+    calls: list[list[str]] = []
+    _latest_unknown(monkeypatch, tmp_path, mode, None)
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    cli = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--json"])
+
+    assert cli.exit_code == 0
+    _assert_latest_unknown(json.loads(cli.stdout), retry="mb update")
+    assert _installer_calls(calls) == []
+
+
+@pytest.mark.parametrize("mode", ["uv", "pipx", "wheel"])
+def test_update_check_with_unknown_latest_lists_no_install_command(
+    monkeypatch: Any, tmp_path: Path, mode: str
+) -> None:
+    calls: list[list[str]] = []
+    _latest_unknown(monkeypatch, tmp_path, mode, None)
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    cli = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--check", "--json"])
+    human = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--check"])
+
+    assert cli.exit_code == 0
+    payload = json.loads(cli.stdout)
+    _assert_latest_unknown(payload, retry="mb update --check")
+    assert payload["release"]["source"] == "not_newer"
+    assert human.exit_code == 0
+    assert "version: 0.6.3 (PyPI's latest version could not be checked)" in human.stdout
+    assert "next: uv tool install" not in human.stdout
+    assert "next: pip install" not in human.stdout
+    assert _installer_calls(calls) == []
+
+
+@pytest.mark.parametrize(
+    ("mode", "installer"),
+    [
+        ("uv", update_mod.UV_UPDATE_COMMAND),
+        ("pipx", ["pipx", "upgrade", "mainbranch"]),
+    ],
+)
+def test_update_older_install_with_known_latest_still_upgrades(
+    monkeypatch: Any, tmp_path: Path, mode: str, installer: list[str]
+) -> None:
+    # The guard only fires on unknown freshness; a normal upgrade still runs.
+    calls: list[list[str]] = []
+    _latest_unknown(monkeypatch, tmp_path, mode, "0.6.4")
+    monkeypatch.setattr(update_mod, "_version_from_mb_command", lambda: "0.6.4")
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    result = update_mod.run(repo=tmp_path / "biz", interactive=True, confirm=lambda *a: True)
+
+    assert result["ok"] is True
+    assert result["latest_version_unknown"] is False
+    assert _installer_calls(calls) == [installer]
+    assert result["upgrade_performed"] is True
+    assert result["new_version"] == "0.6.4"
+
+
 def test_update_reports_plugin_rail_wired_without_warning(monkeypatch: Any, tmp_path: Path) -> None:
     # Default fixture: repo already on the plugin rail -> no migration warning.
     monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
@@ -1473,7 +1798,9 @@ def test_update_warns_when_installed_claude_plugin_is_stale(
         if args == ["mb", "--version"]:
             return _completed(args, stdout="mb 0.4.2\n")
         if args[:3] == ["mb", "skill", "link"]:
-            return _completed(args, stdout=json.dumps({"ok": True, "linked": ["mb-start"]}))
+            return _completed(
+                args, stdout=json.dumps({"ok": True, "linked": ["mb-start"], "tracked_changes": []})
+            )
         if args[:4] == ["mb", "doctor", "repair", "--repo"]:
             return _codex_repair_completed(args)
         return _completed(args)
@@ -1563,7 +1890,7 @@ def test_confirm_uv_update_defaults_to_no(
 
     assert approved is expected
     out = capsys.readouterr().out
-    assert "uv tool install mainbranch@latest" in out
+    assert "uv tool install --refresh-package mainbranch mainbranch@latest" in out
     assert str(tmp_path / "_engine") in out
 
 
@@ -1598,7 +1925,7 @@ def test_update_render_human_manual_path_names_the_command(capsys: Any) -> None:
     assert "version: 0.5.2 -> 0.6.0" in output
     assert "Main Branch did not upgrade this install." in output
     assert "refreshed 15 skill link(s)" in output
-    assert "next: uv tool install mainbranch@latest" in output
+    assert "next: uv tool install --refresh-package mainbranch mainbranch@latest" in output
 
 
 def test_update_check_uv_carries_the_manual_command_like_wheel_does(
@@ -1611,7 +1938,7 @@ def test_update_check_uv_carries_the_manual_command_like_wheel_does(
 
     seen = {}
     for mode, command in (
-        ("uv", "uv tool install mainbranch@latest"),
+        ("uv", "uv tool install --refresh-package mainbranch mainbranch@latest"),
         ("wheel", "pip install --upgrade mainbranch"),
     ):
         monkeypatch.setattr(update_mod, "install_mode", lambda mode=mode: mode)
@@ -1643,3 +1970,523 @@ def test_update_check_promise_matches_what_the_real_run_does(
     assert planned["planned_skills_relink_count"] == actual["skills_relinked_count"]
     assert planned["surface_refresh"]["claude"]["command"] in actual["surface_refresh"]["commands"]
     assert _installer_calls(calls) == []
+
+
+# --- #1012: no tracked-file writes without an interactive terminal ---------
+
+
+def _git(repo: Path, *args: str) -> str:
+    return subprocess.run(
+        ["git", *args], cwd=repo, check=True, capture_output=True, text=True
+    ).stdout
+
+
+@pytest.fixture
+def business_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A committed business repo with stale AGENTS.md and a bare .gitignore."""
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("CODEX_HOME", str(home / ".codex"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(home / ".local" / "share"))
+    monkeypatch.setenv("MAINBRANCH_CODEX_SKILLS_ROOT", str(home / ".codex" / "skills"))
+    monkeypatch.setattr(codex_mod, "readiness", _REAL_CODEX_READINESS)
+    monkeypatch.setattr(engine_mod, "_personal_skills_dir", lambda: home / ".claude" / "skills")
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    (repo / "CLAUDE.md").write_text("# Business\n", encoding="utf-8")
+    (repo / "AGENTS.md").write_text("# Old guidance\n", encoding="utf-8")
+    (repo / ".gitignore").write_text("node_modules/\n", encoding="utf-8")
+    _git(repo, "init", "-q", "-b", "main")
+    _git(repo, "add", "-A")
+    _git(
+        repo,
+        "-c",
+        "user.name=Test",
+        "-c",
+        "user.email=test@example.invalid",
+        "commit",
+        "-q",
+        "-m",
+        "Start",
+    )
+    return repo
+
+
+def _in_process_mb(calls: list[list[str]]) -> Callable[..., subprocess.CompletedProcess[str]]:
+    """Run `mb ...` subcommands against this checkout's CLI, in process."""
+
+    def fake_run(
+        args: list[str], *, cwd: Path | None = None, timeout: float = 0.0
+    ) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        if args and args[0] == "mb":
+            invoked = runner.invoke(app, args[1:])
+            stderr = repr(invoked.exception) if invoked.exception else ""
+            if isinstance(invoked.exception, SystemExit):
+                stderr = ""
+            return _completed(
+                args, stdout=invoked.stdout, stderr=stderr, returncode=invoked.exit_code
+            )
+        return _completed(args, returncode=1, stderr="unexpected command in test")
+
+    return fake_run
+
+
+def _wheel_update_env(monkeypatch: pytest.MonkeyPatch, calls: list[list[str]]) -> None:
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "wheel")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: None)
+    monkeypatch.setattr(update_mod, "_run_command", _in_process_mb(calls))
+
+
+def _tracked_state(repo: Path) -> tuple[str, str, str]:
+    return (
+        _git(repo, "status", "--porcelain"),
+        (repo / "AGENTS.md").read_text(encoding="utf-8"),
+        (repo / ".gitignore").read_text(encoding="utf-8"),
+    )
+
+
+def test_update_without_terminal_leaves_tracked_files_and_reports_plan(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    monkeypatch.setattr(update_mod, "_is_interactive_terminal", lambda: False)
+
+    def never_ask(repo: Path, files: list[str]) -> bool:
+        raise AssertionError("must not prompt without a terminal")
+
+    monkeypatch.setattr(update_mod, "_confirm_surface_writes", never_ask, raising=False)
+    before = _tracked_state(business_repo)
+
+    result = update_mod.run(repo=business_repo)
+
+    assert _tracked_state(business_repo) == before
+    assert before[0] == ""
+    assert not any("--apply" in args for args in calls)
+    assert ["mb", "skill", "link", "--repo", str(business_repo), "--json"] not in calls
+    assert result["ok"] is True
+    planned = result["surface_refresh"]["planned"]
+    assert planned["consent"] == "no_terminal"
+    assert planned["tracked_files"] == [".gitignore", "AGENTS.md"]
+    apply_commands = [
+        f"mb skill link --repo {business_repo}",
+        f"mb doctor repair --repo {business_repo} --apply --only codex",
+    ]
+    assert planned["apply_commands"] == apply_commands
+    for command in apply_commands:
+        assert command in result["next_actions"]
+    assert result["surface_refresh"]["claude"]["applied"] is False
+    assert result["surface_refresh"]["claude"]["tracked_writes"] == [".gitignore"]
+    assert result["surface_refresh"]["codex"]["applied"] is False
+    assert result["surface_refresh"]["codex"]["tracked_writes"] == ["AGENTS.md"]
+    assert result["codex_repaired"] is False
+    assert any("Left tracked files unchanged" in w for w in result["warnings"])
+
+
+def test_update_json_never_prompts_for_tracked_files_even_at_a_terminal(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    monkeypatch.setattr(update_mod, "_is_interactive_terminal", lambda: True)
+
+    def never_ask(repo: Path, files: list[str]) -> bool:
+        raise AssertionError("--json must not prompt")
+
+    monkeypatch.setattr(update_mod, "_confirm_surface_writes", never_ask, raising=False)
+    before = _tracked_state(business_repo)
+
+    invoked = runner.invoke(app, ["update", "--repo", str(business_repo), "--json"])
+
+    assert invoked.exit_code == 0, invoked.stdout
+    payload = json.loads(invoked.stdout)
+    assert _tracked_state(business_repo) == before
+    assert payload["surface_refresh"]["planned"]["consent"] == "no_terminal"
+    assert payload["surface_refresh"]["planned"]["tracked_files"] == [".gitignore", "AGENTS.md"]
+
+
+def test_update_terminal_no_leaves_tracked_files(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    asked: list[list[str]] = []
+
+    def say_no(repo: Path, files: list[str]) -> bool:
+        asked.append(files)
+        return False
+
+    before = _tracked_state(business_repo)
+
+    result = update_mod.run(repo=business_repo, interactive=True, confirm_surfaces=say_no)
+
+    assert asked == [[".gitignore", "AGENTS.md"]], result["errors"]
+    assert _tracked_state(business_repo) == before
+    assert result["surface_refresh"]["planned"]["consent"] == "declined"
+    assert f"mb doctor repair --repo {business_repo} --apply --only codex" in result["next_actions"]
+
+
+def test_update_terminal_yes_applies_once_then_unattended_runs_need_no_consent(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    asked: list[list[str]] = []
+
+    def say_yes(repo: Path, files: list[str]) -> bool:
+        asked.append(files)
+        return True
+
+    result = update_mod.run(repo=business_repo, interactive=True, confirm_surfaces=say_yes)
+
+    assert asked == [[".gitignore", "AGENTS.md"]], result["errors"]
+    assert result["ok"] is True, result["errors"]
+    assert result["surface_refresh"]["planned"]["consent"] == "approved"
+    assert result["surface_refresh"]["planned"]["apply_commands"] == []
+    changed = sorted(line[3:] for line in _git(business_repo, "status", "--porcelain").splitlines())
+    assert changed == [".gitignore", "AGENTS.md"]
+    agents_md = (business_repo / "AGENTS.md").read_text(encoding="utf-8")
+    assert agents_md != "# Old guidance\n"
+    assert "<!-- mainbranch" in agents_md
+    assert (business_repo / ".claude" / "skills" / "mb-start").is_symlink()
+    assert result["codex_repaired"] is True
+
+    # Once the tracked files are current, a run without a terminal still
+    # refreshes the gitignored links, and asks nothing.
+    _git(business_repo, "add", "-A")
+    _git(
+        business_repo,
+        "-c",
+        "user.name=Test",
+        "-c",
+        "user.email=test@example.invalid",
+        "commit",
+        "-q",
+        "-m",
+        "Refresh",
+    )
+    (business_repo / ".claude" / "skills" / "mb-start").unlink()
+
+    def never_ask(repo: Path, files: list[str]) -> bool:
+        raise AssertionError("nothing tracked changes, so nothing to ask")
+
+    again = update_mod.run(repo=business_repo, interactive=False, confirm_surfaces=never_ask)
+
+    assert again["ok"] is True, again["errors"]
+    assert again["surface_refresh"]["planned"]["consent"] == "not_needed"
+    assert again["surface_refresh"]["claude"]["applied"] is True
+    assert (business_repo / ".claude" / "skills" / "mb-start").is_symlink()
+    assert _git(business_repo, "status", "--porcelain") == ""
+
+
+def test_plan_link_skills_writes_nothing_and_names_gitignore(business_repo: Path) -> None:
+    before = _tracked_state(business_repo)
+
+    plan = engine_mod.plan_link_skills(business_repo)
+
+    assert _tracked_state(business_repo) == before
+    assert not (business_repo / ".claude").exists()
+    assert plan["ok"] is True
+    assert plan["tracked_writes"] == [".gitignore"]
+    assert ".claude/skills/mb-start" in plan["linked"]
+    assert ".claude/skills/mb-start" in plan["gitignore_add"]
+
+
+# --- #1008 item 4: always fetch the new version after a release --------------
+
+
+def test_uv_update_command_refreshes_the_package_index() -> None:
+    assert update_mod.UV_UPDATE_COMMAND == [
+        "uv",
+        "tool",
+        "install",
+        "--refresh-package",
+        "mainbranch",
+        "mainbranch@latest",
+    ]
+    assert " ".join(update_mod.UV_UPDATE_COMMAND) == update_mod.UV_UPDATE_COMMAND_TEXT
+
+
+def test_emitted_commands_quote_a_repo_path_with_spaces_and_parens(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = tmp_path / "My Business (old)"
+    repo.mkdir()
+    real = str(repo.resolve())
+
+    def fake_run(
+        args: list[str], *, cwd: Path | None = None, timeout: float = 0.0
+    ) -> subprocess.CompletedProcess[str]:
+        if args[:3] == ["mb", "skill", "link"] and "--plan" in args:
+            return _completed(
+                args,
+                stdout=json.dumps(
+                    {"ok": True, "tracked_changes": [{"path": ".gitignore", "op": "write"}]}
+                ),
+            )
+        if args[:3] == ["mb", "doctor", "repair"] and "--plan" in args:
+            change = {"path": "AGENTS.md", "op": "write"}
+            plan = {"ok": True, "actions": [{"id": "codex-agents-md", "tracked_changes": [change]}]}
+            return _completed(args, stdout=json.dumps(plan))
+        return _completed(args, returncode=1, stderr="must not apply without a terminal")
+
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "wheel")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: None)
+    monkeypatch.setattr(update_mod, "_run_command", fake_run)
+
+    result = update_mod.run(repo=repo, interactive=False)
+
+    planned = result["surface_refresh"]["planned"]
+    assert planned["consent"] == "no_terminal"
+    emitted = [
+        *planned["apply_commands"],
+        *[a for a in result["next_actions"] if a.startswith("mb ") and "--repo" in a],
+        result["surface_refresh"]["claude"]["command"],
+        result["surface_refresh"]["codex"]["command"],
+    ]
+    assert len(planned["apply_commands"]) == 2
+    assert any("--plan --only codex" in command for command in emitted)
+    for command in emitted:
+        argv = shlex.split(command)
+        assert argv[argv.index("--repo") + 1] == real, command
+
+    update_mod.render_human(result)
+    printed = [
+        line.removeprefix("next: ")
+        for line in capsys.readouterr().out.splitlines()
+        if line.startswith("next: mb ") and "--repo" in line
+    ]
+    assert len(printed) == 3
+    for command in printed:
+        argv = shlex.split(command)
+        assert argv[argv.index("--repo") + 1] == real, command
+
+
+# --- #1015 review: deletions, aliases and transitional cleanup ---------------
+
+
+def _commit_all(repo: Path, message: str) -> None:
+    _git(repo, "add", "-A")
+    _git(
+        repo,
+        "-c",
+        "user.name=Test",
+        "-c",
+        "user.email=test@example.invalid",
+        "commit",
+        "-q",
+        "-m",
+        message,
+    )
+
+
+def _probe_repo(repo: Path, tmp_path: Path, kind: str) -> str:
+    """Set up one review reproduction; return the tracked path it puts at risk."""
+    entries, _ = engine_mod._link_gitignore_entries()
+    (repo / ".gitignore").write_text("\n".join(entries) + "\n", encoding="utf-8")
+    at_risk = ""
+    if kind == "legacy_link":
+        old = repo / ".claude" / "skills" / "start"
+        old.parent.mkdir(parents=True)
+        old.symlink_to(tmp_path / "missing-old-engine")
+        _git(repo, "add", "-f", ".claude/skills/start")
+        at_risk = ".claude/skills/start"
+    elif kind == "claude_alias":
+        shared = repo / "shared-claude"
+        shared.mkdir()
+        (shared / "settings.local.json").write_text("{}\n", encoding="utf-8")
+        (repo / ".claude").symlink_to(shared, target_is_directory=True)
+        at_risk = "shared-claude/settings.local.json"
+    elif kind == "codex_alias":
+        codex_mod.write_agents_md(repo)
+        shared = repo / "shared-codex" / "mb-start"
+        shared.mkdir(parents=True)
+        (shared / "SKILL.md").write_text("stale\n", encoding="utf-8")
+        global_root = codex_mod.global_skill_source_root()
+        global_root.mkdir(parents=True, exist_ok=True)
+        (global_root / "mb-start").symlink_to(shared, target_is_directory=True)
+        at_risk = "shared-codex/mb-start/SKILL.md"
+    elif kind == "codex_cleanup":
+        legacy = repo / ".agents" / "skills" / "main-branch" / "SKILL.md"
+        legacy.parent.mkdir(parents=True)
+        legacy.write_text("legacy skill\n", encoding="utf-8")
+        at_risk = ".agents/skills/main-branch"
+    _commit_all(repo, "Probe setup")
+    assert _git(repo, "status", "--porcelain") == ""
+    return at_risk
+
+
+def _changed_tracked(repo: Path) -> list[str]:
+    status = _git(repo, "status", "--porcelain", "--untracked-files=no")
+    return sorted(line[3:] for line in status.splitlines())
+
+
+REVIEW_PROBES = ["legacy_link", "claude_alias", "codex_alias", "codex_cleanup"]
+
+
+@pytest.mark.parametrize("kind", REVIEW_PROBES)
+def test_review_probe_unattended_changes_no_tracked_file_and_plans_it(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path, kind: str
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    at_risk = _probe_repo(business_repo, tmp_path, kind)
+
+    result = update_mod.run(repo=business_repo, interactive=False)
+
+    assert _changed_tracked(business_repo) == []
+    assert _git(business_repo, "status", "--porcelain") == ""
+    planned = result["surface_refresh"]["planned"]
+    assert planned["consent"] == "no_terminal", planned
+    assert at_risk in planned["tracked_files"], planned
+    assert result["ok"] is True, result["errors"]
+
+
+@pytest.mark.parametrize("kind", REVIEW_PROBES)
+def test_review_probe_yes_changes_only_listed_files(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path, kind: str
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    at_risk = _probe_repo(business_repo, tmp_path, kind)
+    asked: list[list[str]] = []
+
+    def say_yes(repo: Path, files: list[str]) -> bool:
+        asked.append(files)
+        return True
+
+    result = update_mod.run(repo=business_repo, interactive=True, confirm_surfaces=say_yes)
+
+    assert len(asked) == 1
+    listed = result["surface_refresh"]["planned"]["tracked_files"]
+    assert at_risk in listed
+    changed = _changed_tracked(business_repo)
+    assert changed, "the approved plan should have changed something"
+    for path in changed:
+        assert any(path == item or path.startswith(item.rstrip("/") + "/") for item in listed), (
+            path,
+            listed,
+        )
+    assert result["ok"] is True, result["errors"]
+
+
+def test_unattended_guard_reports_a_tracked_change_the_plan_missed(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    entries, _ = engine_mod._link_gitignore_entries()
+    (business_repo / ".gitignore").write_text("\n".join(entries) + "\n", encoding="utf-8")
+    _commit_all(business_repo, "Current gitignore")
+    # A deliberately wrong plan: it misses the AGENTS.md write the apply makes.
+    monkeypatch.setattr(
+        update_mod,
+        "_plan_codex_surface",
+        lambda repo: ({"ok": True, "actions": []}, []),
+    )
+
+    result = update_mod.run(repo=business_repo, interactive=False)
+
+    assert _changed_tracked(business_repo) == ["AGENTS.md"]
+    assert result["ok"] is False
+    assert result["surface_refresh"]["planned"]["unapproved_changes"] == ["AGENTS.md"]
+    assert any("not approved: AGENTS.md" in error for error in result["errors"])
+
+
+def _case_insensitive(directory: Path) -> bool:
+    probe = directory / "case-probe"
+    probe.write_text("", encoding="utf-8")
+    try:
+        return (directory / "CASE-PROBE").exists()
+    finally:
+        probe.unlink()
+
+
+def _with_current_gitignore(repo: Path) -> None:
+    entries, _ = engine_mod._link_gitignore_entries()
+    (repo / ".gitignore").write_text("\n".join(entries) + "\n", encoding="utf-8")
+
+
+def test_unattended_update_leaves_a_lowercase_agents_md_alone(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path
+) -> None:
+    if not _case_insensitive(business_repo):
+        pytest.skip("needs a case-insensitive filesystem: agents.md and AGENTS.md differ here")
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    _with_current_gitignore(business_repo)
+    _git(business_repo, "mv", "AGENTS.md", "intermediate.md")
+    _git(business_repo, "mv", "intermediate.md", "agents.md")
+    _commit_all(business_repo, "Lowercase agents.md")
+
+    result = update_mod.run(repo=business_repo, interactive=False)
+
+    assert _git(business_repo, "status", "--porcelain") == ""
+    assert (business_repo / "agents.md").read_text(encoding="utf-8") == "# Old guidance\n"
+    planned = result["surface_refresh"]["planned"]
+    assert planned["consent"] == "no_terminal", planned
+    assert "agents.md" in planned["tracked_files"], planned
+    assert result["ok"] is True, result["errors"]
+
+
+@pytest.mark.parametrize("holder", ["business", "other"])
+def test_unattended_update_never_writes_through_a_hard_link(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path, holder: str
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    _with_current_gitignore(business_repo)
+    codex_mod.write_agents_md(business_repo)
+    holder_repo = business_repo
+    if holder == "other":
+        holder_repo = tmp_path / "other"
+        holder_repo.mkdir()
+        _git(holder_repo, "init", "-q", "-b", "main")
+    shared = holder_repo / "shared-skill.md"
+    shared.write_text("stale\n", encoding="utf-8")
+    global_skill = codex_mod.global_skill_source_root() / "mb-start" / "SKILL.md"
+    global_skill.parent.mkdir(parents=True, exist_ok=True)
+    os.link(shared, global_skill)
+    _commit_all(holder_repo, "Shared skill")
+    if holder == "other":
+        _commit_all(business_repo, "Current surfaces")
+
+    result = update_mod.run(repo=business_repo, interactive=False)
+
+    assert shared.read_text(encoding="utf-8") == "stale\n"
+    assert _git(business_repo, "status", "--porcelain") == ""
+    assert _git(holder_repo, "status", "--porcelain") == ""
+    planned = result["surface_refresh"]["planned"]
+    if holder == "business":
+        assert "shared-skill.md" in planned["tracked_files"], planned
+    else:
+        # Outside the business repo the refresh still runs, into a new file.
+        assert global_skill.read_text(encoding="utf-8") != "stale\n"
+        assert not os.path.samefile(global_skill, shared)
+    assert result["ok"] is True, result["errors"]
+
+
+def test_planned_personal_backup_is_where_the_link_moves_it(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    _with_current_gitignore(business_repo)
+    codex_mod.write_agents_md(business_repo)
+    _commit_all(business_repo, "Current surfaces")
+    personal = engine_mod._personal_skills_dir()
+    personal.mkdir(parents=True)
+    (personal / "mb-start").symlink_to(tmp_path / "missing-engine")
+
+    planned = [
+        item["path"]
+        for item in engine_mod.plan_link_skills(business_repo)["operations"]
+        if item["op"] == "create" and ".mainbranch-backups" in item["path"]
+    ]
+    result = update_mod.run(repo=business_repo, interactive=False)
+
+    applied = sorted(str(path) for path in (personal / ".mainbranch-backups").rglob("mb-start*"))
+    assert planned and applied == planned, (planned, applied)
+    assert result["ok"] is True, result["errors"]

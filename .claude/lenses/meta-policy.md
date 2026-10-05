@@ -150,6 +150,29 @@ When Employment category is active, upgrade all Personal Attributes issues by on
 
 ---
 
+## Sensitive Categories
+
+Religion, grief and loss, health, body image, finances and similar subjects
+draw the strictest review, and Meta's prohibited-practices rules name some
+product types outright (for example items sold with spiritual or protective
+claims). Before writing for one:
+
+- read Meta's current Advertising Standards pages on personal attributes and on
+  unacceptable business practices for that category; policy moves, so check on
+  the day;
+- **never describe the viewer**: no line asserts or implies their beliefs,
+  health, losses or other attributes, including as a question;
+- **no promised result**: describe the product (what it is, how it's made, what
+  it does mechanically) and tell tradition or heritage as history, never as an
+  outcome for the buyer;
+- read every headline and description next to the primary text that makes it
+  riskiest, because Meta pairs any slot with any other
+  (the mb-ads `references/meta-text-slots.md`);
+- keep the business's own never-list of words (claims its page makes that ads
+  must not) in `core/` and check every slot and image word against it.
+
+---
+
 ## Red Flags (Always Flag)
 
 - Direct "you" + negative state combination

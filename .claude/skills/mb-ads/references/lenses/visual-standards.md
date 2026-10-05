@@ -19,8 +19,8 @@ The 9:16 format (1080x1920) has UI elements that cover content.
 │   TOP 14% DANGER    │  ← Progress bar, account icon
 │                     │
 │ ┌─────────────────┐ │
-│ │  CENTER 1:1     │ │  ← All hooks and disclosures HERE
-│ │  SAFE ZONE      │ │  ← This area extracts as the square version
+│ │  14%-65% BAND   │ │  ← All hooks, product and disclosures HERE
+│ │  SAFE ZONE      │ │
 │ └─────────────────┘ │
 │                     │
 │  BOTTOM 35% DANGER  │  ← Caption, CTA button, likes
@@ -29,18 +29,19 @@ The 9:16 format (1080x1920) has UI elements that cover content.
 
 **Compliance implication:** Disclosures at bottom are "avoidable" = non-compliant.
 
-### Format Pair: 1:1 + 9:16
+### Format Pair: 4:5 + 9:16
 
-Facebook Ads Manager accepts exactly two image uploads per ad: **1:1 (square)** and **9:16 (vertical)**. There is no 4:5 upload option.
-
-**Design strategy:** Design 9:16 first, keep critical content in center 1:1 zone, center-crop for square version. One design → two uploads.
+Default pair: **4:5** for Feeds and **9:16** for Stories and Reels, both in one
+creative through placement rules. 1:1 is still accepted on Feeds; use it only
+when a placement or reused asset needs it. Full specs and composition rules:
+the mb-ads `references/ad-media-specs.md`.
 
 ### Technical Specs
 
-- **Square:** 1920×1920 (1:1) — Facebook feed, Instagram feed
+- **Feed:** 1440×1800 minimum (4:5) — Facebook and Instagram feeds, Explore, Marketplace
 - **Vertical:** 1080×1920 (9:16) — Stories, Reels, full-screen mobile
-- **Safe margin:** 250px from top and bottom edges on 9:16
-- **Critical text:** Must be in center 1:1 zone (visible in both formats)
+- **Safe area on 9:16:** keep product, hooks and disclosures between 14% and 65% of the height (rows 269-1248)
+- **Critical text:** Inside the safe area on 9:16 and inside the frame margin on 4:5
 
 ---
 

@@ -461,7 +461,8 @@ Rules:
 - Business state stays in git.
 - Local operational state stays out of git.
 - Secrets stay in the OS keychain, environment, or runtime-specific secret
-  stores, never in repo files or frontmatter.
+  stores, never in repo files or frontmatter. Agents use them through
+  `mb connect exec`, never by reading or printing the value.
 - Dashboard/server/process state must be explicit, local-first, optional, and
   documented before it is added.
 
