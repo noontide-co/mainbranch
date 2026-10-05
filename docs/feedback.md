@@ -103,7 +103,7 @@ logs nothing.
 | --- | --- |
 | `connect.config_boundary` | `mb connect` refuses `.mb/connect.yaml` because it is a symlink, invalid, or outside the repo. |
 | `connect.token_print` | `mb connect token` refuses to print to a terminal or a pipe. |
-| `connect.metadata_secret_value`, `connect.metadata_format` | `--metadata` holds a secret-shaped value or is not `key=value`. |
+| `connect.metadata_secret_value`, `connect.metadata_secret_key`, `connect.metadata_format` | `--metadata` holds a secret-shaped value or key, or is not `key=value`. |
 | `connect.source_secret_value` | `--source` holds a secret value instead of a reference. |
 | `connect.key_shape`, `connect.stripe_mode_mismatch` | A credential does not match the provider's key shape or mode. |
 | `connect.exec_no_command`, `connect.exec_env_name` | `mb connect exec` has no command, or `--env` is not a usable variable name. |

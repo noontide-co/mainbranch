@@ -24,6 +24,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- `mb`'s own usage errors (an unknown option, an unexpected extra argument,
+  an invalid value) no longer repeat command-line input that could be a
+  credential: it is replaced with `(not shown: it may be a credential)`, on
+  `mb`, `mb connect` and every subcommand. An ordinary typo such as `--jsno`
+  is still shown; the exit code (2) and the usage line are unchanged, and
+  `--json` still prints no envelope for these errors (#1037).
+- `mb connect --metadata` refuses a metadata key that looks like a credential
+  (rule `metadata_secret_key`, exit 2), with or without a token, without
+  repeating it, and stores nothing. A key like that already in
+  `.mb/connect.yaml` no longer appears in `mb connect status` or
+  `mb connect identity` output (#1033).
 - `mainbranch` now requires `pyyaml>=6.0.1`. PyYAML 6.0 does not build on
   Python 3.12, and the minimum-dependency CI job now also runs on 3.12 so a
   floor like that fails the PR (#1028).
