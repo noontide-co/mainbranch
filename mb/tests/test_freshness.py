@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import urllib.request
 from pathlib import Path
 
 import pytest
@@ -218,3 +219,41 @@ def test_unparseable_pypi_answer_counts_as_unavailable(monkeypatch: pytest.Monke
 )
 def test_checked_release_version(raw: object, expected: str | None) -> None:
     assert checked_release_version(raw) == expected
+
+
+class _Response:
+    def __init__(self, body: str) -> None:
+        self._body = body.encode("utf-8")
+
+    def __enter__(self) -> _Response:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+    def read(self) -> bytes:
+        return self._body
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        ("[1, 2]", None),
+        ("null", None),
+        ("3", None),
+        ('"x"', None),
+        ('{"info": [1]}', None),
+        ('{"info": {"version": "0.6.3"}}', "0.6.3"),
+    ],
+)
+def test_latest_pypi_version_treats_non_object_json_as_unknown(
+    monkeypatch: pytest.MonkeyPatch, body: str, expected: str | None
+) -> None:
+    # #1039: valid JSON that is not an object carries no version.
+    monkeypatch.setattr(
+        urllib.request,
+        "urlopen",
+        lambda url, timeout=0.0: _Response(body),
+    )
+
+    assert freshness_mod.latest_pypi_version() == expected
