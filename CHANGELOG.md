@@ -11,6 +11,22 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-10-05
+
+This patch makes `mb connect` and `mb update` report what is actually true.
+Scripts reading `mb connect ... --json` can now parse stdout on failure:
+branch on `state`, not on stderr text. `mb connect` failure messages no longer
+repeat input that could be a credential. After connecting a provider without
+a token, expect `connected: false` and `missing_secret` until a token is
+added; `mb connect identity` still lists it. `mb connect status --json`
+reports credential-store health even with no providers (`credential_backend`).
+`mb update` no longer offers a downgrade when you run a newer build than PyPI,
+and no longer says "updated" when nothing changed; the required-update line
+names your install method. When `mb update` cannot reach PyPI's version check,
+it leaves the install alone; run it again later. The `typer` floor is now
+0.15.4: anyone pinning an older Typer must move. To upgrade a uv install, run
+`uv tool install --refresh-package mainbranch mainbranch@latest`.
+
 ### Fixed
 
 - `mb connect` failure messages no longer repeat input that could be a
