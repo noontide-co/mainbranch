@@ -289,6 +289,14 @@ version, and lists no install command, since installing the latest release
 would be a downgrade. Versions compare by PEP 440, so `0.6.3rc1` is newer than
 `0.6.2` and older than `0.6.3`.
 
+When `mb update` cannot reach PyPI's version check (offline, a timeout, or an
+answer that is not a version), a uv, pipx or wheel install is left alone: no
+installer runs, since `@latest` could be older than the installed build.
+`mb update` exits 0, reports `latest_version_unknown: true`, keeps
+`new_version` at the installed version, lists no install command, and names
+`mb update` (or `mb update --check`) as the retry. Agent surfaces are still
+refreshed.
+
 **`mb update` writes, on every install mode.** The surface refresh is not
 scoped to the business repo. It touches:
 

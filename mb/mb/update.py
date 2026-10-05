@@ -93,6 +93,13 @@ AHEAD_OF_PYPI_MESSAGE = (
     "({latest}), so there is nothing to install. Installing the latest release "
     "would replace this build with an older version."
 )
+LATEST_UNKNOWN_MESSAGE = (
+    "Main Branch could not check PyPI for the latest version, so it left this "
+    "install ({installed}) alone. Installing without that check could replace it "
+    "with an older version. Check your connection, then run `{retry}` again."
+)
+# A release version as PyPI publishes it: 0.6.3, 0.6.3rc1, 0.6.3.post1, 0.7.0.dev2.
+_RELEASE_VERSION_RE = re.compile(r"^\d+(\.\d+)*((a|b|rc)\d+)?(\.post\d+)?(\.dev\d+)?$")
 GITHUB_RELEASE_API_URL_TEMPLATE = (
     "https://api.github.com/repos/noontide-co/mainbranch/releases/tags/oe-v{version}"
 )
@@ -249,11 +256,41 @@ def _confirm_surface_writes(repo: Path, files: list[str]) -> bool:
     return answer in {"y", "yes"}
 
 
+def _checked_latest_version() -> str | None:
+    """PyPI's latest Main Branch version, or None when it could not be established.
+
+    None covers a failed or timed-out lookup and an answer that is not a
+    release version. Callers treat None as "freshness unknown", never as
+    permission to install.
+    """
+    latest = (_latest_pypi_version() or "").strip()
+    return latest if _RELEASE_VERSION_RE.fullmatch(latest) else None
+
+
+def _note_latest_unknown(result: dict[str, Any], *, retry: str) -> None:
+    """Record that PyPI's latest version could not be checked, so nothing installs.
+
+    Without a known latest version no installer may run: a timed-out JSON
+    lookup says nothing about what an installer's own index would resolve, and
+    `@latest` could be older than the installed build. `ok` stays true and the
+    installed version is kept; the only next action is the retry.
+    """
+    old = str(result.get("old_version") or "")
+    result["latest_version_unknown"] = True
+    result["new_version"] = result["old_version"]
+    result["warnings"].append(
+        LATEST_UNKNOWN_MESSAGE.format(installed=old or "unknown", retry=retry)
+    )
+    if retry not in result["next_actions"]:
+        result["next_actions"].append(retry)
+
+
 def _note_manual_update(
     result: dict[str, Any],
     *,
     command: str,
     message: str,
+    latest: str | None,
 ) -> None:
     """Hand the operator the command that works instead of dead-ending (#963).
 
@@ -266,7 +303,6 @@ def _note_manual_update(
     surfaces needs no package upgrade, so the manual paths continue into the
     same surface refresh every other mode gets.
     """
-    latest = _latest_pypi_version()
     if _note_ahead_of_pypi(result, latest):
         return
     result["new_version"] = latest or result["old_version"]
@@ -610,6 +646,7 @@ def _base_result(
         "new_version": None,
         "latest_version": "",
         "installed_ahead_of_latest": False,
+        "latest_version_unknown": False,
         "upgrade_performed": False,
         "manual_update_command": "",
         "skills_relinked_count": 0,
@@ -968,8 +1005,17 @@ def run(
         )
         return result
 
+    # One PyPI lookup per run for the package modes. None means freshness is
+    # unknown: nothing installs and no install command is handed out.
+    latest = _checked_latest_version() if mode in {"pipx", "uv", "wheel"} else None
+
     if check:
-        if mode == "uv":
+        if mode in {"pipx", "uv", "wheel"} and latest is None:
+            result["actions"] = [
+                "would leave this install alone; PyPI's latest version could not be checked",
+            ]
+            _note_latest_unknown(result, retry="mb update --check")
+        elif mode == "uv":
             result["actions"] = [
                 f"would run `{UV_UPDATE_COMMAND_TEXT}` after an explicit yes",
             ]
@@ -977,6 +1023,7 @@ def run(
                 result,
                 command=UV_UPDATE_COMMAND_TEXT,
                 message=UV_MANUAL_MESSAGE,
+                latest=latest,
             )
         elif mode == "wheel":
             result["actions"] = [
@@ -986,9 +1033,9 @@ def run(
                 result,
                 command=PIP_UPDATE_COMMAND_TEXT,
                 message=WHEEL_MANUAL_MESSAGE,
+                latest=latest,
             )
         elif mode == "pipx":
-            latest = _latest_pypi_version()
             if not _note_ahead_of_pypi(result, latest):
                 result["new_version"] = latest or result["old_version"]
                 result["actions"] = [
@@ -1062,7 +1109,12 @@ def run(
         _add_plugin_follow_up(result, target_repo)
         return result
 
-    if mode in {"pipx", "uv"} and _note_ahead_of_pypi(result, _latest_pypi_version()):
+    if mode in {"pipx", "uv", "wheel"} and latest is None:
+        result["actions"].append(
+            "left this install alone; PyPI's latest version could not be checked"
+        )
+        _note_latest_unknown(result, retry="mb update")
+    elif mode in {"pipx", "uv"} and _note_ahead_of_pypi(result, latest):
         result["actions"].append("left this install alone; it is newer than PyPI's latest")
     elif mode == "pipx":
         if shutil.which("pipx") is None:
@@ -1097,6 +1149,7 @@ def run(
                 result,
                 command=UV_UPDATE_COMMAND_TEXT,
                 message=UV_DECLINED_MESSAGE if wants_prompt else UV_MANUAL_MESSAGE,
+                latest=latest,
             )
         else:
             upgrade = _run_command(UV_UPDATE_COMMAND)
@@ -1114,6 +1167,7 @@ def run(
             result,
             command=PIP_UPDATE_COMMAND_TEXT,
             message=WHEEL_MANUAL_MESSAGE,
+            latest=latest,
         )
     else:
         if root is None:
@@ -1165,11 +1219,14 @@ def render_human(result: dict[str, Any]) -> None:
 
     ahead = result.get("installed_ahead_of_latest") is True
     latest = result.get("latest_version") or "unknown"
+    latest_unknown = result.get("latest_version_unknown") is True
 
     if result.get("check"):
         print(f"install mode: {mode}")
         if ahead:
             print(f"version: {old} (newer than PyPI's latest, {latest})")
+        elif latest_unknown:
+            print(f"version: {old} (PyPI's latest version could not be checked)")
         else:
             print(f"version: {old} -> {new}")
         raw_release = result.get("release")
@@ -1207,6 +1264,8 @@ def render_human(result: dict[str, Any]) -> None:
     elif result.get("ok"):
         if ahead:
             print(f"Main Branch {old} is newer than PyPI's latest release ({latest}); not changed.")
+        elif latest_unknown:
+            print(f"Main Branch {old} was not changed; PyPI's latest version could not be checked.")
         elif old == new:
             print(f"Main Branch is already current ({new}).")
         else:

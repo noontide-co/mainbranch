@@ -241,8 +241,8 @@ only: it does not change `ok`, the summary counts, or the exit code.
 With `--json`, every `mb connect` failure that exits non-zero without a
 result also prints one JSON object on stdout, with the shared
 [result envelope](json-output-contract.md) fields. The human message stays on
-stderr unchanged, and the exit code is the same as without `--json`. Without
-`--json` nothing changes: stdout stays empty.
+stderr, and the exit code is the same as without `--json`. Without `--json`
+nothing changes: stdout stays empty.
 
 ```json
 {
@@ -275,7 +275,12 @@ stderr unchanged, and the exit code is the same as without `--json`. Without
 | `connect_failed` | 1 | Another runtime failure. |
 | `unexpected_error` | 1 | An unexpected error; details are hidden because they may hold a secret. |
 
-No envelope carries a secret value or raw backend output.
+No envelope carries a secret value or raw backend output, and the stderr
+message gets the same redaction as the envelope. A failure message never quotes
+input that could be a credential: a metadata key, provider name, extra argument
+or command that looks like a secret is replaced with
+`(not shown: it may be a credential)`, and a refused metadata pair is also
+named by its `--metadata` position.
 
 ## Probes
 

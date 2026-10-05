@@ -740,15 +740,15 @@ def _connect_failure(
 ) -> NoReturn:
     """Report one `mb connect` failure and exit with ``exit_code``.
 
-    The human text always goes to stderr, unchanged. With ``--json`` the same
-    failure is also written to stdout as one envelope (#973), so a script never
-    reads an empty stdout; ``state`` is its stable machine code. Neither stream
-    carries a secret: messages never hold one, and the JSON copy also strips
-    any value in ``secrets``.
+    The human text always goes to stderr. With ``--json`` the same failure is
+    also written to stdout as one envelope (#973), so a script never reads an
+    empty stdout; ``state`` is its stable machine code. Neither stream carries
+    a secret: messages never quote secret-shaped input, and both streams get
+    the same redaction, including any value in ``secrets``.
     """
-    typer.echo(f"{command}: {message}", err=True)
+    safe_message = connect_mod._redact_sensitive_text(message, secrets)
+    typer.echo(f"{command}: {safe_message}", err=True)
     if json_out:
-        safe_message = connect_mod._redact_sensitive_text(message, secrets)
         payload: dict[str, Any] = {
             "ok": False,
             "state": state,
@@ -1840,7 +1840,9 @@ def connect_cmd(
     command = command or []
     if command and target != "exec":
         _connect_usage_exit(
-            "mb connect", f"unexpected extra argument {command[0]!r}", json_out=json_out
+            "mb connect",
+            f"unexpected extra argument {connect_mod.quoted_input(command[0])}",
+            json_out=json_out,
         )
     if not target:
         try:
@@ -1985,12 +1987,13 @@ def connect_cmd(
             )
         try:
             if not print_token and connect_mod.stdout_exposes_secret():
+                shown = connect_mod.echoable_input(provider) or "<provider>"
                 connect_mod._refuse(
                     "token_print",
                     "refusing to print the secret to a terminal or a pipe, where it lands "
                     "in a transcript. Run the command with it instead: "
-                    f"`mb connect exec {provider} -- <command>`. A plain redirect to a file "
-                    f"needs no flag: `mb connect token {provider} > file`. `--print` is only "
+                    f"`mb connect exec {shown} -- <command>`. A plain redirect to a file "
+                    f"needs no flag: `mb connect token {shown} > file`. `--print` is only "
                     "for a terminal or a pipe, when no agent or log reads the output.",
                 )
         except connect_mod.ConnectRefusal as exc:
@@ -2016,7 +2019,9 @@ def connect_cmd(
     if target == "repair":
         if provider:
             _connect_usage_exit(
-                "mb connect repair", f"unexpected extra argument {provider!r}", json_out=json_out
+                "mb connect repair",
+                f"unexpected extra argument {connect_mod.quoted_input(provider)}",
+                json_out=json_out,
             )
         if not keychain:
             _connect_usage_exit(
@@ -2065,7 +2070,9 @@ def connect_cmd(
         raise typer.Exit(1 if connect_mod.provider_needs_action(result["status"]) else 0)
     if provider:
         _connect_usage_exit(
-            "mb connect", f"unexpected extra argument {provider!r}", json_out=json_out
+            "mb connect",
+            f"unexpected extra argument {connect_mod.quoted_input(provider)}",
+            json_out=json_out,
         )
 
     try:

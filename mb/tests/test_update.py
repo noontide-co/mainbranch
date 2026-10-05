@@ -112,8 +112,9 @@ def uv_tool_dir_quiet(monkeypatch: pytest.MonkeyPatch) -> None:
 def pypi_quiet(monkeypatch: pytest.MonkeyPatch) -> None:
     # Every install mode now asks PyPI whether this build is ahead of the latest
     # release (#1022). Tests that care set their own answer; the rest stay off
-    # the network and independent of what PyPI currently publishes.
-    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: None)
+    # the network and see a lookup that worked and matches this build. A failed
+    # lookup (None) leaves the install alone, so tests of that path set it.
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: __version__)
 
 
 def _completed(
@@ -1628,6 +1629,123 @@ def test_update_dev_build_of_published_release_is_behind_pypi(
     assert result["new_version"] == "0.6.3"
     assert result["manual_update_command"] == update_mod.UV_UPDATE_COMMAND_TEXT
     assert update_mod.UV_UPDATE_COMMAND_TEXT in result["next_actions"]
+
+
+def _latest_unknown(monkeypatch: Any, tmp_path: Path, mode: str, latest: str | None) -> None:
+    """The 0.6.3 release-gate scenario: 0.6.3 installed, PyPI's answer unusable."""
+    monkeypatch.setattr(update_mod, "install_mode", lambda: mode)
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_engine_version", lambda root=None: "0.6.3")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: latest)
+    monkeypatch.setattr(update_mod, "_version_from_mb_command", lambda: "0.6.2")
+    monkeypatch.setattr(update_mod, "bundled_skills", lambda: ["mb-start"])
+    monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
+
+
+def _assert_latest_unknown(result: dict[str, Any], *, retry: str) -> None:
+    assert result["ok"] is True
+    assert result["old_version"] == "0.6.3"
+    assert result["new_version"] == "0.6.3"
+    assert result["latest_version"] == ""
+    assert result["latest_version_unknown"] is True
+    assert result["installed_ahead_of_latest"] is False
+    assert result["upgrade_performed"] is False
+    assert result["manual_update_command"] == ""
+    installers = ("uv tool install", "pipx upgrade", "pipx install", "pip install")
+    assert not [a for a in result["next_actions"] if a.startswith(installers)]
+    assert retry in result["next_actions"]
+    assert any("could not check PyPI for the latest version" in w for w in result["warnings"])
+
+
+@pytest.mark.parametrize("latest", [None, "", "not-a-version", "<html>"])
+@pytest.mark.parametrize("mode", ["uv", "pipx", "wheel"])
+def test_update_run_with_unknown_latest_runs_no_installer(
+    monkeypatch: Any, tmp_path: Path, mode: str, latest: str | None, capsys: Any
+) -> None:
+    # A failed or unusable PyPI lookup is not permission to install: `@latest`
+    # could be older than the installed build.
+    calls: list[list[str]] = []
+    _latest_unknown(monkeypatch, tmp_path, mode, latest)
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    def never_prompt(command: str, root: Path | None) -> bool:
+        raise AssertionError("must not offer an install when freshness is unknown")
+
+    result = update_mod.run(repo=tmp_path / "biz", interactive=True, confirm=never_prompt)
+
+    _assert_latest_unknown(result, retry="mb update")
+    assert _installer_calls(calls) == []
+    assert result["skills_relinked_count"] == 1
+
+    update_mod.render_human(result)
+    output = capsys.readouterr().out
+    assert (
+        "Main Branch 0.6.3 was not changed; PyPI's latest version could not be checked." in output
+    )
+    assert "updated" not in output
+    assert "already current" not in output
+
+
+@pytest.mark.parametrize("mode", ["uv", "pipx", "wheel"])
+def test_update_cli_json_with_unknown_latest_exits_zero(
+    monkeypatch: Any, tmp_path: Path, mode: str
+) -> None:
+    calls: list[list[str]] = []
+    _latest_unknown(monkeypatch, tmp_path, mode, None)
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    cli = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--json"])
+
+    assert cli.exit_code == 0
+    _assert_latest_unknown(json.loads(cli.stdout), retry="mb update")
+    assert _installer_calls(calls) == []
+
+
+@pytest.mark.parametrize("mode", ["uv", "pipx", "wheel"])
+def test_update_check_with_unknown_latest_lists_no_install_command(
+    monkeypatch: Any, tmp_path: Path, mode: str
+) -> None:
+    calls: list[list[str]] = []
+    _latest_unknown(monkeypatch, tmp_path, mode, None)
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    cli = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--check", "--json"])
+    human = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--check"])
+
+    assert cli.exit_code == 0
+    payload = json.loads(cli.stdout)
+    _assert_latest_unknown(payload, retry="mb update --check")
+    assert payload["release"]["source"] == "not_newer"
+    assert human.exit_code == 0
+    assert "version: 0.6.3 (PyPI's latest version could not be checked)" in human.stdout
+    assert "next: uv tool install" not in human.stdout
+    assert "next: pip install" not in human.stdout
+    assert _installer_calls(calls) == []
+
+
+@pytest.mark.parametrize(
+    ("mode", "installer"),
+    [
+        ("uv", update_mod.UV_UPDATE_COMMAND),
+        ("pipx", ["pipx", "upgrade", "mainbranch"]),
+    ],
+)
+def test_update_older_install_with_known_latest_still_upgrades(
+    monkeypatch: Any, tmp_path: Path, mode: str, installer: list[str]
+) -> None:
+    # The guard only fires on unknown freshness; a normal upgrade still runs.
+    calls: list[list[str]] = []
+    _latest_unknown(monkeypatch, tmp_path, mode, "0.6.4")
+    monkeypatch.setattr(update_mod, "_version_from_mb_command", lambda: "0.6.4")
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    result = update_mod.run(repo=tmp_path / "biz", interactive=True, confirm=lambda *a: True)
+
+    assert result["ok"] is True
+    assert result["latest_version_unknown"] is False
+    assert _installer_calls(calls) == [installer]
+    assert result["upgrade_performed"] is True
+    assert result["new_version"] == "0.6.4"
 
 
 def test_update_reports_plugin_rail_wired_without_warning(monkeypatch: Any, tmp_path: Path) -> None:

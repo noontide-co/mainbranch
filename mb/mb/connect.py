@@ -501,13 +501,13 @@ def normalize_provider(provider_id: str, *, allow_custom: bool = False) -> Provi
     if allow_custom:
         if not CUSTOM_PROVIDER_RE.fullmatch(key):
             raise ValueError(
-                f"custom provider id {provider_id!r} must be 2-31 chars of "
+                f"custom provider id {quoted_input(provider_id)} must be 2-31 chars of "
                 "lowercase letters, digits, and hyphens"
             )
         return _custom_provider(key)
     supported = ", ".join(sorted(providers))
     raise ValueError(
-        f"unknown provider {provider_id!r}; supported providers: {supported}. "
+        f"unknown provider {quoted_input(provider_id)}; supported providers: {supported}. "
         "For an operator-defined provider, rerun with --custom."
     )
 
@@ -1318,9 +1318,30 @@ def metadata_value_rule(value: str) -> str:
     return ""
 
 
+# Operator input an error may quote back: short names, ids and command paths.
+# Anything longer, oddly shaped or secret-shaped is described, never echoed,
+# so a credential pasted into the wrong argument does not come back on stderr.
+_ECHOABLE_INPUT_RE = re.compile(r"^[A-Za-z0-9_.~/@+:-]{1,64}$")
+HIDDEN_INPUT = "(not shown: it may be a credential)"
+
+
+def echoable_input(value: object) -> str:
+    """Return ``value`` when an error may show it, or "" when it must not."""
+    text = str(value).strip()
+    if not _ECHOABLE_INPUT_RE.fullmatch(text) or metadata_value_rule(text):
+        return ""
+    return text
+
+
+def quoted_input(value: object) -> str:
+    """Quote operator input for an error message, or say it is not shown."""
+    text = echoable_input(value)
+    return repr(text) if text else HIDDEN_INPUT
+
+
 def _parse_metadata(pairs: list[str]) -> dict[str, str]:
     metadata: dict[str, str] = {}
-    for pair in pairs:
+    for position, pair in enumerate(pairs, start=1):
         if "=" not in pair:
             # Echo the key part only: a bare secret pasted without `=` must
             # not come back in the error.
@@ -1337,7 +1358,8 @@ def _parse_metadata(pairs: list[str]) -> dict[str, str]:
         if rule:
             _refuse(
                 "metadata_secret_value",
-                f"metadata value for {key!r} looks like a secret (rule: {rule}). "
+                f"metadata value for {quoted_input(key)} (--metadata argument {position}) "
+                f"looks like a secret (rule: {rule}). "
                 "Nothing was stored. Pass the credential with --token-stdin; "
                 "metadata holds labels and ids only.",
             )
@@ -2615,15 +2637,16 @@ def exec_with_secret(
         return outcome
     env = dict(os.environ)
     env[name] = result["token"]
+    shown = echoable_input(command[0]) or HIDDEN_INPUT
     try:
         completed = runner(command, env=env, check=False)
     except FileNotFoundError:
         outcome["returncode"] = 127
-        outcome["error"] = f"command not found: {command[0]}"
+        outcome["error"] = f"command not found: {shown}"
         return outcome
     except PermissionError:
         outcome["returncode"] = 126
-        outcome["error"] = f"command is not executable: {command[0]}"
+        outcome["error"] = f"command is not executable: {shown}"
         return outcome
     except OSError as exc:
         # ENOEXEC (a text file without a shebang) and every other launch
@@ -2631,7 +2654,7 @@ def exec_with_secret(
         # a traceback could carry the child environment.
         outcome["returncode"] = 126
         reason = errno.errorcode.get(exc.errno or 0, "OSError")
-        outcome["error"] = f"command could not be started ({reason}): {command[0]}"
+        outcome["error"] = f"command could not be started ({reason}): {shown}"
         return outcome
     returncode = int(completed.returncode)
     # A child killed by a signal reports -N; shells report 128+N.

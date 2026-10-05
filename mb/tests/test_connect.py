@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import typer
 import yaml
 from typer.testing import CliRunner
 
@@ -4722,6 +4723,146 @@ def test_connect_json_refusal_names_its_rule_without_the_value(tmp_path: Path, m
     payload = _assert_json_failure(result, exit_code=2, state="refused")
     assert payload["rule"] == "source_secret_value"
     assert leaked not in result.output
+
+
+# Credential-shaped dummy for the stderr tests; built here, never printed.
+STDERR_DUMMY_CREDENTIAL = "sk_live_" + "Q" * 32
+
+
+@pytest.mark.parametrize("json_flag", [["--json"], []])
+def test_connect_failure_keeps_a_credential_off_both_streams(
+    tmp_path: Path, monkeypatch, json_flag: list[str]
+) -> None:
+    """The 0.6.3 release-gate scenario: the stdin credential reused as a metadata key."""
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    dummy = STDERR_DUMMY_CREDENTIAL
+
+    result = runner.invoke(
+        app,
+        [
+            "connect",
+            "stripe",
+            "--token-stdin",
+            "--metadata",
+            f"{dummy}={dummy}",
+            "--repo",
+            str(repo),
+            *json_flag,
+        ],
+        input=dummy,
+    )
+
+    assert result.exit_code == 2
+    assert dummy not in result.stdout
+    assert dummy not in result.stderr
+    assert "--metadata argument 1" in result.stderr
+    if json_flag:
+        payload = _assert_json_failure(result, exit_code=2, state="refused")
+        assert payload["rule"] == "metadata_secret_value"
+    else:
+        assert result.stdout == ""
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        # A secret-shaped metadata key with a refused value, no stdin credential.
+        ["connect", "cloudflare", "--metadata", "{dummy}=" + FAKE_SECRET_VALUES["high_entropy"]],
+        ["connect", "{dummy}"],
+        ["connect", "--custom", "{dummy}"],
+        ["connect", "stripe", "{dummy}"],
+        ["connect", "repair", "{dummy}"],
+    ],
+)
+def test_connect_failure_messages_never_quote_secret_shaped_input(
+    tmp_path: Path, monkeypatch, argv: list[str]
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    dummy = STDERR_DUMMY_CREDENTIAL
+    args = [arg.replace("{dummy}", dummy) for arg in argv]
+
+    for json_flag in (["--json"], []):
+        result = runner.invoke(app, [*args, "--repo", str(repo), *json_flag], input="")
+
+        assert result.exit_code == 2, result.stderr
+        assert dummy not in result.stdout
+        assert dummy not in result.stderr
+        assert FAKE_SECRET_VALUES["high_entropy"] not in result.output
+        assert connect_mod.HIDDEN_INPUT in result.stderr
+
+
+def test_connect_token_refusal_never_quotes_a_secret_shaped_provider(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    monkeypatch.setattr(connect_mod, "stdout_exposes_secret", lambda: True)
+    dummy = STDERR_DUMMY_CREDENTIAL
+
+    result = runner.invoke(app, ["connect", "token", dummy, "--repo", str(tmp_path)])
+
+    assert result.exit_code == connect_mod.TOKEN_REFUSED_EXIT_CODE
+    assert dummy not in result.output
+    assert "mb connect exec <provider> -- <command>" in result.stderr
+
+
+def test_connect_exec_never_quotes_a_secret_shaped_command(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-fixture-notfound-0000")
+    dummy = STDERR_DUMMY_CREDENTIAL
+
+    def fake_run(args, **kwargs):
+        raise FileNotFoundError(2, "No such file or directory", args[0])
+
+    outcome = connect_mod.exec_with_secret("cloudflare", [dummy], repo, runner=fake_run)
+
+    assert outcome["returncode"] == 127
+    assert outcome["error"] == f"command not found: {connect_mod.HIDDEN_INPUT}"
+    assert dummy not in json.dumps(outcome)
+
+
+def test_connect_failure_redacts_stderr_like_the_json_copy(capsys) -> None:
+    """The reporter redacts the human line too, not only the JSON envelope."""
+    from mb import cli as cli_mod
+
+    dummy = STDERR_DUMMY_CREDENTIAL
+    for json_out in (True, False):
+        with pytest.raises(typer.Exit):
+            cli_mod._connect_failure(
+                "mb connect",
+                f"upstream said {dummy}; Authorization: Bearer {dummy}",
+                json_out=json_out,
+                exit_code=1,
+                state="connect_failed",
+                secrets=(dummy,),
+            )
+        captured = capsys.readouterr()
+        assert dummy not in captured.out
+        assert dummy not in captured.err
+        assert connect_mod.SECRET_REPLACEMENT in captured.err
+
+
+@pytest.mark.parametrize(
+    ("value", "shown"),
+    [
+        ("cloudflare", True),
+        ("my-custom-provider", True),
+        ("/usr/local/bin/stripe", True),
+        (STDERR_DUMMY_CREDENTIAL, False),
+        (FAKE_SECRET_VALUES["high_entropy"], False),
+        (FAKE_SECRET_VALUES["jwt_shape"], False),
+        ("x" * 65, False),
+        ("two words", False),
+    ],
+)
+def test_echoable_input_only_shows_plain_short_names(value: str, shown: bool) -> None:
+    assert (connect_mod.echoable_input(value) == value) is shown
+    assert (value in connect_mod.quoted_input(value)) is shown
 
 
 @pytest.mark.parametrize(

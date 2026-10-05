@@ -13,6 +13,16 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- `mb connect` failure messages no longer repeat input that could be a
+  credential. A secret-looking metadata key, provider name, extra argument or
+  command is replaced with `(not shown: it may be a credential)`, and the
+  message on stderr gets the same redaction as the `--json` copy, including
+  the credential you passed on stdin.
+- `mb update` now leaves the install alone when it cannot reach PyPI's version
+  check, instead of running an installer that could put an older version in
+  its place. It keeps the installed version, says the latest version could not
+  be checked, and names `mb update` as the retry; `--json` reports
+  `latest_version_unknown: true`.
 - The keychain release-simulation test no longer depends on the caller's
   `MB_CONNECT_SECRET_BACKEND`, and the dogfood harness tests print only the
   environment keys they check when an assertion fails, never the whole
