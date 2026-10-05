@@ -43,7 +43,6 @@ from mb.freshness import (
     checked_release_version,
     compare_versions,
     release_notes_url,
-    version_key,
 )
 from mb.freshness import (
     latest_pypi_version as _latest_pypi_version,
@@ -333,6 +332,22 @@ def _note_ahead_of_pypi(result: dict[str, Any], latest: str | None) -> bool:
     result["installed_ahead_of_latest"] = True
     result["new_version"] = old
     result["warnings"].append(AHEAD_OF_PYPI_MESSAGE.format(installed=old, latest=latest))
+    return True
+
+
+def _note_already_current(result: dict[str, Any], latest: str | None) -> bool:
+    """Record a uv or wheel install that already runs PyPI's latest release (#1036).
+
+    Returns True when the installed version equals ``latest``. The result then
+    keeps `new_version` at the installed version, leaves `manual_update_command`
+    empty and lists no install command: reinstalling the same release changes
+    nothing, so there is nothing for the operator to confirm or run.
+    """
+    old = str(result.get("old_version") or "")
+    if not latest or not old or compare_versions(old, latest) != 0:
+        return False
+    result["latest_version"] = latest
+    result["new_version"] = old
     return True
 
 
@@ -1031,6 +1046,10 @@ def run(
                 "would leave this install alone; PyPI's latest version could not be checked",
             ]
             _note_latest_unknown(result, retry="mb update --check")
+        elif mode in {"uv", "wheel"} and _note_already_current(result, latest):
+            result["actions"] = [
+                "would leave this install alone; it already runs PyPI's latest release",
+            ]
         elif mode == "uv":
             result["actions"] = [
                 f"would run `{UV_UPDATE_COMMAND_TEXT}` after an explicit yes",
@@ -1108,7 +1127,7 @@ def run(
             result["actions"].append("would skip agent surface refresh")
         new_version = str(result.get("new_version") or "")
         old_version = str(result.get("old_version") or "")
-        if new_version and version_key(new_version) > version_key(old_version):
+        if new_version and old_version and compare_versions(new_version, old_version) > 0:
             result["release"] = _release_context(new_version)
         elif new_version:
             result["release"] = {
@@ -1132,6 +1151,8 @@ def run(
         _note_latest_unknown(result, retry="mb update")
     elif mode in {"pipx", "uv"} and _note_ahead_of_pypi(result, latest):
         result["actions"].append("left this install alone; it is newer than PyPI's latest")
+    elif mode in {"uv", "wheel"} and _note_already_current(result, latest):
+        result["actions"].append("left this install alone; it already runs PyPI's latest release")
     elif mode == "pipx":
         if shutil.which("pipx") is None:
             result["ok"] = False
@@ -1244,6 +1265,16 @@ def render_human(result: dict[str, Any]) -> None:
     ahead = result.get("installed_ahead_of_latest") is True
     latest = result.get("latest_version") or "unknown"
     latest_unknown = result.get("latest_version_unknown") is True
+    # uv and wheel installs that already run PyPI's latest carry no install
+    # command (#1036); pipx and clone checks keep their "would run" line.
+    already_current = (
+        mode in {"uv", "wheel"}
+        and not ahead
+        and not latest_unknown
+        and not result.get("manual_update_command")
+        and bool(result.get("latest_version"))
+        and old == new
+    )
 
     if result.get("check"):
         print(f"install mode: {mode}")
@@ -1251,6 +1282,9 @@ def render_human(result: dict[str, Any]) -> None:
             print(f"version: {old} (newer than PyPI's latest, {latest})")
         elif latest_unknown:
             print(f"version: {old} (PyPI's latest version could not be checked)")
+        elif already_current:
+            print(f"version: {old}")
+            print(f"Main Branch is already current ({old}).")
         else:
             print(f"version: {old} -> {new}")
         raw_release = result.get("release")

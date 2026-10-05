@@ -15,9 +15,10 @@ import sys
 from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, NoReturn, TypeVar
+from typing import Any, NoReturn, TypeVar, cast
 
 import typer
+from typer.core import TyperGroup
 
 from mb import __version__
 from mb import ads as ads_mod
@@ -57,8 +58,64 @@ from mb import validate as validate_mod
 from mb.freshness import format_update_alert, looks_like_business_repo, package_update_status
 from mb.json_result import envelope, json_default
 
+# Click's own usage error, from whichever Click this Typer ships with.
+_CLICK_USAGE_ERROR = cast(
+    "type[Exception]",
+    next(cls for cls in typer.BadParameter.__mro__ if cls.__name__ == "UsageError"),
+)
+
+
+def _hide_credential_input(exc: Exception, argv: list[str]) -> None:
+    """Replace credential-shaped command-line input in a Click usage error.
+
+    Click repeats what it could not parse ("No such option: --<text>", an
+    unexpected extra argument, an invalid value). Input that could be a
+    credential is replaced with the same marker `mb connect` failures use; an
+    ordinary typo such as ``--jsno`` still shows so it can be fixed.
+    """
+    message = getattr(exc, "message", None)
+    if not isinstance(message, str):
+        return
+    hidden: set[str] = set()
+    for token in argv:
+        for piece in {token, *token.split("=", 1)}:
+            core = piece.strip().lstrip("-")
+            if len(core) >= 8 and not connect_mod.echoable_input(core):
+                hidden.update({piece, core})
+    for text in sorted(hidden, key=len, reverse=True):
+        message = message.replace(text, connect_mod.HIDDEN_INPUT)
+    exc.message = message  # type: ignore[attr-defined]
+
+
+class _UsageErrorRedactingGroup(TyperGroup):
+    """The `mb` root group: Click usage errors never repeat credential-shaped input.
+
+    Every subcommand is parsed inside the root's ``invoke``, so catching here
+    covers `mb`, `mb connect` and their subcommands. Exit code 2 and the
+    usage line are Click's own.
+    """
+
+    def make_context(self, info_name: Any, args: list[str], *rest: Any, **extra: Any) -> Any:
+        argv = list(args)
+        try:
+            ctx = super().make_context(info_name, args, *rest, **extra)
+        except _CLICK_USAGE_ERROR as exc:
+            _hide_credential_input(exc, argv)
+            raise
+        ctx.meta["mb.argv"] = argv
+        return ctx
+
+    def invoke(self, ctx: Any) -> Any:
+        try:
+            return super().invoke(ctx)
+        except _CLICK_USAGE_ERROR as exc:
+            _hide_credential_input(exc, list(ctx.meta.get("mb.argv") or []))
+            raise
+
+
 app = typer.Typer(
     name="mb",
+    cls=_UsageErrorRedactingGroup,
     help=(
         "Run your business as files in git. Main Branch scaffolds your repo, "
         "checks it, graphs it, and wires it into Claude Code."

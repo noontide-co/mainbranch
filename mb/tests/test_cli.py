@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from typer.testing import CliRunner
 
@@ -115,3 +117,57 @@ def test_init_output_points_to_connected_accounts_guidance(tmp_path) -> None:
     assert result.exit_code == 0
     assert "connected accounts:" in result.stdout
     assert "CLAUDE.md -> Connected accounts" in result.stdout
+
+
+# Credential-shaped dummy for the usage-error tests; built here, never printed.
+USAGE_DUMMY_CREDENTIAL = "sk_live_" + "Q" * 32
+
+
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _flat(text: str) -> str:
+    """Text without colour codes, whitespace or panel borders (matches wrapped, coloured lines)."""
+    return "".join(ch for ch in _ANSI.sub("", text) if not ch.isspace() and ch not in "│╭╮╰╯─")
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["--{dummy}"],
+        ["--{dummy}=x"],
+        ["{dummy}"],
+        ["status", "--{dummy}"],
+        ["connect", "--{dummy}"],
+        ["connect", "cloudflare", "--{dummy}"],
+        ["connect", "cloudflare", "--{dummy}", "--json"],
+    ],
+)
+def test_usage_errors_never_repeat_credential_shaped_input(argv: list[str]) -> None:
+    dummy = USAGE_DUMMY_CREDENTIAL
+    result = runner.invoke(app, [arg.replace("{dummy}", dummy) for arg in argv])
+
+    # Booleans only, so a failure never prints the dummy or the output.
+    exit_two = result.exit_code == 2
+    on_stdout = dummy in _flat(result.stdout)
+    on_stderr = dummy in _flat(result.stderr)
+    marked = _flat("(not shown: it may be a credential)") in _flat(result.stderr)
+    usage_line = "Usage:" in result.stderr
+    assert (exit_two, on_stdout, on_stderr, marked, usage_line) == (True, False, False, True, True)
+
+
+@pytest.mark.parametrize(
+    ("argv", "typo"),
+    [
+        (["--jsno"], "--jsno"),
+        (["connect", "--verbos"], "--verbos"),
+        (["connect", "cloudflare", "--jsno", "--json"], "--jsno"),
+    ],
+)
+def test_usage_errors_still_show_an_ordinary_typo(argv: list[str], typo: str) -> None:
+    result = runner.invoke(app, argv)
+
+    assert result.exit_code == 2
+    assert typo in _flat(result.stderr)
+    assert "notshown" not in _flat(result.stderr)
+    assert "Usage:" in _flat(result.stderr)
