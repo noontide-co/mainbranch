@@ -55,7 +55,8 @@ links still refresh on their own.
 
 **For a person only.** `operator_actions` lists steps that change tracked
 files, such as the plugin-rail switch. Show each `command` and `note` to the
-user as theirs to run at a terminal; never run them yourself.
+user as theirs to run at a terminal; never run them yourself. `mb doctor
+repair` lists the same switch there and never applies it.
 
 ---
 

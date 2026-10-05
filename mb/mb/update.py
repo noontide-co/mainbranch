@@ -26,6 +26,7 @@ from mb.engine import (
     engine_root,
     install_mode,
     looks_like_uv_tool_install,
+    plugin_switch_operator_action,
     plugin_wiring_status,
 )
 
@@ -64,14 +65,6 @@ UV_UPDATE_COMMAND = [
     PACKAGE_NAME,
     f"{PACKAGE_NAME}@latest",
 ]
-# The plugin-rail switch writes a tracked file, so `mb update` lists it in
-# `operator_actions` for a person, never in `next_actions` (#1023).
-PLUGIN_SWITCH_COMMAND = "mb skill link --repo . --plugin"
-PLUGIN_SWITCH_NOTE = (
-    "For a person to run at a terminal, not an agent: switches this repo to the "
-    "Main Branch plugin rail by writing the tracked `.claude/settings.json`. "
-    "Restart Claude Code afterwards."
-)
 UV_MANUAL_MESSAGE = (
     "Main Branch was installed as a uv tool. Upgrading replaces the installed "
     "command, so it only runs after an explicit yes at an interactive prompt. "
@@ -767,19 +760,12 @@ def _add_plugin_follow_up(result: dict[str, Any], repo: Path) -> None:
         result["warnings"].append(
             "This repo is on symlink-only skill wiring. The Main Branch plugin is "
             "the default cross-surface rail (Claude Desktop and the terminal, and "
-            "it survives git worktrees). Migrate when you're ready with "
-            "`mb skill link --repo . --plugin` (or `mb doctor repair --apply "
-            "--all-agents`), then restart Claude Code."
+            "it survives git worktrees). The switch writes a tracked file, so it "
+            "is listed under `operator_actions` for a person to run at a terminal."
         )
         # #1023: the switch writes tracked `.claude/settings.json`, so it is a
         # step for a person at a terminal, never an unattended next action.
-        result["operator_actions"].append(
-            {
-                "command": PLUGIN_SWITCH_COMMAND,
-                "changes": [".claude/settings.json"],
-                "note": PLUGIN_SWITCH_NOTE,
-            }
-        )
+        result["operator_actions"].append(plugin_switch_operator_action())
 
     install_state = str(install.get("state") or "")
     if install_state in {"stale", "installed_not_enabled", "disabled", "not_installed"}:
