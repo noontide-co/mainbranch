@@ -4530,7 +4530,8 @@ def test_generated_agents_guidance_routes_credentials_to_exec(tmp_path: Path) ->
 
 def _stored_entry(repo: Path, provider_id: str) -> dict[str, Any]:
     config = yaml.safe_load((repo / ".mb" / "connect.yaml").read_text(encoding="utf-8"))
-    return config["providers"][provider_id]
+    entry: dict[str, Any] = config["providers"][provider_id]
+    return entry
 
 
 def test_tokenless_first_connect_with_metadata_records_no_secret_ref(
@@ -4661,7 +4662,7 @@ def test_entry_written_with_a_dangling_ref_still_reads_missing_secret(
 
 def _assert_json_failure(result: Any, *, exit_code: int, state: str) -> dict[str, Any]:
     assert result.exit_code == exit_code, (result.stdout, result.stderr)
-    payload = json.loads(result.stdout)
+    payload: dict[str, Any] = json.loads(result.stdout)
     assert payload["ok"] is False
     assert payload["state"] == state
     assert payload["result_status"] == "error"

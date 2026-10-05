@@ -736,7 +736,6 @@ def _connect_failure(
     backend_state: str = "",
     repair: str = "",
     repair_command: str = "",
-    echo_repair: bool = False,
     secrets: tuple[str, ...] = (),
 ) -> NoReturn:
     """Report one `mb connect` failure and exit with ``exit_code``.
@@ -748,8 +747,6 @@ def _connect_failure(
     any value in ``secrets``.
     """
     typer.echo(f"{command}: {message}", err=True)
-    if echo_repair and repair_command:
-        typer.echo(f"repair: {repair_command}", err=True)
     if json_out:
         safe_message = connect_mod._redact_sensitive_text(message, secrets)
         payload: dict[str, Any] = {
