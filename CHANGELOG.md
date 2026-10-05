@@ -19,9 +19,18 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `ga4_property_id` and the granted products recorded in repo metadata. It
   refuses to replace a stored Google access token without
   `--replace-access-token`, and token reconnects and `mb connect rotate` on a
-  sign-in connection refuse instead of dropping the grant. Nothing reads
-  Google yet; setup, the 100-token limit and headless use are in
+  sign-in connection refuse instead of dropping the grant. Setup, the 100-token limit and headless use are in
   `docs/connect.md` (part of #1004).
+- `mb connect token google` and `mb connect exec google` on a Google sign-in
+  connection mint a short-lived access token from the stored grant, once per
+  `mb` process, and hand out only that token (`GOOGLE_OAUTH_TOKEN` for
+  `exec`). The refresh token and client secret never leave the process.
+  Google refusing the sign-in gives `reauth_required` with the repair
+  `mb connect google --oauth --reauth`, recorded so `mb connect status google`
+  shows it without calling Google; an unreachable token endpoint or a
+  corrupt grant has its own rule. Status adds
+  `oauth.refresh_token_expires_on` (a date) for sign-in connections. Plain
+  Google access-token connections and `ga4` are unchanged (part of #1004).
 
 ### Changed
 

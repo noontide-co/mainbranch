@@ -674,9 +674,11 @@ read-only Search Console and GA4 (scopes `webmasters.readonly` and
 in a Google consent screen that only the account owner can answer. Plain
 `mb connect google` is unchanged and never opens a browser.
 
-This release stores the sign-in only. Nothing checks it against Google yet,
-and `mb connect test google` behaves as before; reading reports through it
-comes in later releases.
+Once signed in, `mb connect token google` and `mb connect exec google`
+hand out a short-lived access token minted from the sign-in (see "Reading
+with the sign-in" below). Nothing checks the sign-in against Google's APIs
+yet: `mb connect test google` behaves as before, and typed report commands
+come in later releases.
 
 ### One-time setup in Google Cloud
 
@@ -719,7 +721,7 @@ Waiting for Google on http://127.0.0.1:<port> (5 min)...
 Granted (read-only): Search Console, Analytics (GA4)
 Stored: yes (stored in the macOS login Keychain)
 metadata: .../.mb/connect.yaml
-Not checked against Google yet: this release stores the sign-in only.
+Not checked against Google yet: `mb connect exec google -- <command>` reads with it.
 See it with `mb connect status google`.
 ```
 
@@ -741,7 +743,51 @@ secret when the client file has one, refresh token), a second holds the
 access token from the sign-in, and `.mb/connect.yaml` records their refs plus
 `search_console_site`, `ga4_property_id` and `oauth_grants` (which products
 you allowed). No token or client secret is ever written to the repo.
-`mb connect status google` then shows `stored` with `credential_mode: oauth`.
+`mb connect status google` then shows `stored` with `credential_mode: oauth`,
+and `oauth.refresh_token_expires_on` (a UTC date) when Google put a time
+limit on the sign-in; it is `""` otherwise.
+
+### Reading with the sign-in
+
+On a sign-in connection, `mb connect token google` and
+`mb connect exec google -- <command>` read the stored grant, ask Google's
+token endpoint for a fresh access token, and use that token. The refresh
+token and client secret stay inside the `mb` process: they never reach the
+command, its arguments, stdout, stderr or any JSON. The minted token is not
+written back to the credential store, and one `mb` process asks Google once
+(it reuses the token until a minute before Google says it expires).
+
+```bash
+mb connect exec google -- python3 scripts/search_console_report.py
+```
+
+The command gets one variable, `GOOGLE_OAUTH_TOKEN`, holding an access
+token that lives about an hour. A command that puts it into an argument,
+such as `curl -H "Authorization: Bearer $GOOGLE_OAUTH_TOKEN" ...` inside
+`sh -c`, shows it to anything that can list processes for as long as that
+command runs, and the token stays usable for up to an hour. Prefer a script
+that reads the variable itself; typed `mb google ...` read commands that keep
+the token inside `mb` are planned for a later release.
+
+When minting fails, `token` and `exec` exit 1 (the command never runs), print
+one line naming the problem and, where one helps, a `repair:` line. Google's
+own error text is never shown.
+
+| Rule | Meaning | What to do |
+| --- | --- | --- |
+| `reauth_required` | Google refused the stored sign-in: revoked, the 7-day Testing expiry, six months unused, past the 100-token limit, or a session-control policy (`invalid_rapt`). | A person runs `mb connect google --oauth --reauth`. |
+| `oauth_client_rejected` | Google refused the OAuth client in the sign-in (deleted, or its secret changed). | `mb connect google --oauth --reauth --client-file <Desktop client JSON>` with the current client file. |
+| `oauth_grant_malformed`, `oauth_grant_missing` | The stored grant cannot be read, or is gone from the credential store. | `mb connect google --oauth --reauth --client-file <Desktop client JSON>`. |
+| `token_unreachable`, `token_request_failed`, `token_response_malformed` | Google's token endpoint could not be reached, had a server error, or sent an unreadable answer. Nothing about the sign-in is known to be wrong. | Try again later. Nothing is recorded. |
+
+A credential store that is locked or unavailable reads as
+`backend_unavailable`, as for every other provider.
+
+`reauth_required` is recorded in the connection metadata when a read sees
+it, so `mb connect status google` (which never calls Google) shows
+`state: reauth_required` with the `--reauth` repair and exits 1. A later
+successful read, or the `--reauth` sign-in, clears it. The other failures
+are not recorded, so a network blip never changes status.
 
 If you untick one product on the consent screen, the sign-in is stored with
 the product you allowed, exits 1, and names the missing one; sign in again
@@ -757,9 +803,10 @@ business repos, every extra sign-in can end another repo's access without
 warning. So:
 
 - sign in once per repo; never script retries;
-- renew with `mb connect google --oauth --reauth` only when status says
-  `reauth_required`. `--reauth` reuses the client and metadata already
-  recorded; pass `--client-file` again only if it asks.
+- renew with `mb connect google --oauth --reauth` only when
+  `mb connect status google`, `token` or `exec` says `reauth_required` (or
+  names `--reauth` in its repair). `--reauth` reuses the client and metadata
+  already recorded; pass `--client-file` again only if it asks.
 
 Running `--oauth` again on a repo that already has a sign-in refuses with
 `oauth_use_reauth`.
@@ -817,7 +864,12 @@ the grant write fails, nothing changed. If a later write fails on a first
 sign-in, the repo does not record the new items and the connection is not
 set up; sign in again once the store is healthy. If it fails during
 `--reauth`, the new grant has already replaced the old one; the message says
-so and points at `mb connect test google`.
+so and points at `mb connect test google`. With `--scope user`, if the
+user-scope entry was written but `.mb/connect.yaml` was not, the sign-in is
+already usable: `mb connect hydrate --repo .` records it in the repo without
+a new sign-in (`--reauth` also works; a second plain `--oauth` refuses).
+Ctrl-C, or an unexpected error, after the first write gives the same
+account of what is stored instead of "Nothing was stored".
 
 ## User Scope
 

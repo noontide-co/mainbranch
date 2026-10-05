@@ -5,7 +5,8 @@ a browser (or, with ``--paste``, reads the redirect URL from a real terminal),
 receives the authorization code on ``http://127.0.0.1:<port>``, exchanges it
 with PKCE and stores the grant. Nothing here calls Google beyond the token
 exchange; checking the grant against the APIs comes with ``mb connect test``
-in a later release.
+in a later release. ``read_minted_token`` (end of this module) is the read
+side: it mints a short-lived access token from the grant for ``read_token``.
 
 Storage (one credential-store item per slot, refs from ``_secret_ref``):
 
@@ -24,14 +25,17 @@ reaches an exception message, stdout, stderr, JSON or ``repr``.
 
 from __future__ import annotations
 
+import http.client
 import json
 import re
 import sys
+import time
 import urllib.parse
 import webbrowser
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, TextIO
 
@@ -364,6 +368,18 @@ def _sign_in(
     )
 
 
+def _expires_on(tokens: go.TokenResponse) -> str:
+    """UTC date the refresh token expires, when Google set a time limit on it."""
+
+    seconds = tokens.get("refresh_token_expires_in")
+    if isinstance(seconds, bool) or not isinstance(seconds, (int, float)) or seconds <= 0:
+        return ""
+    try:
+        return (datetime.now(timezone.utc) + timedelta(seconds=float(seconds))).date().isoformat()
+    except OverflowError:
+        return ""
+
+
 def _grant_json(client: OAuthClient, tokens: go.TokenResponse) -> str:
     grant: dict[str, Any] = {"client_id": client.client_id}
     if client.client_secret:
@@ -385,11 +401,42 @@ class _Writes:
     replaced_access_token: bool  # an access-token-only entry is being upgraded
     grant: bool = False
     token: bool = False
+    user_scope: bool = False  # the user-scope entry (which readers follow) is written
+    metadata: bool = False  # the repo metadata is written: the sign-in is complete
 
 
-def _partial_message(writes: _Writes, failed: str) -> str:
+@dataclass
+class Progress:
+    """Filled in by ``bootstrap`` as it writes, so a caller interrupted part way
+    (Ctrl-C) can say exactly what is stored."""
+
+    writes: _Writes | None = None
+
+
+_USER_SCOPE_RECORDED = (
+    "The new Google sign-in is stored and recorded in user scope, but this repo's "
+    ".mb/connect.yaml was not updated. Run `mb connect hydrate --repo .` to record it here "
+    "(no new sign-in needed), or renew it with `mb connect google --oauth --reauth`."
+)
+
+
+_REPLACED_NOTE = (
+    " The previously stored Google access token was already replaced by the new "
+    "read-only one, so Drive, Docs and Sheets use of this connection has stopped."
+)
+
+
+def _partial_message(
+    writes: _Writes, failed: str, *, retry: str = "once the store is healthy"
+) -> str:
     if failed == "grant":
         return "Nothing was stored and the repo metadata is unchanged."
+    if writes.user_scope:
+        # Readers already follow the user-scope entry, and a second `--oauth`
+        # would refuse (`oauth_use_reauth`), so point at commands that work.
+        if writes.replaced_access_token:
+            return _USER_SCOPE_RECORDED + _REPLACED_NOTE
+        return _USER_SCOPE_RECORDED
     if writes.fresh:
         lead = (
             "The Google grant was written to the credential store but this repo does not "
@@ -397,11 +444,8 @@ def _partial_message(writes: _Writes, failed: str) -> str:
             "the next sign-in overwrites it."
         )
         if writes.replaced_access_token and writes.token:
-            lead += (
-                " The previously stored Google access token was already replaced by the new "
-                "read-only one, so Drive, Docs and Sheets use of this connection has stopped."
-            )
-        return lead + " Re-run `mb connect google --oauth` once the store is healthy."
+            lead += _REPLACED_NOTE
+        return lead + f" Re-run `mb connect google --oauth` {retry}."
     if failed == "token":
         return (
             "The new Google grant is stored and replaced the old one, but the access-token "
@@ -413,6 +457,25 @@ def _partial_message(writes: _Writes, failed: str) -> str:
         "repo metadata was not updated, so the granted products and the site or property it "
         "shows may be stale. Run `mb connect test google`."
     )
+
+
+def wrote_anything(progress: Progress | None) -> bool:
+    return progress is not None and progress.writes is not None and progress.writes.grant
+
+
+def cancelled_message(progress: Progress | None, lead: str = "Google sign-in cancelled") -> str:
+    """What Ctrl-C (or a crash) during ``bootstrap`` left behind, as fixed text."""
+
+    writes = progress.writes if progress is not None else None
+    if writes is None or not writes.grant:
+        return f"{lead}. Nothing was stored."
+    if writes.metadata:
+        return (
+            f"{lead} after it finished: the new sign-in is stored and recorded. See it with "
+            "`mb connect status google`."
+        )
+    failed = "token" if not writes.token else "metadata"
+    return f"{lead} part way. " + _partial_message(writes, failed, retry="to finish it")
 
 
 def _store_failure(
@@ -445,6 +508,7 @@ def bootstrap(
     sender: go.Sender | None = None,
     stdin: TextIO | None = None,
     paste_reader: Callable[[str], str] | None = None,
+    progress: Progress | None = None,
 ) -> dict[str, Any]:
     """Run the sign-in and store the grant. Refusals raise ``ConnectRefusal``.
 
@@ -528,6 +592,10 @@ def bootstrap(
         fresh=not existing.oauth,
         replaced_access_token=existing.has_access_token and not existing.oauth,
     )
+    if progress is not None:
+        progress.writes = writes
+    # A token minted earlier in this process came from the grant being replaced.
+    _minted.pop((store.backend, grant_ref), None)
     try:
         store.set(grant_ref, _grant_json(client, tokens), deadline=deadline)
     except connect_mod.KeychainError as exc:
@@ -554,6 +622,9 @@ def bootstrap(
         },
         "metadata": metadata,
     }
+    expires_on = _expires_on(tokens)
+    if expires_on:
+        entry["oauth"] = {"refresh_token_expires_on": expires_on}
     config["providers"][provider.id] = entry
     user_scope_path = ""
     try:
@@ -566,7 +637,9 @@ def bootstrap(
                     entry=entry,
                 )
             )
+            writes.user_scope = True
         path = connect_mod._write_config(target, config)
+        writes.metadata = True
     except (OSError, ValueError):
         raise GoogleConnectError(
             "The repo metadata could not be written. " + _partial_message(writes, "metadata"),
@@ -606,5 +679,297 @@ def render_result(result: dict[str, Any]) -> None:
     print(f"metadata: {result['config_path']}")
     if result.get("user_scope_path"):
         print(f"user scope: {result['user_scope_path']}")
-    print("Not checked against Google yet: this release stores the sign-in only.")
+    print("Not checked against Google yet: `mb connect exec google -- <command>` reads with it.")
     print("See it with `mb connect status google`.")
+
+
+# --- Read-time minting (`mb connect token` / `exec` / `read_token`) ------------
+
+STATE_REAUTH_REQUIRED = go.STATE_REAUTH_REQUIRED
+REAUTH_COMMAND = go.REPAIRS[go.STATE_REAUTH_REQUIRED]
+# A grant that cannot be read has no client to reuse, so --reauth needs the file.
+REAUTH_WITH_CLIENT_COMMAND = f"{REAUTH_COMMAND} --client-file <Desktop client JSON>"
+# Reuse a minted token until this many seconds before Google says it expires.
+MINT_EXPIRY_MARGIN_SECONDS = 60
+# Used when Google's answer carries no usable ``expires_in``.
+MINT_DEFAULT_LIFETIME_SECONDS = 3600
+
+_EXPIRES_ON_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+
+
+@dataclass(frozen=True)
+class _Mint:
+    """One token-endpoint outcome, kept for the rest of this ``mb`` process."""
+
+    ok: bool
+    token: str = field(default="", repr=False)
+    expires_at: float = 0.0
+    state: str = ""
+    rule: str = ""
+    error: str = ""
+    repair_command: str = ""
+
+
+# Keyed by the grant's (backend, ref). One token call per grant per process:
+# a success is reused until it nears expiry, a failure is not retried.
+_minted: dict[tuple[str, str], _Mint] = {}
+# Test seam for the clock behind the reuse window.
+monotonic: Callable[[], float] = time.monotonic
+
+
+def forget_minted() -> None:
+    """Drop every minted token held by this process."""
+
+    _minted.clear()
+
+
+def _read_result(
+    *,
+    ok: bool,
+    source: str,
+    state: str,
+    error: str = "",
+    repair_command: str = "",
+    rule: str = "",
+    backend_state: str = "",
+    token: str = "",
+) -> dict[str, Any]:
+    """The ``read_token`` result shape, with ``field`` always ``access_token``."""
+
+    return {
+        "ok": ok,
+        "provider": PROVIDER_ID,
+        "field": TOKEN_SLOT,
+        "source": source,
+        "token": token,
+        "state": state,
+        "backend_state": backend_state,
+        "error": error,
+        "repair_command": repair_command,
+        "rule": rule,
+    }
+
+
+def _grant_fields(value: str) -> tuple[str, str, str] | None:
+    """``(client_id, client_secret, refresh_token)`` from the stored grant JSON."""
+
+    try:
+        raw = json.loads(value)
+    except ValueError:
+        return None
+    if not isinstance(raw, dict):
+        return None
+    client_id = raw.get("client_id")
+    client_secret = raw.get("client_secret", "")
+    refresh_token = raw.get("refresh_token")
+    if (
+        not isinstance(client_id, str)
+        or not client_id
+        or not isinstance(client_secret, str)
+        or not isinstance(refresh_token, str)
+        or not refresh_token
+    ):
+        return None
+    return client_id, client_secret, refresh_token
+
+
+def _lifetime(tokens: go.TokenResponse) -> float:
+    value = tokens.get("expires_in")
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+        return MINT_DEFAULT_LIFETIME_SECONDS
+    return float(value)
+
+
+def _mint(grant: tuple[str, str, str]) -> _Mint:
+    client_id, client_secret, refresh_token = grant
+    try:
+        tokens = go.refresh_access_token(
+            client_id=client_id,
+            client_secret=client_secret or None,
+            refresh_token=refresh_token,
+            sender=token_sender,
+        )
+    except go.GoogleOAuthError as exc:
+        if exc.state == STATE_REAUTH_REQUIRED:
+            return _Mint(
+                ok=False,
+                state=STATE_REAUTH_REQUIRED,
+                rule=STATE_REAUTH_REQUIRED,
+                error=(
+                    "the Google sign-in has expired or was revoked (reauth_required); a person "
+                    "must sign in again"
+                ),
+                repair_command=REAUTH_COMMAND,
+            )
+        if exc.state == go.STATE_INVALID:
+            return _Mint(
+                ok=False,
+                state=go.STATE_INVALID,
+                rule="oauth_client_rejected",
+                error=(
+                    "Google refused the OAuth client recorded in the sign-in (deleted, or its "
+                    "secret changed); sign in again with the current client file"
+                ),
+                repair_command=REAUTH_WITH_CLIENT_COMMAND,
+            )
+        # Unreachable, a server error or an unreadable answer: nothing about
+        # the sign-in is known to be wrong, so nothing is recorded.
+        return _Mint(
+            ok=False,
+            state=go.STATE_UNVALIDATED,
+            rule=exc.rule,
+            error=f"{exc} No access token was minted; try again later",
+        )
+    except (OSError, ValueError, http.client.HTTPException):
+        # A transport that raised instead of answering. Its text is never shown.
+        return _Mint(
+            ok=False,
+            state=go.STATE_UNVALIDATED,
+            rule="token_unreachable",
+            error=(
+                "Google's token endpoint could not be reached. No access token was minted; "
+                "try again later"
+            ),
+        )
+    access_token = tokens.get("access_token")
+    if not isinstance(access_token, str) or not access_token:
+        return _Mint(
+            ok=False,
+            state=go.STATE_UNVALIDATED,
+            rule="token_response_malformed",
+            error="Google's token endpoint returned an unreadable response; try again later",
+        )
+    reuse_for = max(0.0, _lifetime(tokens) - MINT_EXPIRY_MARGIN_SECONDS)
+    return _Mint(ok=True, token=access_token, expires_at=monotonic() + reuse_for)
+
+
+def _record_read_state(target: Path, grant_ref: str, *, reauth_required: bool) -> None:
+    """Record (or clear) ``reauth_required`` so status shows it without calling Google.
+
+    Best effort, and only when it changes: a read never fails because the
+    metadata could not be written. Only the entry still holding ``grant_ref``
+    is touched.
+    """
+
+    with suppress(OSError, ValueError):
+        config = connect_mod._read_config(target)
+        repo_id = str(config.get("repo_id") or connect_mod._repo_identity(target)["repo_id"])
+        repo_entry = config["providers"].get(PROVIDER_ID)
+        entry = (
+            repo_entry
+            if isinstance(repo_entry, dict)
+            else connect_mod._user_scope_provider_entry(repo_id, PROVIDER_ID)
+        )
+        if not isinstance(entry, dict) or _slot(entry, GRANT_SLOT).get("ref") != grant_ref:
+            return
+        raw_previous = entry.get("validation")
+        previous: dict[str, Any] = raw_previous if isinstance(raw_previous, dict) else {}
+        recorded = previous.get("state") == STATE_REAUTH_REQUIRED
+        if recorded == reauth_required:
+            return
+        validation: dict[str, Any] = {
+            "state": STATE_REAUTH_REQUIRED if reauth_required else "unvalidated",
+            "checked_at": connect_mod._now(),
+            "provider_verified": False,
+            "verified_at": connect_mod._verified_at(previous),
+            "summary": "",
+            "safe_to_share": True,
+        }
+        if reauth_required:
+            validation["summary"] = (
+                "Google refused the stored sign-in (expired or revoked); a person must sign in "
+                "again."
+            )
+            validation["repair"] = f"Run `{REAUTH_COMMAND}` in a terminal (a person, not an agent)."
+            validation["repair_command"] = REAUTH_COMMAND
+            validation["rule"] = STATE_REAUTH_REQUIRED
+        entry["validation"] = validation
+        if isinstance(repo_entry, dict):
+            connect_mod._write_config(target, config)
+        if entry.get("scope") == "user" or not isinstance(repo_entry, dict):
+            stored = connect_mod._read_user_scope()["repos"].get(repo_id)
+            identity = stored.get("repo_identity") if isinstance(stored, dict) else None
+            connect_mod._write_user_scope_provider(
+                repo_id,
+                repo_identity=identity
+                if isinstance(identity, dict)
+                else config.get("repo_identity") or {},
+                provider_id=PROVIDER_ID,
+                entry=entry,
+            )
+
+
+def read_minted_token(entry: dict[str, Any], *, source: str, target: Path) -> dict[str, Any]:
+    """``read_token`` for an OAuth-mode ``google`` entry: mint an access token in memory.
+
+    The grant is read once from the credential store and sent only to Google's
+    token endpoint. The refresh token and client secret never leave this
+    function; only the short-lived access token is returned. Nothing minted is
+    written back to the store.
+    """
+
+    grant = _slot(entry, GRANT_SLOT)
+    backend, ref = grant["backend"], grant["ref"]
+    probe = connect_mod._probe_secret_ref(backend, ref)
+    if not probe.backend_ok:
+        detail = connect_mod._backend_repair(probe.reason)
+        error = detail["summary"]
+        if probe.reason == "keychain_prompt_pending":
+            error = "Google credential: keychain prompt pending"
+        return _read_result(
+            ok=False,
+            source=source,
+            state=connect_mod.BACKEND_FAILURE_STATE,
+            backend_state=probe.reason,
+            error=error,
+            repair_command=detail["repair_command"],
+        )
+    if not probe.present:
+        return _read_result(
+            ok=False,
+            source=source,
+            state="missing_secret",
+            backend_state="ready",
+            rule="oauth_grant_missing",
+            error="the Google sign-in grant is missing from the secret store",
+            repair_command=REAUTH_WITH_CLIENT_COMMAND,
+        )
+    fields = _grant_fields(probe.value)
+    if fields is None:
+        return _read_result(
+            ok=False,
+            source=source,
+            state=go.STATE_INVALID,
+            backend_state="ready",
+            rule="oauth_grant_malformed",
+            error="the stored Google sign-in grant is unreadable; a person must sign in again",
+            repair_command=REAUTH_WITH_CLIENT_COMMAND,
+        )
+    key = (backend, ref)
+    mint = _minted.get(key)
+    if mint is None or (mint.ok and monotonic() >= mint.expires_at):
+        mint = _mint(fields)
+        _minted[key] = mint
+        if mint.ok or mint.state == STATE_REAUTH_REQUIRED:
+            _record_read_state(target, ref, reauth_required=not mint.ok)
+    if not mint.ok:
+        return _read_result(
+            ok=False,
+            source=source,
+            state=mint.state,
+            backend_state="ready",
+            rule=mint.rule,
+            error=mint.error,
+            repair_command=mint.repair_command,
+        )
+    return _read_result(
+        ok=True, source=source, state="ready", backend_state="ready", token=mint.token
+    )
+
+
+def refresh_token_expires_on(entry: dict[str, Any]) -> str:
+    """The coarse date (UTC) the recorded sign-in says its refresh token expires, or ""."""
+
+    raw = entry.get("oauth")
+    value = raw.get("refresh_token_expires_on") if isinstance(raw, dict) else None
+    return value if isinstance(value, str) and _EXPIRES_ON_RE.match(value) else ""
