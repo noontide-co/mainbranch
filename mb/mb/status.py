@@ -4234,7 +4234,7 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
     connected_integrations = [
         item
         for item in (report.get("integrations") or {}).get("providers", [])
-        if item.get("connected")
+        if item.get("configured", item.get("connected"))
     ]
     unverified_integrations = [
         item for item in connected_integrations if item.get("state") == connect_mod.UNVERIFIED_STATE
@@ -4467,7 +4467,7 @@ def _readiness(report: dict[str, Any]) -> dict[str, Any]:
     integration_repairs = [
         item
         for item in (report.get("integrations") or {}).get("providers", [])
-        if item.get("connected")
+        if item.get("configured", item.get("connected"))
         and not item["ok"]
         and item.get("state") != connect_mod.UNVERIFIED_STATE
     ]

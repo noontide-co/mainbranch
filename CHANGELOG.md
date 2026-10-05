@@ -17,6 +17,20 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `MB_CONNECT_SECRET_BACKEND`, and the dogfood harness tests print only the
   environment keys they check when an assertion fails, never the whole
   environment (#1019).
+- `mb connect <provider>` without a token, for a provider with no stored
+  secret yet, no longer records `connected: true` and a secret ref with
+  nothing behind it. The entry keeps its metadata and source, reads
+  `connected: false`, and status still reports `missing_secret` with the
+  connect command; `mb connect rotate` or `--token-stdin` connects it. Status
+  adds `configured` per provider (#991).
+- With `--json`, every `mb connect` failure now prints one JSON envelope on
+  stdout (`ok: false`, a stable `state` code, sanitized `backend_state`,
+  `repair` and `repair_command`) with the same exit code; the human message
+  stays on stderr and output without `--json` is unchanged (#973).
+- `mb connect status --json` reports a top-level `credential_backend` block
+  even with no providers, and a locked or unavailable backend no longer
+  reports `present: false` for a credential it could not check: `present` is
+  `null` and the new `presence` field reads `unknown` (#976).
 
 ### Changed
 

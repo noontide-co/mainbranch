@@ -1865,7 +1865,11 @@ def test_connect_token_rejects_json(tmp_path: Path, monkeypatch) -> None:
     )
 
     assert result.exit_code == 2
-    assert result.stdout == ""
+    # A JSON error envelope only (#973); the token never reaches JSON.
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["state"] == "json_not_supported"
+    assert "cf-test-token" not in result.output
     assert "--json is not supported" in result.stderr
 
 
@@ -4519,3 +4523,331 @@ def test_generated_agents_guidance_routes_credentials_to_exec(tmp_path: Path) ->
     assert "token to stdout" not in text
     assert "credentials -> `mb connect token`" not in text
     assert text.count("mb connect token") == text.count("`mb connect token` refuses")
+
+
+# --- #991: a tokenless first connect records no secret it never stored ---------
+
+
+def _stored_entry(repo: Path, provider_id: str) -> dict[str, Any]:
+    config = yaml.safe_load((repo / ".mb" / "connect.yaml").read_text(encoding="utf-8"))
+    return config["providers"][provider_id]
+
+
+def test_tokenless_first_connect_with_metadata_records_no_secret_ref(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = connect_mod.connect_provider("cloudflare", repo=repo, metadata_pairs=["zone_id=abc"])
+
+    entry = _stored_entry(repo, "cloudflare")
+    assert entry["connected"] is False
+    assert entry["secrets"] == {}
+    assert entry["metadata"] == {"zone_id": "abc"}
+    assert result["ok"] is False
+    status = result["status"]
+    assert status["state"] == "missing_secret"
+    assert status["repair_command"] == "mb connect cloudflare --token-stdin"
+    assert status["connected"] is False
+    assert status["configured"] is True
+    assert status["secrets"]["api_token"]["ref"] == ""
+    assert status["secrets"]["api_token"]["backend"] == ""
+
+    cli = runner.invoke(app, ["connect", "status", "--repo", str(repo), "--json"])
+
+    # Still counted and still actionable, so status keeps exiting 1.
+    assert cli.exit_code == 1, cli.output
+    payload = json.loads(cli.stdout)
+    assert payload["summary"]["configured"] == 1
+    assert payload["summary"]["needs_repair"] == 1
+    assert payload["providers"][0]["state"] == "missing_secret"
+
+
+def test_tokenless_first_connect_with_source_then_rotate_connects(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    _ok_http(monkeypatch)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    source = "op://Business/Cloudflare/credential"
+
+    first = runner.invoke(
+        app,
+        ["connect", "cloudflare", "--source", source, "--repo", str(repo), "--json"],
+        input="",
+    )
+
+    assert first.exit_code == 1, first.output
+    assert json.loads(first.stdout)["status"]["state"] == "missing_secret"
+    entry = _stored_entry(repo, "cloudflare")
+    assert entry["connected"] is False
+    assert entry["secrets"] == {}
+    assert entry["metadata"] == {"source": source}
+
+    run, calls = _fake_op("cf-rotated-token")
+    rotated = connect_mod.rotate_provider(
+        "cloudflare", repo, which_func=lambda name: f"/usr/bin/{name}", command_runner=run
+    )
+
+    assert calls == [["op", "read", "--no-newline", source]]
+    assert rotated["stored"] is True
+    entry = _stored_entry(repo, "cloudflare")
+    assert entry["connected"] is True
+    assert entry["secrets"]["api_token"]["ref"]
+    assert connect_mod.read_token("cloudflare", repo)["token"] == "cf-rotated-token"
+
+
+def test_tokenless_reconnect_keeps_existing_connected_entry(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, token="cf-test-token")
+    before = _stored_entry(repo, "cloudflare")["secrets"]
+
+    connect_mod.connect_provider("cloudflare", repo=repo, metadata_pairs=["zone_id=abc"])
+
+    entry = _stored_entry(repo, "cloudflare")
+    assert entry["connected"] is True
+    assert entry["secrets"] == before
+    assert entry["metadata"] == {"zone_id": "abc"}
+    assert connect_mod.read_token("cloudflare", repo)["token"] == "cf-test-token"
+
+
+def test_entry_written_with_a_dangling_ref_still_reads_missing_secret(
+    tmp_path: Path, monkeypatch
+) -> None:
+    # The shape releases before #991 wrote for a tokenless first connect.
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    (repo / ".mb").mkdir(parents=True)
+    (repo / ".mb" / "connect.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "version": 1,
+                "providers": {
+                    "cloudflare": {
+                        "provider": "cloudflare",
+                        "connected": True,
+                        "scope": "repo",
+                        "secrets": {
+                            "api_token": {
+                                "ref": "mainbranch:connect:demo:cloudflare:api_token",
+                                "backend": "local-file",
+                            }
+                        },
+                        "metadata": {"zone_id": "abc"},
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    status = connect_mod.status_provider("cloudflare", repo)
+
+    assert status["state"] == "missing_secret"
+    assert status["connected"] is True
+    assert status["configured"] is True
+    assert status["secrets"]["api_token"]["present"] is False
+    assert status["secrets"]["api_token"]["presence"] == "absent"
+    assert status["repair_command"] == "mb connect cloudflare --token-stdin"
+
+
+# --- #973: every --json failure prints one envelope on stdout --------------------
+
+
+def _assert_json_failure(result: Any, *, exit_code: int, state: str) -> dict[str, Any]:
+    assert result.exit_code == exit_code, (result.stdout, result.stderr)
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["state"] == state
+    assert payload["result_status"] == "error"
+    assert payload["errors"][0]["code"] == state
+    assert payload["exit_code"] == exit_code
+    assert payload["mb_command"].startswith("mb connect")
+    assert payload["safe_to_share"] is True
+    # The human text is unchanged and stays on stderr.
+    assert result.stderr.startswith(payload["mb_command"] + ": ")
+    return payload
+
+
+@pytest.mark.parametrize(
+    ("argv", "exit_code", "state"),
+    [
+        (["status", "no-such-provider"], 2, "invalid_request"),
+        (["test"], 2, "usage_error"),
+        (["rotate"], 2, "usage_error"),
+        (["token", "cloudflare"], 2, "json_not_supported"),
+        (["exec", "cloudflare", "--", "true"], 2, "json_not_supported"),
+        (["repair"], 2, "usage_error"),
+        (["repair", "--keychain"], 2, "needs_terminal"),
+        (["status", "cloudflare", "extra-arg"], 2, "usage_error"),
+        (["stripe", "--from-env"], 1, "missing_env_credential"),
+    ],
+)
+def test_connect_json_failure_paths_print_an_envelope(
+    tmp_path: Path, monkeypatch, argv: list[str], exit_code: int, state: str
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    # Options first, so the exec case's `--` keeps them out of its command.
+    with_json = runner.invoke(app, ["connect", "--repo", str(repo), "--json", *argv], input="")
+    plain = runner.invoke(app, ["connect", "--repo", str(repo), *argv], input="")
+
+    _assert_json_failure(with_json, exit_code=exit_code, state=state)
+    if state == "json_not_supported":
+        return  # Only --json itself fails here; the plain run is another command.
+    # Without --json nothing changes: stdout stays empty, same exit, same text.
+    assert plain.exit_code == exit_code
+    assert plain.stdout == ""
+    assert plain.stderr == with_json.stderr
+
+
+def test_connect_json_refusal_names_its_rule_without_the_value(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    leaked = FAKE_SECRET_VALUES["credential_prefix:sk_"]
+
+    result = runner.invoke(
+        app, ["connect", "stripe", "--source", leaked, "--repo", str(repo), "--json"], input=""
+    )
+
+    payload = _assert_json_failure(result, exit_code=2, state="refused")
+    assert payload["rule"] == "source_secret_value"
+    assert leaked not in result.output
+
+
+@pytest.mark.parametrize(
+    ("native_state", "backend_state"),
+    [("locked", "keychain_locked"), ("unavailable", "keychain_unavailable")],
+)
+def test_connect_json_backend_failure_carries_sanitized_state(
+    tmp_path: Path, monkeypatch, native_state: str, backend_state: str
+) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "macos-keychain")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    _fake_native_store(monkeypatch, native_state)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(
+        app,
+        ["connect", "resend", "--token-stdin", "--repo", str(repo), "--json"],
+        input="re_secret_token\n",
+    )
+
+    payload = _assert_json_failure(result, exit_code=1, state="backend_unavailable")
+    assert payload["backend_state"] == backend_state
+    assert payload["repair_command"] == connect_mod._backend_repair(backend_state)["repair_command"]
+    assert "Nothing was stored" in payload["summary"]
+    assert "re_secret_token" not in result.output
+    assert not (repo / ".mb" / "connect.yaml").exists()
+
+
+def test_connect_json_unexpected_error_prints_an_envelope(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    def boom(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise KeyError("sk_live_should_never_print")
+
+    monkeypatch.setattr(connect_mod, "status_all", boom)
+
+    result = runner.invoke(app, ["connect", "status", "--repo", str(repo), "--json"])
+
+    payload = _assert_json_failure(result, exit_code=1, state="unexpected_error")
+    assert "KeyError" in payload["summary"]
+    assert "sk_live_should_never_print" not in result.output
+
+
+# --- #976: backend health without providers; unknown is not absent -------------
+
+
+def test_status_reports_backend_health_with_no_providers(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(app, ["connect", "status", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["providers"] == []
+    backend = payload["credential_backend"]
+    assert backend["backend"] == "local-file"
+    assert backend["ok"] is True
+    assert backend["state"] == "ready"
+
+
+def test_status_reports_locked_backend_with_no_providers(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "macos-keychain")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    _fake_native_store(monkeypatch, "locked")
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    status = connect_mod.status_all(repo)
+
+    assert status["providers"] == []
+    backend = status["credential_backend"]
+    assert backend["backend"] == "macos-keychain"
+    assert backend["ok"] is False
+    assert backend["state"] == "keychain_locked"
+    assert backend["repair_command"].startswith("security unlock-keychain")
+    assert '"locked"' not in json.dumps(backend)
+
+
+def test_locked_backend_reports_presence_unknown_not_absent(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("resend", repo=repo, token="re_secret_token")
+    config_path = repo / ".mb" / "connect.yaml"
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    config["providers"]["resend"]["secrets"]["api_key"]["backend"] = "macos-keychain"
+    config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
+    _fake_native_store(monkeypatch, "locked")
+
+    status = connect_mod.status_all(repo)
+
+    secret = status["providers"][0]["secrets"]["api_key"]
+    assert secret["present"] is None
+    assert secret["presence"] == "unknown"
+    assert secret["backend_ok"] is False
+    assert secret["backend_state"] == "keychain_locked"
+    assert status["providers"][0]["state"] == "backend_unavailable"
+    assert status["credential_backend"]["ok"] is False
+    assert status["credential_backend"]["state"] == "keychain_locked"
+    assert "re_secret_token" not in json.dumps(status)
+
+
+def test_ready_and_missing_secrets_report_known_presence(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("resend", repo=repo, token="re_secret_token")
+    connect_mod.connect_provider("cloudflare", repo=repo, metadata_pairs=["zone_id=abc"])
+
+    status = connect_mod.status_all(repo)
+
+    by_id = {item["provider"]: item for item in status["providers"]}
+    stored = by_id["resend"]["secrets"]["api_key"]
+    assert (stored["present"], stored["presence"]) == (True, "present")
+    missing = by_id["cloudflare"]["secrets"]["api_token"]
+    assert (missing["present"], missing["presence"]) == (False, "absent")
+    assert status["credential_backend"] == {
+        "backend": "local-file",
+        "ok": True,
+        "state": "ready",
+        "summary": "Configured credential backend(s) are ready: local-file.",
+        "repair": "",
+        "repair_command": "",
+        "safe_to_share": True,
+    }

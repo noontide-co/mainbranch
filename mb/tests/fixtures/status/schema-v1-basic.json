@@ -90,6 +90,7 @@
     ],
     "integrations": [
       "config_path",
+      "credential_backend",
       "github",
       "ok",
       "providers",

@@ -114,7 +114,9 @@ that fails decides the code:
 | 2 | Usage error, or a refusal other than the stdout gate (unknown provider, no secret slot). |
 | 3 | Refused by design: stdout is a terminal or a pipe and `--print` was not given. Checked before the provider is looked up. |
 
-`--json` is not supported: the token is the whole stdout contract.
+`--json` is not supported: the token is the whole stdout contract. Passing it
+exits 2 and prints only a `json_not_supported` error envelope (see
+[JSON on failure](#json-on-failure)); the token is never in JSON.
 
 ### Breaking in 0.6.0 (not flagged at the time)
 
@@ -203,6 +205,77 @@ Metadata written before this behavior existed recorded `ready` without
 recording whether a provider was called, so it reads as `stored, unverified`
 until `mb connect test` runs once more. Nothing is rewritten, and a provider
 with a real probe returns to `ready` after one re-test.
+
+### Configured, connected, present
+
+Each provider in `mb connect status --json` separates what is recorded from
+what is stored:
+
+- `configured`: the repo or user scope has an entry for the provider. Status
+  counts, `summary.configured`, and the exit code cover every configured
+  provider.
+- `connected`: a credential was stored when the entry was written. A connect
+  without a token for a provider that has none yet, for example
+  `mb connect cloudflare --metadata zone_id=...` or
+  `mb connect stripe --source op://...`, records the metadata and source only:
+  `connected: false`, no secret ref, and state `missing_secret` with the
+  connect command as repair. `mb connect rotate` or a connect with
+  `--token-stdin` then stores the secret and sets `connected: true`. A
+  tokenless reconnect of an entry that already has a secret keeps its ref.
+  Entries written by earlier releases with a ref and nothing behind it keep
+  reading as `missing_secret`.
+- `secrets.<field>.presence`: `present`, `absent`, or `unknown`. `unknown`
+  means the credential backend could not answer (`backend_ok: false`, with
+  the reason in `backend_state`); `present` is then `null`, never `false`.
+  `present: false` always means the credential is known to be absent.
+
+`mb connect status --json` also carries a top-level `credential_backend`
+block (`backend`, `ok`, `state`, `summary`, `repair`, `repair_command`), even
+with no provider connected. With recorded secrets it reuses their probes;
+otherwise it checks the backend a new connect would use, so a locked or
+missing store shows before the first connect fails on it. It is information
+only: it does not change `ok`, the summary counts, or the exit code.
+
+## JSON on failure
+
+With `--json`, every `mb connect` failure that exits non-zero without a
+result also prints one JSON object on stdout, with the shared
+[result envelope](json-output-contract.md) fields. The human message stays on
+stderr unchanged, and the exit code is the same as without `--json`. Without
+`--json` nothing changes: stdout stays empty.
+
+```json
+{
+  "ok": false,
+  "state": "backend_unavailable",
+  "backend_state": "keychain_locked",
+  "summary": "...",
+  "repair": "...",
+  "repair_command": "security unlock-keychain ~/Library/Keychains/login.keychain-db",
+  "exit_code": 1,
+  "safe_to_share": true,
+  "errors": [{"code": "backend_unavailable", "message": "..."}],
+  "mb_command": "mb connect",
+  "result_status": "error"
+}
+```
+
+`state` (and `errors[0].code`) is stable for scripts:
+
+| `state` | Exit | Meaning |
+| --- | --- | --- |
+| `usage_error` | 2 | Missing provider, extra argument, or missing `--keychain`. |
+| `json_not_supported` | 2 | `--json` on `token` or `exec`, whose stdout belongs to the value or the command. |
+| `needs_terminal` | 2 | `repair --keychain` without a terminal. |
+| `refused` | 2, or 3 for `token` | A policy refusal; `rule` names it, for example `source_secret_value`. |
+| `invalid_request` | 2 | Unknown provider or another rejected request. |
+| `config_boundary`, `config_corrupt` | 2 | `.mb/connect.yaml` is outside the repo or cannot be parsed. |
+| `backend_unavailable` | 1 | The credential backend failed; `backend_state` is the sanitized reason. Nothing was stored. |
+| `missing_env_credential` | 1 | `--from-env` found none of the provider's variables. |
+| `connect_failed` | 1 | Another runtime failure. |
+| `unexpected_error` | 1 | An unexpected error; details are hidden because they may hold a secret. |
+
+No envelope carries a secret value or raw backend output.
 
 ## Probes
 

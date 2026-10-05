@@ -29,6 +29,19 @@ def isolated_state_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None
 
 
 @pytest.fixture(autouse=True)
+def isolated_credential_backend(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep every test away from the operator's own credential store.
+
+    `mb connect status` probes credential-backend health even with no
+    provider connected, so without this a status-reading test would ask the
+    real Keychain or Secret Service. Tests that need another backend set it.
+    """
+
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "mainbranch-home"))
+
+
+@pytest.fixture(autouse=True)
 def stable_runtime_mb_probe(monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep Codex runtime readiness tests independent of the host PATH."""
 
