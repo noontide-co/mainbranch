@@ -550,7 +550,7 @@ def _safe_identity_metadata(metadata: dict[str, Any]) -> dict[str, str]:
         lowered = key.lower().replace("-", "_")
         if key in recorded or value is None or value == "":
             continue
-        if metadata_value_rule(str(value)):
+        if metadata_value_rule(str(value)) or metadata_value_rule(key):
             continue
         if lowered not in SAFE_METADATA_KEYS and any(
             part in lowered for part in SENSITIVE_KEY_PARTS
@@ -575,7 +575,9 @@ def _safe_status_metadata(metadata: dict[str, Any]) -> dict[str, str]:
         if raw_value is None or raw_value == "":
             continue
         value = str(raw_value)
-        if metadata_value_rule(value):
+        # A key that is itself secret-shaped is dropped like a secret value:
+        # this output is marked safe to share.
+        if metadata_value_rule(value) or metadata_value_rule(key):
             continue
         if key.lower().replace("-", "_") not in SAFE_METADATA_KEYS:
             flagged, _reason = _classify_credential_value(key, value)
@@ -1371,6 +1373,15 @@ def _parse_metadata(pairs: list[str]) -> dict[str, str]:
                 f"looks like a secret (rule: {rule}). "
                 "Nothing was stored. Pass the credential with --token-stdin; "
                 "metadata holds labels and ids only.",
+            )
+        key_rule = metadata_value_rule(key)
+        if key_rule:
+            _refuse(
+                "metadata_secret_key",
+                f"metadata key {HIDDEN_INPUT} (--metadata argument {position}) "
+                f"looks like a secret (rule: {key_rule}). "
+                "Nothing was stored. Pass the credential with --token-stdin; "
+                "metadata keys are names such as zone_id.",
             )
         metadata[key] = value
     return metadata

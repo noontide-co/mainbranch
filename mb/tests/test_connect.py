@@ -5156,3 +5156,113 @@ def test_google_user_scope_oauth_grant_survives_hydrate(tmp_path: Path, monkeypa
     item = hydrated["statuses"][0]
     assert item["credential_mode"] == "oauth"
     assert item["secrets"][connect_mod.GOOGLE_OAUTH_GRANT_SLOT]["presence"] == "present"
+
+
+def _tree_snapshot(root: Path) -> dict[str, bytes]:
+    if not root.exists():
+        return {}
+    return {str(path): path.read_bytes() for path in sorted(root.rglob("*")) if path.is_file()}
+
+
+@pytest.mark.parametrize("json_flag", [["--json"], []])
+@pytest.mark.parametrize("with_token", [False, True], ids=["tokenless", "token"])
+def test_connect_refuses_a_credential_shaped_metadata_key(
+    tmp_path: Path, monkeypatch, with_token: bool, json_flag: list[str]
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, metadata_pairs=["zone_id=demo-zone"])
+    before = (_tree_snapshot(repo / ".mb"), _tree_snapshot(tmp_path / "home"))
+    dummy = STDERR_DUMMY_CREDENTIAL
+    token_args = ["--token-stdin"] if with_token else []
+
+    result = runner.invoke(
+        app,
+        [
+            "connect",
+            "cloudflare",
+            *token_args,
+            "--metadata",
+            f"{dummy}=a-label",
+            "--repo",
+            str(repo),
+            *json_flag,
+        ],
+        input="cf-fixture-token-0000" if with_token else "",
+    )
+
+    # Booleans only, so a failure never prints the dummy or the output.
+    after = (_tree_snapshot(repo / ".mb"), _tree_snapshot(tmp_path / "home"))
+    refused = result.exit_code == 2
+    on_stdout = dummy in result.stdout
+    on_stderr = dummy in result.stderr
+    marked = connect_mod.HIDDEN_INPUT in result.stderr
+    unchanged = before == after
+    assert (refused, on_stdout, on_stderr, marked, unchanged) == (True, False, False, True, True)
+    if json_flag:
+        payload = _assert_json_failure(result, exit_code=2, state="refused")
+        assert payload["rule"] == "metadata_secret_key"
+
+
+def test_connect_metadata_keys_like_zone_id_still_work(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(
+        app,
+        [
+            "connect",
+            "cloudflare",
+            "--metadata",
+            "zone_id=demo-zone",
+            "--metadata",
+            "account_id=demo-account",
+            "--repo",
+            str(repo),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code in {0, 1}, result.output
+    assert connect_mod.read_metadata("cloudflare", repo) == {
+        "zone_id": "demo-zone",
+        "account_id": "demo-account",
+    }
+
+
+def test_status_and_identity_hide_a_stored_credential_shaped_metadata_key(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, metadata_pairs=["zone_id=demo-zone"])
+    connect_mod.connect_provider(
+        "mercury",
+        repo=repo,
+        token="mercury-fixture-token",
+        metadata_pairs=["role=operating_cash_source"],
+        custom=True,
+    )
+    dummy = STDERR_DUMMY_CREDENTIAL
+    # Stored by hand (or by an older mb that accepted it).
+    config_path = repo / ".mb" / "connect.yaml"
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    config["providers"]["cloudflare"]["metadata"][dummy] = "a-label"
+    config["providers"]["mercury"]["metadata"][dummy] = "a-label"
+    config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
+
+    status = runner.invoke(app, ["connect", "status", "--repo", str(repo), "--json"])
+    identity = runner.invoke(app, ["connect", "identity", "--repo", str(repo), "--json"])
+
+    # Booleans only, so a failure never prints the dummy or the output.
+    in_status = dummy in status.output
+    in_identity = dummy in identity.output
+    assert (in_status, in_identity) == (False, False)
+    by_id = {item["provider"]: item for item in json.loads(status.stdout)["providers"]}
+    assert by_id["cloudflare"]["metadata"]["zone_id"] == "demo-zone"
+    assert by_id["cloudflare"]["safe_to_share"] is True
+    identities = {item["provider"]: item for item in json.loads(identity.stdout)["providers"]}
+    assert identities["mercury"]["identity"]["role"] == "operating_cash_source"

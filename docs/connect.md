@@ -287,6 +287,12 @@ input that could be a credential: a metadata key, provider name, extra argument
 or command that looks like a secret is replaced with
 `(not shown: it may be a credential)`, and a refused metadata pair is also
 named by its `--metadata` position.
+A metadata key that looks like a secret is refused (rule
+`metadata_secret_key`) and nothing is stored, and one already in
+`.mb/connect.yaml` is left out of status and identity output. Usage errors that
+come from argument parsing itself (an unknown option, an unexpected extra
+argument, an invalid value) exit 2 with the usage line and no JSON envelope,
+and get the same replacement.
 
 ## Probes
 
