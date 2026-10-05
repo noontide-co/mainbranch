@@ -117,10 +117,12 @@ jobs:
           PY
 
   minimum-dependencies:
-    # Installs every runtime dependency at the lowest version mb/pyproject.toml
-    # allows (and their own dependencies at their floors) on the lowest
-    # supported Python, then loads the CLI. Catches a declared floor that mb
-    # cannot actually run on (#997). No secrets; read-only token.
+    # Installs every runtime dependency mb/pyproject.toml declares at its
+    # lowest allowed version on the lowest supported Python, then loads the
+    # CLI. `lowest-direct`, not `lowest`: transitive floors (for example
+    # cryptography 2.0 under SecretStorage on Linux) no longer build.
+    # Catches a declared floor that mb cannot actually run on (#997).
+    # No secrets; read-only token.
     name: Minimum dependency floors
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -144,7 +146,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install "uv==0.12.22"
           uv venv --python "$(command -v python)" .venv-min
-          uv pip install --python .venv-min/bin/python --resolution lowest .
+          uv pip install --python .venv-min/bin/python --resolution lowest-direct .
           uv pip list --python .venv-min/bin/python
 
       - name: Smoke — mb --help and mb skill list load on the floors

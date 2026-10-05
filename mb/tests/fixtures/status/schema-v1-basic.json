@@ -212,6 +212,7 @@
     "update": [
       "checked_at",
       "command",
+      "install_mode",
       "installed",
       "latest",
       "latest_source",
