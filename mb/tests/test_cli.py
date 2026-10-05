@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from typer.testing import CliRunner
 
@@ -121,9 +123,12 @@ def test_init_output_points_to_connected_accounts_guidance(tmp_path) -> None:
 USAGE_DUMMY_CREDENTIAL = "sk_live_" + "Q" * 32
 
 
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
 def _flat(text: str) -> str:
-    """Text without whitespace or panel borders, so a wrapped line still matches."""
-    return "".join(ch for ch in text if not ch.isspace() and ch not in "│╭╮╰╯─")
+    """Text without colour codes, whitespace or panel borders (matches wrapped, coloured lines)."""
+    return "".join(ch for ch in _ANSI.sub("", text) if not ch.isspace() and ch not in "│╭╮╰╯─")
 
 
 @pytest.mark.parametrize(
@@ -163,6 +168,6 @@ def test_usage_errors_still_show_an_ordinary_typo(argv: list[str], typo: str) ->
     result = runner.invoke(app, argv)
 
     assert result.exit_code == 2
-    assert typo in result.stderr
-    assert "not shown" not in result.stderr
-    assert "Usage:" in result.stderr
+    assert typo in _flat(result.stderr)
+    assert "notshown" not in _flat(result.stderr)
+    assert "Usage:" in _flat(result.stderr)
