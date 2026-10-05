@@ -88,6 +88,36 @@ business verb, a required object, and an optional result segment:
 the shortened example above is illustrative. `legacy_prefixes` are readable in
 history but are not accepted for new checkpoint subjects.
 
+### Operator Actions
+
+`mb update --json` and `mb doctor repair --json` include an `operator_actions`
+list: steps that change tracked files in the business repo, so a person runs
+them at a terminal. An agent shows each entry to the person and never runs it,
+even when it runs `next_actions` or applies doctor repairs. Each entry has:
+
+- `command`: the command for the person to run.
+- `changes`: the tracked files the command writes.
+- `note`: a short explanation for the person.
+
+Today the only entry is the plugin-rail switch for a repo still on
+symlink-only skill wiring:
+
+```json
+{
+  "operator_actions": [
+    {
+      "command": "mb skill link --repo . --plugin",
+      "changes": [".claude/settings.json"],
+      "note": "For a person to run at a terminal, not an agent: ..."
+    }
+  ]
+}
+```
+
+The list is empty when there is nothing for a person to run.
+`mb doctor repair --apply` never performs an operator action, and
+`mb doctor repair --only codex` leaves the plugin switch out.
+
 ### MoneyPath Proof Quality
 
 `money_path.objects.proof` has two layers:

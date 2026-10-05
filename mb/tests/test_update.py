@@ -2083,7 +2083,12 @@ def test_update_surfaces_plugin_migration_for_symlink_era_repo(
     result = update_mod.run(repo=tmp_path / "biz", check=True)
 
     assert result["plugin_rail"]["wired"] is False
-    assert any("symlink-only skill wiring" in w for w in result["warnings"])
+    warning = next(w for w in result["warnings"] if "symlink-only skill wiring" in w)
+    # #1042: the warning points to `operator_actions` and names no command an
+    # agent could read as its own step.
+    assert "operator_actions" in warning
+    assert "mb skill link" not in warning
+    assert "mb doctor repair" not in warning
     # #1023: the switch writes a tracked file, so it is a step for a person,
     # never an unattended next action an agent might run.
     assert not any("--plugin" in action for action in result["next_actions"])

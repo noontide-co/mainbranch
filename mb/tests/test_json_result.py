@@ -261,6 +261,24 @@ def test_doctor_repair_json_preserves_domain_schema_shape(tmp_path: Path) -> Non
     assert payload["mode"] == "plan"
 
 
+def test_operator_actions_are_documented_and_emitted(tmp_path: Path) -> None:
+    # #1042: `operator_actions` is a documented JSON field on `mb update` and
+    # `mb doctor repair`, and agents are told never to run its entries.
+    doc = (Path(__file__).resolve().parents[2] / "docs" / "json-output-contract.md").read_text()
+    section = doc.split("### Operator Actions", 1)[1].split("\n### ", 1)[0]
+    assert "`mb update --json`" in section
+    assert "`mb doctor repair --json`" in section
+    assert "never runs it" in section
+    for key in ("`command`", "`changes`", "`note`"):
+        assert key in section
+
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+    payload = _load_json(result)
+    assert payload["operator_actions"] == []
+
+
 def test_onboard_json_uses_shared_result_envelope(tmp_path: Path, monkeypatch: Any) -> None:
     monkeypatch.setattr(onboard_mod, "_which", _tool_path)
     monkeypatch.setattr(onboard_mod, "is_interactive", lambda: False)

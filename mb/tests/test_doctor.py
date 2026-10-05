@@ -2057,19 +2057,24 @@ def test_doctor_guard_passes_business_folders(tmp_path: Path) -> None:
     assert len(plan["sections"]) > 1
 
 
-def test_doctor_repair_apply_migrates_symlink_era_repo_to_plugin(tmp_path: Path) -> None:
-    # Stage 3 (decision 2026-06-10): doctor repair backfills the plugin rail on
-    # a symlink-era repo that has no plugin wiring yet.
+def test_doctor_repair_apply_never_switches_symlink_era_repo_to_plugin(tmp_path: Path) -> None:
+    # #1042: the plugin-rail switch writes tracked `.claude/settings.json`, so
+    # it is a step for a person (M22 on #1023). An agent running
+    # `repair --apply` must never switch a repo's wiring, under any scope.
     repo = tmp_path / "biz"
     init_run(path=str(repo), name="Acme")
     # Simulate symlink-era: remove the plugin wiring init now writes by default.
     (repo / ".claude" / "settings.json").unlink()
     assert engine_mod.plugin_wiring_status(repo)["wired"] is False
 
-    applied = doctor_mod.repair_apply(repo=repo, only="claude")
-    applied_actions = {action["id"]: action for action in applied["applied_actions"]}
-    assert "plugin-wiring" in applied_actions
-    assert engine_mod.plugin_wiring_status(repo)["wired"] is True
+    for scope in ({"only": "claude"}, {"all_agents": True}, {}):
+        applied = doctor_mod.repair_apply(repo=repo, **scope)
+        assert "plugin-wiring" not in {action["id"] for action in applied["applied_actions"]}
+        assert engine_mod.plugin_wiring_status(repo)["wired"] is False
+        assert not (repo / ".claude" / "settings.json").exists()
+        assert [item["command"] for item in applied["operator_actions"]] == [
+            "mb skill link --repo . --plugin"
+        ]
 
 
 def test_doctor_claude_code_detail_is_plugin_first_when_missing(
@@ -2101,20 +2106,30 @@ def test_doctor_claude_code_detail_is_path_when_present(tmp_path: Path, monkeypa
     assert check["detail"] == "/usr/local/bin/claude"
 
 
-def test_doctor_repair_plan_surfaces_plugin_wiring_on_symlink_era_repo(tmp_path: Path) -> None:
-    # Plan/apply parity: on a symlink-healthy-but-unwired repo, `--plan` must
-    # show the plugin-wiring action that `--apply` would perform — otherwise the
-    # write happens without preview (the contract doctor itself instructs).
+def test_doctor_repair_plan_lists_plugin_switch_for_a_person(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # #1042: on a symlink-era repo the plan reports the plugin-rail switch the
+    # way `mb update` does: in `operator_actions`, never as a repair action.
     repo = tmp_path / "biz"
     init_run(path=str(repo), name="Acme")
     (repo / ".claude" / "settings.json").unlink()
     assert engine_mod.plugin_wiring_status(repo)["wired"] is False
 
     plan = doctor_mod.repair_plan(repo, only="claude")
-    actions = {action["id"]: action for action in plan["actions"]}
-    assert "plugin-wiring" in actions
-    assert actions["plugin-wiring"]["mode"] == "write"
-    assert ".claude/settings.json" in actions["plugin-wiring"]["writes"]
+    assert not any("--plugin" in action["command"] for action in plan["actions"])
+    assert plan["operator_actions"] == [engine_mod.plugin_switch_operator_action()]
+    assert plan["operator_actions"][0]["changes"] == [".claude/settings.json"]
+    assert "not an agent" in plan["operator_actions"][0]["note"]
+
+    bare = doctor_mod.repair_plan(repo)
+    assert bare["operator_actions"] == plan["operator_actions"]
+    assert doctor_mod.repair_plan(repo, only="codex")["operator_actions"] == []
+
+    doctor_mod.render_repair(plan)
+    out = capsys.readouterr().out
+    assert "For you to run" in out
+    assert "mb skill link --repo . --plugin" in out
 
 
 def test_doctor_repair_plan_omits_plugin_wiring_when_already_wired(tmp_path: Path) -> None:
@@ -2124,6 +2139,7 @@ def test_doctor_repair_plan_omits_plugin_wiring_when_already_wired(tmp_path: Pat
 
     plan = doctor_mod.repair_plan(repo, only="claude")
     assert "plugin-wiring" not in {action["id"] for action in plan["actions"]}
+    assert plan["operator_actions"] == []
 
 
 def test_doctor_repair_apply_already_wired_is_noop_for_plugin(tmp_path: Path) -> None:
@@ -2134,25 +2150,3 @@ def test_doctor_repair_apply_already_wired_is_noop_for_plugin(tmp_path: Path) ->
 
     applied = doctor_mod.repair_apply(repo=repo, only="claude")
     assert "plugin-wiring" not in {action["id"] for action in applied["applied_actions"]}
-
-
-def test_doctor_repair_apply_plugin_migration_requires_claude_scope(tmp_path: Path) -> None:
-    # Pin the scope contract: only `--only claude` / `--all-agents` migrate the
-    # plugin. Bare `--apply` and `--only codex` do NOT (matching skill-link).
-    # See issue #931 for the UX question this raises.
-    repo = tmp_path / "biz"
-    init_run(path=str(repo), name="Acme")
-    (repo / ".claude" / "settings.json").unlink()
-    assert engine_mod.plugin_wiring_status(repo)["wired"] is False
-
-    codex_only = doctor_mod.repair_apply(repo=repo, only="codex")
-    assert "plugin-wiring" not in {action["id"] for action in codex_only["applied_actions"]}
-    assert engine_mod.plugin_wiring_status(repo)["wired"] is False
-
-    bare = doctor_mod.repair_apply(repo=repo)
-    assert "plugin-wiring" not in {action["id"] for action in bare["applied_actions"]}
-    assert engine_mod.plugin_wiring_status(repo)["wired"] is False
-
-    scoped = doctor_mod.repair_apply(repo=repo, all_agents=True)
-    assert "plugin-wiring" in {action["id"] for action in scoped["applied_actions"]}
-    assert engine_mod.plugin_wiring_status(repo)["wired"] is True

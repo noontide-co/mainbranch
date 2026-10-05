@@ -47,6 +47,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   repeating it, and stores nothing. A key like that already in
   `.mb/connect.yaml` no longer appears in `mb connect status` or
   `mb connect identity` output (#1033).
+- `mb doctor repair --apply` no longer switches a symlink-era repo to the
+  plugin rail. `mb doctor repair` now lists the switch in a new
+  `operator_actions` field, the way `mb update` does, for a person to run at a
+  terminal; `mb update`'s symlink-only warning points there instead of naming
+  commands; and `docs/json-output-contract.md` documents `operator_actions`
+  (#1042).
 - `mainbranch` now requires `pyyaml>=6.0.1`. PyYAML 6.0 does not build on
   Python 3.12, and the minimum-dependency CI job now also runs on 3.12 so a
   floor like that fails the PR (#1028).
