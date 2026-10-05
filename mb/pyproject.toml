@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mainbranch"
-version = "0.5.3"
+version = "0.6.3"
 description = "Main Branch engine umbrella - scaffolds, validates, and graphs business-as-files repos. Claude Code first, runtime-agnostic by design."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -34,7 +34,7 @@ classifiers = [
 ]
 dependencies = [
   "openai>=1.0",
-  "typer>=0.12",
+  "typer>=0.15.4",
   "pyyaml>=6.0",
   "rich>=13.0",
   "SecretStorage>=3.5; sys_platform == 'linux'",

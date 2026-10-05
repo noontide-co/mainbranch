@@ -19,8 +19,10 @@ Main Branch already ships:
 
 - public PyPI package and MIT-licensed engine;
 - `mb onboard`, `mb init`, `mb status`, `mb start`, `mb update`, `mb doctor`,
-  `mb graph`, `mb validate`, `mb migrate`, `mb connect`, and skill management
-  commands;
+  `mb graph`, `mb validate`, `mb migrate`, `mb connect` (including `mb connect
+  exec`, which runs a command with a credential the agent does not retrieve),
+  `mb fleet` (read-only status of every site across your hubs), `mb feedback`
+  (local friction log with a weekly rollup), and skill management commands;
 - `mb doctor repair --plan` / `--apply` and migration drift detection across
   `mb validate` and `mb doctor` for stale generated guidance, legacy
   active-write folders, stale Claude settings, wrong push/playbook paths, and
@@ -143,9 +145,10 @@ The work clusters into a few durable buckets:
   explicit, tested rails with approval gates where money, publishing, account
   mutation, or customer contact is involved. Meta Ads has read-only readiness
   and compact summary rails; broader provider mutation remains out of scope.
-- **Issue and friction capture.** Confusing errors, missing workflows, and
-  repeated repair steps should turn into privacy-safe issue drafts so real use
-  improves the public engine.
+- **Issue and friction capture.** `mb issue` drafts privacy-safe issues and
+  `mb feedback` logs friction locally, including `mb connect` refusals, with a
+  weekly rollup. Next direction is turning repeated friction into issue drafts
+  so real use improves the public engine.
 
 Current public implementation anchors are GitHub issues, not promises in this
 roadmap. Check live issues before using any anchor as current scope. For this

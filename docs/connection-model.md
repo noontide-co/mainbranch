@@ -17,8 +17,11 @@ APIs, and niche SaaS tools before Main Branch has native wrappers.
 - Secret values live outside git through one credential-store interface. Auto
   selection uses the macOS login Keychain or Linux Secret Service and never
   silently falls back to a plaintext local file.
-- `mb connect token <provider>` gives scripts one narrow credential read path
-  that prints only the token to stdout.
+- `mb connect exec <provider> -- <command>` runs one command with the
+  credential in its environment only, so agents and scripts use a secret
+  without ever seeing it. `mb connect token <provider>` remains the raw read
+  path for scripts that write to a file, and refuses terminals and pipes
+  (exit 3) unless `--print` is passed.
 - `status`, `doctor`, `list`, `identity`, `hygiene`, and `test` give agents
   facts without copying credentials into chat or workpapers.
 - User scope lets worktrees and scheduled jobs resolve the same credential
@@ -40,6 +43,14 @@ APIs, and niche SaaS tools before Main Branch has native wrappers.
   `repo_id`-indexed; rotation now preserves the same boundary.
 - A desktop-unlocked macOS Keychain did not imply that an already-running
   remote security session was unlocked.
+- macOS Keychain items trusted the exact Python that created them. uv's Python
+  builds are unsigned, so every Python change brought back an access dialog
+  that unattended reads waited on until the safety deadline. Credentials now
+  live in items owned by Apple-signed `/usr/bin/security`, existing items move
+  there on their first successful read through a staged copy that is never
+  removed before the final item reads back, and unattended reads fail fast
+  with `keychain_prompt_pending` instead of waiting on a dialog. A hand-edited
+  item access list can still raise a dialog; the command deadline bounds it.
 - `ready` was reported for providers that were never called, so it meant "a
   credential is stored" rather than "this credential works". Storage and
   verification are now separate facts.
@@ -60,11 +71,14 @@ APIs, and niche SaaS tools before Main Branch has native wrappers.
 4. **Record identity metadata.** Record non-secret facts that prevent agents
    from guessing: role, access level, data domain, auth state, account label,
    workspace, environment, or provider-specific ids when safe for the repo.
-5. **Use token in scripts.** Scripts call `mb connect token <provider>` and
-   keep its exact stdout in memory or a pipe. They do not put tokens in child
-   argv, echo them, enable shell trace, write env files, or commit raw exports.
+5. **Use the credential through `exec`.** Scripts and agents run
+   `mb connect exec <provider> -- <command>`, and the command reads the
+   secret from its environment. They do not put tokens in child argv, echo
+   them, enable shell trace, write env files, or commit raw exports.
 6. **Rotate or repair.** Missing or stale secrets report a reconnect command.
-   For custom providers, repair output includes `--custom --token-stdin`.
+   For custom providers, repair output includes `--custom --token-stdin`. A
+   connection with a recorded `--source op://...` reference rotates with
+   `mb connect rotate <provider>`, which re-reads, stores and probes.
 7. **Audit and hygiene.** `mb connect doctor`, `mb connect status --all`,
    `mb connect identity`, and `mb connect hygiene` are the read-only audit
    surfaces before agents use provider facts.
@@ -118,7 +132,8 @@ Agents can do without seeing secrets:
 - check whether a secret is present;
 - read safe identity metadata;
 - tell the operator which repair command to run;
-- run approved scripts that consume `mb connect token` without printing it;
+- run approved commands through `mb connect exec`, which never prints the
+  credential;
 - summarize sanitized import counts and freshness.
 
 Approval-gated every time:

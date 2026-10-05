@@ -28,6 +28,46 @@ def _local_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
 
 
+def _popen_running(run: Any) -> Any:
+    """A ``subprocess.Popen`` stand-in that answers through a ``run``-style fake."""
+
+    class FakePopen:
+        def __init__(self, args: list[str], **kwargs: Any) -> None:
+            self.args = args
+            self.kwargs = kwargs
+            self.pid = None
+            self.returncode: int | None = None
+
+        def communicate(self, input: str | None = None, timeout: float | None = None) -> Any:
+            result = run(
+                self.args,
+                input=input,
+                timeout=timeout,
+                stdout=self.kwargs.get("stdout"),
+                stderr=self.kwargs.get("stderr"),
+                text=True,
+                start_new_session=self.kwargs.get("start_new_session"),
+            )
+            self.returncode = result.returncode
+            return result.stdout, None
+
+        def kill(self) -> None:
+            pass
+
+    return FakePopen
+
+
+def _fake_subprocess(run: Any) -> SimpleNamespace:
+    return SimpleNamespace(
+        run=run,
+        Popen=_popen_running(run),
+        PIPE=subprocess.PIPE,
+        DEVNULL=subprocess.DEVNULL,
+        TimeoutExpired=subprocess.TimeoutExpired,
+        SubprocessError=subprocess.SubprocessError,
+    )
+
+
 def _completed(stdout: str, stderr: str = "") -> SimpleNamespace:
     return SimpleNamespace(returncode=0, stdout=stdout, stderr=stderr)
 
@@ -126,7 +166,7 @@ def test_native_helper_keeps_secret_out_of_argv_and_discards_stderr(
         seen["stderr"] = kwargs["stderr"]
         return _completed('{"state":"unavailable"}', f"raw failure {secret}")
 
-    monkeypatch.setattr(store_mod.subprocess, "run", fake_run)  # type: ignore[attr-defined]
+    monkeypatch.setattr(store_mod, "subprocess", _fake_subprocess(fake_run))
 
     with pytest.raises(store_mod.CredentialStoreError) as exc_info:
         store_mod.SecretStore("macos-keychain").set("fixture-ref", secret)
@@ -148,7 +188,7 @@ def test_native_helper_timeout_is_bounded_and_sanitized(
     def hang(args: list[str], **kwargs: Any) -> SimpleNamespace:
         raise subprocess.TimeoutExpired(args, kwargs["timeout"])
 
-    monkeypatch.setattr(store_mod.subprocess, "run", hang)  # type: ignore[attr-defined]
+    monkeypatch.setattr(store_mod, "subprocess", _fake_subprocess(hang))
 
     probe = store_mod.SecretStore("macos-keychain").probe("fixture-ref")
 
@@ -161,6 +201,7 @@ def test_native_helper_timeout_is_bounded_and_sanitized(
     [
         ("locked", "keychain_locked"),
         ("auth-failed", "keychain_auth_failed"),
+        ("prompt-pending", "keychain_prompt_pending"),
         ("unavailable", "keychain_unavailable"),
     ],
 )
@@ -183,6 +224,7 @@ def test_macos_read_query_explicitly_forbids_authentication_ui() -> None:
     adapter: Any = object.__new__(helper_mod._MacSecurity)
     adapter.security = object()
     adapter.core = object()
+    adapter.search_list = None
     constants = {
         "kSecClass": 1,
         "kSecClassGenericPassword": 2,
@@ -231,11 +273,14 @@ def test_macos_failed_update_preserves_previous_item_without_delete() -> None:
 
     adapter: Any = object.__new__(helper_mod._MacSecurity)
     adapter.security = FakeSecurity()
+    adapter.health = lambda: "ready"
+    adapter._item_owner = lambda ref: "legacy"
     adapter._update = lambda ref, value: helper_mod.ERR_SEC_AUTH_FAILED
 
     result = adapter.set("fixture-ref", "replacement")
 
-    assert result == "auth-failed"
+    # On an unlocked keychain the refusal means a macOS dialog would wait.
+    assert result == "prompt-pending"
     assert state == {"value": "previous", "add_called": False, "delete_called": False}
 
 
@@ -243,6 +288,8 @@ def test_macos_add_explicitly_forbids_authentication_ui() -> None:
     adapter: Any = object.__new__(helper_mod._MacSecurity)
     adapter.security = SimpleNamespace(SecItemAdd=lambda add, result: helper_mod.ERR_SEC_SUCCESS)
     adapter.core = SimpleNamespace(CFRelease=lambda value: None)
+    adapter.keychain = None
+    adapter.health = lambda: "ready"
     constants = {
         "kSecClass": 1,
         "kSecClassGenericPassword": 2,
@@ -265,7 +312,8 @@ def test_macos_add_explicitly_forbids_authentication_ui() -> None:
     adapter._dictionary = capture
     adapter._release_all = lambda values: None
 
-    assert adapter.set("fixture-ref", "replacement") == "ready"
+    # The legacy add is now only the restore path of a failed migration.
+    assert adapter._ctypes_add("fixture-ref", "replacement") == helper_mod.ERR_SEC_SUCCESS
     assert (constants["kSecUseAuthenticationUI"], constants["kSecUseAuthenticationUIFail"]) in (
         captured
     )
@@ -524,7 +572,7 @@ def test_repo_backend_outage_never_falls_back_to_user_scope(
     assert result["backend_state"] == "keychain_locked"
     assert "user-token" not in json.dumps(result)
 
-    cli = runner.invoke(app, ["connect", "token", "cloudflare", "--repo", str(repo)])
+    cli = runner.invoke(app, ["connect", "token", "cloudflare", "--print", "--repo", str(repo)])
     assert cli.exit_code == 1
     assert cli.stdout == ""
     assert "login Keychain is locked" in cli.stderr
@@ -600,14 +648,7 @@ def test_status_all_shares_one_aggregate_credential_deadline(
         calls += 1
         return SimpleNamespace(returncode=1, stdout='{"state":"unavailable"}')
 
-    fake_subprocess = SimpleNamespace(
-        run=unavailable,
-        PIPE=subprocess.PIPE,
-        DEVNULL=subprocess.DEVNULL,
-        TimeoutExpired=subprocess.TimeoutExpired,
-        SubprocessError=subprocess.SubprocessError,
-    )
-    monkeypatch.setattr(store_mod, "subprocess", fake_subprocess)
+    monkeypatch.setattr(store_mod, "subprocess", _fake_subprocess(unavailable))
 
     status = connect_mod.status_all(repo)
 
@@ -632,7 +673,7 @@ def test_token_stdin_and_stdout_preserve_whitespace(
         ["connect", "mercury", "--custom", "--repo", str(repo), "--token-stdin"],
         input=value + "\n",
     )
-    read = runner.invoke(app, ["connect", "token", "mercury", "--repo", str(repo)])
+    read = runner.invoke(app, ["connect", "token", "mercury", "--print", "--repo", str(repo)])
 
     assert connected.exit_code == 0
     assert read.exit_code == 0
@@ -652,7 +693,7 @@ def test_environment_credential_preserves_whitespace(
         app,
         ["connect", "cloudflare", "--repo", str(repo), "--from-env"],
     )
-    read = runner.invoke(app, ["connect", "token", "cloudflare", "--repo", str(repo)])
+    read = runner.invoke(app, ["connect", "token", "cloudflare", "--print", "--repo", str(repo)])
 
     assert connected.exit_code == 0
     assert read.stdout == value

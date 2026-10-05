@@ -61,6 +61,67 @@ Fields:
 | `return_to_hub_command` | Optional exact command when a sibling checkout makes it safe and useful. Prefer relative paths. |
 | `safe_to_share` | Whether this descriptor is intended to be safe for the child repo's normal audience. This does not grant access. |
 
+## Sites: several sites in one repo
+
+`role: site` describes one repo. A repo that holds several sites (one shared
+engine plus a folder per client, for example) lists them in an optional
+`sites` array:
+
+```json
+{
+  "schema": "mb.child_repo.v0",
+  "role": "site",
+  "display_name": "Acme client sites",
+  "github_owner": "example-co",
+  "repo_name": "acme-sites",
+  "parent": {"github_owner": "example-co", "repo_name": "example"},
+  "sites": [
+    {
+      "slug": "alpha",
+      "display_name": "Alpha",
+      "dir": "clients/alpha",
+      "domains": ["alpha.example"],
+      "deploy": {"provider": "cloudflare-pages", "project": "alpha-site"},
+      "lifecycle": "active"
+    }
+  ]
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `slug` | Lowercase id, unique in the repo. `mb site check --site <slug>` uses it. |
+| `display_name` | Human-readable site name. |
+| `dir` | Required. The site's folder, relative to the repo root (`.` for the root). It must exist and stay inside the repo, also after following symlinks. |
+| `domains` | Domains the site serves. |
+| `deploy` | `provider` (today `cloudflare-pages`) and `project`, the provider's project name. |
+| `lifecycle` | Same values as the registry: `proposed`, `active`, `paused`, `superseded`, `archived`. |
+
+Rules:
+
+- The list is optional and backward compatible: an older `mb` ignores it, and
+  the schema stays `mb.child_repo.v0`.
+- Every value is a string (or a list of strings for `domains`). No other keys
+  are accepted, and key names must pass the same sensitive-key filter as the
+  hub registry: that is why the folder is `dir`, not `data_path`.
+- Contacts, prices, contracts and anything else private stay in the hub, never
+  in the descriptor.
+- A bad entry is dropped and reported as `topology_descriptor_sites_invalid` in
+  `mb status` and `mb doctor`; the rest of the descriptor still counts.
+
+Check one site:
+
+```bash
+mb site check . --site alpha --json
+```
+
+The descriptor and the source link are read from the repo root; the
+conversion plan (`.mainbranch/conversion.json`) and the built HTML come from
+the site's `dir`. An unknown slug exits `2` and names the slugs the repo lists.
+
+[`mb fleet`](fleet.md) reads `sites` to give each site its own row: framework,
+engine pin, CI and what is live.
+
 ## The repo tree
 
 One sentence holds the whole model:
@@ -167,6 +228,26 @@ contains GitHub owner/repo handles, pass the local hub checkout explicitly:
 ```bash
 mb site check . --business-repo ../example --json
 ```
+
+`mb site check` also guards against a copied site folder that still names a
+different business: it compares the descriptor's `parent` owner/repo with the
+business repo's own `.mainbranch/repo.json`, or, when that has no owner/repo,
+with the business repo's git `origin` remote. A mismatch blocks the check.
+
+## How mb tells repo kinds apart
+
+Every command that needs to know what kind of repo it is in asks one
+classifier. It returns `hub`, `child`, `engine` or `none`, plus the file that
+decided it, checking in this order:
+
+1. a valid child descriptor: `.mainbranch/repo.json` with a known `role`
+   (`role: business` counts as a hub), or the legacy site `source.json`;
+2. the hub registry, `core/operations/repo-topology.md`;
+3. the Main Branch engine checkout;
+4. the older hub shape: `CLAUDE.md` plus `core/`, `research/` or `decisions/`.
+
+So a product repo that keeps its own `CLAUDE.md` and `research/` is a child,
+not a second hub. `mb doctor` and `mb checkpoint` accept a hub or a child.
 
 ## Sensitive Repos
 

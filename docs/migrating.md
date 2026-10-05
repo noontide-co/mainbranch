@@ -155,8 +155,15 @@ use the global `mb-start` skill.
 
 This flow is intentionally confirmation-gated. `mb skill link` and
 `mb skill repair --apply` only move stale Main Branch symlinks and broken links
-with Main Branch skill names into timestamped backups. They do not delete
-user-authored skill folders, real files, or live third-party skill links.
+with Main Branch skill names out of the way. They do not delete user-authored
+skill folders, real files, or live third-party skill links. The two commands
+keep their backups in different places:
+
+- `mb skill link` moves each personal link to
+  `~/.claude/skills/.mainbranch-backups/skill-link/<name>`. If that name is
+  already taken, it adds a number: `<name>-1`, `<name>-2`, and so on.
+- `mb skill repair --apply` moves each link into a timestamped folder:
+  `~/.claude/skills/.mainbranch-backups/<UTC timestamp>/<name>`.
 
 ## If Claude Creates A Branch
 

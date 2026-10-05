@@ -441,12 +441,14 @@ build on it, here is the command list.
 | `mb init` | Quiet scriptable primitive underneath `mb onboard`. |
 | `mb status` | Local-first daily briefing with ranked next actions, MoneyPath readiness, recent activity, GitHub tasks/proposals, updates, and drift. |
 | `mb doctor` | Check environment, repo shape, frontmatter, settings, app setup, provider state, and repair paths. |
-| `mb connect` | Register connected-account metadata/credentials, test health where supported, inspect repair-safe integration status without committing secrets. See [docs/connect.md](docs/connect.md). |
+| `mb connect` | Register connected-account metadata/credentials, test health where supported, inspect repair-safe integration status without committing secrets. `mb connect exec <provider> -- <command>` runs a command with the stored credential in its environment only, so an agent can use it without retrieving the raw value; the command itself must not print it. See [docs/connect.md](docs/connect.md). |
+| `mb fleet` | Read-only status of every site across your hubs (framework, CI, deploy, Dependabot) from one cached snapshot. Needs Python 3.11+. See [docs/fleet.md](docs/fleet.md). |
 | `mb books` | Plain-file bookkeeping setup checks, bookkeeping engine health, safe repair plans, bet exposure, and fake-data sample monthly reporting. |
 | `mb launch check` | Read-only launch readiness across app stack, deploy rail, commerce, email, local smoke scripts, and measurement posture. |
 | `mb site check` | Local paid-traffic measurement readiness: GTM install, dataLayer events, consent posture, Google Ads metadata, approval gates. |
 | `mb ads meta summary` | Read-only Meta Ads account context through the official Meta CLI path after setup. |
 | `mb issue draft` / `open` | Draft a privacy-scrubbed GitHub issue locally, review it, then submit through `gh`. |
+| `mb feedback` | Log mb friction to a local file; refusals log themselves; `rollup` drafts a weekly summary. Nothing is sent. See [docs/feedback.md](docs/feedback.md). |
 | `mb validate` | Frontmatter and cross-reference checks across business repo files. |
 | `mb graph` | Build a folder graph from links, tags, connected-tool refs, and repo topology. DOT, JSON, and PNG outputs. |
 | `mb suggest links` | Suggest likely connections for a file without editing it. |

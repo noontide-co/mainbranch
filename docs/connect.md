@@ -47,10 +47,94 @@ supplied there is visible in the caller's process arguments. Main Branch never
 uses that option in generated commands or internal helper invocation; use
 `--token-stdin` for real credentials.
 
-`mb connect token <provider>` is the scripted read path. It prints the raw token
-to stdout and nothing else. Use it only in pipes or local scripts that need the
-credential; do not paste its output into chat, docs, issues, PRs, or tracked
-files.
+## Using a Credential: `exec`
+
+`mb connect exec <provider> [--env NAME] -- <command> [args...]` runs one
+command with the stored credential in that command's environment and nowhere
+else:
+
+```bash
+mb connect exec stripe -- stripe products list --limit 3
+mb connect exec cloudflare -- npx wrangler pages deployment list
+mb connect exec mercury --env MERCURY_TOKEN -- python3 scripts/import.py
+```
+
+- No shell is involved: the words after `--` are the program and its
+  arguments, exactly as given.
+- The secret is never printed, logged, or returned in JSON. stdin, stdout and
+  stderr belong to the command.
+- The exit code is the command's own; a command killed by a signal exits
+  `128 + signal`, as in a shell. `mb connect exec` itself exits 1 when the
+  credential cannot be read, 2 for a refused request, and 127 when the
+  command is not found.
+- Default variable: the provider's own, which is its first registered
+  environment variable (`CLOUDFLARE_API_TOKEN`, `GITHUB_TOKEN`,
+  `RESEND_API_KEY`, `APIFY_TOKEN`, Meta's `ACCESS_TOKEN`, and so on). Stripe
+  uses `STRIPE_API_KEY`, which the Stripe CLI reads, and Google uses
+  `GOOGLE_OAUTH_TOKEN`. Custom ids and providers with no registered variable,
+  such as GA4, get `MB_SECRET`. `--env` overrides it.
+- `--repo` selects the business repo, and a user-scoped connection resolves
+  from a worktree as it does for `status`.
+
+This is the path agents and scripts should use. What the command prints is
+still the command's business: avoid commands that echo their environment.
+
+## Raw Read: `token`
+
+`mb connect token <provider>` prints the raw credential with no added newline.
+It refuses when stdout is a terminal or a pipe, because both put the secret
+into some other process's text: a transcript, a log, a variable an agent later
+prints. The refusal points at `exec` on stderr. A plain redirect to a file is
+neither, so it works without any flag:
+
+```bash
+mb connect token stripe > "$private_tmp/stripe-key"
+```
+
+`--print` is needed only for a terminal or a pipe: it lifts the refusal there.
+Use it only when nothing reading that output is an agent or a log.
+
+Exit codes, stable for scripts. The checks run in this order, and the first
+that fails decides the code:
+
+1. Usage: no provider, or `--json`: exit 2.
+2. The stdout gate: stdout is a terminal or a pipe and `--print` was not
+   given: exit 3. This comes before any lookup, so a provider that is not
+   connected, or not even known, still exits 3 here.
+3. The lookup, only once the gate has passed: an unknown provider or one with
+   no secret slot exits 2; a provider that is not connected, a missing
+   credential, or a store that cannot read it exits 1 (stderr says which and
+   names the repair).
+4. Otherwise the value is written to stdout: exit 0.
+
+| Exit | Meaning |
+| --- | --- |
+| 0 | The value was written to stdout. |
+| 1 | After the stdout gate passed: no value (not connected, missing, or unreadable). |
+| 2 | Usage error, or a refusal other than the stdout gate (unknown provider, no secret slot). |
+| 3 | Refused by design: stdout is a terminal or a pipe and `--print` was not given. Checked before the provider is looked up. |
+
+`--json` is not supported: the token is the whole stdout contract. Passing it
+exits 2 and prints only a `json_not_supported` error envelope (see
+[JSON on failure](#json-on-failure)); the token is never in JSON.
+
+### Breaking in 0.6.0 (not flagged at the time)
+
+0.6.0 made `mb connect token <provider>` refuse a terminal or a pipe. Scripts
+that captured the value through stdout stopped working, for example
+`TOKEN=$(mb connect token stripe)` (command substitution reads through a pipe)
+or `mb connect token stripe | tool`. Through 0.6.1 the refusal exited 2, the
+same code as usage errors; from 0.6.2 it exits 3, so a wrapper can tell
+"refused by design" from "no credential". To migrate:
+
+- Run the command with the credential instead:
+  `mb connect exec <provider> -- <command>`. The value reaches only that
+  command's environment (see `exec` above).
+- Where a script must hold the raw value, prefer a plain redirect to a private
+  file: `mb connect token <provider> > file`. That needs no flag, because a
+  file is neither a terminal nor a pipe. Command substitution reads through a
+  pipe, so it needs `--print`: `TOKEN=$(mb connect token <provider> --print)`
+  works, but keeps the value in the shell.
 
 The product model behind this surface lives in
 [connection-model.md](connection-model.md).
@@ -69,8 +153,9 @@ per provider:
 
 The invariant, stated precisely: **for a provider with `required_secrets`,
 `ready` and `ok: true` require `provider_verified: true`.** Cloudflare, Apify,
-and Meta have real probes. Every other built-in provider, and every custom
-provider, reports `stored, unverified`: the credential is present and readable,
+Meta, Stripe, GitHub and GA4 have real probes (see [Probes](#probes)). Every
+other built-in provider, and every custom provider, reports
+`stored, unverified`: the credential is present and readable,
 and nothing has checked that it works. `mb connect doctor` and `mb status` grade
 that as a warning, not a pass.
 
@@ -121,6 +206,183 @@ recording whether a provider was called, so it reads as `stored, unverified`
 until `mb connect test` runs once more. Nothing is rewritten, and a provider
 with a real probe returns to `ready` after one re-test.
 
+### Configured, connected, present
+
+Each provider in `mb connect status --json` separates what is recorded from
+what is stored:
+
+- `configured`: the repo or user scope has an entry for the provider. Status
+  counts, `summary.configured`, and the exit code cover every configured
+  provider.
+- `connected`: a credential was stored when the entry was written. A connect
+  without a token for a provider that has none yet, for example
+  `mb connect cloudflare --metadata zone_id=...` or
+  `mb connect stripe --source op://...`, records the metadata and source only:
+  `connected: false`, no secret ref, and state `missing_secret` with the
+  connect command as repair. `mb connect rotate` or a connect with
+  `--token-stdin` then stores the secret and sets `connected: true`. A
+  tokenless reconnect of an entry that already has a secret keeps its ref.
+  Entries written by earlier releases with a ref and nothing behind it keep
+  reading as `missing_secret`.
+- `secrets.<field>.presence`: `present`, `absent`, or `unknown`. `unknown`
+  means the credential backend could not answer (`backend_ok: false`, with
+  the reason in `backend_state`); `present` is then `null`, never `false`.
+  `present: false` always means the credential is known to be absent.
+
+`mb connect status --json` also carries a top-level `credential_backend`
+block (`backend`, `ok`, `state`, `summary`, `repair`, `repair_command`), even
+with no provider connected. With recorded secrets it reuses their probes;
+otherwise it checks the backend a new connect would use, so a locked or
+missing store shows before the first connect fails on it. It is information
+only: it does not change `ok`, the summary counts, or the exit code.
+
+## JSON on failure
+
+With `--json`, every `mb connect` failure that exits non-zero without a
+result also prints one JSON object on stdout, with the shared
+[result envelope](json-output-contract.md) fields. The human message stays on
+stderr, and the exit code is the same as without `--json`. Without `--json`
+nothing changes: stdout stays empty.
+
+```json
+{
+  "ok": false,
+  "state": "backend_unavailable",
+  "backend_state": "keychain_locked",
+  "summary": "...",
+  "repair": "...",
+  "repair_command": "security unlock-keychain ~/Library/Keychains/login.keychain-db",
+  "exit_code": 1,
+  "safe_to_share": true,
+  "errors": [{"code": "backend_unavailable", "message": "..."}],
+  "mb_command": "mb connect",
+  "result_status": "error"
+}
+```
+
+`state` (and `errors[0].code`) is stable for scripts:
+
+| `state` | Exit | Meaning |
+| --- | --- | --- |
+| `usage_error` | 2 | Missing provider, extra argument, or missing `--keychain`. |
+| `json_not_supported` | 2 | `--json` on `token` or `exec`, whose stdout belongs to the value or the command. |
+| `needs_terminal` | 2 | `repair --keychain` without a terminal. |
+| `refused` | 2, or 3 for `token` | A policy refusal; `rule` names it, for example `source_secret_value`. |
+| `invalid_request` | 2 | Unknown provider or another rejected request. |
+| `config_boundary`, `config_corrupt` | 2 | `.mb/connect.yaml` is outside the repo or cannot be parsed. |
+| `backend_unavailable` | 1 | The credential backend failed; `backend_state` is the sanitized reason. Nothing was stored. |
+| `missing_env_credential` | 1 | `--from-env` found none of the provider's variables. |
+| `connect_failed` | 1 | Another runtime failure. |
+| `unexpected_error` | 1 | An unexpected error; details are hidden because they may hold a secret. |
+
+No envelope carries a secret value or raw backend output, and the stderr
+message gets the same redaction as the envelope. A failure message never quotes
+input that could be a credential: a metadata key, provider name, extra argument
+or command that looks like a secret is replaced with
+`(not shown: it may be a credential)`, and a refused metadata pair is also
+named by its `--metadata` position.
+
+## Probes
+
+Every probe is a read-only GET. Response bodies are never returned or stored;
+only the outcome, the HTTP status, and the facts listed here.
+
+| Provider | Probe | Extra facts recorded |
+| --- | --- | --- |
+| Cloudflare | token verify (user or account token) | none |
+| Apify | current user | none |
+| Meta | Meta's Ads CLI read smoke | per-command results |
+| Stripe | list products, prices, customers and charges (`limit=1`) and read the balance | `scopes`: `allowed`, `refused` or `unknown` per resource |
+| GitHub | authenticated user | `token_kind`; `token_scopes` for classic tokens |
+| GA4 | the configured property, from the Admin API | none |
+
+Stripe: a 2xx means the key may read that resource, a 403 means the key is
+valid but restricted from it, and a 401 on any probe means Stripe rejected the
+key itself. A restricted key that reads products and prices but not customers
+is `ready`, with the refusals named in the summary and in `scopes`.
+
+GitHub: classic tokens report their scopes through the `X-OAuth-Scopes`
+header. GitHub does not list a fine-grained or app token's permissions through
+the API, so the probe says so instead of guessing. The GitHub entry stores its
+token in an `api_key` slot, which keeps a GitHub token connected earlier with
+`--custom` readable.
+
+GA4: the probe needs the numeric property id as metadata. Without it the test
+reports `unvalidated` and names the command:
+
+```bash
+mb connect ga4 --token-stdin --metadata property_id=<property-id>
+mb connect test ga4
+```
+
+The GA4 credential is an OAuth access token with Analytics read scope.
+
+## Metadata Is Judged by Value
+
+`--metadata key=value` is for labels and ids. A value that looks like a secret
+is refused, and nothing is stored. The value is judged whole and word by
+word, so a short label in front of a key (`note: <key>`) does not hide it. The
+rules:
+
+- `credential_prefix:<prefix>`: a public credential grammar matched in full,
+  prefix and generated part together (for example `sk_live_`/`sk_test_`,
+  `rk_`, `pk_live_`, `whsec_`, Resend `re_<8>_<16+>`, `ghp_` and the other
+  GitHub token prefixes, `github_pat_`, `glpat-`, `xox?-`, `AKIA`, `AIza`).
+  A word that only shares a prefix, such as `re_engagement` or
+  `pk_test_publishable`, passes;
+- `jwt_shape`: three dot-separated base64url segments starting `eyJ`;
+- `bearer_credential`: a value starting `Bearer `, or `Bearer <long token>`
+  after a label;
+- `high_entropy`: 24 or more token characters, mixed case, enough entropy, and
+  at least 30% of its CamelCase/digit segments look generated (a single
+  letter, a letter run with no vowel, or a lone digit). Labels are made of
+  words, so `UsEuUkCaAuNzApiKeyName2026` and `HTTPSRedirectCheckerProdV2`
+  pass. A short letter-digit code between words counts as a word when the
+  rest of the value reads as words (a final version digit is allowed), so
+  `CloudflareR2StorageBucket`, `B2BMarketingCampaignOctober2026` and
+  `S3ProductionBucketUsWest2` pass too, and a code next to a generated tail
+  is judged letter by letter.
+
+A value is judged whole and word by word. URLs, emails and env references
+stay whole. Each part of a URL (user name, password, host labels, path
+segments, query keys and values, fragment pieces) is percent-decoded until
+stable (at most three passes) before it is split, then split on `:` and
+`=` and judged like a bare value; a URL nested in a part is judged the same
+way, up to three levels deep. So `?campaign=CloudflareR2StorageBucket`,
+`/docs/getting-started`, IP addresses and `xn--` host labels pass, and a
+token in `?token=`, `/token=`, `#token:`, a path segment, a user name, a
+host label or behind an encoded `%2F` is refused. A URL that does not
+parse, such as one with a bad port, is judged from its decoded raw pieces.
+
+Measured limits of `high_entropy`, 10,000 random values each from
+`random.Random(987)` (the test `test_metadata_high_entropy_miss_rates_match_docs`
+keeps these numbers current): it misses 33 of 10,000 (0.33%) 24-character
+alphanumeric values, 37 of 10,000 (0.37%) 24-character base64-alphabet values
+and 168 of 10,000 (1.68%) 40-character mixed-case values with no digits.
+Values shorter than 24 characters, and all-lowercase or all-uppercase random
+strings, are not judged by entropy at all: hex ids and UUIDs look the same.
+Metadata detection is a heuristic, not complete token detection: a value
+built only from invented pronounceable words around a short code, for
+example `AmoriavenaR2UlenavopiraPavirelona`, reads as a label and passes,
+because it looks like `CloudflareR2StorageBucket`. Metadata is a label
+field, not a secret scanner; pass credentials with `--token-stdin`.
+
+Hex ids, UUIDs, numeric ids, URLs, emails, paths, `op://` references,
+`${VAR}` references and CamelCase labels pass. The key name alone never
+refuses, so labels such as `key_name=Main restricted key` or
+`onepassword_item=Stripe restricted` are fine. The refusal names the rule and
+the key, never the value.
+
+## Refusals Are Logged Locally
+
+Each refusal above that ends an `mb connect` command appends one line to the
+local feedback log (see [feedback.md](feedback.md)): the rule name as
+`connect.<rule>`, the command path, the repo kind, the time and the mb
+version. It never holds the refusal message, the value, a path or a token, and
+nothing is sent anywhere. `mb feedback rollup` counts them by rule. Set
+`MB_FEEDBACK_LOG=0` to turn this off; a log that cannot be written never
+changes the refusal or its exit code.
+
 ## Custom Providers
 
 Use `--custom` when the provider is not in the built-in registry yet. Custom
@@ -153,27 +415,23 @@ mb connect list --json
 mb connect identity --json
 ```
 
-Read the token for a local importer or scheduled collector:
+Run a local importer or scheduled collector with the token in its
+environment:
 
 ```bash
-mb connect token mercury
+mb connect exec mercury --env MERCURY_TOKEN -- python3 scripts/import_mercury.py
 ```
 
-In a local script, keep the token in memory and out of child-process arguments.
-The token command writes the exact credential text with no added newline.
+The script reads the variable and keeps the token in memory and out of
+child-process arguments:
 
 ```python
-import subprocess
+import os
 import urllib.request
 
-token = subprocess.run(
-    ["mb", "connect", "token", "mercury"],
-    check=True,
-    capture_output=True,
-).stdout.decode()
 request = urllib.request.Request(
     "https://api.example.invalid/accounts",
-    headers={"Authorization": f"Bearer {token}"},
+    headers={"Authorization": f"Bearer {os.environ['MERCURY_TOKEN']}"},
 )
 with urllib.request.urlopen(request, timeout=10) as response:
     payload = response.read()
@@ -214,16 +472,109 @@ logged-in user's GUI launchd domain; Main Branch does not install a daemon,
 broker, or launchd job. A new security session or reboot can require another
 interactive unlock in that owning session.
 
-Keychain item access control is separate from Keychain lock state. A new item
-trusts the installed Python application identity that created it. Reads from a
-different or reinstalled interpreter can require a one-time Access Control
-addition in Keychain Access or reprovisioning from the intended stable `mb`
-install. An item ACL that trusts only `/usr/bin/security` does not authorize the
-native reader, which runs inside the Python interpreter named by the installed
-`mb` executable's shebang. Provisioning must add that exact interpreter as a
-trusted application without granting access to every application. Main Branch
-fails closed instead of opening that approval dialog. Never reset or delete the
-login keychain to repair one item.
+Keychain item access control is separate from Keychain lock state. A macOS
+Keychain item trusts the program that created it. Main Branch reads and writes
+its items through Apple-signed `/usr/bin/security`, whose identity stays the
+same across Python, uv, `mb` and macOS updates, so changing the Python under
+`mb` does not bring back an access dialog. Values reach `security` only on
+stdin, hex-encoded (`security -i`), never in process arguments; a value too
+long for one `security -i` line is written as an empty item by `security` and
+filled in through the Security framework, which keeps the same access list.
+
+Items stored by `mb` before this change trust the Python that created them.
+The first read that this Python can do moves the item to `security` as a staged
+move, so no step can lose the credential:
+
+1. the full value is written to a temporary `security` item next to the old one
+   and read back;
+2. the old item is removed;
+3. the final `security` item is written and read back;
+4. the temporary item is removed.
+
+If a step fails, the old item is put back and the temporary copy is kept. If
+the process is killed between steps, the next access of that credential, in
+any command, finishes or undoes the move from the temporary copy before doing
+anything else. A move starts only when at least 3 seconds remain before the
+command's deadline; otherwise the read returns the value without moving it,
+and the next read moves it. This happens silently in any command, including
+unattended ones, with keychain interaction off.
+
+Unattended reads do not wait on a keychain dialog. Every command reads with
+keychain interaction turned off, so an item this Python is not trusted to read
+fails at once with the `keychain_prompt_pending` state instead of running into
+the safety deadline. A locked keychain fails at once with `keychain_locked`,
+since unlocking would also need a dialog. Main Branch runs `security` only on
+items whose access list already trusts it, because `security` itself cannot be
+told to fail instead of showing a dialog.
+
+One case is not detected: an item whose access list was edited by hand (in
+Keychain Access, or with `security set-generic-password-partition-list`) so
+that `/usr/bin/security` comes first while its partition list lacks
+`apple-tool:`. Main Branch never creates such an item. Telling it apart needs
+the item's partition list, which the public Security API does not expose, so
+Main Branch reads it like any other `security`-owned item; `security` may then
+raise a dialog. The command's deadline bounds it: it stops waiting, kills
+`security`, and reports `keychain_prompt_pending`. To fix such an item, delete
+it in Keychain Access and connect the provider again.
+
+`ready` in `mb connect status` means the credential can be read now; it does
+not prove the item has moved to `security`. An item still owned by the old
+Python reads as `ready` until a Python change, then as
+`keychain_prompt_pending`. `mb connect repair --keychain` is the check that
+reports whether each item has moved.
+
+When an item reports `keychain_prompt_pending`, run this once from a terminal
+in the hub, at the screen, and choose **Always Allow** for each dialog (Allow lets only that one read
+through):
+
+```bash
+mb connect repair --keychain
+```
+
+It is the only command that lets macOS show the keychain dialog. It refuses to
+run without a terminal, waits up to 60 seconds per credential, moves each
+credential it can read to `security`, and never prints a value. It reports a
+credential as `repaired` only after a fresh unattended read succeeds and shows
+the item owned by `security`. A credential it can read but could not move
+reports `readable_not_migrated`: it works now but would ask again after a
+Python change, so run the command again. Otherwise it says the prompt is still
+pending. A credential already owned by `security` reports `ready`. After every
+credential reports `ready` or `repaired`, Python and `mb` updates do not ask
+again. Never reset or delete the login keychain to repair one item.
+
+With several business repos, repair every item on the machine in one pass:
+
+```bash
+mb connect repair --keychain --all
+```
+
+It lists the `mainbranch` items in the keychain by their attributes only (no
+values are read and no dialog can appear while listing), then repairs each one
+exactly as above: a dialog only for an item that needs one, the same
+`repaired` / `readable_not_migrated` / `still_pending` verdicts, and one
+summary with the count per state and what is still pending. Each item is
+labelled with its hub and provider when this repo or a hub checkout in the
+`mb fleet` hub list records it (reading the hub list needs Python 3.11 or
+newer, as `mb fleet` does), otherwise by its keychain ref. A staged copy
+left by an interrupted move is not repaired on its own: its item is read,
+which finishes or undoes the move. One pass lists at most 2000 items; past
+that it says the pass is incomplete, with how many items it did not check,
+exits 1, and names `mb connect repair --keychain` to run in each hub for the
+rest. Like the per-repo repair, it needs a
+terminal, refuses to run without one, and never prints a value.
+
+To move an existing install, in this order, from a terminal in the hub:
+
+1. `mb update`. It runs `uv tool install --refresh-package mainbranch
+   mainbranch@latest`, which keeps the Python the tool already uses; `uv tool list --show-python` shows it before
+   and after. Do not upgrade or reinstall uv's Python until step 3 reports
+   nothing pending: a new Python cannot read items that have not moved yet.
+2. `mb connect status`. Every credential this Python can read moves to
+   `security` silently; the rest report `keychain_prompt_pending`.
+3. `mb connect repair --keychain`, at the screen, choosing **Always Allow** for
+   each dialog. Run it again until every credential reports `ready` (already
+   owned by `security`) or `repaired`, and nothing is pending. With several
+   hubs, `mb connect repair --keychain --all` does every hub in one run.
 
 On Linux, Main Branch uses the existing Secret Service default collection. It
 checks collection and item lock state and never calls an unlock method. Unlock
@@ -231,11 +582,14 @@ the collection in the user's desktop keyring application before starting the
 unattended reader.
 
 A connect attempt that fails on the backend stores nothing and leaves repo
-metadata unchanged. Replacement updates an existing Keychain item in place,
-and Secret Service updates a matched item in place while preserving its
-attributes, including legacy Python keyring attributes. New Secret Service
-items use its replacement contract. Main Branch never delete-before-adds an
-existing credential. Helper stderr and raw exceptions are discarded.
+metadata unchanged. Replacement updates an existing Keychain item in place; an
+item stored before the `security` change is updated in place first and then
+moved with the staged move above, which keeps a verified copy until the final
+item reads back. New Keychain items are written through the same staged move,
+so a failed write never leaves an empty credential. Secret Service updates a
+matched item in place while preserving its attributes, including legacy Python
+keyring attributes. New Secret Service items use its replacement contract.
+Helper stderr and raw exceptions are discarded.
 
 Reconnecting an already configured custom provider also works without
 `--custom`, but keeping the flag in repair output makes the command safe to
@@ -250,6 +604,32 @@ MB_CONNECT_SECRET_BACKEND=macos-keychain \
 
 Rotation updates only the selected business's `repo_id`-scoped reference. A
 same-named provider in another business is not a sibling and is never rewritten.
+
+### Rotate from a recorded source
+
+Record where the credential lives once, as a non-secret reference:
+
+```bash
+op read "op://Business/Stripe restricted/credential" \
+  | mb connect stripe --token-stdin --source "op://Business/Stripe restricted/credential"
+```
+
+`--source` stores the reference as `metadata.source`. Given on its own, with
+no `--metadata`, it keeps the existing metadata and adds the source. A source
+that looks like a secret itself is refused.
+
+After the key is rolled in the provider and updated in 1Password:
+
+```bash
+mb connect rotate stripe
+```
+
+`rotate` re-reads the credential with `op read <ref>` (no shell; the value is
+never printed), stores it through the same path as a connect, keeps the
+account label, metadata, scope and backend, and runs the provider probe. The
+exit code follows `mb connect test`. It refuses, with exit 2 and the next
+step, when no source is recorded, when the source is not an `op://`
+reference, when the 1Password CLI is missing, and when it is not signed in.
 
 Then verify readiness without printing the token:
 
@@ -301,7 +681,8 @@ cannot.
 Main Branch does not yet implement a 1Password credential-store adapter. An
 operator may use an existing 1Password CLI or service-account workflow outside
 `mb` and pipe a selected field into `mb connect ... --token-stdin`, keeping the
-value in memory and off argv. Vault choice, service-account creation, token
+value in memory and off argv. Recording the reference with `--source` lets
+`mb connect rotate` repeat that read later. Vault choice, service-account creation, token
 storage, desktop integration approval, and reapproval remain operator-owned
 bootstrap. An unlocked desktop integration is not evidence that unattended
 access will remain available.

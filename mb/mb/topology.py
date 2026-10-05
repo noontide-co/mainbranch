@@ -222,6 +222,89 @@ def infer_role_from_signals(repo_path: Path) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Repo classifier
+# ---------------------------------------------------------------------------
+
+REPO_KINDS = ("hub", "child", "engine", "none")
+_LEGACY_HUB_DIRS: tuple[str, ...] = ("core", "research", "decisions")
+
+
+def is_engine_repo(repo: Path) -> bool:
+    """True when ``repo`` is a checkout of the Main Branch engine itself."""
+    return (repo / "mb" / "pyproject.toml").is_file() and (repo / "mb" / "mb" / "cli.py").is_file()
+
+
+def _legacy_hub_shape(repo: Path) -> bool:
+    return (repo / "CLAUDE.md").is_file() and (
+        any((repo / name).is_dir() for name in _LEGACY_HUB_DIRS)
+        or (repo / "reference" / "core").exists()
+    )
+
+
+def classify_repo(repo: str | Path) -> dict[str, str]:
+    """Say what kind of Main Branch repo ``repo`` is, and which file decided it.
+
+    Returns ``kind`` (``hub``, ``child``, ``engine`` or ``none``), the declared
+    ``role`` when one exists, ``decided_by`` (a repo-relative path, empty for
+    ``none``) and a short ``reason``. Evidence is checked in a fixed order so
+    every caller agrees:
+
+    1. a valid child descriptor (``.mainbranch/repo.json`` with a known role,
+       or the legacy site ``source.json``);
+    2. the hub registry (``core/operations/repo-topology.md``);
+    3. the engine checkout;
+    4. the older hub shape: ``CLAUDE.md`` plus ``core/``, ``research/`` or
+       ``decisions/``.
+
+    A descriptor beats the older hub shape, so a product repo that also keeps
+    ``CLAUDE.md`` and ``research/`` is a child, not a second hub.
+    """
+    path = Path(repo)
+    try:
+        descriptor = read_child_descriptor(path)
+        role = _string(descriptor.get("role"))
+        if descriptor.get("found") and descriptor.get("ok") and role in TOPOLOGY_ROLES:
+            decided_by = str(descriptor.get("path") or CHILD_REPO_RELATIVE_PATH.as_posix())
+            if role == "business":
+                return {
+                    "kind": "hub",
+                    "role": role,
+                    "decided_by": decided_by,
+                    "reason": "descriptor declares role business",
+                }
+            return {
+                "kind": "child",
+                "role": role,
+                "decided_by": decided_by,
+                "reason": f"descriptor declares role {role}",
+            }
+        if (path / REGISTRY_RELATIVE_PATH).is_file():
+            return {
+                "kind": "hub",
+                "role": "business",
+                "decided_by": REGISTRY_RELATIVE_PATH.as_posix(),
+                "reason": "hub registry present",
+            }
+        if is_engine_repo(path):
+            return {
+                "kind": "engine",
+                "role": "",
+                "decided_by": "mb/pyproject.toml",
+                "reason": "Main Branch engine checkout",
+            }
+        if _legacy_hub_shape(path):
+            return {
+                "kind": "hub",
+                "role": "",
+                "decided_by": "CLAUDE.md",
+                "reason": "CLAUDE.md with business folders and no descriptor",
+            }
+    except OSError:
+        pass
+    return {"kind": "none", "role": "", "decided_by": "", "reason": "no Main Branch markers"}
+
+
+# ---------------------------------------------------------------------------
 # Registry reader
 # ---------------------------------------------------------------------------
 
@@ -300,6 +383,16 @@ def read_registry(repo: Path) -> dict[str, Any]:
             "business_display_name": "",
             "repos": [],
         }
+    return parse_registry_text(text)
+
+
+def parse_registry_text(text: str) -> dict[str, Any]:
+    """Normalize registry markdown that has already been read.
+
+    ``mb fleet`` reads registries through the GitHub API, so the parsing is
+    kept separate from the file read.
+    """
+    rel = REGISTRY_RELATIVE_PATH.as_posix()
     fm, _ = _split_frontmatter(text)
     if not fm:
         return {
@@ -377,6 +470,118 @@ def _read_json(path: Path) -> tuple[dict[str, Any], str]:
     return parsed, ""
 
 
+SITE_KEYS = frozenset({"slug", "display_name", "dir", "domains", "deploy", "lifecycle"})
+SITE_DEPLOY_KEYS = frozenset({"provider", "project"})
+_SITE_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
+
+
+def _unsafe_key(key: str) -> bool:
+    return bool(SECRET_KEY_RE.search(key) or UNSAFE_KEY_RE.search(key))
+
+
+def _inside_repo(repo: Path | None, rel: Path) -> bool:
+    """True when ``repo / rel`` resolves (symlinks followed) inside ``repo``."""
+    if repo is None:
+        return True
+    try:
+        root = repo.resolve()
+        (root / rel).resolve().relative_to(root)
+    except (OSError, RuntimeError, ValueError):
+        return False
+    return True
+
+
+def normalize_sites(raw: Any, repo: Path | None = None) -> tuple[list[dict[str, Any]], list[str]]:
+    """Normalize the optional ``sites`` list of a child descriptor.
+
+    One entry per site the repo holds (a repo of client sites, for example):
+    ``slug``, ``display_name``, ``dir`` (required, relative; ``.`` for the
+    root), ``domains``, ``deploy`` (``provider``, ``project``) and
+    ``lifecycle``. Returns the valid entries and a list of public-safe error
+    strings. When ``repo`` is a local checkout, ``dir`` must exist and resolve
+    inside it with symlinks followed; readers over the GitHub API pass
+    ``repo=None``.
+    """
+    if raw is None:
+        return [], []
+    if not isinstance(raw, list):
+        return [], ["sites must be a list of mappings"]
+    sites: list[dict[str, Any]] = []
+    errors: list[str] = []
+    seen: set[str] = set()
+    for index, entry in enumerate(raw):
+        label = f"sites[{index}]"
+        if not isinstance(entry, dict):
+            errors.append(f"{label} must be a mapping")
+            continue
+        entry_errors: list[str] = []
+        slug = entry.get("slug")
+        if not isinstance(slug, str) or not _SITE_SLUG_RE.match(slug.strip()):
+            entry_errors.append(f"{label}.slug must be a lowercase slug")
+            slug_text = ""
+        else:
+            slug_text = slug.strip()
+            label = f"sites[{slug_text}]"
+            if slug_text in seen:
+                entry_errors.append(f"{label}.slug is not unique")
+            seen.add(slug_text)
+        for key in entry:
+            key_text = str(key)
+            if _unsafe_key(key_text):
+                entry_errors.append(f"{label}.{key_text} looks sensitive or machine-specific")
+            elif key_text not in SITE_KEYS:
+                entry_errors.append(f"{label}.{key_text} is not a known site field")
+        for field in ("display_name", "lifecycle"):
+            value = entry.get(field)
+            if value is not None and not isinstance(value, str):
+                entry_errors.append(f"{label}.{field} must be a string")
+        dir_raw = entry.get("dir")
+        dir_text = dir_raw.strip() if isinstance(dir_raw, str) else ""
+        dir_path = Path(dir_text or ".")
+        if not dir_text:
+            entry_errors.append(f"{label}.dir must be a non-empty string ('.' for the repo root)")
+        elif LOCAL_ABSOLUTE_PATH_RE.match(dir_text) or dir_path.is_absolute():
+            entry_errors.append(f"{label}.dir must be relative to the repo")
+        elif ".." in dir_path.parts or not _inside_repo(repo, dir_path):
+            entry_errors.append(f"{label}.dir must stay inside the repo")
+        elif repo is not None and not (repo / dir_path).is_dir():
+            entry_errors.append(f"{label}.dir does not exist")
+        lifecycle = _string(entry.get("lifecycle"))
+        if lifecycle and lifecycle not in TOPOLOGY_LIFECYCLES:
+            entry_errors.append(f"{label}.lifecycle {lifecycle!r} is not a known lifecycle")
+        domains_raw = entry.get("domains", [])
+        if not isinstance(domains_raw, list) or not all(isinstance(d, str) for d in domains_raw):
+            entry_errors.append(f"{label}.domains must be a list of strings")
+            domains_raw = []
+        deploy_raw = entry.get("deploy", {})
+        deploy: dict[str, str] = {"provider": "", "project": ""}
+        if not isinstance(deploy_raw, dict):
+            entry_errors.append(f"{label}.deploy must be a mapping")
+        else:
+            for key, value in deploy_raw.items():
+                key_text = str(key)
+                if _unsafe_key(key_text) or key_text not in SITE_DEPLOY_KEYS:
+                    entry_errors.append(f"{label}.deploy.{key_text} is not a known deploy field")
+                elif not isinstance(value, str):
+                    entry_errors.append(f"{label}.deploy.{key_text} must be a string")
+                else:
+                    deploy[key_text] = value.strip()
+        if entry_errors:
+            errors.extend(entry_errors)
+            continue
+        sites.append(
+            {
+                "slug": slug_text,
+                "display_name": _string(entry.get("display_name")),
+                "dir": dir_path.as_posix(),
+                "domains": [d.strip() for d in domains_raw if d.strip()],
+                "deploy": deploy,
+                "lifecycle": lifecycle,
+            }
+        )
+    return sites, errors
+
+
 def _empty_descriptor() -> dict[str, Any]:
     return {
         "found": False,
@@ -403,10 +608,14 @@ def _empty_descriptor() -> dict[str, Any]:
         "return_to_hub_command": "",
         "safe_to_share": True,
         "legacy_business_repo_present": False,
+        "sites": [],
+        "sites_errors": [],
     }
 
 
-def _normalize_repo_json(payload: dict[str, Any], rel: str) -> dict[str, Any]:
+def _normalize_repo_json(
+    payload: dict[str, Any], rel: str, repo: Path | None = None
+) -> dict[str, Any]:
     parent = payload.get("parent")
     parent_data: dict[str, Any] = parent if isinstance(parent, dict) else {}
     linked = payload.get("linked")
@@ -428,6 +637,7 @@ def _normalize_repo_json(payload: dict[str, Any], rel: str) -> dict[str, Any]:
     else:
         local_checkout = local_checkout_raw
     role = _string(payload.get("role"))
+    sites, sites_errors = normalize_sites(payload.get("sites"), repo)
     return {
         "found": True,
         "kind": "repo_json",
@@ -462,7 +672,28 @@ def _normalize_repo_json(payload: dict[str, Any], rel: str) -> dict[str, Any]:
         "return_to_hub_command": _string(payload.get("return_to_hub_command")),
         "safe_to_share": bool(payload.get("safe_to_share", True)),
         "legacy_business_repo_present": False,
+        "sites": sites,
+        "sites_errors": sites_errors,
     }
+
+
+def parse_descriptor_text(text: str) -> dict[str, Any]:
+    """Normalize ``.mainbranch/repo.json`` text read from somewhere other than disk.
+
+    ``sites[].dir`` existence is not checked because there is no checkout.
+    """
+    rel = CHILD_REPO_RELATIVE_PATH.as_posix()
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError as exc:
+        payload, error = {}, f"invalid JSON: {exc}"
+    else:
+        error = "" if isinstance(payload, dict) else "not a JSON object"
+    if error:
+        empty = _empty_descriptor()
+        empty.update({"found": True, "kind": "repo_json", "path": rel, "error": error})
+        return empty
+    return _normalize_repo_json(payload, rel)
 
 
 def _normalize_legacy_source(payload: dict[str, Any], rel: str) -> dict[str, Any]:
@@ -502,6 +733,8 @@ def _normalize_legacy_source(payload: dict[str, Any], rel: str) -> dict[str, Any
         "return_to_hub_command": "",
         "safe_to_share": bool(payload.get("safe_to_share", True)),
         "legacy_business_repo_present": legacy_absolute,
+        "sites": [],
+        "sites_errors": [],
     }
 
 
@@ -523,7 +756,7 @@ def read_child_descriptor(repo: Path) -> dict[str, Any]:
             empty["path"] = CHILD_REPO_RELATIVE_PATH.as_posix()
             empty["error"] = error
             return empty
-        return _normalize_repo_json(payload, CHILD_REPO_RELATIVE_PATH.as_posix())
+        return _normalize_repo_json(payload, CHILD_REPO_RELATIVE_PATH.as_posix(), repo)
     if source_json.exists():
         payload, error = _read_json(source_json)
         if error:
@@ -858,6 +1091,23 @@ def _has_absolute_path_value(entry: dict[str, Any]) -> bool:
     return False
 
 
+def _sites_findings(descriptor: dict[str, Any]) -> list[dict[str, Any]]:
+    errors = [str(item) for item in descriptor.get("sites_errors") or []]
+    if not errors:
+        return []
+    return [
+        {
+            "code": "topology_descriptor_sites_invalid",
+            "severity": "warn",
+            "summary": "child descriptor sites list has invalid entries",
+            "detail": "; ".join(errors),
+            "repair_command": "",
+            "path": descriptor.get("path", ""),
+            "safe_to_share": True,
+        }
+    ]
+
+
 def drift_findings(
     *,
     registry: dict[str, Any],
@@ -910,6 +1160,7 @@ def drift_findings(
                     "safe_to_share": True,
                 }
             )
+        findings.extend(_sites_findings(descriptor))
         if descriptor.get("found") and not descriptor.get("ok"):
             findings.append(
                 {
@@ -1033,6 +1284,7 @@ def drift_findings(
             )
 
     # Descriptor cross-checks.
+    findings.extend(_sites_findings(descriptor))
     if descriptor.get("found") and descriptor.get("ok"):
         desc_owner = descriptor.get("github_owner")
         desc_repo = descriptor.get("repo_name")

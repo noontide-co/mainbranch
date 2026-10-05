@@ -11,7 +11,272 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-10-05
+
+This patch makes `mb connect` and `mb update` report what is actually true.
+Scripts reading `mb connect ... --json` can now parse stdout on failure:
+branch on `state`, not on stderr text. `mb connect` failure messages no longer
+repeat input that could be a credential. After connecting a provider without
+a token, expect `connected: false` and `missing_secret` until a token is
+added; `mb connect identity` still lists it. `mb connect status --json`
+reports credential-store health even with no providers (`credential_backend`).
+`mb update` no longer offers a downgrade when you run a newer build than PyPI,
+and no longer says "updated" when nothing changed; the required-update line
+names your install method. When `mb update` cannot reach PyPI's version check,
+it leaves the install alone; run it again later. The `typer` floor is now
+0.15.4: anyone pinning an older Typer must move. To upgrade a uv install, run
+`uv tool install --refresh-package mainbranch mainbranch@latest`.
+
+### Fixed
+
+- `mb connect` failure messages no longer repeat input that could be a
+  credential. A secret-looking metadata key, provider name, extra argument or
+  command is replaced with `(not shown: it may be a credential)`, and the
+  message on stderr gets the same redaction as the `--json` copy, including
+  the credential you passed on stdin.
+- `mb update` now leaves the install alone when it cannot reach PyPI's version
+  check, instead of running an installer that could put an older version in
+  its place. It keeps the installed version, says the latest version could not
+  be checked, and names `mb update` as the retry; `--json` reports
+  `latest_version_unknown: true`.
+- The keychain release-simulation test no longer depends on the caller's
+  `MB_CONNECT_SECRET_BACKEND`, and the dogfood harness tests print only the
+  environment keys they check when an assertion fails, never the whole
+  environment (#1019).
+- `mb connect <provider>` without a token, for a provider with no stored
+  secret yet, no longer records `connected: true` and a secret ref with
+  nothing behind it. The entry keeps its metadata and source, reads
+  `connected: false`, and status still reports `missing_secret` with the
+  connect command; `mb connect rotate` or `--token-stdin` connects it. Status
+  adds `configured` per provider (#991).
+- With `--json`, every `mb connect` failure now prints one JSON envelope on
+  stdout (`ok: false`, a stable `state` code, sanitized `backend_state`,
+  `repair` and `repair_command`) with the same exit code; the human message
+  stays on stderr and output without `--json` is unchanged (#973).
+- `mb connect status --json` reports a top-level `credential_backend` block
+  even with no providers, and a locked or unavailable backend no longer
+  reports `present: false` for a credential it could not check: `present` is
+  `null` and the new `presence` field reads `unknown` (#976).
+- `mb update` on a pre-release or local build newer than PyPI's latest says so
+  and lists no install command, instead of offering one that would downgrade
+  it. `--json` reports `installed_ahead_of_latest` and `latest_version`, and
+  versions compare by PEP 440 (#1022).
+- `mb update` no longer prints `updated Main Branch (X -> X)` when the version
+  did not change; it says Main Branch is already current (#974).
+- The required-update message names the command for your install (pipx, uv
+  tool or pip) instead of always pipx, and gives install-neutral copy when the
+  install mode is unknown (#965).
+- `typer` floor raised from 0.12 to 0.15.4, the lowest release `mb` loads on
+  with every Click it accepts. A new `minimum-dependencies` CI job installs all
+  declared floors on Python 3.10 and runs `mb --help` and `mb skill list`
+  (#997).
+
 ### Changed
+
+- `docs/migrating.md` names both skill backup locations: `mb skill link` uses
+  `~/.claude/skills/.mainbranch-backups/skill-link/<name>`, and
+  `mb skill repair --apply` keeps its timestamped folder. `docs/connect.md` and
+  the `mb connect token` refusal now say a plain redirect to a file works
+  without `--print`; the flag is only for a terminal or a pipe (#1020).
+
+## [0.6.2] - 2026-10-04
+
+This patch makes `mb update` safe to run from an agent or a scheduled job: it
+no longer edits `AGENTS.md` or `.gitignore` without a yes at a terminal, and
+reports what it would change in `surface_refresh.planned` instead. uv installs
+now get the new version right after a release; to upgrade by hand, run
+`uv tool install --refresh-package mainbranch mainbranch@latest`.
+`mb connect repair --keychain --all` repairs every hub on one Mac in one run.
+`mb connect token` refusing a terminal or a pipe now exits 3. That refusal
+arrived in 0.6.0 without being flagged as breaking: scripts that captured the
+token through a pipe or `$(...)` should move to
+`mb connect exec <provider> -- <command>`, or to `--print`.
+
+### Added
+
+- `mb connect repair --keychain --all` repairs every Main Branch item in the
+  macOS Keychain in one run, instead of once per business repo. It lists the
+  `mainbranch` items by attributes only (no value is read and no dialog can
+  appear while listing), runs each through the same repair as the per-repo
+  command, labels each with its hub and provider where this repo or the
+  `mb fleet` hub list records it (otherwise by its keychain ref), finishes any
+  interrupted move from its staged copy, and prints one summary of what is
+  still pending. It needs a terminal and never prints a value.
+- Release simulations gain a keychain repair prompt (#1010): a recorded
+  `mb connect status --json` fact shows Cloudflare with a pending keychain
+  prompt (no real keychain is involved), and the operator says the connection
+  stopped working. It runs in the pre-release and release acceptance tiers.
+  Transcript scoring gains a credential-safety check that fails the run when
+  Claude reads, prints or asks for a credential, puts a token on the command
+  line, or suggests resetting, deleting or script-unlocking the login keychain.
+  The dogfood harness takes `--simulation <id>` to run one prompt.
+- CI runs the opt-in macOS keychain integration tests on `macos-latest`
+  (#1008). They use throwaway keychains only, need no secrets, and the job
+  fails if they are skipped instead of run.
+
+### Changed
+
+- `mb connect token` refusing a terminal or a pipe (without `--print`) now
+  exits 3 instead of 2, so scripts can tell "refused by design" from a missing
+  credential or a store failure (1) and from usage errors (2). The refusal is
+  checked before the provider is looked up, so exit 1 applies only once it
+  has passed: a provider that is not connected still exits 3 on a terminal or
+  a pipe without `--print`. The exit codes and their order are documented in
+  `docs/connect.md`.
+- Breaking in 0.6.0, not flagged at the time: that refusal broke scripts that
+  captured the token through stdout, such as `TOKEN=$(mb connect token <provider>)`
+  or `mb connect token <provider> | tool`. Migrate to
+  `mb connect exec <provider> -- <command>`, or add `--print` where a script
+  must capture the raw value (preferably `--print > file`).
+- `docs/connect.md` says plainly that a keychain item whose access list was
+  edited by hand (`security` first, no `apple-tool:` partition) is not
+  detected, why (the partition list is not in the public API), and that the
+  deadline bounds the dialog it can raise.
+
+### Fixed
+
+- `mb connect repair --keychain --all` no longer reports a clean pass when the
+  keychain holds more Main Branch items than one pass lists (2000). The
+  listing now says it was cut and how many items it found, and the repair
+  reports `complete: false` with the number not checked, exits 1, and points
+  at `mb connect repair --keychain` in each hub for the rest, since a rerun
+  would list the same first items. No value is read to count them. A listing
+  counts as whole only when it says how many items it found and that matches
+  what it returned, so a helper from another mb version (files replaced
+  mid-upgrade) can never produce a clean pass either.
+- `mb update` no longer changes tracked files in your business repo without
+  asking. Run by an agent or a scheduled job, it used to rewrite `AGENTS.md`
+  and `.gitignore` on its own. Now, without an interactive terminal (and always
+  with `--json`), it leaves every tracked file as it was, reports what it would
+  change in `surface_refresh.planned`, and hands back the commands that apply it
+  in `next_actions`; applying them is your step. At a terminal it lists the
+  files and asks once, default no, and a yes changes only the files it listed.
+  The plan covers deletions too (old skill links, transitional Codex files),
+  and it matches files by identity as well as by path, so a symlinked
+  `.claude/` or skill folder, a case variant such as `agents.md`, or a hard
+  link cannot hide a tracked file. Writes replace the file rather than writing
+  into it, so a hard-linked copy elsewhere keeps its content. A post-apply
+  check reports, and never reverts, any tracked change the plan missed. Gitignored skill links and the per-user Codex
+  skills still refresh on their own. `mb skill link --plan` shows what a link
+  would change without writing anything. (#1012)
+- `mb update` on a uv tool install now gets the new version even minutes after
+  a release. The command it runs or hands back is
+  `uv tool install --refresh-package mainbranch mainbranch@latest`; before, uv
+  could resolve `@latest` from its cached package index and reinstall the
+  version you already had. The tool keeps the Python it already uses. If you
+  are upgrading by hand, use that command. (#1008)
+
+### Security
+
+- The credential helper now starts from the installed package's directory, so
+  code in the current working directory can no longer stand in for it.
+
+## [0.6.1] - 2026-10-04
+
+This patch fixes a regression on macOS: after the Python under `mb` changed,
+unattended credential reads waited on a keychain dialog. Credentials now read
+and write through Apple-signed `/usr/bin/security`, so Python, uv and `mb`
+updates no longer bring keychain prompts back, and existing items move over on
+their first read. An item that cannot move on its own reports a pending
+keychain prompt at once instead of waiting; `mb connect repair --keychain`
+moves it. The docs now match 0.6.0.
+
+### Fixed
+
+- Regression: unattended credential reads on macOS no longer wait on keychain
+  prompts after the Python under `mb` changes. Credentials now read and write
+  through Apple-signed `/usr/bin/security`, whose identity survives Python, uv,
+  `mb` and macOS updates; values travel on its stdin, never in process
+  arguments. Existing items migrate on their first successful read through a
+  staged copy that is kept until the final item reads back, so an interrupted
+  move is finished or undone on the next access. Every command reads with
+  keychain interaction off, so an item that cannot migrate silently reports
+  `keychain_prompt_pending` at once, naming the provider (and the hub in
+  `mb fleet refresh`), instead of "did not answer before the safety deadline";
+  a locked keychain also fails at once. For those items, run
+  `mb connect repair --keychain` once from a terminal in the hub and choose
+  Always Allow: it is the only command that may show the keychain dialog,
+  and it reports `repaired` only once the item has moved to `security`. An
+  item whose access list was edited by hand can still raise a dialog; the
+  command deadline stops it and reports `keychain_prompt_pending`.
+  (#1005, #992)
+
+## [0.6.0] - 2026-10-04
+
+This release adds three commands. `mb fleet` shows every site across your hubs
+in one read-only table. `mb connect exec` runs a command with a stored
+credential in its environment, so an agent can use a key without ever seeing
+it, and `mb connect token` now refuses to print to a terminal or a pipe.
+`mb feedback` keeps a local log of friction with `mb`, including each
+`mb connect` refusal, and rolls it up for a maintainer. `/mb-ads` gains the
+Meta pack loop, text slots, media specs and a Google Ads check.
+
+### Added
+
+- `mb fleet refresh` and `mb fleet status [--json]`: a read-only view of every
+  site across the hubs listed in a user-level `fleet.toml`. One row per site
+  shows its framework and version (or the engine ref it pins), main's CI state
+  and SHA, the commit its Cloudflare Pages production deploy came from, whether
+  that deploy was uploaded from a dirty tree and how far it is behind main, and
+  days since the last commit. Each repo also shows its open Dependabot alerts by
+  severity and its open Dependabot pull requests. `refresh` reads GitHub through
+  `gh` and Cloudflare through the hub's `mb connect` credential and caches one
+  snapshot in SQLite; `status` reads only the cache. `mb fleet hubs list` shows
+  the hub list. Needs Python 3.11 or newer. See `docs/fleet.md`. (#984)
+- An optional `sites` list in `.mainbranch/repo.json` (`mb.child_repo.v0`)
+  describes a repo that holds several sites: slug, name, folder, domains,
+  deploy target and lifecycle. Older `mb` ignores it. `mb site check --site
+  <slug>` checks one of them. (#984)
+- `mb connect exec <provider> [--env NAME] -- <command>` runs one command with
+  the stored credential in its environment only. No shell; the secret is never
+  printed, logged or returned in JSON; the exit code is the command's own.
+  The default variable is the provider's own (`CLOUDFLARE_API_TOKEN`,
+  `STRIPE_API_KEY`, `GITHUB_TOKEN`, `RESEND_API_KEY`, …), or `MB_SECRET` for
+  custom providers and providers with none. Bundled skills now route
+  credential use to `exec`.
+- `mb connect <provider> --source op://vault/item/field` records where a
+  credential lives, and `mb connect rotate <provider>` re-reads it with the
+  1Password CLI, stores it and runs the provider probe.
+- Read-only probes for Stripe (allowed or refused per probed resource, so a
+  restricted key's reach is visible), GitHub (token kind and classic token
+  scopes) and GA4 (the configured `property_id`). GitHub and GA4 are now
+  built-in providers.
+
+- `mb feedback "<text>"` logs friction with `mb` to a local file in the user
+  state directory (`~/.local/state/mainbranch/feedback.jsonl`, or under
+  `XDG_STATE_HOME`). Each line records the time, mb version, the command it is
+  about (`--command`), the repo kind (hub, child, engine or none) and the text.
+  Secret-shaped values and absolute paths are scrubbed before writing. Nothing
+  is sent anywhere. (#986)
+- Every `mb connect` refusal that ends the command (the repo boundary, a token
+  print to a terminal or pipe, a secret-shaped metadata or source value, a key
+  shape, exec and rotate refusals) logs one local `refusal` line with the rule
+  name as `connect.<rule>` and the command path, never the message, the value,
+  a path or a token. `MB_FEEDBACK_LOG=0` turns this off. (#986)
+- `mb feedback rollup [--since 7d] [--json]` groups the log by command and rule
+  with counts, oldest and newest, as a Markdown draft for a maintainer.
+  `mb feedback list` and `mb feedback clear --before <date>` read and prune it.
+  See [docs/feedback.md](docs/feedback.md). (#986)
+
+### Fixed
+
+- `mb site check` compares a site's recorded parent with the business repo's
+  git `origin` remote when the business repo has no `.mainbranch/repo.json`, so
+  a copied site that still names another business is caught there too. (#915)
+- A product or site repo that carries a descriptor is no longer mistaken for a
+  hub because it also keeps `CLAUDE.md` and `research/`. One classifier now
+  decides hub, child, engine or neither for the launch screen, `mb doctor` and
+  `mb checkpoint`; doctor and checkpoint accept child repos. (#984)
+
+### Changed
+
+- `mb connect token` refuses to print to a terminal or a pipe unless `--print`
+  is passed, and points at `exec`. A redirect to a file still works for
+  scripts that need the raw value.
+- `mb connect --metadata` judges the value, not the key name: a value with a
+  credential prefix, a JWT shape, a bearer string or a high-entropy token
+  shape is refused and the rule is named, never the value. Labels such as
+  `key_name`, `onepassword_item` and `source` are accepted.
 
 - `/mb-ads` carries what a live ecommerce store learned running Meta and
   Google Ads through agent skills. The additions are new reference pages:

@@ -90,6 +90,7 @@
     ],
     "integrations": [
       "config_path",
+      "credential_backend",
       "github",
       "ok",
       "providers",
@@ -211,6 +212,7 @@
     "update": [
       "checked_at",
       "command",
+      "install_mode",
       "installed",
       "latest",
       "latest_source",

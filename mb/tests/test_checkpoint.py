@@ -880,3 +880,32 @@ def test_checkpoint_hook_still_broken_when_logic_differs(tmp_path: Path) -> None
 
     status = checkpoint_mod.hook_status(repo)
     assert status["state"] == "broken"
+
+
+def test_checkpoint_child_repo_does_not_warn_not_business_repo(tmp_path: Path) -> None:
+    repo = tmp_path / "site"
+    repo.mkdir()
+    _git(repo, "init", "-q")
+    descriptor = repo / ".mainbranch" / "repo.json"
+    descriptor.parent.mkdir()
+    descriptor.write_text(
+        json.dumps({"schema": "mb.child_repo.v0", "role": "site"}), encoding="utf-8"
+    )
+    (repo / "index.html").write_text("<h1>hi</h1>\n", encoding="utf-8")
+
+    report = checkpoint_mod.plan(repo)
+
+    codes = [warning["code"] for warning in report["safety"]["warnings"]]
+    assert "not_business_repo" not in codes
+
+
+def test_checkpoint_plain_repo_warns_not_business_repo(tmp_path: Path) -> None:
+    repo = tmp_path / "plain"
+    repo.mkdir()
+    _git(repo, "init", "-q")
+    (repo / "notes.txt").write_text("hi\n", encoding="utf-8")
+
+    report = checkpoint_mod.plan(repo)
+
+    codes = [warning["code"] for warning in report["safety"]["warnings"]]
+    assert "not_business_repo" in codes

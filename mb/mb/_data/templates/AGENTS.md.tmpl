@@ -387,11 +387,15 @@ the operator asks for plumbing.
   leads flow unattended -> `mb canary init`. A recurring daily read on the
   business -> `mb pulse init` (deterministic collectors + a judgment skill:
   scorecard, anomalies, exactly ONE recommended action, read-only).
+  A question that spans several repos or sites (what is deployed, is CI red,
+  what is behind) -> `mb fleet status` (read-only; `mb fleet refresh` first;
+  needs Python 3.11+).
   "Show me the business" ->
-  `mb dashboard open` (local, read-only, never committed). Scripts that read
-  credentials -> `mb connect token` (token to stdout for scripts and agents;
-  never echo the value). Plaintext credentials sitting in agent configs ->
-  `mb connect hygiene` (read-only scan; never prints the value). Reading the
+  `mb dashboard open` (local, read-only, never committed). Commands that
+  need a credential -> `mb connect exec <provider> -- <command>` (the secret
+  goes into that command's environment only, never into output;
+  `mb connect token` refuses terminals and pipes). Plaintext credentials
+  sitting in agent configs -> `mb connect hygiene` (read-only scan; never prints the value). Reading the
   recorded business identity (ad account, pixel, page, sender domain) instead
   of inferring it from live state -> `mb connect identity`. Tools missing from
   the provider list -> `mb connect <id> --custom`. Writing to an external
@@ -419,7 +423,13 @@ the operator asks for plumbing.
   validating their own work in repos with
   legacy debt -> `mb validate --paths <prefix>`. Filing work upstream or in
   the business repo without leaking private detail -> `mb issue` (privacy-safe
-  GitHub issue drafting). "What should we improve in this repo?" ->
+  GitHub issue drafting). An `mb` command refused, confused you or lacked a
+  probe -> `mb feedback "<what happened>" --command "<mb command name>"`
+  before you work around it: a credential-free summary in your own words and
+  the command name only, never copied arguments, tokens, keys or paths (local
+  log only, nothing sent; `mb feedback rollup` drafts the week for a
+  maintainer). "What should we
+  improve in this repo?" ->
   `mb suggest` (read-only improvement suggestions). An old repo shape that
   needs the current structure -> `mb migrate` via the doctor-recommended
   plan, never hand-moved files. Lead with the business answer, command

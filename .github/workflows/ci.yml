@@ -54,6 +54,111 @@ jobs:
       - name: Pytest with coverage
         run: pytest tests/ -v --cov=mb --cov-report=term-missing --cov-fail-under=79
 
+  macos-keychain:
+    # Opt-in macOS keychain integration tests (#1008). Each test creates a
+    # throwaway mbtest-*.keychain-db under the pytest temp dir, keeps it out
+    # of the user search list, and deletes it afterwards; the login keychain
+    # is never read or written. The interaction-off paths need no GUI session.
+    # No secrets: the throwaway keychain password is generated per test.
+    name: macOS keychain integration
+    runs-on: macos-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: mb
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install uv and a non-framework Python
+        # setup-python's macOS Python is a framework build: bin/python only
+        # launches Python.app, so the tests' re-signed "foreign" interpreter
+        # would still be the same app to the keychain. uv's managed Python
+        # is a plain executable, like the maintainers' local runs.
+        env:
+          UV_MANAGED_PYTHON: "1"
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "uv==0.12.22"
+          uv python install 3.12
+          uv venv --python 3.12 .venv-keychain
+          uv pip install --python .venv-keychain/bin/python -e ".[dev]"
+          .venv-keychain/bin/python -c "import sysconfig, sys; fw = sysconfig.get_config_var('PYTHONFRAMEWORK'); print(sys.version, 'framework=' + repr(fw)); sys.exit(1 if fw else 0)"
+
+      - name: Keychain integration tests
+        env:
+          MB_KEYCHAIN_INTEGRATION: "1"
+        run: >-
+          .venv-keychain/bin/python -m pytest tests/test_keychain_unattended.py -k macos -v -rs
+          --junitxml=keychain-junit.xml
+
+      - name: Fail if any keychain integration test was skipped
+        # A skip here means the opt-in gate did not open, which would turn
+        # this job into a silent no-op.
+        run: |
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+
+          suite = ET.parse("keychain-junit.xml").getroot().find("testsuite")
+          tests = int(suite.get("tests", 0))
+          skipped = int(suite.get("skipped", 0))
+          print(f"keychain tests={tests} skipped={skipped}")
+          if tests == 0 or skipped:
+              raise SystemExit("::error::keychain integration tests did not all run")
+          PY
+
+  minimum-dependencies:
+    # Installs every runtime dependency mb/pyproject.toml declares at its
+    # lowest allowed version on the lowest supported Python, then loads the
+    # CLI. `lowest-direct`, not `lowest`: transitive floors (for example
+    # cryptography 2.0 under SecretStorage on Linux) no longer build.
+    # Catches a declared floor that mb cannot actually run on (#997).
+    # No secrets; read-only token.
+    name: Minimum dependency floors
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: mb
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.10"
+
+      - name: Install mb at its declared minimum dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "uv==0.12.22"
+          uv venv --python "$(command -v python)" .venv-min
+          uv pip install --python .venv-min/bin/python --resolution lowest-direct .
+          uv pip list --python .venv-min/bin/python
+
+      - name: Smoke — mb --help and mb skill list load on the floors
+        run: |
+          cd "$(mktemp -d)"
+          "$GITHUB_WORKSPACE/mb/.venv-min/bin/mb" --help > help.txt
+          grep -q "Usage:" help.txt \
+            || { echo "::error::mb --help failed on minimum dependencies"; exit 1; }
+          "$GITHUB_WORKSPACE/mb/.venv-min/bin/mb" skill list > skills.txt
+          grep -qx "mb-start" skills.txt \
+            || { echo "::error::mb skill list failed on minimum dependencies"; exit 1; }
+
   skill-validate:
     name: SKILL.md line-count gate
     runs-on: ubuntu-latest

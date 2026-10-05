@@ -25,7 +25,11 @@ from mb import site as site_mod
 from mb import topology as topology_mod
 from mb import validate as validate_mod
 from mb.engine import install_mode, link_status
-from mb.freshness import format_update_alert, package_update_status
+from mb.freshness import (
+    MODE_NEUTRAL_UPDATE_TEXT,
+    format_update_alert,
+    package_update_status,
+)
 from mb.json_result import json_default
 
 IMPORTANT_DIRS = (
@@ -4234,7 +4238,7 @@ def _drift(report: dict[str, Any]) -> dict[str, Any]:
     connected_integrations = [
         item
         for item in (report.get("integrations") or {}).get("providers", [])
-        if item.get("connected")
+        if item.get("configured", item.get("connected"))
     ]
     unverified_integrations = [
         item for item in connected_integrations if item.get("state") == connect_mod.UNVERIFIED_STATE
@@ -4402,7 +4406,7 @@ def _readiness(report: dict[str, Any]) -> dict[str, Any]:
             "name": "install",
             "ok": bool(report["install"]["ok"]) and report["update"]["severity"] != "required",
             "weight": 15,
-            "repair": report["update"]["command"]
+            "repair": (report["update"]["command"] or MODE_NEUTRAL_UPDATE_TEXT)
             if report["update"]["severity"] == "required"
             else "Reinstall Main Branch with `pipx install mainbranch`.",
         },
@@ -4467,7 +4471,7 @@ def _readiness(report: dict[str, Any]) -> dict[str, Any]:
     integration_repairs = [
         item
         for item in (report.get("integrations") or {}).get("providers", [])
-        if item.get("connected")
+        if item.get("configured", item.get("connected"))
         and not item["ok"]
         and item.get("state") != connect_mod.UNVERIFIED_STATE
     ]

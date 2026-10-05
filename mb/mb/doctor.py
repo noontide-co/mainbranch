@@ -36,8 +36,8 @@ from mb import topology as topology_mod
 from mb import validate as validate_mod
 from mb.engine import install_mode, link_status
 from mb.freshness import (
+    MODE_NEUTRAL_UPDATE_TEXT,
     format_update_alert,
-    looks_like_business_repo,
     package_update_status,
     version_key,
 )
@@ -246,6 +246,14 @@ def _action(
         "applied": applied,
         "result": result or {},
     }
+
+
+def _attach_operations(
+    action: dict[str, Any], target: Path, operations: list[dict[str, Any]]
+) -> None:
+    """Record every destination an apply touches and which ones git tracks (#1012)."""
+    action["operations"] = engine_mod.public_operations(operations)
+    action["tracked_changes"] = engine_mod.consent_destinations(target, operations)
 
 
 def _section(
@@ -719,7 +727,7 @@ def _mainbranch_version_check(update: dict[str, Any]) -> dict[str, Any]:
             "ok": False,
             "detail": (
                 f"installed {installed}; minimum supported is {update['minimum_supported']}. "
-                f"Run `{update['command']}`."
+                + (f"Run `{update['command']}`." if update["command"] else MODE_NEUTRAL_UPDATE_TEXT)
             ),
             "severity": "error",
         }
@@ -2032,7 +2040,10 @@ def _not_business_folder_guard(target: Path, *, mode: str = "plan") -> dict[str,
     )
     # Partially built or broken business folders are exactly what doctor
     # repairs — refuse only a directory with no business markers at all.
-    if looks_like_business_repo(target) or any((target / m).exists() for m in markers):
+    # Hub or child: the descriptor docs promise doctor reports topology drift
+    # inside child repos too, so the classifier accepts both.
+    kind = topology_mod.classify_repo(target)["kind"]
+    if kind in {"hub", "child"} or any((target / m).exists() for m in markers):
         return None
     message = (
         "this is not a Main Branch business folder — run `mb onboard` to "
@@ -2666,6 +2677,7 @@ def repair_plan(
     ]
     codex_actions: list[dict[str, Any]] = []
     if not codex_instruction_status["ok"]:
+        agents_operations = codex_mod.agents_md_operations(target)
         action = _action(
             id="codex-agents-md",
             title="Refresh Codex AGENTS.md instructions",
@@ -2680,8 +2692,10 @@ def repair_plan(
             ),
             writes=[
                 "AGENTS.md",
+                *[str(item["rel"]) for item in agents_operations if item["op"] == "delete_tree"],
             ],
         )
+        _attach_operations(action, target, agents_operations)
         actions.append(action)
         codex_actions.append(action)
     if not codex_global_skill["ok"]:
@@ -2701,6 +2715,7 @@ def repair_plan(
             ],
             result=codex_global_skill,
         )
+        _attach_operations(action, target, codex_mod.global_skill_operations())
         actions.append(action)
         codex_actions.append(action)
     sections.append(

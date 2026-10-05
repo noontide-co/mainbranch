@@ -186,8 +186,8 @@ missing, offer the repo's pulse run before routing. At session close, say
 whether that action was done, moved into a lane, or untouched.
 "Show me the business" routes to
 `mb dashboard open` (local, read-only, never committed). Scripts that read
-credentials route to `mb connect token` (token to stdout for scripts and
-agents; never echo the value). Tools missing from the provider list route to
+credentials route to `mb connect exec <provider> -- <command>` (credential
+in the command's environment only; never echo the value). Tools missing from the provider list route to
 `mb connect <id> --custom`. Agents validating their own work in repos with
 legacy debt route to `mb validate --paths <prefix>`. Lead with the business
 answer, command second; triggered surfaces stay triggered.
