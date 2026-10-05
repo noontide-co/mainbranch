@@ -18,6 +18,7 @@ from mb import graph as graph_mod
 from mb import status as status_mod
 from mb import validate as validate_mod
 from mb.cli import app
+from mb.freshness import MODE_NEUTRAL_UPDATE_TEXT
 from mb.init import run as init_run
 
 runner = CliRunner()
@@ -3005,7 +3006,7 @@ def test_status_readiness_mentions_due_bets(tmp_path: Path) -> None:
         ("pipx", "Run `pipx upgrade mainbranch`."),
         ("uv", "Run `uv tool install --refresh-package mainbranch mainbranch@latest`."),
         ("wheel", "Run `pip install --upgrade mainbranch`."),
-        ("unknown", status_mod.MODE_NEUTRAL_UPDATE_TEXT),
+        ("unknown", MODE_NEUTRAL_UPDATE_TEXT),
     ],
 )
 def test_status_readiness_install_repair_names_the_install_mode(
