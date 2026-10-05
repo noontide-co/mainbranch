@@ -17,6 +17,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   in a new `operator_actions` field for a person to run at a terminal, not in
   `next_actions`, so an agent running `next_actions` never rewires a repo
   (#1023).
+- `mb connect status --json` (and the statuses in `doctor` and `hydrate`) adds
+  `credential_mode` to Google entries (`access_token` today), and reports an
+  optional `oauth_grant` slot with `optional: true` only when an entry records
+  one. Existing Google connections are otherwise unchanged (part of #1004).
 
 ### Fixed
 
