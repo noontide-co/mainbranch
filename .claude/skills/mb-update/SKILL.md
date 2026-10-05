@@ -53,6 +53,10 @@ give them those commands. Applying them is the operator's step: do not run
 them yourself unless the user asks you to in this conversation. Gitignored skill
 links still refresh on their own.
 
+**For a person only.** `operator_actions` lists steps that change tracked
+files, such as the plugin-rail switch. Show each `command` and `note` to the
+user as theirs to run at a terminal; never run them yourself.
+
 ---
 
 ## Step 2: If Update Fails

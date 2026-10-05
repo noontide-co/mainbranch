@@ -1788,11 +1788,12 @@ def test_update_reports_plugin_rail_wired_without_warning(monkeypatch: Any, tmp_
 
     assert result["plugin_rail"]["wired"] is True
     assert not any("symlink-only skill wiring" in w for w in result["warnings"])
-    assert "mb skill link --repo . --plugin --json" not in result["next_actions"]
+    assert not any("--plugin" in action for action in result["next_actions"])
+    assert result["operator_actions"] == []
 
 
 def test_update_surfaces_plugin_migration_for_symlink_era_repo(
-    monkeypatch: Any, tmp_path: Path
+    monkeypatch: Any, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     # #931: a repo that predates the plugin default stays on symlinks after
     # `mb update`; the post-update follow-up names the one-command migration.
@@ -1815,7 +1816,19 @@ def test_update_surfaces_plugin_migration_for_symlink_era_repo(
 
     assert result["plugin_rail"]["wired"] is False
     assert any("symlink-only skill wiring" in w for w in result["warnings"])
-    assert "mb skill link --repo . --plugin --json" in result["next_actions"]
+    # #1023: the switch writes a tracked file, so it is a step for a person,
+    # never an unattended next action an agent might run.
+    assert not any("--plugin" in action for action in result["next_actions"])
+    assert [item["command"] for item in result["operator_actions"]] == [
+        "mb skill link --repo . --plugin"
+    ]
+    assert result["operator_actions"][0]["changes"] == [".claude/settings.json"]
+
+    update_mod.render_human(result)
+    out = capsys.readouterr().out
+    assert "for you to run: mb skill link --repo . --plugin" in out
+    assert "not an agent" in out
+    assert "next: mb skill link" not in out
 
 
 def test_update_warns_when_installed_claude_plugin_is_stale(

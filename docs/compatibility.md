@@ -341,6 +341,11 @@ reverts nothing. `surface_refresh.claude` and
 `surface_refresh.codex` each carry `applied`; a surface left alone also
 carries its `tracked_writes` and `plan`.
 
+A repo still on symlink skill wiring gets the plugin-rail switch
+(`mb skill link --repo . --plugin`) in `operator_actions`, not `next_actions`:
+it writes the tracked `.claude/settings.json`, so a person runs it at a
+terminal. Each entry has `command`, `changes` and `note`.
+
 Use `--no-refresh-surfaces` to update the package without touching any
 surface, and `mb update --check` when you want the facts and no writes at all:
 `--check` never runs an installer and never refreshes a surface.

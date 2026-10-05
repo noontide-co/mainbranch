@@ -64,6 +64,14 @@ UV_UPDATE_COMMAND = [
     PACKAGE_NAME,
     f"{PACKAGE_NAME}@latest",
 ]
+# The plugin-rail switch writes a tracked file, so `mb update` lists it in
+# `operator_actions` for a person, never in `next_actions` (#1023).
+PLUGIN_SWITCH_COMMAND = "mb skill link --repo . --plugin"
+PLUGIN_SWITCH_NOTE = (
+    "For a person to run at a terminal, not an agent: switches this repo to the "
+    "Main Branch plugin rail by writing the tracked `.claude/settings.json`. "
+    "Restart Claude Code afterwards."
+)
 UV_MANUAL_MESSAGE = (
     "Main Branch was installed as a uv tool. Upgrading replaces the installed "
     "command, so it only runs after an explicit yes at an interactive prompt. "
@@ -657,6 +665,7 @@ def _base_result(
         "warnings": [],
         "errors": [],
         "next_actions": [],
+        "operator_actions": [],
         "codex_adapter": {},
         "surface_refresh": {
             "enabled": refresh_surfaces,
@@ -762,7 +771,15 @@ def _add_plugin_follow_up(result: dict[str, Any], repo: Path) -> None:
             "`mb skill link --repo . --plugin` (or `mb doctor repair --apply "
             "--all-agents`), then restart Claude Code."
         )
-        result["next_actions"].append("mb skill link --repo . --plugin --json")
+        # #1023: the switch writes tracked `.claude/settings.json`, so it is a
+        # step for a person at a terminal, never an unattended next action.
+        result["operator_actions"].append(
+            {
+                "command": PLUGIN_SWITCH_COMMAND,
+                "changes": [".claude/settings.json"],
+                "note": PLUGIN_SWITCH_NOTE,
+            }
+        )
 
     install_state = str(install.get("state") or "")
     if install_state in {"stale", "installed_not_enabled", "disabled", "not_installed"}:
@@ -1208,6 +1225,14 @@ def _render_surface_plan(result: dict[str, Any]) -> None:
     print(f"left tracked files unchanged: {files}")
 
 
+def _render_operator_actions(result: dict[str, Any]) -> None:
+    for item in result.get("operator_actions", []):
+        if isinstance(item, dict) and item.get("command"):
+            print(f"for you to run: {item['command']}")
+            if item.get("note"):
+                print(f"  {item['note']}")
+
+
 def render_human(result: dict[str, Any]) -> None:
     """Print a concise human-readable update result."""
     old = result.get("old_version") or "unknown"
@@ -1288,3 +1313,4 @@ def render_human(result: dict[str, Any]) -> None:
     if not result.get("check") and not result.get("ok"):
         for action in result.get("next_actions", []):
             print(f"next: {action}")
+    _render_operator_actions(result)

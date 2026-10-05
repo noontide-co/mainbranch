@@ -11,6 +11,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- `mb update` lists the plugin-rail switch (`mb skill link --repo . --plugin`)
+  in a new `operator_actions` field for a person to run at a terminal, not in
+  `next_actions`, so an agent running `next_actions` never rewires a repo
+  (#1023).
+
 ### Fixed
 
 - `mainbranch` now requires `pyyaml>=6.0.1`. PyYAML 6.0 does not build on
