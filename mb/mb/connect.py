@@ -563,12 +563,16 @@ def _connect_command(provider: Provider, *, token_stdin: bool = False) -> str:
 GOOGLE_SIGN_IN_COMMAND = "mb connect google --oauth"
 
 
-def _reconnect_command(provider: Provider, entry: Any = None) -> str:
+def _reconnect_command(
+    provider: Provider, entry: Any = None, *, grant_readable: bool = True
+) -> str:
     """The next step that stores (or replaces) a provider's credential.
 
     Google's names the sign-in: ``--oauth`` with no connection, ``--oauth
-    --reauth`` on a sign-in entry. Only a legacy access-token entry keeps
-    ``--token-stdin``, the one path that replaces that token in place.
+    --reauth`` on a sign-in entry whose stored grant (and so its OAuth client)
+    can be read, and ``--oauth --reauth --client-file ...`` when it cannot,
+    since ``--reauth`` alone is then refused. Only a legacy access-token entry
+    keeps ``--token-stdin``, the one path that replaces that token in place.
     """
 
     if provider.id != "google":
@@ -576,7 +580,9 @@ def _reconnect_command(provider: Provider, entry: Any = None) -> str:
     if _entry_records_slot(entry, GOOGLE_OAUTH_GRANT_SLOT):
         from mb import google_connect
 
-        return google_connect.REAUTH_COMMAND
+        if grant_readable:
+            return google_connect.REAUTH_COMMAND
+        return google_connect.REAUTH_WITH_CLIENT_COMMAND
     if _entry_records_slot(entry, "access_token"):
         return _connect_command(provider, token_stdin=True)
     return GOOGLE_SIGN_IN_COMMAND
@@ -977,6 +983,7 @@ def _repair(
     validation: dict[str, Any] | None = None,
     backend_reason: str = "",
     entry: Any = None,
+    secrets: dict[str, Any] | None = None,
 ) -> dict[str, str]:
     if state == BACKEND_FAILURE_STATE:
         # Wins over every provider-level repair: reconnecting a provider
@@ -993,6 +1000,18 @@ def _repair(
     validation = validation or {}
     validation_repair = str(validation.get("repair") or "")
     validation_repair_command = str(validation.get("repair_command") or "")
+    # `--reauth` reads the OAuth client from the stored grant; when the grant
+    # cannot be read, the command must carry the client file or it is refused.
+    raw_grant = (secrets or {}).get(GOOGLE_OAUTH_GRANT_SLOT)
+    grant_readable = not isinstance(raw_grant, dict) or raw_grant.get("present") is True
+    if _records_oauth_grant(provider, entry) and not grant_readable:
+        from mb import google_connect
+
+        if validation_repair_command == google_connect.REAUTH_COMMAND:
+            validation_repair_command = google_connect.REAUTH_WITH_CLIENT_COMMAND
+            validation_repair = validation_repair.replace(
+                google_connect.REAUTH_COMMAND, google_connect.REAUTH_WITH_CLIENT_COMMAND
+            )
     validation_summary = str(validation.get("summary") or "")
     if validation_repair or validation_repair_command:
         return {
@@ -1008,7 +1027,7 @@ def _repair(
     if provider.id == "meta":
         return _meta_repair(state, missing)
     missing_fields = ", ".join(missing or provider.required_secrets)
-    connect_command = _reconnect_command(provider, entry)
+    connect_command = _reconnect_command(provider, entry, grant_readable=grant_readable)
     if state == "not_connected":
         if provider.required_secrets:
             return {
@@ -1932,7 +1951,7 @@ def _unhydrated_status(
         repair = _repair(provider, state, missing, None, backend_reason)
         ok = False
     elif missing:
-        repair = _repair(provider, "missing_secret", missing, entry=entry)
+        repair = _repair(provider, "missing_secret", missing, entry=entry, secrets=secrets)
         state = "missing_secret"
         ok = False
     else:
@@ -2217,7 +2236,7 @@ def status_provider(
         else:
             state = "unvalidated"
             ok = False
-    repair = _repair(provider, state, missing, validation, backend_reason, entry)
+    repair = _repair(provider, state, missing, validation, backend_reason, entry, secrets)
     return {
         "provider": provider.id,
         "name": provider.name,
@@ -3975,8 +3994,16 @@ def test_provider(
     if tracked:
         result["recorded"] = False
         result["not_recorded_reason"] = "connect_yaml_tracked"
-        # The CLI exits 1 on a failed check even when the stored status is green.
-        result["needs_action"] = not validation["ok"]
+        # The CLI exits on the check itself, by the same rule as a status item:
+        # a probe-less provider left unverified warns without failing.
+        result["needs_action"] = provider_needs_action(
+            {
+                "ok": bool(validation["ok"]),
+                "state": validation["state"],
+                "has_probe": bool(status.get("has_probe")),
+                "provider": provider.id,
+            }
+        )
     return result
 
 

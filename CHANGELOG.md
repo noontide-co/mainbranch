@@ -18,14 +18,18 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   It prints `recorded: no (.mb/connect.yaml is tracked by git ...)`, and
   `--json` adds `recorded: false` and
   `not_recorded_reason: connect_yaml_tracked`. The exit code follows the
-  check itself. `mb connect rotate` still records its check, because a person
+  check itself, by the same rule as status: a provider with no automated
+  check still exits 0. `mb connect rotate` still records its check, because a person
   ran it to change the connection.
 - Google's next step names the sign-in. With no Google connection,
   `mb connect status google`, `mb connect test google`, `mb connect token google`
   and `mb connect exec google` say `mb connect google --oauth`, not
-  `--token-stdin`. A sign-in connection whose credential is missing or failed
-  says `mb connect google --oauth --reauth`. A connection made with a plain
-  access token still says `--token-stdin`. `repair_command` in `--json`
+  `--token-stdin`. A sign-in connection that failed says
+  `mb connect google --oauth --reauth`. If its stored sign-in can't be read
+  (for example, a reset credential store), it says
+  `mb connect google --oauth --reauth --client-file <Desktop client JSON>`,
+  because `--reauth` alone is refused without the client. A connection made
+  with a plain access token still says `--token-stdin`. `repair_command` in `--json`
   matches. Other providers are unchanged.
 
 ### Fixed

@@ -335,6 +335,88 @@ def test_a_sign_in_entry_missing_its_token_names_reauth(
     assert payload["repair_command"] == "mb connect google --oauth --reauth"
 
 
+def _run_named(repo: Path, command: str, client_file: Path) -> Any:
+    """Run a `next:` command exactly as named, with the client file filled in."""
+
+    named = command.replace("<Desktop client JSON>", str(client_file)).split()
+    assert named[:2] == ["mb", "connect"]
+    return runner.invoke(app, [*named[1:], "--repo", str(repo), "--json"])
+
+
+def _wipe(repo: Path, *slots: str) -> None:
+    for slot in slots:
+        ref = _google_entry(repo)["secrets"][slot]["ref"]
+        credential_store.SecretStore("local-file").delete(ref)
+
+
+def test_the_named_reauth_works_when_only_the_token_is_missing(
+    repo: Path, client_file: Path, google: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _sign_in(repo, client_file, google, monkeypatch)
+    _wipe(repo, "access_token")
+    _, payload = _status(repo)
+    google()
+    _api(monkeypatch)
+
+    renewed = _run_named(repo, payload["repair_command"], client_file)
+
+    assert payload["repair_command"] == "mb connect google --oauth --reauth"
+    assert renewed.exit_code == 0, renewed.output
+    assert _status(repo)[1]["state"] == "ready"
+
+
+def test_a_wiped_sign_in_names_the_client_file_and_that_command_works(
+    repo: Path, client_file: Path, google: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Grant and token both gone (a reset store): `--reauth` alone is refused."""
+
+    _sign_in(repo, client_file, google, monkeypatch)
+    _wipe(repo, "oauth_grant", "access_token")
+
+    _, payload = _status(repo)
+    human = runner.invoke(app, ["connect", "status", "google", "--repo", str(repo)])
+    _, tested = _test_json(repo)
+    plain_test = _test(repo)
+
+    assert payload["state"] == "missing_secret"
+    assert payload["repair_command"] == gc.REAUTH_WITH_CLIENT_COMMAND
+    assert tested["status"]["repair_command"] == gc.REAUTH_WITH_CLIENT_COMMAND
+    assert f"next: {gc.REAUTH_WITH_CLIENT_COMMAND}" in _plain(human.stdout)
+    assert f"next: {gc.REAUTH_WITH_CLIENT_COMMAND}" in _plain(plain_test.output)
+    # The command as named is not refused for want of the OAuth client.
+    bare = _run_named(repo, gc.REAUTH_COMMAND, client_file)
+    assert json.loads(bare.stdout)["rule"] == "oauth_client_required"
+    google()
+    _api(monkeypatch)
+    renewed = _run_named(repo, payload["repair_command"], client_file)
+    assert renewed.exit_code == 0, renewed.output
+    assert "oauth_client_required" not in renewed.output
+    assert _status(repo)[1]["state"] == "ready"
+
+
+@pytest.mark.parametrize("recorded", ["invalid", "reauth_required"])
+def test_an_unreadable_grant_never_names_bare_reauth(
+    repo: Path, client_file: Path, google: Any, monkeypatch: pytest.MonkeyPatch, recorded: str
+) -> None:
+    """The token is still stored, but the grant (and so its client) is gone."""
+
+    _sign_in(repo, client_file, google, monkeypatch)
+    config = connect_mod._read_config(repo)
+    validation: dict[str, Any] = {"state": recorded, "summary": ""}
+    if recorded == "reauth_required":
+        validation["repair"] = f"Run `{gc.REAUTH_COMMAND}` in a terminal."
+        validation["repair_command"] = gc.REAUTH_COMMAND
+    config["providers"]["google"]["validation"] = validation
+    connect_mod._write_config(repo, config)
+    _wipe(repo, "oauth_grant")
+
+    _, payload = _status(repo)
+
+    assert payload["state"] == recorded
+    assert payload["repair_command"] == gc.REAUTH_WITH_CLIENT_COMMAND
+    assert gc.REAUTH_WITH_CLIENT_COMMAND in payload["repair"] or not payload["repair"]
+
+
 def test_a_legacy_access_token_entry_keeps_token_stdin(repo: Path) -> None:
     connect_mod.connect_provider("google", repo=repo, token="SYNTH-LEGACY-0010")
     config = connect_mod._read_config(repo)
@@ -497,3 +579,22 @@ def test_the_new_paths_never_show_a_secret(
     text = test.output + json.dumps(payload) + human.output
     _assert_never_shown(text)
     assert ACCESS not in text and REFRESH not in text
+
+
+@pytest.mark.parametrize("tracked", [False, True])
+def test_a_probe_less_check_exits_0_tracked_or_not(repo: Path, tracked: bool) -> None:
+    """A legacy Google access token has no probe: it warns, as on main, tracked or not."""
+
+    connect_mod.connect_provider("google", repo=repo, token="SYNTH-LEGACY-0011")
+    if tracked:
+        _track_config(repo)
+    else:
+        subprocess.run(["git", "init", "-q"], cwd=repo, check=True, capture_output=True)
+    before = _yaml(repo)
+
+    result = runner.invoke(app, ["connect", "test", "google", "--repo", str(repo)])
+
+    assert result.exit_code == 0, result.output
+    assert ("recorded: no" in result.stdout) is tracked
+    if tracked:
+        assert _yaml(repo) == before

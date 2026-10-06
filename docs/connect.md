@@ -760,9 +760,14 @@ limit on the sign-in; it is `""` otherwise.
 With no Google connection, `mb connect status google`, `mb connect test
 google`, `mb connect token google` and `mb connect exec google` name
 `mb connect google --oauth` as the next step (`repair_command` in `--json`).
-On a sign-in connection whose credential is missing or failed, they name
-`mb connect google --oauth --reauth`. Only a connection made with a plain
-access token keeps `--token-stdin`, the one way to replace that token.
+On a sign-in connection whose stored sign-in can still be read (only the
+access token is missing, or the check failed), they name
+`mb connect google --oauth --reauth`. When the stored sign-in itself is gone
+(for example, after the credential store was reset), they name
+`mb connect google --oauth --reauth --client-file <Desktop client JSON>`:
+`--reauth` reads the OAuth client from the stored sign-in, so without it the
+client file must be passed. Only a connection made with a plain access token
+keeps `--token-stdin`, the one way to replace that token.
 
 ### Reading with the sign-in
 
