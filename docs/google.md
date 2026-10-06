@@ -100,7 +100,7 @@ mb google ga4 report --metrics activeUsers,sessions \
 | `--start`, `--end` | Required. `YYYY-MM-DD`, in the property's reporting time zone. Both days are included. |
 | `--limit` | 1 to 250,000 (default 1,000; Google's own default is 10,000). |
 | `--offset` | Zero-based first row, for paging (default 0). |
-| `--order-by` | One requested metric or dimension, `NAME` or `NAME:desc` (`NAME:asc` also works). |
+| `--order-by` | One requested metric or dimension, `NAME` or `NAME:desc` (`NAME:asc` also works). Custom names keep their colons: `customEvent:plan` or `customEvent:plan:desc`. |
 
 Names must start with a letter and use only letters, digits, `_` and `:`.
 Google checks whether a name exists. An unknown name gets an answer of

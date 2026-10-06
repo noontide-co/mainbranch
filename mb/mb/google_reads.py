@@ -257,8 +257,19 @@ def ga4_names(raw: list[str], flag: str) -> list[str]:
 def ga4_order_by(value: str, metrics: list[str], dimensions: list[str]) -> dict[str, Any] | None:
     if not value:
         return None
-    name, _, direction = value.partition(":")
-    if direction not in {"", "desc", "asc"} or not _GA4_NAME_RE.fullmatch(name):
+    # GA4 names can contain ":" (customEvent:foo, keyEvents:purchase), so a
+    # requested name is taken whole and only a trailing :desc or :asc is a direction.
+    requested = set(metrics) | set(dimensions)
+    name, direction = value, ""
+    if value not in requested:
+        head, _, tail = value.rpartition(":")
+        if head in requested:
+            if tail not in {"desc", "asc"}:
+                raise ReadRefusal(
+                    "name_format", "--order-by must be NAME or NAME:desc (or NAME:asc)."
+                )
+            name, direction = head, tail
+    if not _GA4_NAME_RE.fullmatch(name):
         raise ReadRefusal("name_format", "--order-by must be NAME or NAME:desc (or NAME:asc).")
     desc = direction == "desc"
     if name in metrics:

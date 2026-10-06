@@ -557,6 +557,45 @@ def test_ga4_report_dimension_order_and_paging(
     assert last["may_have_more"] is False and last["next_offset"] is None
 
 
+CUSTOM_GA4_ARGS = GA4_ARGS[:3] + [
+    "--metrics",
+    "sessions,keyEvents:purchase",
+    "--dimensions",
+    "date,customEvent:foo",
+    "--start",
+    "2026-09-01",
+    "--end",
+    "2026-09-30",
+]
+
+
+@pytest.mark.parametrize(
+    ("order_by", "expected"),
+    [
+        ("customEvent:foo", {"dimension": {"dimensionName": "customEvent:foo"}, "desc": False}),
+        ("customEvent:foo:desc", {"dimension": {"dimensionName": "customEvent:foo"}, "desc": True}),
+        ("keyEvents:purchase:asc", {"metric": {"metricName": "keyEvents:purchase"}, "desc": False}),
+    ],
+)
+def test_ga4_report_orders_by_custom_names(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    order_by: str,
+    expected: dict[str, Any],
+) -> None:
+    _signed_in(repo, client_file, google, monkeypatch)
+    api = _reads(monkeypatch)
+
+    code, payload, stderr = _json(repo, CUSTOM_GA4_ARGS, "--order-by", order_by)
+
+    assert code == 0, stderr
+    assert len(api.calls) == 1
+    assert api.calls[0]["body"]["orderBys"] == [expected]
+    assert payload["order_by"] == expected
+
+
 def test_ga4_report_zero_rows_is_ok(
     repo: Path, client_file: Path, google: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -596,6 +635,8 @@ REFUSALS = [
     (GA4_ARGS + ["--dimensions", "1date"], "name_format"),
     (GA4_ARGS + ["--order-by", "sessions:sideways"], "name_format"),
     (GA4_ARGS + ["--order-by", "country"], "order_by_unknown"),
+    (CUSTOM_GA4_ARGS + ["--order-by", "customEvent:foo:sideways"], "name_format"),
+    (CUSTOM_GA4_ARGS + ["--order-by", "customEvent:bar"], "order_by_unknown"),
     (GA4_ARGS + ["--limit", "0"], "limit_range"),
     (GA4_ARGS + ["--limit", "250001"], "limit_range"),
     (GA4_ARGS + ["--offset", "-5"], "limit_range"),
