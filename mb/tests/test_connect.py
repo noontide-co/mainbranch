@@ -26,6 +26,7 @@ from typer.testing import CliRunner
 from mb import codex as codex_mod
 from mb import connect as connect_mod
 from mb import credential_store as credential_store_mod
+from mb import http_safe as http_safe_mod
 from mb.cli import app
 
 runner = CliRunner()
@@ -4430,7 +4431,7 @@ def test_http_get_json_returns_only_named_headers(monkeypatch) -> None:
         seen["method"] = request.get_method()
         return FakeResponse()
 
-    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(http_safe_mod, "open_no_redirect", fake_urlopen)
 
     result = connect_mod._http_get_json(
         "https://api.example.test/user",
@@ -4481,7 +4482,7 @@ def test_github_probe_redacts_secret_reflected_in_scope_header(monkeypatch, stat
             )
         return FakeResponse()
 
-    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(http_safe_mod, "open_no_redirect", fake_urlopen)
 
     result = connect_mod._validate_with_provider(connect_mod.normalize_provider("github"), secret)
 
@@ -4504,7 +4505,7 @@ def test_http_get_json_redacts_and_caps_returned_headers(monkeypatch) -> None:
         headers["X-OAuth-Scopes"] = f"repo,{secret}," + "x" * 2000
         raise urllib.error.HTTPError(request.full_url, 403, "Forbidden", headers, io.BytesIO(b""))
 
-    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(http_safe_mod, "open_no_redirect", fake_urlopen)
 
     result = connect_mod._http_get_json(
         "https://api.example.test/user",
