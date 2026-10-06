@@ -570,6 +570,67 @@ CUSTOM_GA4_ARGS = GA4_ARGS[:3] + [
 ]
 
 
+# A base metric next to a parameterised one named "desc" or "asc" (a key event
+# can be called that), and the pre-October-2020 custom definition form.
+AMBIGUOUS_GA4_ARGS = GA4_ARGS[:3] + [
+    "--metrics",
+    "keyEvents,keyEvents:desc,keyEvents:asc",
+    "--start",
+    "2026-09-01",
+    "--end",
+    "2026-09-30",
+]
+LEGACY_GA4_ARGS = GA4_ARGS[:3] + [
+    "--metrics",
+    "sessions,customEvent:levels_unlocked[tutorial_start]",
+    "--dimensions",
+    "customEvent:achievement_id[level_up]",
+    "--start",
+    "2026-09-01",
+    "--end",
+    "2026-09-30",
+]
+
+
+@pytest.mark.parametrize(
+    ("args", "order_by", "expected"),
+    [
+        (AMBIGUOUS_GA4_ARGS, "keyEvents", {"metric": {"metricName": "keyEvents"}, "desc": False}),
+        (AMBIGUOUS_GA4_ARGS, "keyEvents:desc:desc", {"metric": {"metricName": "keyEvents:desc"}, "desc": True}),
+        (AMBIGUOUS_GA4_ARGS, "keyEvents:desc:asc", {"metric": {"metricName": "keyEvents:desc"}, "desc": False}),
+        (AMBIGUOUS_GA4_ARGS, "keyEvents:asc:desc", {"metric": {"metricName": "keyEvents:asc"}, "desc": True}),
+        (LEGACY_GA4_ARGS, "customEvent:achievement_id[level_up]", {"dimension": {"dimensionName": "customEvent:achievement_id[level_up]"}, "desc": False}),
+        (LEGACY_GA4_ARGS, "customEvent:levels_unlocked[tutorial_start]:desc", {"metric": {"metricName": "customEvent:levels_unlocked[tutorial_start]"}, "desc": True}),
+    ],
+)  # fmt: skip
+def test_ga4_report_orders_by_ambiguous_and_legacy_names(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    args: list[str],
+    order_by: str,
+    expected: dict[str, Any],
+) -> None:
+    _signed_in(repo, client_file, google, monkeypatch)
+    api = _reads(monkeypatch, ga4=(200, {"rowCount": 0}))
+
+    code, payload, stderr = _json(repo, args, "--order-by", order_by)
+
+    assert code == 0, stderr
+    body = api.calls[0]["body"]
+    assert body["orderBys"] == [expected] and payload["order_by"] == expected
+    requested = [item["name"] for item in body["metrics"] + body.get("dimensions", [])]
+    assert all(name in args[4] or name in args[6] for name in requested)
+
+
+def test_order_by_ambiguous_says_how_to_write_it() -> None:
+    with pytest.raises(gr.ReadRefusal) as caught:
+        gr.ga4_order_by("keyEvents:desc", ["keyEvents", "keyEvents:desc"], [])
+    assert caught.value.rule == "order_by_ambiguous"
+    assert "keyEvents:desc:asc" in str(caught.value) and "keyEvents:desc:desc" in str(caught.value)
+
+
 @pytest.mark.parametrize(
     ("order_by", "expected"),
     [
@@ -638,6 +699,14 @@ REFUSALS = [
     (GA4_ARGS + ["--order-by", "country"], "order_by_unknown"),
     (CUSTOM_GA4_ARGS + ["--order-by", "customEvent:foo:sideways"], "name_format"),
     (CUSTOM_GA4_ARGS + ["--order-by", "customEvent:bar"], "order_by_unknown"),
+    (AMBIGUOUS_GA4_ARGS + ["--order-by", "keyEvents:desc"], "order_by_ambiguous"),
+    (AMBIGUOUS_GA4_ARGS + ["--order-by", "keyEvents:asc"], "order_by_ambiguous"),
+    (GA4_ARGS + ["--dimensions", "customEvent:level[level_up"], "name_format"),
+    (GA4_ARGS + ["--dimensions", "customEvent:level[]"], "name_format"),
+    (GA4_ARGS + ["--dimensions", "customEvent:level[a]b"], "name_format"),
+    (GA4_ARGS + ["--dimensions", "customEvent:level[a-b]"], "name_format"),
+    (GA4_ARGS + ["--dimensions", "customEvent:level[a\n]"], "name_format"),
+    (LEGACY_GA4_ARGS + ["--order-by", "customEvent:level[level_up]:sideways"], "name_format"),
     (GA4_ARGS + ["--limit", "0"], "limit_range"),
     (GA4_ARGS + ["--limit", "250001"], "limit_range"),
     (GA4_ARGS + ["--offset", "-5"], "limit_range"),
@@ -946,6 +1015,11 @@ def _strings(value: Any) -> list[str]:
         ("\x1b]8;;https://evil.example/\x1b\\link\x1b]8;;\x1b\\", "link"),
         ("tab\there", "tab here"),
         ("x" * 200, "x" * 79 + "…"),
+        ("a\u202eevil\u202cb", "aevilb"),
+        ("\u2066x\u2067y\u2068z\u2069", "xyz"),
+        ("l\u200er\u200fa\u061cb", "lrab"),
+        ("\u202a\u202b\u202dq", "q"),
+        ("one\u2028two\u2029three", "one two three"),
     ],
 )
 def test_terminal_safe(value: str, shown: str) -> None:

@@ -57,6 +57,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   Refusals exit 2 with a stable `rule`; credential and Google failures exit 1.
   No Google error text is shown, and the table view strips terminal escape
   codes from row values. See `docs/google.md` (part of #1004).
+- `mb google sc inspect --url URL` shows the index status of one URL of the
+  recorded Search Console site (`urlInspection.index.inspect`, the version in
+  Google's index only), as a short summary or a `mb.google.sc.inspect`
+  envelope with `--json`. A URL outside the recorded site is refused with
+  `url_outside_site` before anything is sent, and only Google's documented
+  result fields are passed through. The per-site quota (2,000 a day, 600 a
+  minute) is in `--help` and `docs/google.md` (part of #1004).
 
 ### Changed
 
@@ -71,6 +78,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- `mb google` reads: the table view also removes bidi controls and turns
+  line separators into spaces; `ga4 report` accepts the pre-October-2020
+  `customEvent:parameter[event]` names and refuses an ambiguous `--order-by`
+  with `order_by_ambiguous`; the unreachable message says "could not be
+  reached, or did not answer"; and a credential probe's `repr` no longer
+  shows the secret value (part of #1004).
 - `mb connect test` never follows an HTTP redirect with a credential. The
   GitHub, Cloudflare, Stripe, Apify and `ga4` probes, the Cloudflare Pages read
   behind `mb fleet`, and the fal.ai image request now refuse a 3xx instead of

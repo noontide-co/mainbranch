@@ -1,18 +1,19 @@
 # `mb google`: read Search Console and GA4
 
 `mb google` reads a business's Search Console site and GA4 property with the
-repo's Google sign-in. It never writes anything to Google. There are three
+repo's Google sign-in. It never writes anything to Google. There are four
 commands:
 
 | Command | What it reads | Google method |
 | --- | --- | --- |
 | `mb google sc query` | Search performance rows (clicks, impressions, CTR, position) | Search Console `searchAnalytics.query` |
 | `mb google sc sitemaps list` | Submitted sitemaps and their status | Search Console `sitemaps.list` |
+| `mb google sc inspect` | The index status of one URL | Search Console `urlInspection.index.inspect` |
 | `mb google ga4 report` | A GA4 report table | Analytics Data API `properties.runReport` |
 
 Each prints a table by default. Add `--json` to get one result envelope
 (`docs/json-output-contract.md`) with the schema name `mb.google.sc.query`,
-`mb.google.sc.sitemaps` or `mb.google.ga4.report`. Every command takes
+`mb.google.sc.sitemaps`, `mb.google.sc.inspect` or `mb.google.ga4.report`. Every command takes
 `--repo PATH` (default `.`).
 
 ## Before you start
@@ -85,6 +86,51 @@ and `sitemaps`. Each sitemap keeps Google's documented fields: `path`,
 `warnings`, `errors` and `contents` (`type`, `submitted`). Any other field is
 dropped. Strings longer than 2,048 characters are cut and end in `…`.
 
+## `mb google sc inspect`
+
+```bash
+mb google sc inspect --url https://www.example.com/shoes/
+mb google sc inspect --url https://www.example.com/shoes/ --json
+```
+
+This shows the status of the version in Google's index only. The API has
+no live test, and requesting indexing has no API either; both stay in the
+Search Console website.
+
+`--url` must be a full `http` or `https` URL under the recorded site. It
+cannot contain a user name or password, a `#fragment`, spaces, control
+characters, `\`, or `.` or `..` path segments. For a domain site
+(`sc-domain:example.com`), the URL's host must be that domain or one of its
+subdomains. For a URL-prefix site (`https://www.example.com/blog/`), the
+URL must start with the prefix: the scheme and host are compared in lower
+case and the path is compared exactly. Any other URL is refused with
+`url_outside_site`, and nothing is sent to Google. The request sends the
+recorded site as `siteUrl`, so there is no flag to change it.
+
+The JSON result has `site`, `inspection_url` and `inspection_result`, which
+keeps only Google's documented fields:
+
+- `indexStatusResult`: `verdict`, `coverageState`, `robotsTxtState`,
+  `indexingState`, `lastCrawlTime`, `pageFetchState`, `googleCanonical`,
+  `userCanonical`, `crawledAs`, `sitemap` and `referringUrls`.
+- `ampResult`: `verdict`, `ampUrl`, `robotsTxtState`, `indexingState`,
+  `ampIndexStatusVerdict`, `lastCrawlTime`, `pageFetchState` and `issues`
+  (`issueMessage`, `severity`).
+- `mobileUsabilityResult` (deprecated by Google): `verdict` and `issues`
+  (`issueType`, `severity`, `message`).
+- `richResultsResult`: `verdict` and `detectedItems` (`richResultType`, and
+  `items` with `name` and `issues`).
+- `inspectionResultLink`, but only when it is a
+  `https://search.google.com/` link.
+
+Any other field is dropped. Strings longer than 2,048 characters are cut and
+end in `…`, and each list keeps at most 32 entries. The default output is a
+short summary: the verdict and coverage state, robots.txt, indexing and page
+fetch states, the last crawl, the canonicals, and counts.
+
+URL Inspection has its own, much smaller quota: 2,000 inspections a day
+and 600 a minute per site. Inspect the pages you need, not the whole site.
+
 ## `mb google ga4 report`
 
 ```bash
@@ -103,6 +149,13 @@ mb google ga4 report --metrics activeUsers,sessions \
 | `--order-by` | One requested metric or dimension, `NAME` or `NAME:desc` (`NAME:asc` also works). Custom names keep their colons: `customEvent:plan` or `customEvent:plan:desc`. |
 
 Names must start with a letter and use only letters, digits, `_` and `:`.
+They may end in `[event_name]`, the form GA4 uses for custom definitions
+registered before October 2020, such as `customEvent:level[level_up]`.
+
+If you request both `X` and `X:desc` (for example `keyEvents` and a key
+event named `desc`), `--order-by X:desc` could mean either, so it is refused
+with `order_by_ambiguous`. Write `X:desc:asc` or `X:desc:desc` to sort by
+`X:desc`, or `--order-by X` to sort by `X` ascending.
 Google checks whether a name exists. An unknown name gets an answer of
 `ga4_request_rejected`.
 
@@ -114,8 +167,10 @@ given, and `property_quota`.
 
 ## Quotas and pacing
 
-Each command sends one request. If the request never reached Google, it is
-retried once; nothing else is retried. `mb` never runs two reads at once.
+Each command sends one request. If Google could not be reached, or no answer
+came back, the request is retried once; nothing else is retried. A request
+that timed out may still have reached Google, but every read is read-only,
+so sending it twice changes nothing (it does count against the quota). `mb` never runs two reads at once.
 
 - Search Console, Search Analytics: 1,200 queries per minute per site and per
   user, 30,000,000 per day and 40,000 per minute per Cloud project. There are
@@ -123,6 +178,8 @@ retried once; nothing else is retried. `mb` never runs two reads at once.
   filtering by `page` or `query` costs the most, both together most of all,
   and longer date ranges cost more. If you hit the load quota, wait 15
   minutes. Do not re-read the same data over and over.
+- Search Console, URL Inspection: 2,000 queries per day and 600 per minute
+  per site, and 10,000,000 per day and 15,000 per minute per Cloud project.
 - Search Console, other calls (sitemaps): 20 per second and 200 per minute per
   user.
 - GA4, standard property: 200,000 core tokens per day, 40,000 per hour,
@@ -135,7 +192,24 @@ retried once; nothing else is retried. `mb` never runs two reads at once.
   `potentiallyThresholdedRequestsPerHour`. Agents should pace their reads by
   these numbers.
 
-Sources: Search Console usage limits
+## Sources
+
+Google's API reference pages for each method:
+
+- `searchAnalytics.query`:
+  <https://developers.google.com/webmaster-tools/v1/searchanalytics/query>
+- `sitemaps.list`: <https://developers.google.com/webmaster-tools/v1/sitemaps/list>
+  and the Sitemap resource, <https://developers.google.com/webmaster-tools/v1/sitemaps>
+- `urlInspection.index.inspect`:
+  <https://developers.google.com/webmaster-tools/v1/urlInspection.index/inspect>
+  and its result fields,
+  <https://developers.google.com/webmaster-tools/v1/urlInspection.index/UrlInspectionResult>
+- `properties.runReport`:
+  <https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/properties/runReport>
+  and the API names,
+  <https://developers.google.com/analytics/devguides/reporting/data/v1/api-schema>
+
+Quotas: Search Console usage limits
 (<https://developers.google.com/webmaster-tools/limits>) and Data API limits
 and quotas
 (<https://developers.google.com/analytics/devguides/reporting/data/v1/quotas>).
@@ -156,7 +230,7 @@ and quotas
 | 1 | Another 4xx answer. | `search_console_request_rejected`, `ga4_request_rejected` |
 | 1 | A redirect (3xx). It is never followed, so the token never reaches a second URL. | `search_console_unexpected_redirect`, `ga4_unexpected_redirect` |
 | 1 | A 5xx answer, which is not retried. | `search_console_server_error`, `ga4_server_error` |
-| 1 | Google could not be reached, after one retry. | `search_console_unreachable`, `ga4_unreachable` |
+| 1 | Google could not be reached, or no answer came back, after one retry. | `search_console_unreachable`, `ga4_unreachable` |
 | 1 | An unreadable answer. | `search_console_response_malformed`, `ga4_response_malformed` |
 | 2 | No `search_console_site` is recorded. | `site_not_recorded` |
 | 2 | No `ga4_property_id` is recorded. | `property_not_recorded` |
@@ -168,6 +242,9 @@ and quotas
 | 2 | `--type` is not in the list. | `unknown_type` |
 | 2 | A GA4 name or `--order-by` is not well formed. | `name_format` |
 | 2 | `--order-by` names something that was not requested. | `order_by_unknown` |
+| 2 | `--order-by X:desc` (or `X:asc`) when both `X` and `X:desc` were requested. | `order_by_ambiguous` |
+| 2 | `--url` is not a plain http(s) URL. | `url_format` |
+| 2 | `--url` is not under the recorded Search Console site. | `url_outside_site` |
 | 2 | `--sitemap-index` is not an http(s) URL. | `sitemap_index_format` |
 | 2 | `.mb/connect.yaml` could not be used. | `connect_config_refused` |
 
@@ -186,10 +263,11 @@ A read never changes the recorded status, except for `reauth_required`.
 - Row values are data and are returned as Google sent them in `--json`. The
   table view strips ANSI escape sequences and control characters and keeps
   each row on one line, so a hostile search query cannot write to your
-  terminal. Wide cells are cut at 80 characters.
+  terminal. It also removes bidi controls (U+202A-202E, U+2066-2069,
+  U+200E, U+200F, U+061C) and turns line separators (U+2028, U+2029) into
+  spaces. Wide cells are cut at 80 characters.
 
 ## Not here yet
 
-URL inspection (`mb google sc inspect`), a private `--out` file mode and
-skill wiring come in later releases. Request indexing has no API; it stays in
+A private `--out` file mode and skill wiring come in later releases. Request indexing has no API; it stays in
 the Search Console website.

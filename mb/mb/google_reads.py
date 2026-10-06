@@ -1,4 +1,5 @@
-"""Typed read-only Google reads: ``mb google sc query``, ``sc sitemaps list``, ``ga4 report``.
+"""Typed read-only Google reads: ``mb google sc query``, ``sc sitemaps list``,
+``sc inspect`` and ``ga4 report``.
 
 These read a Google sign-in made with ``mb connect google --oauth`` (#1004).
 The site and property come only from the metadata recorded on that sign-in
@@ -12,8 +13,9 @@ argv. Only products the sign-in granted are read; ``invalid_grant`` is
 recorded as ``reauth_required`` by ``read_minted_token``, as for
 ``mb connect token``/``exec``/``test``.
 
-Each command makes one request. A request that never reached Google is
-retried once; nothing else is retried (GA4 charges server errors against
+Each command makes one request. A request that could not be sent, or got no
+answer, is retried once (reads are idempotent; a timed-out request may still
+have reached Google); nothing else is retried (GA4 charges server errors against
 quota). Google's error text is never read into the output: an error answer is
 matched only against short allowlists of status codes and reasons, and the
 command reports a stable ``rule`` with fixed text.
@@ -44,13 +46,16 @@ PRODUCT_NAMES = {SEARCH_CONSOLE: "Search Console", GA4: "Analytics (GA4)"}
 
 SC_QUERY_URL = "https://www.googleapis.com/webmasters/v3/sites/{site}/searchAnalytics/query"
 SC_SITEMAPS_URL = "https://www.googleapis.com/webmasters/v3/sites/{site}/sitemaps"
+SC_INSPECT_URL = "https://searchconsole.googleapis.com/v1/urlInspection/index:inspect"
 GA4_RUN_REPORT_URL = "https://analyticsdata.googleapis.com/v1beta/properties/{property}:runReport"
 
 SC_QUERY_COMMAND = "mb google sc query"
 SC_SITEMAPS_COMMAND = "mb google sc sitemaps list"
+SC_INSPECT_COMMAND = "mb google sc inspect"
 GA4_REPORT_COMMAND = "mb google ga4 report"
 SCHEMA_SC_QUERY = "mb.google.sc.query"
 SCHEMA_SC_SITEMAPS = "mb.google.sc.sitemaps"
+SCHEMA_SC_INSPECT = "mb.google.sc.inspect"
 SCHEMA_GA4_REPORT = "mb.google.ga4.report"
 
 # Search Console dates are Pacific Time (searchAnalytics.query docs).
@@ -75,6 +80,14 @@ GA4_LIMIT_MAX = 250000
 STRING_MAX = 2048
 HUMAN_CELL_MAX = 80
 SITEMAP_INDEX_MAX = 2048
+INSPECT_URL_MAX = 2048
+# URL Inspection quota (Search Console usage limits): per site, per day and minute.
+INSPECT_QUOTA_PER_DAY = 2000
+INSPECT_QUOTA_PER_MINUTE = 600
+# Lists in an inspection result (sitemaps, referring URLs, issues) are capped.
+LIST_MAX = 32
+# Only a link into the Search Console website is passed through.
+INSPECTION_LINK_PREFIX = "https://search.google.com/"
 
 REQUEST_TIMEOUT_SECONDS = 60.0
 # A report of 25,000 rows is a few MiB; anything far bigger is not an answer.
@@ -82,13 +95,19 @@ RESPONSE_MAX_BYTES = 64 * 1024 * 1024
 
 # Matched with `fullmatch`: `$` alone would accept a trailing newline.
 _DATE_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
-_GA4_NAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9_:]*")
+# A trailing [event_name] is the pre-October-2020 custom definition form
+# (customEvent:parameter_name[event_name], GA4 api-schema).
+_GA4_NAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9_:]*(?:\[[A-Za-z0-9_]+\])?")
 # C0/C1 control characters (ESC included, so ANSI sequences lose their
 # introducer) and the ANSI CSI/OSC sequences themselves.
 _ANSI_RE = re.compile(
     r"\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)?|\x9b[0-?]*[ -/]*[@-~]"
 )
 _CONTROL_RE = re.compile(r"[\x00-\x1f\x7f-\x9f]")
+# Bidi embedding, override, isolate and mark characters reorder the text
+# around them; the line and paragraph separators break a row on some terminals.
+_BIDI_RE = re.compile("[\u202a-\u202e\u2066-\u2069\u200e\u200f\u061c]")
+_LINE_SEPARATOR_RE = re.compile("[\u2028\u2029]")
 
 # Google error reasons matched by exact value (never shown as Google sent
 # them): quota or rate limits, and an API not enabled in the Cloud project.
@@ -148,9 +167,10 @@ class _Connection:
 
 
 def terminal_safe(value: Any, limit: int = HUMAN_CELL_MAX) -> str:
-    """``value`` as one line with ANSI sequences and control characters removed."""
+    """``value`` as one line with ANSI sequences, bidi and control characters removed."""
 
-    text = _CONTROL_RE.sub(" ", _ANSI_RE.sub("", str(value)))
+    text = _BIDI_RE.sub("", _ANSI_RE.sub("", str(value)))
+    text = _CONTROL_RE.sub(" ", _LINE_SEPARATOR_RE.sub(" ", text))
     if len(text) > limit:
         text = text[: max(0, limit - 1)] + "…"
     return text
@@ -247,7 +267,8 @@ def ga4_names(raw: list[str], flag: str) -> list[str]:
         if not _GA4_NAME_RE.fullmatch(name):
             raise ReadRefusal(
                 "name_format",
-                f"{flag} names must start with a letter and use only letters, digits, _ and :.",
+                f"{flag} names must start with a letter and use only letters, digits, _ and :, "
+                "optionally ending in [event_name].",
             )
     if len(set(names)) != len(names):
         raise ReadRefusal("name_format", f"{flag} lists a name twice.")
@@ -261,14 +282,18 @@ def ga4_order_by(value: str, metrics: list[str], dimensions: list[str]) -> dict[
     # requested name is taken whole and only a trailing :desc or :asc is a direction.
     requested = set(metrics) | set(dimensions)
     name, direction = value, ""
-    if value not in requested:
-        head, _, tail = value.rpartition(":")
-        if head in requested:
-            if tail not in {"desc", "asc"}:
-                raise ReadRefusal(
-                    "name_format", "--order-by must be NAME or NAME:desc (or NAME:asc)."
-                )
-            name, direction = head, tail
+    head, _, tail = value.rpartition(":")
+    if value in requested and head in requested and tail in {"desc", "asc"}:
+        # Both X and X:desc were requested, so X:desc could mean either.
+        raise ReadRefusal(
+            "order_by_ambiguous",
+            f"--order-by {value} names a requested name and also {head} sorted {tail}; "
+            f"write {value}:asc or {value}:desc.",
+        )
+    if value not in requested and head in requested:
+        if tail not in {"desc", "asc"}:
+            raise ReadRefusal("name_format", "--order-by must be NAME or NAME:desc (or NAME:asc).")
+        name, direction = head, tail
     if not _GA4_NAME_RE.fullmatch(name):
         raise ReadRefusal("name_format", "--order-by must be NAME or NAME:desc (or NAME:asc).")
     desc = direction == "desc"
@@ -309,6 +334,83 @@ def _sitemap_index(value: str) -> str:
     return value
 
 
+def _origin(parsed: urllib.parse.SplitResult) -> str:
+    """``scheme://host[:port]`` lowercased, without a default port."""
+
+    scheme = parsed.scheme.lower()
+    host = (parsed.hostname or "").lower()
+    port = parsed.port
+    if port is None or (scheme, port) in {("http", 80), ("https", 443)}:
+        return f"{scheme}://{host}"
+    return f"{scheme}://{host}:{port}"
+
+
+def _inspection_parts(value: str) -> urllib.parse.SplitResult:
+    """``value`` split, if it is a plain http(s) URL; refused with ``url_format`` otherwise."""
+
+    bad_format = ReadRefusal(
+        "url_format",
+        "--url must be a full http(s) URL, such as https://www.example.com/page, with no "
+        "user name, password, #fragment, spaces or control characters.",
+    )
+    if (
+        not value
+        or len(value) > INSPECT_URL_MAX
+        or any(ch.isspace() for ch in value)
+        or _CONTROL_RE.search(value)
+        or _BIDI_RE.search(value)
+        or _LINE_SEPARATOR_RE.search(value)
+        or "#" in value
+        or "\\" in value
+    ):
+        raise bad_format
+    try:
+        parsed = urllib.parse.urlsplit(value)
+        parsed.port  # noqa: B018 (raises on a bad port)
+    except ValueError:
+        raise bad_format from None
+    host = (parsed.hostname or "").lower()
+    if (
+        parsed.scheme.lower() not in {"http", "https"}
+        or not parsed.netloc
+        or "@" in parsed.netloc
+        or parsed.username is not None
+        or parsed.password is not None
+        or not gc._valid_host(host)
+    ):
+        raise bad_format
+    # Dot segments would let a URL that starts with the prefix point outside it.
+    segments = urllib.parse.unquote(parsed.path).split("/")
+    if any(segment in {".", ".."} for segment in segments):
+        raise bad_format
+    return parsed
+
+
+def inspection_url(value: str, site: str) -> str:
+    """``value`` if it is a plain http(s) URL under the recorded ``site``.
+
+    ``sc-domain:<host>`` covers that host and its subdomains on any scheme.
+    A URL-prefix site covers URLs whose scheme, host, port and path start
+    with the prefix (scheme and host compared in lower case, the path as is).
+    """
+
+    parsed = _inspection_parts(value)
+    host = (parsed.hostname or "").lower()
+    outside = ReadRefusal(
+        "url_outside_site",
+        "--url must be a page of the recorded Search Console site; nothing was sent.",
+    )
+    if site.startswith("sc-domain:"):
+        domain = site.removeprefix("sc-domain:")
+        if host != domain and not host.endswith("." + domain):
+            raise outside
+        return value
+    prefix = urllib.parse.urlsplit(site)
+    if _origin(parsed) != _origin(prefix) or not (parsed.path or "/").startswith(prefix.path):
+        raise outside
+    return value
+
+
 # --- Request bodies (pure; checked against Google's docs in the tests) -------
 
 
@@ -345,6 +447,12 @@ def sc_sitemaps_url(site: str, sitemap_index: str = "") -> str:
     if sitemap_index:
         url += "?" + urllib.parse.urlencode({"sitemapIndex": sitemap_index})
     return url
+
+
+def sc_inspect_request(site: str, url: str) -> tuple[str, dict[str, Any]]:
+    """The index status of ``url`` (the version in Google's index; there is no live test)."""
+
+    return SC_INSPECT_URL, {"inspectionUrl": url, "siteUrl": site}
 
 
 def ga4_report_request(
@@ -428,8 +536,14 @@ def _recorded(metadata: dict[str, Any], key: str, normalize: Callable[[str], str
         return ""
 
 
-def connect(product: str, repo: str | Path) -> _Connection:
-    """Check the recorded facts for ``product``, then mint a token in memory."""
+def connect(
+    product: str, repo: str | Path, *, before_mint: Callable[[str], Any] | None = None
+) -> _Connection:
+    """Check the recorded facts for ``product``, then mint a token in memory.
+
+    ``before_mint`` gets the recorded site and may raise ``ReadRefusal``, so a
+    refusal that depends on the site still mints nothing and calls nothing.
+    """
 
     target = Path(repo).resolve()
     entry, source = _entry(target)
@@ -466,6 +580,8 @@ def connect(product: str, repo: str | Path) -> _Connection:
                 "no ga4_property_id is recorded for this repo's Google sign-in.",
                 repair_command="mb connect google --metadata ga4_property_id=<property-id>",
             )
+    if before_mint is not None:
+        before_mint(site)
     minted = gc.read_minted_token(entry, source=source, target=target)
     if not minted.get("ok"):
         state = str(minted.get("state") or go.STATE_UNVALIDATED)
@@ -505,7 +621,16 @@ def _reasons(payload: Any) -> set[str]:
     return found
 
 
-def _failure(product: str, status: int, payload: Any) -> ReadFailure:
+QUOTA_ADVICE = "wait, then run the read again with a smaller range or fewer rows"
+INSPECT_QUOTA_ADVICE = (
+    f"URL Inspection allows {INSPECT_QUOTA_PER_DAY:,} a day and "
+    f"{INSPECT_QUOTA_PER_MINUTE} a minute per site; wait, then inspect again later"
+)
+
+
+def _failure(
+    product: str, status: int, payload: Any, *, quota_advice: str = QUOTA_ADVICE
+) -> ReadFailure:
     prefix = "search_console" if product == SEARCH_CONSOLE else "ga4"
     name = PRODUCT_NAMES[product]
     if 300 <= status < 400:
@@ -524,7 +649,7 @@ def _failure(product: str, status: int, payload: Any) -> ReadFailure:
             "quota_exhausted",
             f"{name} answered with a quota or rate limit"
             + (f" ({quota})" if quota else "")
-            + "; wait, then run the read again with a smaller range or fewer rows.",
+            + f"; {quota_advice}.",
             quota=quota,
             http_status=status,
         )
@@ -570,8 +695,19 @@ def _failure(product: str, status: int, payload: Any) -> ReadFailure:
     )
 
 
-def _call(conn: _Connection, method: str, url: str, body: dict[str, Any] | None) -> dict[str, Any]:
-    """One request (retried once only if it never reached Google). Returns the JSON body."""
+def _call(
+    conn: _Connection,
+    method: str,
+    url: str,
+    body: dict[str, Any] | None,
+    *,
+    quota_advice: str = QUOTA_ADVICE,
+) -> dict[str, Any]:
+    """One request, retried once only if it could not be sent or got no answer.
+
+    Returns the JSON body. A timed-out request may still have reached Google;
+    every read is idempotent, so the one retry is safe.
+    """
 
     prefix = "search_console" if conn.product == SEARCH_CONSOLE else "ga4"
     name = PRODUCT_NAMES[conn.product]
@@ -592,7 +728,7 @@ def _call(conn: _Connection, method: str, url: str, body: dict[str, Any] | None)
     if answer is None:
         raise ReadFailure(
             f"{prefix}_unreachable",
-            f"{name} could not be reached (tried twice); try again later.",
+            f"{name} could not be reached, or did not answer (tried twice); try again later.",
         )
     status, raw = int(answer[0]), answer[1]
     payload: Any = None
@@ -610,7 +746,7 @@ def _call(conn: _Connection, method: str, url: str, body: dict[str, Any] | None)
             f"{name} returned an unreadable answer; try again later.",
             http_status=status,
         )
-    raise _failure(conn.product, status, payload)
+    raise _failure(conn.product, status, payload, quota_advice=quota_advice)
 
 
 # --- Shaping answers -----------------------------------------------------------
@@ -722,6 +858,127 @@ def shape_sc_sitemaps(payload: dict[str, Any], *, site: str, sitemap_index: str)
     if sitemap_index:
         result["sitemap_index"] = sitemap_index
     return result
+
+
+def _text(value: Any) -> str | None:
+    return _cut(value) if isinstance(value, str) else None
+
+
+def _texts(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [_cut(item) for item in value if isinstance(item, str)][:LIST_MAX]
+
+
+def _fields(item: Any, keys: tuple[str, ...]) -> dict[str, Any]:
+    """The string fields of ``item`` named in ``keys``, cut to ``STRING_MAX``."""
+
+    if not isinstance(item, dict):
+        return {}
+    return {key: _cut(item[key]) for key in keys if isinstance(item.get(key), str)}
+
+
+def _issues(value: Any, keys: tuple[str, ...]) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [_fields(item, keys) for item in value if isinstance(item, dict)][:LIST_MAX]
+
+
+def _inspection_link(value: Any) -> str | None:
+    if not isinstance(value, str) or len(value) > STRING_MAX:
+        return None
+    if not value.startswith(INSPECTION_LINK_PREFIX) or _CONTROL_RE.search(value):
+        return None
+    parsed = urllib.parse.urlsplit(value)
+    if parsed.hostname != "search.google.com" or "@" in parsed.netloc:
+        return None
+    return value
+
+
+_INDEX_STATUS_TEXT = (
+    "verdict",
+    "coverageState",
+    "robotsTxtState",
+    "indexingState",
+    "lastCrawlTime",
+    "pageFetchState",
+    "googleCanonical",
+    "userCanonical",
+    "crawledAs",
+)
+_AMP_TEXT = (
+    "verdict",
+    "ampUrl",
+    "robotsTxtState",
+    "indexingState",
+    "ampIndexStatusVerdict",
+    "lastCrawlTime",
+    "pageFetchState",
+)
+
+
+def shape_inspection_result(value: Any) -> dict[str, Any]:
+    """Google's documented ``UrlInspectionResult`` fields only, strings cut, lists capped."""
+
+    if not isinstance(value, dict):
+        return {}
+    shaped: dict[str, Any] = {}
+    link = _inspection_link(value.get("inspectionResultLink"))
+    if link:
+        shaped["inspectionResultLink"] = link
+    index = value.get("indexStatusResult")
+    if isinstance(index, dict):
+        shaped["indexStatusResult"] = {
+            **_fields(index, _INDEX_STATUS_TEXT),
+            "sitemap": _texts(index.get("sitemap")),
+            "referringUrls": _texts(index.get("referringUrls")),
+        }
+    amp = value.get("ampResult")
+    if isinstance(amp, dict):
+        shaped["ampResult"] = {
+            **_fields(amp, _AMP_TEXT),
+            "issues": _issues(amp.get("issues"), ("issueMessage", "severity")),
+        }
+    mobile = value.get("mobileUsabilityResult")
+    if isinstance(mobile, dict):
+        shaped["mobileUsabilityResult"] = {
+            **_fields(mobile, ("verdict",)),
+            "issues": _issues(mobile.get("issues"), ("issueType", "severity", "message")),
+        }
+    rich = value.get("richResultsResult")
+    if isinstance(rich, dict):
+        detected = rich.get("detectedItems")
+        shaped["richResultsResult"] = {
+            **_fields(rich, ("verdict",)),
+            "detectedItems": [
+                {
+                    **_fields(group, ("richResultType",)),
+                    "items": [
+                        {
+                            **_fields(item, ("name",)),
+                            "issues": _issues(item.get("issues"), ("issueMessage", "severity")),
+                        }
+                        for item in (group.get("items") or [])[:LIST_MAX]
+                        if isinstance(item, dict)
+                    ]
+                    if isinstance(group.get("items"), list)
+                    else [],
+                }
+                for group in (detected if isinstance(detected, list) else [])[:LIST_MAX]
+                if isinstance(group, dict)
+            ],
+        }
+    return shaped
+
+
+def shape_sc_inspect(payload: dict[str, Any], *, site: str, url: str) -> dict[str, Any]:
+    return {
+        "ok": True,
+        "site": site,
+        "inspection_url": url,
+        "inspection_result": shape_inspection_result(payload.get("inspectionResult")),
+        "safe_to_share": False,
+    }
 
 
 def _quota_status(value: Any) -> dict[str, int] | None:
@@ -889,6 +1146,19 @@ def sc_sitemaps_list(repo: str | Path, *, sitemap_index: str = "") -> tuple[dict
     return shape_sc_sitemaps(payload, site=conn.site, sitemap_index=index), 0
 
 
+def sc_inspect(repo: str | Path, *, url: str) -> tuple[dict[str, Any], int]:
+    try:
+        _inspection_parts(url)
+        # The site check needs the recorded site, so it runs inside connect,
+        # before any token is minted.
+        conn = connect(SEARCH_CONSOLE, repo, before_mint=lambda site: inspection_url(url, site))
+        endpoint, body = sc_inspect_request(conn.site, url)
+        payload = _call(conn, "POST", endpoint, body, quota_advice=INSPECT_QUOTA_ADVICE)
+    except (ReadRefusal, ReadFailure) as exc:
+        return failure_result(exc)
+    return shape_sc_inspect(payload, site=conn.site, url=url), 0
+
+
 def ga4_report(
     repo: str | Path,
     *,
@@ -1038,4 +1308,64 @@ def render_ga4_report(result: dict[str, Any]) -> list[str]:
         if consumed is not None:
             parts.append(f"this read used {consumed}")
         lines.append("quota: " + ", ".join(parts))
+    return lines
+
+
+def render_sc_inspect(result: dict[str, Any]) -> list[str]:
+    inspection = result["inspection_result"]
+    index = inspection.get("indexStatusResult") or {}
+    lines = [
+        f"Search Console: {terminal_safe(result['site'], STRING_MAX)}",
+        f"URL: {terminal_safe(result['inspection_url'], STRING_MAX)}",
+    ]
+    if not index:
+        lines.append("index status: none returned")
+    else:
+        verdict = terminal_safe(index.get("verdict") or "unknown")
+        coverage = index.get("coverageState")
+        lines.append(f"verdict: {verdict}" + (f" ({terminal_safe(coverage)})" if coverage else ""))
+        lines.append(
+            "robots.txt: "
+            + terminal_safe(index.get("robotsTxtState") or "unknown")
+            + ", indexing: "
+            + terminal_safe(index.get("indexingState") or "unknown")
+            + ", page fetch: "
+            + terminal_safe(index.get("pageFetchState") or "unknown")
+        )
+        crawled = index.get("lastCrawlTime")
+        lines.append(
+            "last crawl: "
+            + (terminal_safe(crawled) if crawled else "never")
+            + (f" ({terminal_safe(index['crawledAs'])})" if index.get("crawledAs") else "")
+        )
+        canonicals = (("Google canonical", "googleCanonical"), ("your canonical", "userCanonical"))
+        for label, key in canonicals:
+            if index.get(key):
+                lines.append(f"{label}: {terminal_safe(index[key], STRING_MAX)}")
+        lines.append(
+            f"sitemaps: {len(index.get('sitemap') or [])}, "
+            f"referring URLs: {len(index.get('referringUrls') or [])}"
+        )
+    rich = inspection.get("richResultsResult")
+    if rich:
+        types = [
+            terminal_safe(group.get("richResultType") or "?")
+            for group in rich.get("detectedItems") or []
+        ]
+        lines.append(
+            f"rich results: {terminal_safe(rich.get('verdict') or 'unknown')}"
+            + (f" ({', '.join(types)})" if types else "")
+        )
+    amp = inspection.get("ampResult")
+    if amp:
+        count = len(amp.get("issues") or [])
+        lines.append(
+            f"AMP: {terminal_safe(amp.get('verdict') or 'unknown')}, "
+            f"{count} issue{'' if count == 1 else 's'}"
+        )
+    if inspection.get("inspectionResultLink"):
+        lines.append(
+            "open in Search Console: "
+            + terminal_safe(inspection["inspectionResultLink"], STRING_MAX)
+        )
     return lines
