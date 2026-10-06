@@ -227,6 +227,13 @@ def _outcomes(product: str) -> dict[str, _Outcome]:
             repair_command=later.repair_command,
             recordable=False,
         ),
+        f"{prefix}_unexpected_redirect": _Outcome(
+            state=later.state,
+            summary=f"{name} answered with a redirect, which is never followed.",
+            repair=later.repair,
+            repair_command=later.repair_command,
+            recordable=False,
+        ),
         f"{prefix}_response_malformed": _Outcome(
             state=later.state,
             summary=f"{name} returned an unreadable answer.",
@@ -317,6 +324,10 @@ def _call(product: str, url: str, body: dict[str, Any], token: str) -> tuple[str
         return f"{prefix}_quota_exhausted", upstream
     if status >= 500:
         return f"{prefix}_server_error", upstream
+    if 300 <= status < 400:
+        # `_urllib_sender` never follows a redirect, so the token never
+        # reaches a second URL.
+        return f"{prefix}_unexpected_redirect", upstream
     if status == 401:
         return f"{prefix}_auth_rejected", upstream
     if status == 403 and reasons & _API_DISABLED_REASONS:

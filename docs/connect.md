@@ -787,9 +787,9 @@ own error text is never shown.
 | `oauth_client_rejected` | Google refused the OAuth client in the sign-in (deleted, or its secret changed): `invalid_client`. | `mb connect google --oauth --reauth --client-file <Desktop client JSON>` with the current client file. |
 | `oauth_client_unauthorized` | Google says the client may not use this grant (`unauthorized_client`), usually not a Desktop app client. | Check the client type, then `--reauth --client-file <Desktop client JSON>`. |
 | `oauth_scope_rejected` | Google refused the recorded read-only scopes (`invalid_scope`). | `--reauth --client-file <Desktop client JSON>`. |
-| `token_request_rejected` | Google refused the refresh request for another reason (`invalid_request` or a code `mb` does not know; the code itself is never shown). | Try again; if it repeats, `--reauth --client-file <Desktop client JSON>`. |
+| `token_request_rejected` | Google refused the refresh request for another reason (`invalid_request` or a code `mb` does not know; the code itself is never shown). Nothing about the sign-in is known to be wrong. | Try again later. Nothing is recorded. |
 | `oauth_grant_malformed`, `oauth_grant_missing` | The stored grant cannot be read, or is gone from the credential store. | `mb connect google --oauth --reauth --client-file <Desktop client JSON>`. |
-| `token_unreachable`, `token_request_failed`, `token_response_malformed` | Google's token endpoint could not be reached, had a server error, or sent an unreadable answer. Nothing about the sign-in is known to be wrong. | Try again later. Nothing is recorded. |
+| `token_unreachable`, `token_request_failed`, `token_response_malformed`, `token_unexpected_redirect` | Google's token endpoint could not be reached; answered with a server error, a timeout (408), a rate limit (429) or an error carrying no OAuth code; sent an unreadable answer; or answered with a redirect (never followed, so the grant never reaches a second URL). Nothing about the sign-in is known to be wrong. | Try again later. Nothing is recorded. |
 
 A credential store that is locked or unavailable reads as
 `backend_unavailable`, as for every other provider.
@@ -851,13 +851,13 @@ Each product outcome has a stable rule (`search_console_...` or `ga4_...`):
 | `*_api_disabled` | HTTP 403 because the Google Search Console API or the Google Analytics Data API is not enabled in the Cloud project that owns the OAuth client. | Enable it under APIs & Services > Library, wait a few minutes, test again. | yes (`invalid`) |
 | `*_auth_rejected` | HTTP 401 on a freshly minted token. | A person runs `mb connect google --oauth --reauth`. | yes (`invalid`) |
 | `*_request_rejected` | Another 4xx. | Check the recorded ids with `mb connect status google`. | yes (`invalid`) |
-| `*_quota_exhausted`, `*_server_error`, `*_unreachable`, `*_response_malformed` | 429 or a quota reason, 5xx, no answer, or an unreadable answer. Nothing about the sign-in is known to be wrong. | Test again later. | no |
+| `*_quota_exhausted`, `*_server_error`, `*_unreachable`, `*_response_malformed`, `*_unexpected_redirect` | 429 or a quota reason, 5xx, no answer, an unreadable answer, or a redirect (never followed: the access token is never sent to a second URL). Nothing about the sign-in is known to be wrong. | Test again later. | no |
 
 When the token cannot be minted, the token rules in the table above apply:
 `reauth_required` is recorded as before; `oauth_client_rejected`,
-`oauth_client_unauthorized`, `oauth_scope_rejected`,
-`token_request_rejected`, `oauth_grant_malformed` and `oauth_grant_missing`
-are recorded as `invalid`; the rest are not recorded.
+`oauth_client_unauthorized`, `oauth_scope_rejected`, `oauth_grant_malformed`
+and `oauth_grant_missing` (facts about the client or the grant) are recorded
+as `invalid`; the rest, `token_request_rejected` included, are not recorded.
 
 An outcome that is not recorded leaves `mb connect status google` exactly as
 it was (it may still read `ready` from an earlier check), but the test itself

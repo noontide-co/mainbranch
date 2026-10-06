@@ -14,7 +14,11 @@ store and the synthetic sentinels come from test_google_connect.
 
 from __future__ import annotations
 
+import http.server
 import json
+import socketserver
+import sys
+import threading
 from collections.abc import Mapping
 from datetime import date
 from pathlib import Path
@@ -576,8 +580,6 @@ TOKEN_REFUSALS = {
     "invalid_client": "oauth_client_rejected",
     "unauthorized_client": "oauth_client_unauthorized",
     "invalid_scope": "oauth_scope_rejected",
-    "invalid_request": "token_request_rejected",
-    CODE_SENTINEL: "token_request_rejected",
 }
 
 
@@ -934,3 +936,212 @@ def test_nothing_secret_or_from_google_leaks(
         _assert_never_shown(text)
     # The minted token and the grant stay in memory and the store only.
     assert MINTED not in json.dumps(_local_secrets())
+
+
+# --- Fix round 1: transient token answers, redirects, exact matching ------------
+
+# Token-endpoint answers that say nothing about the client or the grant:
+# (status, raw body, rule). None of them is recorded or names a new sign-in.
+TRANSIENT_TOKEN = {
+    "429_empty": (429, b"", "token_request_failed"),
+    "429_with_code": (429, b'{"error": "invalid_grant"}', "token_request_failed"),
+    "408_empty": (408, b"", "token_request_failed"),
+    "400_empty": (400, b"", "token_request_failed"),
+    "401_no_code": (401, b'{"message": "x"}', "token_request_failed"),
+    "invalid_request": (400, b'{"error": "invalid_request"}', "token_request_rejected"),
+    "unknown_code": (400, json.dumps({"error": CODE_SENTINEL}).encode(), "token_request_rejected"),
+    "redirect": (302, b"", "token_unexpected_redirect"),
+}
+
+
+@pytest.mark.parametrize("case", sorted(TRANSIENT_TOKEN))
+def test_transient_token_answers_are_never_recorded(
+    case: str,
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    status_code, raw, rule = TRANSIENT_TOKEN[case]
+    _sign_in(repo, client_file, google, monkeypatch)
+    before = _yaml(repo)
+    assert _status(repo)[1]["state"] == "ready"
+    api = _api(monkeypatch)
+
+    _mint(monkeypatch, status=status_code, raw=raw)
+    code, result = _test_json(repo)
+    _mint(monkeypatch, status=status_code, raw=raw)
+    human = _test(repo)
+    _mint(monkeypatch, status=status_code, raw=raw)
+    token = runner.invoke(app, ["connect", "token", "google", "--repo", str(repo), "--print"])
+    _mint(monkeypatch, status=status_code, raw=raw)
+    marker = tmp_path / "child-ran"
+    child = runner.invoke(
+        app,
+        [
+            "connect",
+            "exec",
+            "google",
+            "--repo",
+            str(repo),
+            "--",
+            sys.executable,
+            "-c",
+            f"open({str(marker)!r}, 'w').close()",
+        ],
+    )
+
+    assert code == 1
+    assert result["rule"] == rule
+    assert result["state"] == "unvalidated"
+    assert result["recorded"] is False
+    assert result["repair_command"] == ""
+    assert api.calls == []
+    assert human.exit_code == 1
+    assert "try again later" in human.stdout
+    assert "recorded: no" in human.stdout
+    for output in (human.output, token.output, child.output, json.dumps(result)):
+        assert "--reauth" not in output
+        assert "sign in again" not in output
+        assert CODE_SENTINEL not in output
+    assert token.exit_code == 1
+    assert token.stdout == ""
+    assert "try again later" in token.stderr
+    assert child.exit_code == 1
+    assert not marker.exists()
+    assert _yaml(repo) == before
+    status_exit, status = _status(repo)
+    assert status_exit == 0
+    assert status["state"] == "ready"
+
+
+def test_api_redirect_is_not_followed_or_recorded(
+    repo: Path, client_file: Path, google: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _sign_in(repo, client_file, google, monkeypatch)
+    before = _yaml(repo)
+    _mint(monkeypatch)
+    api = _api(monkeypatch, ga4=(302, b""))
+
+    code, result = _test_json(repo)
+
+    assert code == 1
+    assert result["rule"] == "ga4_unexpected_redirect"
+    assert result["recorded"] is False
+    assert api.products() == ["search_console", "ga4"]
+    assert _yaml(repo) == before
+
+
+class _Recorder(http.server.BaseHTTPRequestHandler):
+    """Loopback server: the first path redirects, anything else is recorded."""
+
+    received: list[dict[str, Any]] = []
+    status = 302
+    target = ""
+
+    def _answer(self) -> None:
+        length = int(self.headers.get("Content-Length") or 0)
+        body = self.rfile.read(length) if length else b""
+        if self.path == "/start":
+            self.send_response(self.status)
+            self.send_header("Location", self.target)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        type(self).received.append(
+            {"path": self.path, "authorization": self.headers.get("Authorization"), "body": body}
+        )
+        self.send_response(200)
+        self.send_header("Content-Length", "2")
+        self.end_headers()
+        self.wfile.write(b"{}")
+
+    do_GET = do_POST = _answer
+
+    def log_message(self, *args: Any) -> None:
+        return None
+
+
+@pytest.mark.parametrize("status_code", [301, 302, 303, 307, 308])
+def test_the_sender_never_follows_a_redirect(status_code: int) -> None:
+    received: list[dict[str, Any]] = []
+
+    class Handler(_Recorder):
+        pass
+
+    Handler.received = received
+    Handler.status = status_code
+    server = socketserver.TCPServer(("127.0.0.1", 0), Handler)
+    port = server.server_address[1]
+    Handler.target = f"http://127.0.0.1:{port}/second"
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        status, _raw = go._urllib_sender(
+            f"http://127.0.0.1:{port}/start",
+            b"refresh_token=" + REFRESH.encode(),
+            {"Authorization": f"Bearer {MINTED}", "Content-Type": "application/json"},
+            5.0,
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+    assert status == status_code
+    # Nothing reached the second URL: no bearer token, no form body.
+    assert received == []
+
+
+@pytest.mark.parametrize(
+    "site",
+    [
+        "sc-domain:example.com\n.org",
+        "sc-domain:exam\nple.com",
+        "sc-domain:example.com\x00",
+        "https://www.example.com/a\nb/",
+        "https://www.example.com/a b/",
+    ],
+)
+def test_a_site_with_a_newline_or_control_character_is_refused(site: str) -> None:
+    with pytest.raises(connect_mod.ConnectRefusal) as caught:
+        gc.normalize_search_console_site(site)
+    assert caught.value.rule == "search_console_site_format"
+
+
+@pytest.mark.parametrize("value", ["123\n456", "１２３", "123\x00"])
+def test_a_property_id_that_is_not_only_ascii_digits_is_refused(value: str) -> None:
+    with pytest.raises(connect_mod.ConnectRefusal) as caught:
+        gc.normalize_ga4_property_id(value)
+    assert caught.value.rule == "ga4_property_id_format"
+
+
+def test_a_hand_edited_value_with_a_newline_reads_as_not_recorded(
+    repo: Path, client_file: Path, google: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _sign_in(repo, client_file, google, monkeypatch)
+    config = _config(repo)
+    config["providers"]["google"]["metadata"]["search_console_site"] = "sc-domain:example.com\n.org"
+    connect_mod._write_config(repo, config)
+    _mint(monkeypatch)
+    api = _api(monkeypatch)
+
+    code, result = _test_json(repo)
+
+    assert code == 1
+    assert result["rule"] == "search_console_site_not_recorded"
+    assert api.products() == ["ga4"]
+
+
+def test_connect_refuses_a_site_with_a_newline(repo: Path, client_file: Path, google: Any) -> None:
+    google()
+    result = _oauth(
+        repo,
+        "--client-file",
+        str(client_file),
+        "--metadata",
+        "search_console_site=sc-domain:example.com\n.org",
+    )
+    assert result.exit_code == 2
+    assert _google_entry(repo) == {}

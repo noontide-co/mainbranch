@@ -54,9 +54,10 @@ METADATA_SITE = "search_console_site"
 METADATA_PROPERTY = "ga4_property_id"
 METADATA_GRANTS = connect_mod.GOOGLE_OAUTH_GRANTS_METADATA
 
-_HOST_LABEL_RE = re.compile(r"^(?!-)[a-z0-9-]{1,63}(?<!-)$")
-_CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,254}$")
-_PROPERTY_RE = re.compile(r"^[0-9]{1,20}$")
+# Matched with `fullmatch`: `$` alone would accept a trailing newline.
+_HOST_LABEL_RE = re.compile(r"(?!-)[a-z0-9-]{1,63}(?<!-)")
+_CLIENT_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,254}")
+_PROPERTY_RE = re.compile(r"[0-9]{1,20}")
 
 # Test seams. The CLI uses these defaults; tests replace them.
 Opener = Callable[[str], bool]
@@ -113,7 +114,7 @@ def parse_client_json(text: str) -> OAuthClient:
     client_secret = section.get("client_secret", "") if isinstance(section, dict) else None
     if (
         not isinstance(client_id, str)
-        or not _CLIENT_ID_RE.match(client_id)
+        or not _CLIENT_ID_RE.fullmatch(client_id)
         or not isinstance(client_secret, str)
     ):
         connect_mod._refuse(
@@ -140,13 +141,15 @@ def read_client_file(path: str) -> str:
 
 def _valid_host(host: str) -> bool:
     labels = host.split(".")
-    return len(labels) >= 2 and all(_HOST_LABEL_RE.match(label) for label in labels)
+    return len(labels) >= 2 and all(_HOST_LABEL_RE.fullmatch(label) for label in labels)
 
 
 def normalize_search_console_site(value: str) -> str:
     """``sc-domain:<host>``, or a URL-prefix property ``http(s)://<host>/...`` ending in ``/``."""
 
     site = value.strip()
+    if any(ch.isspace() or ord(ch) < 32 or ord(ch) == 127 for ch in site):
+        site = ""  # no whitespace or control character anywhere; refused below
     if site.startswith("sc-domain:"):
         host = site.removeprefix("sc-domain:").lower()
         if _valid_host(host):
@@ -178,7 +181,7 @@ def normalize_ga4_property_id(value: str) -> str:
     """A numeric GA4 property id; ``properties/123`` becomes ``123``."""
 
     prop = value.strip().removeprefix("properties/")
-    if not _PROPERTY_RE.match(prop):
+    if not _PROPERTY_RE.fullmatch(prop):
         connect_mod._refuse(
             "ga4_property_id_format",
             "ga4_property_id must be the numeric GA4 property id (for example 123456789 or "
@@ -775,7 +778,7 @@ MINT_EXPIRY_MARGIN_SECONDS = 60
 # Used when Google's answer carries no usable ``expires_in``.
 MINT_DEFAULT_LIFETIME_SECONDS = 3600
 
-_EXPIRES_ON_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+_EXPIRES_ON_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 
 
 @dataclass(frozen=True)
@@ -880,16 +883,13 @@ _TOKEN_REFUSALS: dict[str, tuple[str, str]] = {
         "Google refused the read-only scopes recorded in the sign-in (invalid_scope); sign in "
         "again with the current client file",
     ),
-    "invalid_request": (
-        "token_request_rejected",
-        "Google's token endpoint refused the refresh request as malformed (invalid_request); "
-        "try again, and if it repeats sign in again with the current client file",
-    ),
 }
+# Any other refusal (`invalid_request` or a code mb does not know) is not about
+# the grant or the client, so it is not recorded and names no new sign-in.
 _TOKEN_REFUSAL_OTHER = (
     "token_request_rejected",
-    "Google's token endpoint refused the refresh request; try again, and if it repeats sign "
-    "in again with the current client file",
+    "Google's token endpoint refused the refresh request; nothing about the sign-in is "
+    "known to be wrong. No access token was minted; try again later",
 )
 
 
@@ -917,7 +917,10 @@ def _mint(grant: tuple[str, str, str]) -> _Mint:
         if exc.state == go.STATE_INVALID:
             # Matched against fixed codes only; the code Google sent is never shown.
             code = str(exc.upstream.get("error_code") or "")
-            rule, error = _TOKEN_REFUSALS.get(code, _TOKEN_REFUSAL_OTHER)
+            if code not in _TOKEN_REFUSALS:
+                rule, error = _TOKEN_REFUSAL_OTHER
+                return _Mint(ok=False, state=go.STATE_UNVALIDATED, rule=rule, error=error)
+            rule, error = _TOKEN_REFUSALS[code]
             return _Mint(
                 ok=False,
                 state=go.STATE_INVALID,
@@ -1085,4 +1088,4 @@ def refresh_token_expires_on(entry: dict[str, Any]) -> str:
 
     raw = entry.get("oauth")
     value = raw.get("refresh_token_expires_on") if isinstance(raw, dict) else None
-    return value if isinstance(value, str) and _EXPIRES_ON_RE.match(value) else ""
+    return value if isinstance(value, str) and _EXPIRES_ON_RE.fullmatch(value) else ""

@@ -42,8 +42,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   gain this probe: a plain Google access-token connection still exits 0 as
   stored and unverified, and `ga4`, `status` and `doctor` are unchanged and
   never call Google. Token refusals other than an expired sign-in now name
-  the actual problem, and `mb connect google --metadata ...` on a sign-in
-  connection keeps the keys it is not given (part of #1004).
+  the actual problem; a token-endpoint timeout, rate limit or code-less error
+  is treated as transient and never recorded; Google calls never follow a
+  redirect; and `mb connect google --metadata ...` on a sign-in connection
+  keeps the keys it is not given (part of #1004).
 
 ### Changed
 
