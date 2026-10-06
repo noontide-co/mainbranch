@@ -13,6 +13,24 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- `mb connect test <provider>` no longer writes its outcome into a
+  `.mb/connect.yaml` that git tracks, for every provider and not only Google.
+  It prints `recorded: no (.mb/connect.yaml is tracked by git ...)`, and
+  `--json` adds `recorded: false` and
+  `not_recorded_reason: connect_yaml_tracked`. The exit code follows the
+  check itself, by the same rule as status: a provider with no automated
+  check still exits 0. `mb connect rotate` still records its check, because a person
+  ran it to change the connection.
+- Google's next step names the sign-in. With no Google connection,
+  `mb connect status google`, `mb connect test google`, `mb connect token google`
+  and `mb connect exec google` say `mb connect google --oauth`, not
+  `--token-stdin`. A sign-in connection that failed says
+  `mb connect google --oauth --reauth`. If its stored sign-in can't be read
+  (for example, a reset credential store), it says
+  `mb connect google --oauth --reauth --client-file <Desktop client JSON>`,
+  because `--reauth` alone is refused without the client. A connection made
+  with a plain access token still says `--token-stdin`. `repair_command` in `--json`
+  matches. Other providers are unchanged.
 - `mb update` run by an agent, a schedule or with `--json` no longer creates a
   missing `AGENTS.md` in your business repo, or replaces a broken `AGENTS.md`
   link. It lists
@@ -22,6 +40,26 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- A tracked `.mb/connect.yaml` is no longer rewritten when git can't answer.
+  Before, git missing from `PATH`, a `safe.directory` refusal or a timeout let
+  a Google read or check write the file. Inside a git checkout such a file is
+  now treated as tracked, and `GIT_DIR`, `GIT_WORK_TREE` and `GIT_INDEX_FILE`
+  from the environment no longer redirect the check.
+- `mb connect google --oauth --scope user` after a `--metadata`-only Google
+  entry now signs in with user scope. Before, it was refused with renewal
+  wording, although nothing was being renewed.
+- After a read finds that the Google sign-in expired, `mb connect status google`
+  reads `granted, last check: not checked since the sign-in expired` instead
+  of `not checked yet`.
+- A Google connection stored before #959 under the old `keyring` name no
+  longer refuses a renewal when `MB_CONNECT_SECRET_BACKEND` is `auto` or
+  `keyring`, which resolve to the same store. The refusal's own advice now
+  works.
+- `authorization_code_rejected` also covers a sign-in request that did not
+  match, such as a mismatched PKCE challenge. Google's text is still never
+  shown.
+- The `docs/connect.md` refusal table now says that only `--timeout` is
+  refused at its default without `--oauth`.
 - `mb update` lists the Codex review command
   (`mb doctor repair --repo <path> --plan --only codex`) once instead of
   twice, and every Codex repair command it gives you names your repo with

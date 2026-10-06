@@ -316,6 +316,13 @@ def _refuse_other_backend(existing: _Existing, requested: str | None) -> None:
         chosen = ""
     if chosen == recorded:
         return
+    try:
+        # A pre-#959 record names the generic `keyring`, which resolves to the
+        # same native store as `auto` or `keyring` do now.
+        if chosen and chosen == select_secret_backend(recorded):
+            return
+    except (ValueError, CredentialStoreError):
+        pass
     # A hand-edited config could hold anything; name only a known backend.
     name = recorded if recorded in SUPPORTED_BACKENDS else "the recorded store"
     connect_mod._refuse(
@@ -335,8 +342,18 @@ def _stored_client(existing: _Existing) -> OAuthClient | None:
         return None
     if not probe.present:
         return None
+    return client_from_grant(probe.value)
+
+
+def client_from_grant(value: str) -> OAuthClient | None:
+    """The OAuth client in a stored grant's JSON, or None when it cannot be used.
+
+    ``--reauth`` without a client file needs this, and status uses the same
+    check to decide whether that command would be refused.
+    """
+
     try:
-        raw = json.loads(probe.value)
+        raw = json.loads(value)
     except ValueError:
         return None
     if not isinstance(raw, dict):
@@ -627,7 +644,10 @@ def bootstrap(
         client = stored
     if paste and not _stdin_is_tty(stdin):
         raise go.GoogleOAuthError("paste_needs_tty")
-    if existing.entry:
+    if existing.oauth or existing.has_access_token:
+        # Renewing (or replacing) a stored credential keeps its scope and
+        # store. An entry with no credential yet (`--metadata` alone) is a
+        # first sign-in, so --scope is honoured there.
         recorded_scope = str(existing.entry.get("scope") or "repo")
         if scope.strip() and normalized_scope != recorded_scope:
             connect_mod._refuse(
@@ -638,6 +658,8 @@ def bootstrap(
             )
         normalized_scope = recorded_scope
         _refuse_other_backend(existing, secret_backend)
+    elif existing.entry and not scope.strip():
+        normalized_scope = str(existing.entry.get("scope") or "repo")
 
     tokens = _sign_in(
         client,

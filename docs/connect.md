@@ -757,6 +757,18 @@ you allowed). No token or client secret is ever written to the repo.
 and `oauth.refresh_token_expires_on` (a UTC date) when Google put a time
 limit on the sign-in; it is `""` otherwise.
 
+With no Google connection, `mb connect status google`, `mb connect test
+google`, `mb connect token google` and `mb connect exec google` name
+`mb connect google --oauth` as the next step (`repair_command` in `--json`).
+On a sign-in connection whose stored sign-in can still be read (only the
+access token is missing, or the check failed), they name
+`mb connect google --oauth --reauth`. When the stored sign-in itself is gone or
+can't be read (for example, after the credential store was reset), they name
+`mb connect google --oauth --reauth --client-file <Desktop client JSON>`:
+`--reauth` reads the OAuth client from the stored sign-in, so without it the
+client file must be passed. Only a connection made with a plain access token
+keeps `--token-stdin`, the one way to replace that token.
+
 ### Reading with the sign-in
 
 On a sign-in connection, `mb connect token google` and
@@ -872,17 +884,24 @@ exits 1 and prints `recorded: no`. `mb connect status google` and
 On a sign-in connection, `mb connect status google` adds one line per
 product, such as `search_console: granted, last check: ok`,
 `ga4: granted, last check: invalid (ga4_no_access)` or `ga4: not granted`.
+After a read records `reauth_required`, a granted product reads
+`granted, last check: not checked since the sign-in expired`.
 `--json` adds `oauth.grants` (the granted products) and
 `validation.products` (each product's last recorded `state` and `rule`).
 
 `.mb/connect.yaml` is ignored by git in a business repo. If an older or
 hand-made repo tracks it, nothing writes to it on its own: a read that sees
 `reauth_required` still exits 1 with the `--reauth` repair but does not
-record it, and `mb connect test google` reports
+record it, and `mb connect test <provider>` (any provider) reports
 `recorded: no (.mb/connect.yaml is tracked by git ...)` with
-`not_recorded_reason: connect_yaml_tracked` in `--json`. Commands a person
-runs to change the connection (`mb connect google --oauth`, `--metadata`)
-still write it, and the sign-in's own check is recorded with it.
+`not_recorded_reason: connect_yaml_tracked` in `--json`; a failed check still
+exits 1. When git cannot answer (it is missing, times out, or refuses the
+repo, for example over `safe.directory` ownership) and the repo is inside a
+git checkout, the file is treated as tracked. `GIT_DIR`, `GIT_WORK_TREE` and
+`GIT_INDEX_FILE` from the environment are ignored for this check. Commands a
+person runs to change the connection (`mb connect google --oauth`,
+`--metadata`, `mb connect rotate`) still write it, and their own check is
+recorded with it.
 
 The probe is conditional. A sign-in (OAuth) connection has one, so
 `stored, unverified` or `unvalidated` on it exits 1 and points at
@@ -897,7 +916,8 @@ and the rule names the class, never Google's text: `oauth_client_rejected`
 `oauth_client_unauthorized` (`unauthorized_client`: not a Desktop app
 client), `oauth_scope_rejected` (`invalid_scope`),
 `authorization_code_rejected` (`invalid_grant`: the code expired, was used,
-or came from another attempt; sign in again), and `token_request_failed` for
+came from another attempt, or did not match the sign-in request; sign in
+again), and `token_request_failed` for
 anything else.
 
 If you untick one product on the consent screen, the sign-in is stored with
@@ -969,9 +989,9 @@ Each exits 2 with fixed text and changes nothing:
 | `oauth_client_malformed`, `oauth_client_not_desktop`, `oauth_client_unreadable` | The client file is not a Desktop app client JSON, or cannot be read. |
 | `search_console_site_format`, `ga4_property_id_format`, `oauth_metadata_reserved` | A metadata value is not in the shape above, or sets `oauth_grants`. |
 | `paste_needs_tty` | `--paste` without a terminal on stdin. |
-| `oauth_scope_kept` | `--scope` names a scope other than the one the existing Google connection is recorded in; a renewal keeps the recorded scope. |
-| `oauth_backend_kept` | `MB_CONNECT_SECRET_BACKEND` names a store other than the one the existing Google connection uses; a renewal writes to the recorded store. |
-| `oauth_option_without_oauth` | `--timeout`, `--client-file`, `--reauth` or another sign-in option without `--oauth` (any value, the default included). |
+| `oauth_scope_kept` | `--scope` names a scope other than the one the existing Google connection is recorded in; a renewal keeps the recorded scope. An entry with no stored credential yet (only `--metadata`) is a first sign-in, and `--scope` is honoured there. |
+| `oauth_backend_kept` | `MB_CONNECT_SECRET_BACKEND` names a store other than the one the existing Google connection uses; a renewal writes to the recorded store. A connection recorded under the older `keyring` name accepts `auto` or `keyring` when they resolve to the same native store. |
+| `oauth_option_without_oauth` | `--timeout`, `--client-file`, `--reauth` or another sign-in option without `--oauth`. `--timeout` is refused even at its default (`--timeout 300`); `--port 0`, the default, is not. |
 
 A credential-store failure part way through says exactly what is stored. If
 the grant write fails, nothing changed. If a later write fails on a first

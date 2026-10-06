@@ -2420,10 +2420,14 @@ def connect_cmd(
         else:
             connect_mod.render_test_result(result)
         # `needs_action` is set only by checks that can fail without changing
-        # the recorded status (a Google sign-in on a network blip).
-        needs_action = connect_mod.provider_needs_action(result["status"]) or bool(
-            result.get("needs_action")
-        )
+        # the recorded status (a Google sign-in on a network blip). A check
+        # left out of a git-tracked .mb/connect.yaml exits on its own outcome.
+        if result.get("not_recorded_reason") == "connect_yaml_tracked":
+            needs_action = bool(result.get("needs_action"))
+        else:
+            needs_action = connect_mod.provider_needs_action(result["status"]) or bool(
+                result.get("needs_action")
+            )
         raise typer.Exit(1 if needs_action else 0)
     if provider:
         _connect_usage_exit(
