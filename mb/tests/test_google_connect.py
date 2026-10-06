@@ -337,7 +337,11 @@ def test_oauth_human_output_names_grants_and_claims_no_verification(
 
     assert result.exit_code == 0, result.output
     assert "Granted (read-only): Search Console, Analytics (GA4)" in result.stdout
-    assert "Not checked against Google yet" in result.stdout
+    # The sign-in's last step is the read-only check. The network guard
+    # blocks Google here, so it reports that and claims nothing.
+    assert "Checked with Google (read-only): warn (unvalidated)" in result.stdout
+    assert "search_console: unvalidated (search_console_unreachable)" in result.stdout
+    assert "next: mb connect test google" in result.stdout
     assert "verified" not in result.stdout.lower()
     assert "Opening your browser" in result.stderr
     assert "https://accounts.google.com/o/oauth2/v2/auth?" in result.stderr
@@ -889,7 +893,13 @@ def test_tokenless_reconnect_keeps_oauth_grants(repo: Path, client_file: Path, g
 
     assert result.exit_code == 0, result.output
     entry = _google_entry(repo)
-    assert entry["metadata"] == {"account_email": "ops@example.com", "oauth_grants": "ga4"}
+    # The edit adds the key it was given and keeps the recorded ones.
+    assert entry["metadata"] == {
+        "search_console_site": "sc-domain:example.com",
+        "ga4_property_id": "123456789",
+        "account_email": "ops@example.com",
+        "oauth_grants": "ga4",
+    }
     assert sorted(entry["secrets"]) == ["access_token", "oauth_grant"]
 
 

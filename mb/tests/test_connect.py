@@ -3473,6 +3473,31 @@ def test_probe_provider_set_matches_validate_with_provider(tmp_path: Path, monke
     # Custom providers are never in the set.
     assert connect_mod.has_provider_probe("mercury") is False
 
+    # The conditional set: `google` is probed only when its entry records an
+    # OAuth grant (`mb/google_probe.py` runs then, not `_validate_with_provider`,
+    # which the loop above shows stays probe-less for it).
+    assert frozenset({"google"}) == connect_mod.CONDITIONAL_PROBE_PROVIDERS
+    assert not connect_mod.CONDITIONAL_PROBE_PROVIDERS & connect_mod.PROBE_PROVIDERS
+    assert connect_mod.CONDITIONAL_PROBE_PROVIDERS.issubset({p.id for p in connect_mod.PROVIDERS})
+    legacy = {"secrets": {"access_token": {"ref": "ref-1", "backend": "local-file"}}}
+    oauth = {
+        "secrets": {
+            "access_token": {"ref": "ref-1", "backend": "local-file"},
+            "oauth_grant": {"ref": "ref-2", "backend": "local-file"},
+        }
+    }
+    unrecorded = {"secrets": {**legacy["secrets"], "oauth_grant": {"ref": ""}}}
+    for provider_id in connect_mod.CONDITIONAL_PROBE_PROVIDERS:
+        assert connect_mod.has_provider_probe(provider_id) is False
+        assert connect_mod.has_provider_probe(provider_id, legacy) is False
+        assert connect_mod.has_provider_probe(provider_id, unrecorded) is False
+        assert connect_mod.has_provider_probe(provider_id, oauth) is True
+    for provider_id in connect_mod.PROBE_PROVIDERS:
+        assert connect_mod.has_provider_probe(provider_id, legacy) is True
+    # Recording the slot gives a probe only to the provider that has one.
+    assert connect_mod.has_provider_probe("resend", oauth) is False
+    assert connect_mod.has_provider_probe("mercury", oauth) is False
+
 
 def test_provider_needs_action_splits_on_whether_a_probe_exists() -> None:
     unverified = {"ok": False, "state": connect_mod.UNVERIFIED_STATE}
@@ -3494,6 +3519,13 @@ def test_provider_needs_action_splits_on_whether_a_probe_exists() -> None:
         ), state
 
     assert connect_mod.provider_needs_action({"ok": True, "state": "ready"}) is False
+
+    # A status item's own `has_probe` wins: that is how a conditional probe
+    # (an OAuth-mode `google`) reaches the exit code.
+    google = {**unverified, "provider": "google"}
+    assert connect_mod.provider_needs_action(google) is False
+    assert connect_mod.provider_needs_action({**google, "has_probe": False}) is False
+    assert connect_mod.provider_needs_action({**google, "has_probe": True}) is True
 
 
 def test_connect_probeless_unverified_exits_zero_on_all_three_surfaces(

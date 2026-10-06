@@ -566,7 +566,8 @@ def http_post_form(
     payload: dict[str, Any] = {}
     try:
         parsed = json.loads(raw.decode("utf-8")) if raw else {}
-    except (UnicodeDecodeError, ValueError):
+    except (UnicodeDecodeError, ValueError, RecursionError):
+        # RecursionError: a hostile, deeply nested body reads as unreadable.
         parsed = {}
     if isinstance(parsed, dict):
         payload = parsed

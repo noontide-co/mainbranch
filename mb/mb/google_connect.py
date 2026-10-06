@@ -3,10 +3,11 @@
 Read-only Search Console and GA4. A person runs this, never an agent: it opens
 a browser (or, with ``--paste``, reads the redirect URL from a real terminal),
 receives the authorization code on ``http://127.0.0.1:<port>``, exchanges it
-with PKCE and stores the grant. Nothing here calls Google beyond the token
-exchange; checking the grant against the APIs comes with ``mb connect test``
-in a later release. ``read_minted_token`` (end of this module) is the read
-side: it mints a short-lived access token from the grant for ``read_token``.
+with PKCE and stores the grant. Its last step checks the grant with one
+read-only call per granted product, as ``mb connect test google`` does
+(``mb/google_probe.py``). ``read_minted_token`` (end of this module) is the
+read side: it mints a short-lived access token from the grant for
+``read_token``.
 
 Storage (one credential-store item per slot, refs from ``_secret_ref``):
 
@@ -186,6 +187,17 @@ def normalize_ga4_property_id(value: str) -> str:
     return prop
 
 
+def normalize_oauth_metadata(given: dict[str, str]) -> dict[str, str]:
+    """``given`` with the site and property ids in their checked form (refuses bad ones)."""
+
+    normalized = dict(given)
+    if METADATA_SITE in normalized:
+        normalized[METADATA_SITE] = normalize_search_console_site(normalized[METADATA_SITE])
+    if METADATA_PROPERTY in normalized:
+        normalized[METADATA_PROPERTY] = normalize_ga4_property_id(normalized[METADATA_PROPERTY])
+    return normalized
+
+
 def _oauth_metadata(pairs: list[str], existing: dict[str, Any]) -> dict[str, str]:
     given = connect_mod._parse_metadata(pairs)
     if METADATA_GRANTS in given:
@@ -194,10 +206,7 @@ def _oauth_metadata(pairs: list[str], existing: dict[str, Any]) -> dict[str, str
             f"{METADATA_GRANTS} is recorded by the Google sign-in itself and cannot be set "
             "with --metadata. Nothing was stored.",
         )
-    if METADATA_SITE in given:
-        given[METADATA_SITE] = normalize_search_console_site(given[METADATA_SITE])
-    if METADATA_PROPERTY in given:
-        given[METADATA_PROPERTY] = normalize_ga4_property_id(given[METADATA_PROPERTY])
+    given = normalize_oauth_metadata(given)
     merged = {str(key): str(value) for key, value in existing.items() if value not in (None, "")}
     merged.update(given)
     return merged
@@ -399,6 +408,7 @@ class _Writes:
 
     fresh: bool  # no OAuth grant was recorded before this run
     replaced_access_token: bool  # an access-token-only entry is being upgraded
+    grant_started: bool = False  # the grant write began; it may have landed
     grant: bool = False
     token: bool = False
     user_scope: bool = False  # the user-scope entry (which readers follow) is written
@@ -460,15 +470,32 @@ def _partial_message(
 
 
 def wrote_anything(progress: Progress | None) -> bool:
-    return progress is not None and progress.writes is not None and progress.writes.grant
+    """Might the credential store hold something from this run?"""
+
+    writes = progress.writes if progress is not None else None
+    return writes is not None and (writes.grant or writes.grant_started)
 
 
 def cancelled_message(progress: Progress | None, lead: str = "Google sign-in cancelled") -> str:
     """What Ctrl-C (or a crash) during ``bootstrap`` left behind, as fixed text."""
 
     writes = progress.writes if progress is not None else None
-    if writes is None or not writes.grant:
+    if writes is None or not (writes.grant or writes.grant_started):
         return f"{lead}. Nothing was stored."
+    if not writes.grant:
+        # Interrupted inside the grant write: it may or may not have landed.
+        if writes.fresh:
+            return (
+                f"{lead} while the new Google grant was being written, so it may have been "
+                "stored. This repo does not record it, so the connection is not set up; an "
+                "unrecorded item is unused and the next sign-in overwrites it. Re-run "
+                "`mb connect google --oauth` to finish it."
+            )
+        return (
+            f"{lead} while the new Google grant was being written, so it may have been "
+            "stored. If it was, it replaced the old grant and the connection uses it; run "
+            "`mb connect test google` to check."
+        )
     if writes.metadata:
         return (
             f"{lead} after it finished: the new sign-in is stored and recorded. See it with "
@@ -596,6 +623,7 @@ def bootstrap(
         progress.writes = writes
     # A token minted earlier in this process came from the grant being replaced.
     _minted.pop((store.backend, grant_ref), None)
+    writes.grant_started = True
     try:
         store.set(grant_ref, _grant_json(client, tokens), deadline=deadline)
     except connect_mod.KeychainError as exc:
@@ -646,10 +674,11 @@ def bootstrap(
             state="metadata_write_failed",
         ) from None
 
+    check = _check_after_sign_in(provider, target, str(tokens["access_token"]), deadline)
     status = connect_mod.status_provider(provider.id, target, _credential_deadline=deadline)
     return {
         "ok": not missing and status["state"] not in {"missing_secret", "backend_unavailable"},
-        "ready": False,
+        "ready": bool(check["ok"]),
         "provider": provider.id,
         "credential_mode": "oauth",
         "reauth": reauth,
@@ -660,11 +689,53 @@ def bootstrap(
         "user_scope_path": user_scope_path,
         "credential_backend": store.backend,
         "credential_boundary": store.boundary(),
-        "provider_verified": False,
+        "provider_verified": bool(check["ok"]),
         "repair_command": "mb connect google --oauth --reauth" if missing else "",
+        "check": check,
         "safe_to_share": True,
         "status": status,
     }
+
+
+def _check_after_sign_in(
+    provider: connect_mod.Provider, target: Path, access_token: str, deadline: float
+) -> dict[str, Any]:
+    """The sign-in's last step: ``mb connect test google`` with the token just exchanged.
+
+    It reads each granted product once and records the outcome as the test
+    would. The sign-in is already stored, so a check that cannot run never
+    fails it; the result says what to run next.
+    """
+
+    from mb import google_probe
+
+    try:
+        return google_probe.test_google(
+            provider,
+            target,
+            source="repo",
+            before={},
+            status_again=lambda: connect_mod.status_provider(
+                provider.id, target, _credential_deadline=deadline
+            ),
+            access_token=access_token,
+        )
+    except Exception as exc:  # the sign-in is stored; never let the check undo that
+        return {
+            "ok": False,
+            "provider": provider.id,
+            "state": go.STATE_UNVALIDATED,
+            "rule": "check_failed",
+            "summary": (
+                f"The check against Google stopped on an unexpected error ({type(exc).__name__}; "
+                "details are hidden because they may hold a secret)."
+            ),
+            "repair_command": "mb connect test google",
+            "recorded": False,
+            "needs_action": True,
+            "products": {},
+            "safe_to_share": True,
+        }
 
 
 def render_result(result: dict[str, Any]) -> None:
@@ -679,7 +750,17 @@ def render_result(result: dict[str, Any]) -> None:
     print(f"metadata: {result['config_path']}")
     if result.get("user_scope_path"):
         print(f"user scope: {result['user_scope_path']}")
-    print("Not checked against Google yet: `mb connect exec google -- <command>` reads with it.")
+    check = result.get("check") or {}
+    if check:
+        from mb import google_probe
+
+        verdict = "ok" if check.get("ok") else f"warn ({connect_mod.state_label(check['state'])})"
+        print(f"Checked with Google (read-only): {verdict}")
+        if check.get("summary"):
+            print(f"summary: {check['summary']}")
+        google_probe.render_products(check.get("products") or {})
+        if check.get("repair_command"):
+            print(f"next: {check['repair_command']}")
     print("See it with `mb connect status google`.")
 
 
@@ -780,6 +861,38 @@ def _lifetime(tokens: go.TokenResponse) -> float:
     return float(value)
 
 
+# OAuth refusals of the refresh grant other than `invalid_grant`, by the
+# `error` code: (rule, fixed text). Anything else gets the generic pair.
+_TOKEN_REFUSALS: dict[str, tuple[str, str]] = {
+    "invalid_client": (
+        "oauth_client_rejected",
+        "Google refused the OAuth client recorded in the sign-in (deleted, or its secret "
+        "changed); sign in again with the current client file",
+    ),
+    "unauthorized_client": (
+        "oauth_client_unauthorized",
+        "Google says the OAuth client recorded in the sign-in may not use this grant "
+        "(unauthorized_client); check that it is a Desktop app client, then sign in again "
+        "with it",
+    ),
+    "invalid_scope": (
+        "oauth_scope_rejected",
+        "Google refused the read-only scopes recorded in the sign-in (invalid_scope); sign in "
+        "again with the current client file",
+    ),
+    "invalid_request": (
+        "token_request_rejected",
+        "Google's token endpoint refused the refresh request as malformed (invalid_request); "
+        "try again, and if it repeats sign in again with the current client file",
+    ),
+}
+_TOKEN_REFUSAL_OTHER = (
+    "token_request_rejected",
+    "Google's token endpoint refused the refresh request; try again, and if it repeats sign "
+    "in again with the current client file",
+)
+
+
 def _mint(grant: tuple[str, str, str]) -> _Mint:
     client_id, client_secret, refresh_token = grant
     try:
@@ -802,14 +915,14 @@ def _mint(grant: tuple[str, str, str]) -> _Mint:
                 repair_command=REAUTH_COMMAND,
             )
         if exc.state == go.STATE_INVALID:
+            # Matched against fixed codes only; the code Google sent is never shown.
+            code = str(exc.upstream.get("error_code") or "")
+            rule, error = _TOKEN_REFUSALS.get(code, _TOKEN_REFUSAL_OTHER)
             return _Mint(
                 ok=False,
                 state=go.STATE_INVALID,
-                rule="oauth_client_rejected",
-                error=(
-                    "Google refused the OAuth client recorded in the sign-in (deleted, or its "
-                    "secret changed); sign in again with the current client file"
-                ),
+                rule=rule,
+                error=error,
                 repair_command=REAUTH_WITH_CLIENT_COMMAND,
             )
         # Unreachable, a server error or an unreadable answer: nothing about
