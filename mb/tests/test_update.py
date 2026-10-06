@@ -466,13 +466,15 @@ def test_update_points_to_scoped_codex_repair_when_adapter_missing(
 
     assert result["ok"] is True
     assert result["codex_adapter"]["ok"] is False
-    assert "mb doctor repair --plan --only codex" in result["next_actions"]
+    # #1053: every follow-up command names the repo, like the surface refresh.
+    repo_flag = f"--repo {shlex.quote(str((tmp_path / 'biz').resolve()))}"
+    assert f"mb doctor repair {repo_flag} --plan --only codex" in result["next_actions"]
     # #1049: the apply rewrites the tracked AGENTS.md, so a person runs it.
-    assert "mb doctor repair --apply --only codex" not in result["next_actions"]
+    assert not any("--apply" in action for action in result["next_actions"])
     codex_apply = [
         item
         for item in result["operator_actions"]
-        if item["command"] == "mb doctor repair --apply --only codex"
+        if item["command"] == f"mb doctor repair {repo_flag} --apply --only codex"
     ]
     assert len(codex_apply) == 1
     assert "AGENTS.md" in codex_apply[0]["changes"]
@@ -553,7 +555,10 @@ def test_update_points_to_scoped_codex_repair_when_global_skills_are_missing(
     assert result["ok"] is True
     assert result["codex_adapter"]["status"] == "global_skill_missing_or_stale"
     assert result["codex_adapter"]["global_skill_ok"] is False
-    assert "mb doctor repair --plan --only codex" in result["next_actions"]
+    repo_flag = f"--repo {shlex.quote(str((tmp_path / 'biz').resolve()))}"
+    assert f"mb doctor repair {repo_flag} --plan --only codex" in result["next_actions"]
+    # The global skill bundle is written under HOME, not the repo (#1049).
+    assert f"mb doctor repair {repo_flag} --apply --only codex" in result["next_actions"]
     assert any(
         "global Main Branch Codex skills are not ready" in item for item in result["warnings"]
     )
@@ -2418,7 +2423,7 @@ def test_update_without_terminal_leaves_tracked_files_and_reports_plan(
     assert result["surface_refresh"]["codex"]["applied"] is False
     assert result["surface_refresh"]["codex"]["tracked_writes"] == ["AGENTS.md"]
     assert result["codex_repaired"] is False
-    assert any("Left tracked files unchanged" in w for w in result["warnings"])
+    assert any("Left repo files unchanged" in w for w in result["warnings"])
 
 
 def test_update_json_never_prompts_for_tracked_files_even_at_a_terminal(
@@ -2787,7 +2792,10 @@ def test_update_codex_follow_up_names_the_manual_step(
     entries = [item for item in result["operator_actions"] if item.get("id") == "codex-agents-md"]
     assert len(entries) == 1
     assert codex_mod.AGENTS_MANAGED_END in entries[0]["manual_step"]
-    assert entries[0]["command"] == codex_mod.CODEX_REPAIR_COMMAND
+    # #1053: the entry names the repo, like every other `mb update` entry.
+    assert entries[0]["command"] == (
+        f"mb doctor repair --repo {shlex.quote(str(business_repo.resolve()))} --apply --only codex"
+    )
 
 
 def test_unattended_guard_reports_a_tracked_change_the_plan_missed(
@@ -2936,3 +2944,125 @@ def test_update_never_deletes_a_persons_mb_command_in_an_old_codex_path(
     assert len(entries) == 1
     assert "mb-team-policy.md" in entries[0]["reason"]
     assert result["ok"] is True, result["errors"]
+
+
+# --- #1053: one plan command, `--repo` everywhere, no AGENTS.md unattended ---
+
+
+def _codex_repair_commands(result: dict[str, Any]) -> list[str]:
+    return [
+        *[a for a in result["next_actions"] if a.startswith("mb doctor repair")],
+        *[
+            item["command"]
+            for item in result["operator_actions"]
+            if item["command"].startswith("mb doctor repair")
+        ],
+    ]
+
+
+@pytest.mark.parametrize(
+    ("check", "refresh"),
+    [(False, True), (True, True), (False, False)],
+    ids=["run", "check", "no-refresh"],
+)
+def test_update_lists_one_codex_plan_command_for_a_stale_agents_md(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, check: bool, refresh: bool
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+
+    result = update_mod.run(
+        repo=business_repo, check=check, refresh_surfaces=refresh, interactive=False
+    )
+
+    repo_flag = f"--repo {shlex.quote(str(business_repo.resolve()))}"
+    plans = [a for a in result["next_actions"] if "--plan --only codex" in a]
+    assert plans == [f"mb doctor repair {repo_flag} --plan --only codex"]
+    applies = [
+        item["command"]
+        for item in result["operator_actions"]
+        if "--apply --only codex" in item["command"]
+    ]
+    assert applies == [f"mb doctor repair {repo_flag} --apply --only codex"]
+    for command in _codex_repair_commands(result):
+        assert f" {repo_flag} " in command, command
+
+
+def _without_agents_md(repo: Path) -> None:
+    _with_current_gitignore(repo)
+    (repo / "AGENTS.md").unlink()
+    _commit_all(repo, "No AGENTS.md")
+
+
+def test_unattended_update_does_not_create_a_missing_agents_md(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    _without_agents_md(business_repo)
+
+    result = update_mod.run(repo=business_repo, interactive=False)
+
+    assert not (business_repo / "AGENTS.md").exists()
+    assert _git(business_repo, "status", "--porcelain") == ""
+    assert not any("--apply" in args for args in calls)
+    assert result["ok"] is True, result["errors"]
+    planned = result["surface_refresh"]["planned"]
+    assert planned["consent"] == "no_terminal"
+    assert planned["tracked_files"] == ["AGENTS.md"]
+    assert {"path": "AGENTS.md", "op": "create"} in planned["tracked_changes"]
+    codex_apply = f"mb doctor repair --repo {shlex.quote(str(business_repo))} --apply --only codex"
+    entries = [item for item in result["operator_actions"] if item["command"] == codex_apply]
+    assert len(entries) == 1
+    assert entries[0]["changes"] == ["AGENTS.md"]
+    assert result["surface_refresh"]["codex"]["applied"] is False
+    assert any("Left repo files unchanged: AGENTS.md" in w for w in result["warnings"])
+
+
+def test_terminal_yes_creates_a_missing_agents_md(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    _without_agents_md(business_repo)
+    asked: list[list[str]] = []
+
+    def say_yes(repo: Path, files: list[str]) -> bool:
+        asked.append(files)
+        return True
+
+    result = update_mod.run(repo=business_repo, interactive=True, confirm_surfaces=say_yes)
+
+    assert asked == [["AGENTS.md (create)"]]
+    assert result["ok"] is True, result["errors"]
+    assert result["surface_refresh"]["planned"]["consent"] == "approved"
+    assert result["surface_refresh"]["codex"]["applied"] is True
+    assert (business_repo / "AGENTS.md").is_file()
+    assert not [item for item in result["operator_actions"] if "--only codex" in item["command"]]
+
+
+def test_operator_actions_doc_example_matches_real_entries(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    result = update_mod.run(repo=business_repo, interactive=False)
+    real = {item["command"]: item for item in result["operator_actions"]}
+
+    root = Path(__file__).resolve().parents[2]
+    doc = (root / "docs" / "json-output-contract.md").read_text(encoding="utf-8")
+    section = doc.split("### Operator Actions", 1)[1].split("\n### ", 1)[0]
+    example = json.loads(section.split("```json\n", 1)[1].split("```", 1)[0])
+    placeholder = "/Users/me/my-business"
+    shown = {
+        item["command"].replace(placeholder, shlex.quote(str(business_repo))): item
+        for item in example["operator_actions"]
+        if placeholder in item["command"]
+    }
+    assert set(shown) == {
+        f"mb skill link --repo {shlex.quote(str(business_repo))}",
+        f"mb doctor repair --repo {shlex.quote(str(business_repo))} --apply --only codex",
+    }
+    for command, item in shown.items():
+        assert set(item) == set(real[command]), command
+        assert item["changes"] == real[command]["changes"], command

@@ -41,8 +41,8 @@ Handle the JSON result:
 If the result includes warnings, show them after the main status.
 
 **Tracked files.** Run from an agent, `mb update --json` does not change a
-tracked file in the business repo (`AGENTS.md`, `.gitignore`); a post-apply
-check reports any it missed as an error. When the refresh
+tracked file in the business repo (`AGENTS.md`, `.gitignore`) or create a
+missing `AGENTS.md`; a post-apply check reports any it missed as an error. When the refresh
 would change one, it leaves it alone and reports it:
 `surface_refresh.planned.consent` is `no_terminal`,
 `surface_refresh.planned.tracked_files` names the files (writes and

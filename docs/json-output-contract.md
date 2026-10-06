@@ -103,15 +103,23 @@ Entries today:
 
 - the plugin-rail switch for a repo still on symlink-only skill wiring
   (`mb update` and `mb doctor repair`);
-- from `mb update` only, each surface-refresh apply command it declined to run
+- from `mb update`, each surface-refresh apply command it declined to run
   without a person (no terminal, `--json`, or a "no" at the prompt): the
-  skill-link refresh (`mb skill link --repo .`, usually `.gitignore`) and the
-  Codex refresh (`mb doctor repair --repo . --apply --only codex`, which
-  writes `AGENTS.md` and can delete tracked transitional plugin copies). Each
-  entry's `changes` comes from that surface's tracked writes. The same
-  commands stay in `surface_refresh.planned.apply_commands`; they are not in
-  `next_actions`. The read-only `mb doctor repair --plan --only codex` stays in
-  `next_actions` so an agent can show the plan first;
+  skill-link refresh (`mb skill link --repo <path>`, usually `.gitignore`) and
+  the Codex refresh (`mb doctor repair --repo <path> --apply --only codex`,
+  which writes or creates `AGENTS.md` and can delete tracked transitional
+  plugin copies). Each entry's `changes` comes from that surface's tracked
+  writes, plus a missing `AGENTS.md` the refresh would create (#1053). The
+  same commands stay in `surface_refresh.planned.apply_commands`; they are not
+  in `next_actions`. The read-only
+  `mb doctor repair --repo <path> --plan --only codex` stays in `next_actions`,
+  once, so an agent can show the plan first;
+- from `mb update`, including `--check` and `--no-refresh-surfaces`, the Codex
+  `AGENTS.md` repair when Codex guidance is still not ready after the refresh
+  (or the refresh did not run): the same
+  `mb doctor repair --repo <path> --apply --only codex`, with `changes` from
+  the `AGENTS.md` plan. It is not listed twice when the refresh already listed
+  it;
 - the Codex `AGENTS.md` repair while it needs a person first
   (`mb doctor repair` and `mb update`, #1052). This entry also has
   `id: "codex-agents-md"`, `reason` and `manual_step` (also folded into
@@ -152,12 +160,17 @@ Entries today:
 {
   "operator_actions": [
     {
+      "command": "mb skill link --repo /Users/me/my-business",
+      "changes": [".gitignore"],
+      "note": "For a person to run at a terminal, not an agent: ..."
+    },
+    {
       "command": "mb skill link --repo . --plugin",
       "changes": [".claude/settings.json"],
       "note": "For a person to run at a terminal, not an agent: ..."
     },
     {
-      "command": "mb doctor repair --repo . --apply --only codex",
+      "command": "mb doctor repair --repo /Users/me/my-business --apply --only codex",
       "changes": ["AGENTS.md"],
       "note": "For a person to run at a terminal, not an agent: ..."
     }
@@ -165,10 +178,19 @@ Entries today:
 }
 ```
 
-The list is empty when there is nothing for a person to run.
+In `mb update` entries, `<path>` is the business repo's absolute path,
+shell-quoted, so the command runs from any directory; the `--repo` flag is left
+out only when that repo is the current directory. The plugin-rail switch keeps
+`--repo .`. The list is empty when there is nothing for a person to run.
 `mb doctor repair --apply` never performs an operator action, and
 `mb doctor repair --only codex` lists only the Codex entries (it leaves the
 plugin switch out).
+
+`mb doctor repair --plan` is read-only. Its exit code is 1 when any check in
+its scope is an error (`ok: false`), including `--all-agents` when the repo's
+Claude wiring is missing, and 0 when it only lists actions or warnings. A
+non-zero exit means "something needs repair", not that the plan failed to run;
+read the envelope's `summary` and `actions`.
 
 ### MoneyPath Proof Quality
 
