@@ -3121,3 +3121,72 @@ def test_terminal_yes_replaces_a_dangling_agents_md_link(
     assert not link.is_symlink()
     assert link.is_file()
     assert not (tmp_path / "elsewhere").exists()
+
+
+# --- #1067: global files the Codex cleanup keeps, next to the AGENTS.md entry ---
+
+
+def _without_kept(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [item for item in entries if item.get("id") != "codex-global-kept"]
+
+
+@pytest.mark.parametrize("agents", ["missing", "refused"])
+@pytest.mark.parametrize(
+    ("check", "refresh"),
+    [(False, True), (True, True), (False, False)],
+    ids=["run", "check", "no-refresh"],
+)
+def test_update_lists_kept_global_files_without_hiding_the_agents_md_entry(
+    monkeypatch: pytest.MonkeyPatch,
+    business_repo: Path,
+    tmp_path: Path,
+    check: bool,
+    refresh: bool,
+    agents: str,
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    if agents == "missing":
+        _git(business_repo, "rm", "-q", "AGENTS.md")
+    else:
+        (business_repo / "AGENTS.md").write_text(
+            f"# Ours\n{codex_mod.AGENTS_MANAGED_BEGIN}\nOld guidance, end marker deleted.\n",
+            encoding="utf-8",
+        )
+    _commit_all(business_repo, f"AGENTS.md {agents}")
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+
+    def update() -> dict[str, Any]:
+        return update_mod.run(
+            repo=business_repo, check=check, refresh_surfaces=refresh, interactive=False
+        )
+
+    without = update()
+    mine = (
+        codex_mod.global_plugin_source_root()
+        / codex_mod.CODEX_PLUGIN_COMMANDS_RELATIVE_PATH
+        / "mb-team-policy.md"
+    )
+    mine.parent.mkdir(parents=True, exist_ok=True)
+    mine.write_text("# Team policy\nA person wrote this.\n", encoding="utf-8")
+    result = update()
+
+    kept = [item for item in result["operator_actions"] if item.get("id") == "codex-global-kept"]
+    assert len(kept) == 1 and kept[0]["changes"] == [str(mine)]
+    # Every entry `mb update` listed without the kept file is still there, unchanged.
+    assert _without_kept(result["operator_actions"]) == without["operator_actions"]
+    assert [w for w in result["warnings"] if w != kept[0]["note"]] == without["warnings"]
+    agents_entries = [
+        item
+        for item in result["operator_actions"]
+        if "--apply --only codex" in item["command"] and item.get("id") != "codex-global-kept"
+    ]
+    assert agents_entries, result["operator_actions"]
+    if agents == "refused":
+        assert [item.get("id") for item in agents_entries] == ["codex-agents-md"]
+        assert "end marker" in agents_entries[0]["reason"]
+    else:
+        assert any("AGENTS.md" in item["changes"] for item in agents_entries)
+    assert mine.read_text(encoding="utf-8") == "# Team policy\nA person wrote this.\n"

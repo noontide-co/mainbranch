@@ -640,7 +640,7 @@ def test_doctor_codex_repair_that_would_refuse_is_an_operator_action(
     entries = [item for item in plan["operator_actions"] if item.get("id") == "codex-agents-md"]
     assert len(entries) == 1
     entry = entries[0]
-    assert entry["command"] == "mb doctor repair --apply --only codex"
+    assert entry["command"] == codex_mod.repair_command(repo)
     assert "no end marker" in entry["reason"]
     assert codex_mod.AGENTS_MANAGED_END in entry["manual_step"]
     assert entry["manual_step"] in entry["note"]

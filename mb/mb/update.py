@@ -789,7 +789,7 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
             ):
                 agents_plan = codex_mod.agents_md_plan(repo)
                 # #1052: a repair that needs a manual step first says which.
-                blocked = codex_mod.agents_md_operator_action(agents_plan)
+                blocked = codex_mod.agents_md_operator_action(agents_plan, repo=repo)
                 changes = [str(op["rel"]) for op in agents_plan["operations"]]
                 if blocked:
                     blocked["command"] = apply_command
@@ -823,6 +823,17 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
             "Main Branch skill bundle."
         )
         result["next_actions"].append("Open a fresh Codex thread in the business repo.")
+    # #1067: files doctor keeps in global Codex folders are reported here too,
+    # last, so the AGENTS.md entries above stay exactly as they were. Listed
+    # first, its apply command would satisfy the guard above and hide them.
+    # Same shape as the blocked AGENTS.md repair: `mb update` alone tells
+    # the operator. Nothing is deleted on their account.
+    kept_action = codex_mod.global_skill_operator_action(global_skill, repo=repo)
+    if kept_action is not None and not any(
+        item.get("id") == "codex-global-kept" for item in result["operator_actions"]
+    ):
+        result["warnings"].append(str(kept_action.get("note") or ""))
+        result["operator_actions"].append(kept_action)
 
 
 def _add_plugin_follow_up(result: dict[str, Any], repo: Path) -> None:

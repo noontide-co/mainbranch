@@ -334,8 +334,10 @@ refresh deletes only files whose content is proven to be a version Main Branch
 wrote there, and removes a folder only once it is empty; anything else,
 including a Main Branch file someone edited, stays. It is listed as `kept`,
 except in a retired skill folder that held nothing of Main Branch's, which is
-left alone and not reported. When the refresh would change, delete or replace a
-tracked file:
+left alone and not reported. Each file is proven again right before it is
+deleted, a linked folder is listed and never walked, and `mb update` lists
+the kept files in its `codex-global-kept` operator action (#1067). When the
+refresh would change, delete or replace a tracked file:
 
 - at an interactive terminal, it lists those files and asks once (default no);
 - without one, and always with `--json`, it changes no tracked file and

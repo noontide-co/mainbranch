@@ -283,7 +283,7 @@ def test_init_reports_a_refused_agents_md_write(
     assert result["codex_agents_md"]["ok"] is False
     [action] = result["operator_actions"]
     assert action["id"] == "codex-agents-md"
-    assert action["command"] == codex_mod.CODEX_REPAIR_COMMAND
+    assert action["command"] == codex_mod.repair_command(target)
     assert action["reason"] == refusal["reason"]
     assert action["manual_step"] == refusal["manual_step"]
     assert result["warnings"] == [action["note"]]
@@ -310,7 +310,7 @@ def test_init_cli_warns_on_a_refused_agents_md_write(
     assert result.exit_code == 0
     assert "warning:" in result.stderr
     assert codex_mod.AGENTS_MANAGED_END in result.stderr
-    assert codex_mod.CODEX_REPAIR_COMMAND in result.stderr
+    assert codex_mod.repair_command(target) in result.stderr
 
 
 def test_fresh_init_has_no_codex_warning(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
