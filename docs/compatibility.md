@@ -110,6 +110,12 @@ Common shipped automation-safe commands include:
 | Claude Code start wiring repair preview | `mb doctor repair --repo "$repo" --plan --json` |
 | Claude Code skill-link repair preview | `mb skill repair --repo "$repo" --json` |
 
+`mb doctor repair --plan` is read-only. Its exit code is 1 when any check in
+its scope is an error (`ok: false`), including `--all-agents` when the repo's
+Claude wiring is missing, and 0 when it only lists actions or warnings. A
+non-zero exit means "something needs repair", not that the plan failed to run;
+read the envelope's `summary` and `actions`.
+
 Some current commands are runtime handoff hints, not workflow execution. For
 example, `mb think <topic>` prints the `/mb-think` hint for Claude Code today;
 it does not run a model and does not yet expose a stable JSON workflow launcher.
@@ -332,15 +338,18 @@ left alone and not reported. When the refresh would change, delete or replace a
 tracked file:
 
 - at an interactive terminal, it lists those files and asks once (default no);
-- without one, and always with `--json`, it changes no tracked file. It
-  reports the plan in `surface_refresh.planned` and lists the apply commands
-  in `operator_actions`, not `next_actions`. Applying them is the operator's
+- without one, and always with `--json`, it changes no tracked file and
+  creates no `AGENTS.md` that is missing, nor replaces a dangling
+  `AGENTS.md` link (#1053). It reports the plan in
+  `surface_refresh.planned` and lists the apply commands in
+  `operator_actions`, not `next_actions`. Applying them is the operator's
   step.
 
 `surface_refresh.planned` has `consent` (`not_needed`, `no_terminal`,
 `declined` or `approved`), `tracked_files` (the repo files that would change),
 `tracked_changes` (each with its `op`: `write`, `delete`, `delete_tree`,
-`create_link`, `replace_link`) and `apply_commands` (what is left to run).
+`create_link`, `replace_link`, or `create` for a missing `AGENTS.md`; an untracked dangling `AGENTS.md` link is
+`replace_link`) and `apply_commands` (what is left to run).
 After applying, `mb update` compares the business repo's `git status` with what
 it saw before. This check is a backstop for a case the plan missed, not part
 of the guarantee: if a tracked file changed that was not approved, it sets `ok`

@@ -82,13 +82,13 @@ WHEEL_MANUAL_MESSAGE = (
 UV_TOOL_DIR_COMMAND = ["uv", "tool", "dir"]
 UV_TOOL_DIR_TIMEOUT_SECONDS = 10.0
 SURFACE_PLAN_NO_TERMINAL_MESSAGE = (
-    "Left tracked files unchanged: {files}. Without an interactive terminal, "
-    "`mb update` does not change tracked files in the business repo. Applying "
-    "these changes is the operator's step: review them, then run the commands "
-    "below from a terminal."
+    "Left repo files unchanged: {files}. Without an interactive terminal, "
+    "`mb update` does not change tracked files in the business repo or create "
+    "new ones. Applying these changes is the operator's step: review them, "
+    "then run the commands below from a terminal."
 )
 SURFACE_PLAN_DECLINED_MESSAGE = (
-    "Left tracked files unchanged: {files}. Run the commands below whenever you want these changes."
+    "Left repo files unchanged: {files}. Run the commands below whenever you want these changes."
 )
 SURFACE_LINK_APPLY_NOTE = (
     "For a person to run at a terminal, not an agent: refreshes this repo's "
@@ -253,8 +253,8 @@ def _confirm_uv_update(command: str, root: Path | None) -> bool:
 
 
 def _confirm_surface_writes(repo: Path, files: list[str]) -> bool:
-    """Ask once before refreshing agent surfaces changes tracked files. Default is no."""
-    print(f"Refreshing agent surfaces would change these tracked files in {repo}:")
+    """Ask once before refreshing agent surfaces changes repo files. Default is no."""
+    print(f"Refreshing agent surfaces would change these files in {repo}:")
     for path in files:
         print(f"  - {path}")
     try:
@@ -591,6 +591,40 @@ def _codex_tracked_changes(plan: dict[str, Any]) -> list[dict[str, str]] | None:
     return changes
 
 
+def _codex_new_repo_files(
+    plan: dict[str, Any], repo: Path, known: list[dict[str, str]]
+) -> list[dict[str, str]]:
+    """Files the Codex AGENTS.md repair would create in the business repo (#1053).
+
+    `tracked_changes` names only files git already tracks, so a missing
+    AGENTS.md is not in it. A new AGENTS.md still shows in `git status`, so it
+    needs the same yes as a tracked write. A dangling, untracked AGENTS.md link
+    counts too: the apply replaces the link itself (`replace_link`), so the
+    inside-repo check resolves the parent folder, never the link.
+    """
+    repo_real = os.path.realpath(repo)
+    seen = {item["path"] for item in known}
+    found: list[dict[str, str]] = []
+    for action in plan.get("actions", []):
+        if not isinstance(action, dict) or action.get("id") != "codex-agents-md":
+            continue
+        for operation in action.get("operations") or []:
+            if not isinstance(operation, dict) or operation.get("op") != "write":
+                continue
+            path = str(operation.get("path") or "")
+            if not path or os.path.exists(path):
+                continue
+            real = os.path.join(os.path.realpath(os.path.dirname(path)), os.path.basename(path))
+            if not real.startswith(repo_real + os.sep):
+                continue
+            rel = os.path.relpath(real, repo_real).replace(os.sep, "/")
+            if rel not in seen:
+                seen.add(rel)
+                op = "replace_link" if os.path.islink(path) else "create"
+                found.append({"path": rel, "op": op})
+    return found
+
+
 def _codex_blocked_actions(plan: dict[str, Any]) -> list[dict[str, Any]]:
     """The plan's Codex AGENTS.md steps that need a person first (#1052)."""
 
@@ -735,6 +769,10 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
         "plugin_install": plugin_install,
     }
     if not codex["ok"]:
+        # #1053: the same `--repo` form the surface refresh emits, so the two
+        # follow-ups collapse to one plan command and every entry names the repo.
+        plan_command = f"mb doctor repair{_repo_flag(repo)} --plan --only codex"
+        apply_command = f"mb doctor repair{_repo_flag(repo)} --apply --only codex"
         next_actions: list[str]
         if not instructions.get("ok", False):
             message = (
@@ -742,7 +780,7 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
                 "`mb doctor repair --plan --only codex`, review it, then approve "
                 "`mb doctor repair --apply --only codex`."
             )
-            next_actions = ["mb doctor repair --plan --only codex"]
+            next_actions = [plan_command]
             # #1049: the apply rewrites the tracked AGENTS.md, so it is a step
             # for a person; the surface refresh may already have listed it.
             if not any(
@@ -753,10 +791,12 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
                 # #1052: a repair that needs a manual step first says which.
                 blocked = codex_mod.agents_md_operator_action(agents_plan)
                 changes = [str(op["rel"]) for op in agents_plan["operations"]]
+                if blocked:
+                    blocked["command"] = apply_command
                 result["operator_actions"].append(
                     blocked
                     or operator_action(
-                        codex_mod.CODEX_REPAIR_COMMAND,
+                        apply_command,
                         changes or ["AGENTS.md"],
                         SURFACE_CODEX_APPLY_NOTE,
                     )
@@ -768,10 +808,7 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
                 "Run `mb doctor repair --plan --only codex`, review it, then approve "
                 "`mb doctor repair --apply --only codex`."
             )
-            next_actions = [
-                "mb doctor repair --plan --only codex",
-                "mb doctor repair --apply --only codex",
-            ]
+            next_actions = [plan_command, apply_command]
         else:
             message = (
                 "Codex runtime readiness still needs attention. Run "
@@ -897,6 +934,9 @@ def _refresh_surfaces(
     codex_blocked = _codex_blocked_actions(codex_plan)
     if codex_blocked:
         codex_changes = []
+    else:
+        # #1053: creating a missing AGENTS.md needs the same yes.
+        codex_changes.extend(_codex_new_repo_files(codex_plan, target_repo, codex_changes))
     link_writes = list(dict.fromkeys(item["path"] for item in link_changes))
     codex_writes = list(dict.fromkeys(item["path"] for item in codex_changes))
     tracked_changes = list(
@@ -1302,7 +1342,7 @@ def _render_surface_plan(result: dict[str, Any]) -> None:
     if not isinstance(planned, dict) or not planned.get("apply_commands"):
         return
     files = ", ".join(str(path) for path in planned.get("tracked_files", []))
-    print(f"left tracked files unchanged: {files}")
+    print(f"left repo files unchanged: {files}")
 
 
 def _render_operator_actions(result: dict[str, Any]) -> None:

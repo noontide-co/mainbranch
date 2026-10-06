@@ -31,6 +31,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   because `--reauth` alone is refused without the client. A connection made
   with a plain access token still says `--token-stdin`. `repair_command` in `--json`
   matches. Other providers are unchanged.
+- `mb update` run by an agent, a schedule or with `--json` no longer creates a
+  missing `AGENTS.md` in your business repo, or replaces a broken `AGENTS.md`
+  link. It lists
+  `mb doctor repair --repo <path> --apply --only codex` for you to run, like
+  every other change to your repo's files; at a terminal it asks first, and a
+  yes writes it (#1053).
 
 ### Fixed
 
@@ -54,6 +60,16 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   shown.
 - The `docs/connect.md` refusal table now says that only `--timeout` is
   refused at its default without `--oauth`.
+- `mb update` lists the Codex review command
+  (`mb doctor repair --repo <path> --plan --only codex`) once instead of
+  twice, and every Codex repair command it gives you names your repo with
+  `--repo`, so it runs from any folder, including under `--check` and
+  `--no-refresh-surfaces` (#1053).
+- The JSON contract shows `operator_actions` entries as `mb update` really
+  writes them, with the repo's full path, and says which commands emit them.
+  It and the compatibility guide now say what the `mb doctor repair --plan`
+  exit code means: 1 when a check in scope is an error, 0 when the plan only
+  lists actions or warnings (#1053).
 
 ## [0.6.4] - 2026-10-06
 
