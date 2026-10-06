@@ -14,6 +14,7 @@ and the synthetic sentinels come from test_google_connect.
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -953,6 +954,8 @@ def test_terminal_safe(value: str, shown: str) -> None:
 
 # --- Help, and user scope ----------------------------------------------------------------
 
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
 
 @pytest.mark.parametrize(
     ("args", "words"),
@@ -967,9 +970,11 @@ def test_terminal_safe(value: str, shown: str) -> None:
 def test_help(args: list[str], words: list[str]) -> None:
     result = runner.invoke(app, [*args, "--help"])
     assert result.exit_code == 0
+    # CI renders Rich help with colour codes inside option names; compare plain text.
+    text = _ANSI.sub("", result.stdout)
     for word in words:
-        assert word in result.stdout
-    assert "--site " not in result.stdout and "--property" not in result.stdout
+        assert word in text
+    assert "--site " not in text and "--property" not in text
 
 
 def test_user_scope_sign_in_is_read(
