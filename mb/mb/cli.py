@@ -1835,7 +1835,8 @@ def _connect_google_oauth(
     """`mb connect google --oauth`: the one-time Google sign-in (#1004).
 
     Runs inside `connect_cmd`, so `_no_secret_traceback` covers it; Ctrl-C
-    gets a fixed line here too. Every message below is fixed text.
+    gets a fixed line here too, naming what the sign-in had already stored.
+    Every message below is fixed text.
     """
     from mb import google_connect as google_connect_mod
     from mb import google_oauth as google_oauth_mod
@@ -1859,6 +1860,7 @@ def _connect_google_oauth(
             "--paste reads the redirect from the terminal; pass the client with --client-file",
             json_out=json_out,
         )
+    progress = google_connect_mod.Progress()
     try:
         if client_file:
             client_json: str | None = google_connect_mod.read_client_file(client_file)
@@ -1879,11 +1881,12 @@ def _connect_google_oauth(
             account_label=account_label,
             scope=scope,
             emit=lambda line: typer.echo(line, err=True),
+            progress=progress,
         )
     except KeyboardInterrupt:
         _connect_failure(
             command,
-            "Google sign-in cancelled. Nothing was stored.",
+            google_connect_mod.cancelled_message(progress),
             json_out=json_out,
             exit_code=130,
             state="cancelled",
@@ -1917,7 +1920,22 @@ def _connect_google_oauth(
         _connect_error_exit(command, exc, json_out=json_out)
     except connect_mod.KeychainError as exc:
         _connect_runtime_exit(command, exc, json_out=json_out)
-    # Any other error goes to `_no_secret_traceback`: its text is never shown.
+    except Exception as exc:
+        # Before the first write, `_no_secret_traceback` reports it. After
+        # it, say what is stored; the exception's text is never shown.
+        if not google_connect_mod.wrote_anything(progress):
+            raise
+        _connect_failure(
+            command,
+            google_connect_mod.cancelled_message(
+                progress,
+                lead=f"Google sign-in stopped on an unexpected error ({type(exc).__name__}; "
+                "details are hidden because they may hold a secret)",
+            ),
+            json_out=json_out,
+            exit_code=1,
+            state="unexpected_error",
+        )
     if json_out:
         typer.echo(json.dumps(result, indent=2))
     else:

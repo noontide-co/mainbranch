@@ -173,6 +173,8 @@ class ConfigCorruptError(ValueError):
 GOOGLE_OAUTH_GRANT_SLOT = "oauth_grant"
 # Repo metadata key the sign-in writes: the Google products it granted.
 GOOGLE_OAUTH_GRANTS_METADATA = "oauth_grants"
+# State a read records when Google refuses the stored grant (`invalid_grant`).
+GOOGLE_REAUTH_REQUIRED_STATE = "reauth_required"
 
 
 @dataclass(frozen=True)
@@ -1737,7 +1739,7 @@ def _records_oauth_grant(provider: Provider, entry: Any) -> bool:
     return isinstance(raw, dict) and bool(raw.get("ref"))
 
 
-def _credential_mode(provider: Provider, entry: dict[str, Any]) -> dict[str, str]:
+def _credential_mode(provider: Provider, entry: dict[str, Any]) -> dict[str, Any]:
     """``credential_mode`` for providers with optional slots, else nothing.
 
     `google` reads ``oauth`` once its entry records an OAuth grant and
@@ -1746,7 +1748,13 @@ def _credential_mode(provider: Provider, entry: dict[str, Any]) -> dict[str, str
 
     if GOOGLE_OAUTH_GRANT_SLOT not in provider.optional_secrets:
         return {}
-    return {"credential_mode": "oauth" if _records_oauth_grant(provider, entry) else "access_token"}
+    if not _records_oauth_grant(provider, entry):
+        return {"credential_mode": "access_token"}
+    from mb import google_connect
+
+    # A coarse date only, and "" unless Google put a time limit on the sign-in.
+    expires_on = google_connect.refresh_token_expires_on(entry)
+    return {"credential_mode": "oauth", "oauth": {"refresh_token_expires_on": expires_on}}
 
 
 def _secret_presence(probe: SecretProbe) -> str:
@@ -2070,6 +2078,13 @@ def status_provider(
         validation_state = str(validation.get("state") or "unvalidated")
         if validation_state == "invalid":
             state = "invalid"
+            ok = False
+        elif validation_state == GOOGLE_REAUTH_REQUIRED_STATE and _records_oauth_grant(
+            provider, entry
+        ):
+            # Recorded by a read that Google refused (`mb connect token`/`exec`);
+            # status itself never calls Google.
+            state = GOOGLE_REAUTH_REQUIRED_STATE
             ok = False
         elif _provider_verified(validation):
             state = "ready"
@@ -2572,6 +2587,8 @@ def read_token(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
     callers must never log it, persist it, or embed it in shareable output.
     Falls back to user scope when the repo config has no entry, so worktrees
     and scheduled tasks resolve the same credential as the primary checkout.
+    A `google` entry with an OAuth grant returns a freshly minted access
+    token instead of the stored one; the grant itself is never returned.
     """
     provider = resolve_provider(provider_id, repo)
     if not provider.required_secrets:
@@ -2586,6 +2603,11 @@ def read_token(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
     if not isinstance(entry, dict):
         entry = _user_scope_provider_entry(repo_id, provider.id)
         source = "user"
+    if _records_oauth_grant(provider, entry):
+        # OAuth mode: mint a short-lived access token from the stored grant.
+        from mb import google_connect
+
+        return google_connect.read_minted_token(entry, source=source, target=target)
     if not isinstance(entry, dict):
         repair_command = _connect_command(provider, token_stdin=True)
         return {
@@ -2701,6 +2723,9 @@ def exec_with_secret(
     runner: Callable[..., subprocess.CompletedProcess[Any]] = subprocess.run,
 ) -> dict[str, Any]:
     """Run ``command`` with the stored credential in its environment only.
+
+    For an OAuth-mode `google` connection that credential is the short-lived
+    access token `read_token` mints; the refresh token never reaches the child.
 
     No shell is involved and stdin, stdout and stderr are inherited, so the
     secret travels in the child's environment and nowhere else: it is never

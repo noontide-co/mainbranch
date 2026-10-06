@@ -36,6 +36,7 @@ CLIENT_SECRET = "SYNTH-CLIENT-SECRET-0001"
 REFRESH = "SYNTH-REFRESH-0001"
 REFRESH_2 = "SYNTH-REFRESH-0002"
 ACCESS = "SYNTH-ACCESS-0001"
+MINTED = "SYNTH-MINTED-0001"
 CODE = "SYNTH-CODE-0001"
 VERIFIER = "SYNTH-VERIFIER-0001-" + "v" * 40
 LEGACY_TOKEN = "SYNTH-LEGACY-ACCESS-0001"
@@ -63,7 +64,9 @@ def loopback_only_network(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
-def google_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def google_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    # Minted tokens live for the process; each test starts without any.
+    gc.forget_minted()
     monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
     monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
     for provider in connect_mod.PROVIDERS:
@@ -71,6 +74,8 @@ def google_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
             monkeypatch.delenv(env_var, raising=False)
     # A fixed sentinel verifier, so leak checks can look for it.
     monkeypatch.setattr(go, "new_code_verifier", lambda: VERIFIER)
+    yield
+    gc.forget_minted()
 
 
 def assert_no_sentinel(text: str) -> None:
@@ -193,6 +198,10 @@ class TokenEndpoint:
         self.calls.append(fields)
         if self.raises is not None:
             raise self.raises
+        if fields["grant_type"] == ["refresh_token"]:
+            # Read-time minting (`mb connect token`/`exec`): a fresh access token.
+            minted = {"access_token": MINTED, "expires_in": 3599, "token_type": "Bearer"}
+            return 200, json.dumps(minted).encode("utf-8")
         if self.browser is not None and self.browser.urls:
             challenge = self.browser.params()["code_challenge"]
             assert go.code_challenge(fields["code_verifier"][0]) == challenge
@@ -702,7 +711,7 @@ def test_oauth_replace_access_token_upgrades_to_oauth(
 
     assert result.exit_code == 0, result.output
     assert connect_mod.status_provider("google", repo)["credential_mode"] == "oauth"
-    assert connect_mod.read_token("google", repo)["token"] == ACCESS
+    assert connect_mod.read_token("google", repo)["token"] == MINTED
 
 
 def test_oauth_again_without_reauth_refuses(repo: Path, client_file: Path, google: Any) -> None:
