@@ -2354,7 +2354,12 @@ def connect_cmd(
             typer.echo(json.dumps(result, indent=2))
         else:
             connect_mod.render_test_result(result)
-        raise typer.Exit(1 if connect_mod.provider_needs_action(result["status"]) else 0)
+        # `needs_action` is set only by checks that can fail without changing
+        # the recorded status (a Google sign-in on a network blip).
+        needs_action = connect_mod.provider_needs_action(result["status"]) or bool(
+            result.get("needs_action")
+        )
+        raise typer.Exit(1 if needs_action else 0)
     if provider:
         _connect_usage_exit(
             "mb connect",
