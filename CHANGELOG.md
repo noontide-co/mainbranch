@@ -11,6 +11,33 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-10-06
+
+This release adds Google Search Console and GA4, read-only.
+`mb connect google --oauth` signs a business repo in once with your own OAuth
+client (setup in `docs/connect.md`, the reads in `docs/google.md`);
+`mb connect test google` checks it; `mb google sc query`,
+`mb google sc sitemaps list` and `mb google ga4 report` read the recorded site
+or property, and `mb google sc inspect --url URL` reads one page's index
+status. The access token is minted at read time and never printed.
+Nothing writes to Google. `mb connect status google` shows each Google
+product on its own line; a sign-in error names what Google refused without
+showing Google's text; a sign-in option that would be ignored is refused; a
+`.mb/connect.yaml` tracked in git is no longer rewritten by a read or test;
+and a recorded site or property can be cleared. `mb connect test` never
+sends a credential to a redirect target: a redirect reads `unvalidated`
+(`provider_unexpected_redirect`), so retry, don't reconnect.
+`mb doctor repair --only codex` keeps what a person wrote in `AGENTS.md`. In
+old Codex paths, in the repo and under your home, it removes only files whose
+content it can prove is a released Main Branch file and keeps everything
+else, listed as kept with what to do; a file it can't safely change becomes
+an action for a person. `mb doctor` now sees a final release as newer than
+its pre-release. `mb update` run by an agent lists the plugin-rail switch and the
+Codex and skill-link applies as actions for a person, and says "already
+current" on uv and wheel installs. Error messages and metadata keys no longer
+repeat input that looks like a credential. To upgrade a uv install, run
+`uv tool install --refresh-package mainbranch mainbranch@latest`.
+
 ### Added
 
 - `mb connect google --oauth` signs a business repo in to Google once for
@@ -82,11 +109,16 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `next_actions`, so an agent running `next_actions` never rewires a repo
   (#1023).
 - `mb connect status --json` (and the statuses in `doctor` and `hydrate`) adds
-  `credential_mode` to Google entries (`access_token` today), and reports an
-  optional `oauth_grant` slot with `optional: true` only when an entry records
-  one. Existing Google connections are otherwise unchanged (part of #1004).
+  `credential_mode` to Google entries (`access_token`, or `oauth` for a
+  sign-in connection), and reports an optional `oauth_grant` slot with
+  `optional: true` only when an entry records one. Existing Google
+  connections are otherwise unchanged (part of #1004).
 
 ### Fixed
+
+- `mb doctor` compares a pre-release install such as `0.6.3rc1` with the
+  final release in PEP 440 order, the same way `mb update` does, so the final
+  release is reported as an update (#1043).
 
 - Google sign-in hardening (part of #1004): `mb connect status google` shows
   one line per product (granted or not, and its last check), with additive
