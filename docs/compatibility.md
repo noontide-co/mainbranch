@@ -348,7 +348,7 @@ tracked file:
 `surface_refresh.planned` has `consent` (`not_needed`, `no_terminal`,
 `declined` or `approved`), `tracked_files` (the repo files that would change),
 `tracked_changes` (each with its `op`: `write`, `delete`, `delete_tree`,
-`create_link`, `replace_link`, or `create` for a missing `AGENTS.md`; a dangling `AGENTS.md` link is
+`create_link`, `replace_link`, or `create` for a missing `AGENTS.md`; an untracked dangling `AGENTS.md` link is
 `replace_link`) and `apply_commands` (what is left to run).
 After applying, `mb update` compares the business repo's `git status` with what
 it saw before. This check is a backstop for a case the plan missed, not part

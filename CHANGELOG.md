@@ -14,7 +14,7 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 ### Changed
 
 - `mb update` run by an agent, a schedule or with `--json` no longer creates a
-  missing `AGENTS.md` in your business repo, or replace a broken `AGENTS.md`
+  missing `AGENTS.md` in your business repo, or replaces a broken `AGENTS.md`
   link. It lists
   `mb doctor repair --repo <path> --apply --only codex` for you to run, like
   every other change to your repo's files; at a terminal it asks first, and a
