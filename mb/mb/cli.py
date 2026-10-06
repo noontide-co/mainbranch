@@ -3798,6 +3798,7 @@ def _google_read_exit(
         renderers = {
             google_reads_mod.SCHEMA_SC_QUERY: google_reads_mod.render_sc_query,
             google_reads_mod.SCHEMA_SC_SITEMAPS: google_reads_mod.render_sc_sitemaps,
+            google_reads_mod.SCHEMA_SC_INSPECT: google_reads_mod.render_sc_inspect,
             google_reads_mod.SCHEMA_GA4_REPORT: google_reads_mod.render_ga4_report,
         }
         for line in renderers[schema_name](result):
@@ -3876,6 +3877,32 @@ def google_sc_sitemaps_list_cmd(
     _google_read_exit(
         google_reads_mod.SC_SITEMAPS_COMMAND,
         google_reads_mod.SCHEMA_SC_SITEMAPS,
+        result,
+        code,
+        json_out,
+    )
+
+
+@google_sc_app.command("inspect")
+@_no_secret_traceback
+def google_sc_inspect_cmd(
+    url: str = typer.Option(
+        ..., "--url", help="A page of the recorded site, e.g. https://www.example.com/page."
+    ),
+    repo: str = typer.Option(".", "--repo", help="Business repo with the Google sign-in."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Index status of one URL of the recorded site (urlInspection.index.inspect, read-only).
+
+    Shows the version in Google's index only; there is no live test. Quota: 2,000
+    inspections a day and 600 a minute per site.
+    """
+    from mb import google_reads as google_reads_mod
+
+    result, code = google_reads_mod.sc_inspect(repo, url=url)
+    _google_read_exit(
+        google_reads_mod.SC_INSPECT_COMMAND,
+        google_reads_mod.SCHEMA_SC_INSPECT,
         result,
         code,
         json_out,
