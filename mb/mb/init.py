@@ -237,7 +237,7 @@ def run(
             operator_actions.append(agents_action)
     elif agents_result.get("kept"):
         warnings.append(
-            "Kept files Main Branch did not write in old repo-local Codex folders: "
+            "Kept files not proven to be Main Branch's in old repo-local Codex folders: "
             + ", ".join(str(item) for item in agents_result["kept"])
             + ". Move or delete them yourself when you no longer need them."
         )

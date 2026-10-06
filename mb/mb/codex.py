@@ -7,6 +7,7 @@ manage model conversation.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import os
@@ -15,12 +16,14 @@ import shlex
 import shutil
 import subprocess
 from collections.abc import Callable
+from functools import lru_cache
 from importlib import resources
 from pathlib import Path
 from typing import Any
 
 from mb import __version__
 from mb import engine as engine_mod
+from mb.codex_known_files import KNOWN_FILE_DIGESTS
 from mb.durable import atomic_write_text
 from mb.workflows import WorkflowSource, load_workflow, render_codex_shell
 
@@ -102,32 +105,6 @@ CODEX_RETIRED_GLOBAL_SKILL_NAMES = (
     "ship-bet",
     "weekly-review",
 )
-CODEX_RETIRED_GLOBAL_SKILL_MARKERS: dict[str, tuple[str, ...]] = {
-    "google-ads-search-launch": (
-        "name: google-ads-search-launch",
-        'description: "Plan a Google Ads search launch playbook."',
-        "user-invocable: true",
-        "Support level: `read_only_planning`.",
-        "Use this skill when the operator is in a Main Branch business repo",
-        "`mb connect doctor --json`",
-    ),
-    "ship-bet": (
-        "name: ship-bet",
-        'description: "Plan a ship-bet playbook run."',
-        "user-invocable: true",
-        "Support level: `read_only_planning`.",
-        "Use this skill when the operator is in a Main Branch business repo",
-        "`mb checkpoint --plan --json`",
-    ),
-    "weekly-review": (
-        "name: weekly-review",
-        'description: "Plan a weekly review."',
-        "user-invocable: true",
-        "Support level: `read_only_planning`.",
-        "Use this skill when the operator is in a Main Branch business repo",
-        "`mb validate --json`",
-    ),
-}
 CODEX_GLOBAL_SKILL_NAMES = (
     CODEX_GLOBAL_SKILL_NAME,
     "mb-doctor",
@@ -1187,12 +1164,14 @@ def global_skill_file_path(name: str) -> Path:
 
 
 def _is_retired_mainbranch_global_skill(path: Path, name: str) -> bool:
+    """Whether the retired skill at `path` (a link is read through) is one `mb` wrote.
+
+    Proven by content: a known generated version of `<name>/SKILL.md`. A
+    person's edited copy, or their own skill at that name, is not.
+    """
+
     skill_file = path / "SKILL.md" if path.is_dir() else path
-    try:
-        text = skill_file.read_text(encoding="utf-8")
-    except OSError:
-        return False
-    return all(marker in text for marker in CODEX_RETIRED_GLOBAL_SKILL_MARKERS[name])
+    return skill_file.parent.name == name and _is_known_generated_content(skill_file)
 
 
 def codex_marketplace_add_command() -> str:
@@ -3019,6 +2998,58 @@ def global_skill_cleanup() -> dict[str, Any]:
     return {"removals": removals, "kept": kept}
 
 
+def global_skill_operator_action(status: dict[str, Any]) -> dict[str, Any] | None:
+    """The `operator_actions` entry while old global Codex folders hold unproven files.
+
+    None when every file there is proven to be Main Branch's. Otherwise it
+    names each kept file and what a person does with it; the apply removes
+    only the proven files (#1062).
+    """
+
+    kept = [str(item) for item in status.get("kept") or []]
+    if not kept:
+        return None
+    effect = global_skill_apply_effect(status)
+    reason = (
+        "Old global Codex folders hold files Main Branch cannot prove it wrote "
+        "(your own files, or Main Branch files that were changed): "
+        + ", ".join(kept)
+        + ". The repair leaves them where they are."
+    )
+    manual_step = (
+        "Open each file. Move anything you want to keep somewhere of your own, "
+        "then delete the rest yourself. "
+        f"`{CODEX_REPAIR_COMMAND}` "
+        + (
+            "deletes only these unchanged Main Branch files: " + ", ".join(effect["removes"])
+            if effect["removes"]
+            else "deletes no files there"
+        )
+        + "; it keeps the files above."
+    )
+    action = engine_mod.operator_action(CODEX_REPAIR_COMMAND, kept, f"{reason} {manual_step}")
+    action.update(
+        {
+            "id": "codex-global-kept",
+            "reason": reason,
+            "manual_step": manual_step,
+            "on_apply": effect,
+        }
+    )
+    return action
+
+
+def global_skill_apply_effect(status: dict[str, Any]) -> dict[str, list[str]]:
+    """What `--apply --only codex` does to the global Codex folders (#1056)."""
+
+    operations = global_skill_operations()
+    return {
+        "writes": [str(item["path"]) for item in operations if item["op"] == "write"],
+        "removes": [str(item["path"]) for item in operations if item["op"] != "write"],
+        "keeps": [str(item) for item in status.get("kept") or []],
+    }
+
+
 def global_skill_operations() -> list[dict[str, Any]]:
     """Every destination `write_global_skill_source` touches, in order (#1012)."""
 
@@ -3163,8 +3194,13 @@ def write_global_plugin_source() -> dict[str, Any]:
         CODEX_PLUGIN_MANIFEST_RELATIVE_PATH: (manifest, expected_manifest),
         **{relative: (root / relative, text) for relative, text in expected_commands.items()},
     }
+    commands_dir = root / CODEX_PLUGIN_COMMANDS_RELATIVE_PATH
     changed_paths: list[str] = []
+    kept: list[str] = []
     for _relative, (path, text) in writes.items():
+        # #1062: a symlinked commands/ is a person's; never write or walk through it.
+        if path.parent == commands_dir and commands_dir.is_symlink():
+            continue
         path.parent.mkdir(parents=True, exist_ok=True)
         existing = path.read_text(encoding="utf-8") if path.exists() else ""
         if existing != text:
@@ -3172,7 +3208,6 @@ def write_global_plugin_source() -> dict[str, Any]:
             changed_paths.append(str(path))
     # #1056: old plugin folders and unknown command files go only when Main
     # Branch wrote them; anything else stays and is reported as kept.
-    kept: list[str] = []
     for old in (
         root / CODEX_PLUGIN_DIR_RELATIVE_PATH / "skills",
         root / CODEX_LEGACY_PLUGIN_DIR_RELATIVE_PATH,
@@ -3180,9 +3215,10 @@ def write_global_plugin_source() -> dict[str, Any]:
         operations, others = _owned_tree_cleanup(old, _is_mainbranch_transitional_file)
         kept.extend(others)
         changed_paths.extend(item["path"] for item in operations if _remove_owned_entry(item))
-    commands_dir = root / CODEX_PLUGIN_COMMANDS_RELATIVE_PATH
     expected_names = {f"{name}.md" for name in CODEX_SLASH_COMMAND_NAMES}
-    if commands_dir.is_dir():
+    if commands_dir.is_symlink():
+        kept.append(str(commands_dir))
+    elif commands_dir.is_dir():
         for path in sorted(commands_dir.iterdir()):
             if path.name in expected_names:
                 continue
@@ -3203,13 +3239,33 @@ def write_global_plugin_source() -> dict[str, Any]:
 
 
 def _remove_generated_tree(path: Path) -> bool:
+    """Remove a transitional path the plan found to hold only `mb` files.
+
+    A link is removed as a link. A folder is never removed whole: each file is
+    checked again and removed only when proven, then folders that are left
+    empty go; anything else stays with its folders.
+    """
+
     if path.is_symlink():
         path.unlink()  # the link only, never the tree it points into
         return True
     if path.is_dir():
-        shutil.rmtree(path)
+        for root, dirs, files in os.walk(path, topdown=False):
+            base = Path(root)
+            for name in files:
+                if _is_mainbranch_transitional_file(base / name):
+                    (base / name).unlink()
+            for name in dirs:
+                folder = base / name
+                if not folder.is_symlink():
+                    with contextlib.suppress(OSError):
+                        folder.rmdir()  # only an empty folder
+        try:
+            path.rmdir()
+        except OSError:
+            return False
         return True
-    if path.is_file():
+    if path.is_file() and _is_mainbranch_transitional_file(path):
         path.unlink()
         return True
     return False
@@ -3238,55 +3294,98 @@ def _remove_empty_transitional_dirs(target: Path) -> None:
             pass
 
 
-_MAINBRANCH_PLUGIN_NAMES = frozenset({CODEX_PLUGIN_NAME, CODEX_LEGACY_PLUGIN_NAME})
-_MAINBRANCH_MARKETPLACE_NAMES = frozenset({CODEX_MARKETPLACE_NAME, "main-branch-local"})
-_MAINBRANCH_SKILL_NAME_RE = re.compile(r"^name:\s*(main-branch|main-branch-owner-loop)\s*$", re.M)
+# The `mb` version a release embedded in its Codex command and skill text, in
+# the two sentences that carried it: "by Main Branch `0.3.30`. If runtime ..."
+# and "`0.3.30`. If the runtime reports ...".
+_EMBEDDED_VERSION_RE = re.compile(r"`[^`\n]+`(?=\. If (?:the )?runtime )")
+_EMBEDDED_VERSION_PLACEHOLDER = "`<mb-version>`"
+
+
+def generated_file_key(path: Path) -> str:
+    """The key a generated Codex file is proven under: its folder and file name."""
+
+    return f"{path.parent.name}/{path.name}"
+
+
+def normalised_generated_digest(name: str, data: bytes) -> str | None:
+    """sha256 of a Codex file's content with what varies per install normalised.
+
+    What varies: the embedded `mb` version (each release wrote its own) and
+    line endings (git may check a repo-local copy out with CRLF). JSON
+    manifests are compared as parsed data, re-serialised with sorted keys, so
+    a formatter's whitespace or key order does not matter while any added,
+    removed or changed key or value does. None when the bytes are not UTF-8
+    text, or not valid JSON for a `.json` name.
+    """
+
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+    text = text.replace("\r\n", "\n")
+    if name.endswith(".json"):
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError:
+            return None
+        text = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    else:
+        text = _EMBEDDED_VERSION_RE.sub(_EMBEDDED_VERSION_PLACEHOLDER, text)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+@lru_cache(maxsize=1)
+def _current_generated_digests() -> dict[str, frozenset[str]]:
+    """Digests of what this `mb` writes that an old Codex path may hold a copy of.
+
+    The global plugin source files, and the `main-branch` skill (the
+    repo-local `.agents/skills/main-branch` path held a copy of it).
+    """
+
+    rendered = {
+        CODEX_MARKETPLACE_RELATIVE_PATH: render_codex_marketplace_json(),
+        CODEX_PLUGIN_MANIFEST_RELATIVE_PATH: render_codex_plugin_manifest(),
+        **render_codex_slash_commands(),
+        CODEX_GLOBAL_SKILL_RELATIVE_PATH: render_codex_global_skill_md(CODEX_GLOBAL_SKILL_NAME),
+    }
+    digests: dict[str, set[str]] = {}
+    for relative, text in rendered.items():
+        path = Path(relative)
+        digest = normalised_generated_digest(path.name, text.encode("utf-8"))
+        if digest is not None:
+            digests.setdefault(generated_file_key(path), set()).add(digest)
+    return {key: frozenset(values) for key, values in digests.items()}
+
+
+def _is_known_generated_content(path: Path) -> bool:
+    """Whether the file at `path` (a link is read through) is a known generated version."""
+
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return False
+    digest = normalised_generated_digest(path.name, data)
+    if digest is None:
+        return False
+    key = generated_file_key(path)
+    if digest in KNOWN_FILE_DIGESTS.get(key, frozenset()):
+        return True
+    return digest in _current_generated_digests().get(key, frozenset())
 
 
 def _is_mainbranch_transitional_file(path: Path) -> bool:
-    """Whether `mb` wrote this file into a transitional repo-local Codex path (#1052).
+    """Whether this file at an old Codex path is proven to be one `mb` wrote.
 
-    The repo-local copies (0.3.2x) carried no single ownership marker, and
-    their text embeds the `mb` version, so no content hash fits every release.
-    Each file is matched by the name `mb` gave it plus text every release of
-    that file carried. Anything else is treated as a person's file.
+    Proof is content, not name: the file must equal, after normalising what
+    varies per install, a version a released `mb` wrote at that path (the
+    frozen digests in `mb.codex_known_files`) or what this `mb` renders. A
+    person's look-alike, a renamed file or a generated file with additions is
+    not proven and stays. A symlink is never proven.
     """
 
     if path.is_symlink() or not path.is_file():
         return False
-    try:
-        text = path.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
-        return False
-    name = path.name
-    if name == "SKILL.md":
-        return bool(_MAINBRANCH_SKILL_NAME_RE.search(text)) and "Main Branch" in text
-    if name == "workflow-inventory.md":
-        return text.startswith("# Main Branch Codex Workflow Inventory")
-    if path.parent.name == "commands" and name.startswith("mb-") and name.endswith(".md"):
-        return "Main Branch" in text
-    if name not in {"plugin.json", "marketplace.json"}:
-        return False
-    try:
-        payload = json.loads(text)
-    except json.JSONDecodeError:
-        return False
-    if not isinstance(payload, dict):
-        return False
-    if name == "plugin.json":
-        return payload.get("name") in _MAINBRANCH_PLUGIN_NAMES and "noontide-co/mainbranch" in str(
-            payload.get("repository", "")
-        )
-    plugins = payload.get("plugins")
-    return (
-        payload.get("name") in _MAINBRANCH_MARKETPLACE_NAMES
-        and isinstance(plugins, list)
-        and bool(plugins)
-        and all(
-            isinstance(item, dict) and item.get("name") in _MAINBRANCH_PLUGIN_NAMES
-            for item in plugins
-        )
-    )
+    return _is_known_generated_content(path)
 
 
 def _transitional_cleanup(target: Path) -> tuple[list[dict[str, Any]], list[str]]:
@@ -3334,7 +3433,7 @@ def _transitional_cleanup(target: Path) -> tuple[list[dict[str, Any]], list[str]
 def _remove_transitional_file(path: Path, target: Path) -> bool:
     """Remove one `mb` file, then any folders it leaves empty, up to the repo."""
 
-    if not path.is_file() or path.is_symlink():
+    if not _is_mainbranch_transitional_file(path):
         return False
     path.unlink()
     parent = path.parent
@@ -3642,14 +3741,16 @@ def agents_md_operator_action(plan: dict[str, Any]) -> dict[str, Any] | None:
         changes = [AGENTS_RELATIVE_PATH]
     elif kept:
         reason = (
-            "Old repo-local Codex folders hold files Main Branch did not write: "
+            "Old repo-local Codex folders hold files Main Branch cannot prove it wrote "
+            "(your own files, or Main Branch files that were changed): "
             + ", ".join(kept)
-            + ". The repair removes only the Main Branch files and leaves these."
+            + ". The repair removes only unchanged Main Branch files and leaves these."
         )
         # #1056: name exactly what an apply does, so the plan and the apply agree.
         removes = effect["removes"]
         manual_step = (
-            "Move or delete those files yourself when you no longer need them. "
+            "Open each file. Move anything you want to keep somewhere of your own, "
+            "then delete the rest yourself. "
             f"`{CODEX_REPAIR_COMMAND}` (or `--all-agents`) "
             + ("rewrites AGENTS.md, " if effect["writes"] else "")
             + (

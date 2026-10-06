@@ -1,0 +1,20 @@
+{
+  "name": "main-branch-local",
+  "interface": {
+    "displayName": "Main Branch"
+  },
+  "plugins": [
+    {
+      "name": "main-branch-owner-loop",
+      "source": {
+        "source": "local",
+        "path": "./.agents/plugins/main-branch-owner-loop"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

@@ -23,6 +23,8 @@ __pycache__/
 # .claude/*.lock is local Claude Code session state (pid, sessionId).
 .agent/
 .agents/
+# Codex files exactly as released versions wrote them (test fixtures).
+!mb/tests/fixtures/codex_released/*/*/.agents/
 .context/
 .mb/connect.yaml
 .claude/*.lock

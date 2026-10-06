@@ -1,0 +1,40 @@
+---
+description: Plan a Main Branch update without applying it first.
+---
+
+# /mb-update
+
+Use the Main Branch owner-loop skill and the business repo `AGENTS.md` guidance.
+This command is a thin Codex shim, not a separate workflow source.
+
+## Route
+
+Start/status/setup/update/doctor
+
+## Required Facts
+
+First run `command -v mb` and `mb --version`. This command shim was generated
+by Main Branch `0.3.30`. If runtime `mb` is older or different, stop
+before running status/repair commands and surface the PATH repair.
+
+Run the direct `mb` facts that fit this request:
+
+- `mb status --json --peek`
+- `mb start --json`
+- `mb update --check --json`
+
+Do not shell-wrap `mb` JSON through `jq`, temp files, redirects, or Python parsers.
+
+## Task
+
+Report installed/latest version facts, release-note context when present, and the exact update command. Ask before running update or repair commands.
+
+## Boundaries
+
+Ask before durable writes, checkpoints, updates, repairs, migrations, provider
+mutation, publishing, spend, customer contact, destructive operations,
+raw private-source reads, or public issue/proposal submission.
+
+Do not claim Claude Code skill parity, all-skill parity, ads/site production,
+provider mutation support, publishing support, spend support, or customer-contact
+support in Codex.

@@ -2701,6 +2701,12 @@ def repair_plan(
         if agents_operator_action is not None:
             codex_operator_actions.append(agents_operator_action)
             operator_actions.append(agents_operator_action)
+    # A file in an old global folder that is not proven to be Main Branch's
+    # stays; a person decides what to do with it.
+    global_operator_action = codex_mod.global_skill_operator_action(codex_global_skill)
+    if global_operator_action is not None:
+        codex_operator_actions.append(global_operator_action)
+        operator_actions.append(global_operator_action)
     if not codex_global_skill["ok"]:
         action = _action(
             id="codex-global-skill",
@@ -2708,7 +2714,7 @@ def repair_plan(
             state="warn",
             mode="write",
             command="mb doctor repair --apply --only codex",
-            safe_to_apply=True,
+            safe_to_apply=global_operator_action is None,
             reason=(
                 "Codex uses a global Main Branch skill bundle for supported and "
                 "discoverable mb-* routes"
@@ -2718,8 +2724,9 @@ def repair_plan(
             ],
             result=codex_global_skill,
         )
-        # #1056: files Main Branch did not write in old global folders stay.
+        # #1056, #1062: files not proven to be Main Branch's in old global folders stay.
         action["kept"] = list(codex_global_skill.get("kept", []))
+        action["on_apply"] = codex_mod.global_skill_apply_effect(codex_global_skill)
         _attach_operations(action, target, codex_mod.global_skill_operations())
         actions.append(action)
         codex_actions.append(action)
@@ -3169,7 +3176,7 @@ def repair_apply(
                     else "wrote current Codex AGENTS.md fact grounding, lifecycle routing, "
                     "and approval boundaries"
                     + (
-                        "; kept files Main Branch did not write: " + ", ".join(agents["kept"])
+                        "; kept files not proven to be Main Branch's: " + ", ".join(agents["kept"])
                         if agents["kept"]
                         else ""
                     )

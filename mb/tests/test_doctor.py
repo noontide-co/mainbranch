@@ -684,9 +684,10 @@ def test_doctor_repair_apply_all_agents_installs_codex_without_codex_cli(
     (repo / "AGENTS.md").write_text("# stale\n\nNo facts here.\n", encoding="utf-8")
     old_playbook_skill = tmp_path / "codex-skills" / "weekly-review" / "SKILL.md"
     old_playbook_skill.parent.mkdir(parents=True, exist_ok=True)
-    old_playbook_skill.write_text(
-        "\n".join(codex_mod.CODEX_RETIRED_GLOBAL_SKILL_MARKERS["weekly-review"]) + "\n",
-        encoding="utf-8",
+    old_playbook_skill.write_bytes(
+        (
+            Path(__file__).parent / "fixtures/codex_released/0.3.36/skills/weekly-review/SKILL.md"
+        ).read_bytes()
     )
 
     result = runner.invoke(
@@ -1039,8 +1040,13 @@ def test_doctor_repair_removes_stale_repo_local_codex_plugin(tmp_path: Path) -> 
     init_run(path=str(repo), name="Acme")
     command = repo / ".agents" / "plugins" / "main-branch-owner-loop" / "commands" / "mb-start.md"
     command.parent.mkdir(parents=True, exist_ok=True)
-    # #1052: shaped like the shim `mb` wrote; only those files are removed.
-    command.write_text("# /mb-start\n\nUse the Main Branch owner-loop skill.\n", encoding="utf-8")
+    # The shim exactly as 0.3.30 wrote it; only proven files are removed.
+    command.write_bytes(
+        (
+            Path(__file__).parent / "fixtures/codex_released/0.3.30/repo/.agents/plugins"
+            "/main-branch-owner-loop/commands/mb-start.md"
+        ).read_bytes()
+    )
 
     plan_result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
     assert plan_result.exit_code in {0, 1}
