@@ -1003,7 +1003,9 @@ def _repair(
     # `--reauth` reads the OAuth client from the stored grant; when the grant
     # cannot be read, the command must carry the client file or it is refused.
     raw_grant = (secrets or {}).get(GOOGLE_OAUTH_GRANT_SLOT)
-    grant_readable = not isinstance(raw_grant, dict) or raw_grant.get("present") is True
+    grant_readable = not isinstance(raw_grant, dict) or (
+        raw_grant.get("present") is True and raw_grant.get("readable") is True
+    )
     if _records_oauth_grant(provider, entry) and not grant_readable:
         from mb import google_connect
 
@@ -1844,6 +1846,14 @@ def _secret_statuses(
             "backend_state": probe.reason or "ready",
             "optional": True,
         }
+        if field == GOOGLE_OAUTH_GRANT_SLOT:
+            from mb import google_connect
+
+            # Whether `--reauth` could read its OAuth client from this grant.
+            # Only the boolean leaves here, never the value.
+            secrets[field]["readable"] = bool(
+                probe.present and google_connect.client_from_grant(probe.value) is not None
+            )
     return secrets, missing
 
 

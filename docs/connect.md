@@ -762,8 +762,8 @@ google`, `mb connect token google` and `mb connect exec google` name
 `mb connect google --oauth` as the next step (`repair_command` in `--json`).
 On a sign-in connection whose stored sign-in can still be read (only the
 access token is missing, or the check failed), they name
-`mb connect google --oauth --reauth`. When the stored sign-in itself is gone
-(for example, after the credential store was reset), they name
+`mb connect google --oauth --reauth`. When the stored sign-in itself is gone or
+can't be read (for example, after the credential store was reset), they name
 `mb connect google --oauth --reauth --client-file <Desktop client JSON>`:
 `--reauth` reads the OAuth client from the stored sign-in, so without it the
 client file must be passed. Only a connection made with a plain access token

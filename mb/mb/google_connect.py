@@ -342,8 +342,18 @@ def _stored_client(existing: _Existing) -> OAuthClient | None:
         return None
     if not probe.present:
         return None
+    return client_from_grant(probe.value)
+
+
+def client_from_grant(value: str) -> OAuthClient | None:
+    """The OAuth client in a stored grant's JSON, or None when it cannot be used.
+
+    ``--reauth`` without a client file needs this, and status uses the same
+    check to decide whether that command would be refused.
+    """
+
     try:
-        raw = json.loads(probe.value)
+        raw = json.loads(value)
     except ValueError:
         return None
     if not isinstance(raw, dict):
