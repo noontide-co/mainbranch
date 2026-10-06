@@ -2908,3 +2908,31 @@ def test_planned_personal_backup_is_where_the_link_moves_it(
     applied = sorted(str(path) for path in (personal / ".mainbranch-backups").rglob("mb-start*"))
     assert planned and applied == planned, (planned, applied)
     assert result["ok"] is True, result["errors"]
+
+
+@pytest.mark.parametrize("interactive", [False, True])
+def test_update_never_deletes_a_persons_mb_command_in_an_old_codex_path(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, interactive: bool
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    _with_current_gitignore(business_repo)
+    codex_mod.write_agents_md(business_repo)
+    mine = business_repo / codex_mod.CODEX_PLUGIN_COMMANDS_RELATIVE_PATH / "mb-team-policy.md"
+    mine.parent.mkdir(parents=True)
+    policy = "# Team policy\nOur Main Branch workflow requires two reviewers.\n"
+    mine.write_text(policy, encoding="utf-8")
+    _commit_all(business_repo, "A team command")
+
+    result = update_mod.run(
+        repo=business_repo, interactive=interactive, confirm_surfaces=lambda repo, files: True
+    )
+
+    assert mine.read_text(encoding="utf-8") == policy
+    assert _git(business_repo, "status", "--porcelain") == ""
+    assert not any("--apply" in args and "codex" in args for args in calls)
+    assert result["surface_refresh"]["codex"]["blocked"] is True
+    entries = [item for item in result["operator_actions"] if item.get("id") == "codex-agents-md"]
+    assert len(entries) == 1
+    assert "mb-team-policy.md" in entries[0]["reason"]
+    assert result["ok"] is True, result["errors"]

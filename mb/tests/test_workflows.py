@@ -26,6 +26,7 @@ from mb.workflows import (
 )
 
 runner = CliRunner()
+RELEASED = Path(__file__).parent / "fixtures" / "codex_released"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = REPO_ROOT / "workflows" / "mb-start-money-path" / "workflow.md"
 START_STATUS_WORKFLOW = REPO_ROOT / "workflows" / "mb-start-status" / "workflow.md"
@@ -651,10 +652,12 @@ def test_codex_global_plugin_source_generates_slash_commands_and_removes_visible
         / "SKILL.md"
     )
     old_skill.parent.mkdir(parents=True, exist_ok=True)
-    # The shape `mb` wrote; a file without Main Branch text would be kept (#1056).
-    old_skill.write_text(
-        "---\nname: main-branch-owner-loop\n---\n\n# Main Branch owner loop for Codex\n",
-        encoding="utf-8",
+    # Exactly what 0.3.33 wrote; a file that is not a known version is kept.
+    old_skill.write_bytes(
+        (
+            RELEASED / "0.3.33/plugin/.agents/plugins/main-branch-owner-loop/skills"
+            "/main-branch-owner-loop/SKILL.md"
+        ).read_bytes()
     )
 
     result = codex_mod.write_global_plugin_source()
@@ -710,10 +713,8 @@ def test_codex_global_skill_upgrade_removes_retired_playbook_skills(
         assert name not in codex_mod.CODEX_GLOBAL_SKILL_SUPPORT
         stale_skill = codex_mod.global_skill_source_root() / name / "SKILL.md"
         stale_skill.parent.mkdir(parents=True, exist_ok=True)
-        stale_skill.write_text(
-            "\n".join(codex_mod.CODEX_RETIRED_GLOBAL_SKILL_MARKERS[name]) + "\n",
-            encoding="utf-8",
-        )
+        # Exactly what 0.3.36 wrote; only a proven file is removed.
+        stale_skill.write_bytes((RELEASED / "0.3.36" / "skills" / name / "SKILL.md").read_bytes())
 
     before = codex_mod.global_skill_status(tmp_path / "business")
 
@@ -774,7 +775,6 @@ def test_removed_provisional_playbooks_are_cleanup_only(tmp_path: Path, monkeypa
     assert removed.isdisjoint(codex_mod.CODEX_GLOBAL_SKILL_FACTS)
     assert removed.isdisjoint(codex_mod.CODEX_GLOBAL_SKILL_SUPPORT)
     assert removed.issubset(codex_mod.CODEX_RETIRED_GLOBAL_SKILL_NAMES)
-    assert removed.issubset(codex_mod.CODEX_RETIRED_GLOBAL_SKILL_MARKERS)
 
     status = codex_mod.global_skill_status(tmp_path / "business")
     assert removed.isdisjoint(status["required_skills"])
@@ -1009,9 +1009,6 @@ def test_codex_workflow_inventory_static_metadata_is_complete() -> None:
     assert set(codex_mod.CODEX_GLOBAL_SKILL_DESCRIPTIONS) == set(codex_mod.CODEX_GLOBAL_SKILL_NAMES)
     assert set(codex_mod.CODEX_GLOBAL_SKILL_FACTS) == set(codex_mod.CODEX_GLOBAL_SKILL_NAMES)
     assert set(codex_mod.CODEX_GLOBAL_SKILL_SUPPORT) == set(codex_mod.CODEX_GLOBAL_SKILL_NAMES)
-    assert set(codex_mod.CODEX_RETIRED_GLOBAL_SKILL_MARKERS) == set(
-        codex_mod.CODEX_RETIRED_GLOBAL_SKILL_NAMES
-    )
 
     for item in codex_mod.CODEX_WORKFLOW_INVENTORY:
         codex_status = item["codex_status"]

@@ -123,7 +123,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   after the new block; if that text was edited, it refuses. It also refuses
   when a begin or end marker is missing or out of order. It never replaces
   the whole file. In the old repo-local Codex paths it deletes only files
-  Main Branch wrote and leaves the rest, along with their folders. While the
+  proven to be unchanged Main Branch files (see the next entries) and leaves
+  the rest, along with their folders. While the
   repair would refuse or leave a person's files, `codex-agents-md` is not
   `safe_to_apply`, and `mb doctor repair` and `mb update` list it in
   `operator_actions` with the reason and the manual step; `mb update` makes
@@ -133,10 +134,28 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   whole folders under your home. In the old global plugin source
   (`~/.local/share/mainbranch/codex` or `MAINBRANCH_CODEX_PLUGIN_ROOT`), the
   old `main-branch-owner-loop` skill and the retired playbook skills, it
-  deletes only files Main Branch wrote, one by one, and removes a folder only
-  once it is empty. Anything else stays, is never followed through a symlink,
-  and is listed as `kept` in the global skill status, the doctor plan and the
-  apply result (#1056).
+  deletes only files proven to be unchanged Main Branch files, one by one,
+  and removes a folder only once it is empty. Anything else stays and is
+  never followed through a symlink. It is listed as `kept` in the global skill
+  status, the doctor plan and the apply result for the plugin source and the
+  legacy skill folder, and for a retired skill folder only when that folder
+  also held a Main Branch file; a same-named folder with nothing of Main
+  Branch's in it is left alone and not reported (#1056).
+- Codex cleanup no longer decides a file is Main Branch's by its name and a
+  mention of "Main Branch". A file in an old Codex folder, in your business
+  repo or under your home, is deleted only when its content is exactly a
+  version Main Branch wrote there, allowing only for the `mb` version number
+  written into it (a plain X.Y.Z; any other text in that place is compared)
+  and Windows line endings; `plugin.json` and `marketplace.json` are compared
+  as data, so whitespace and key order do not matter. So your own `mb-*.md`
+  command that mentions Main Branch, or a Main Branch file you added notes
+  to, now stays. Doctor lists such files (as described above for each
+  folder) in `kept` and in `operator_actions` (the new
+  `codex-global-kept` entry for files under your home) with what to do;
+  `codex-global-skill` is then not `safe_to_apply` and gains `on_apply`. An
+  explicit apply and `mb update` delete only the proven files. Folders are
+  removed only when empty, a symlink is never followed, and the old global
+  plugin refresh no longer walks a linked `commands/` folder (#1062).
 - `mb init` reports an `AGENTS.md` it refused to change (managed markers
   missing or out of order) the way doctor and update do: a warning, plus an
   `operator_actions` entry with the same `reason` and `manual_step`. The

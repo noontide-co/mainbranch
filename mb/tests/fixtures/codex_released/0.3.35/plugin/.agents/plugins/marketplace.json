@@ -1,0 +1,20 @@
+{
+  "name": "main-branch",
+  "interface": {
+    "displayName": "Main Branch"
+  },
+  "plugins": [
+    {
+      "name": "main-branch",
+      "source": {
+        "source": "local",
+        "path": "./.agents/plugins/main-branch"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

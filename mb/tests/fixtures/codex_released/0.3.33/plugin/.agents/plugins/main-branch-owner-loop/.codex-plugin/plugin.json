@@ -1,0 +1,38 @@
+{
+  "name": "main-branch-owner-loop",
+  "version": "0.1.0",
+  "description": "Main Branch owner-loop commands for Codex. Uses deterministic mb facts and generated business-repo guidance.",
+  "author": {
+    "name": "Noontide"
+  },
+  "homepage": "https://github.com/noontide-co/mainbranch",
+  "repository": "https://github.com/noontide-co/mainbranch",
+  "license": "MIT",
+  "keywords": [
+    "main-branch",
+    "mainbranch",
+    "owner-loop",
+    "business-memory"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Main Branch Owner Loop",
+    "shortDescription": "Start, inspect, decide, and checkpoint from mb facts",
+    "longDescription": "Adds Codex-native owner-loop commands for Main Branch business repos. The plugin routes through generated owner-loop guidance and direct mb facts; it does not add provider mutation, publishing, spend, customer contact, ads/site production, or all-skill parity.",
+    "developerName": "Noontide",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/noontide-co/mainbranch",
+    "defaultPrompt": [
+      "Start this Main Branch business day from mb facts",
+      "Show what Main Branch workflows Codex supports",
+      "Plan a Main Branch checkpoint before saving work"
+    ],
+    "brandColor": "#0F766E",
+    "screenshots": []
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "name": "main-branch",
+  "version": "0.1.0",
+  "description": "Main Branch /mb commands for Codex. Uses deterministic mb facts and business-repo guidance.",
+  "author": {
+    "name": "Noontide"
+  },
+  "homepage": "https://github.com/noontide-co/mainbranch",
+  "repository": "https://github.com/noontide-co/mainbranch",
+  "license": "MIT",
+  "keywords": [
+    "main-branch",
+    "mainbranch",
+    "business-memory"
+  ],
+  "interface": {
+    "displayName": "Main Branch",
+    "shortDescription": "Main Branch /mb commands for business repos",
+    "longDescription": "Adds Codex `/mb-*` commands for Main Branch business repos. Commands route through deterministic mb facts and repo guidance; they do not add provider mutation, publishing, spend, customer contact, ads/site production, or all-skill parity.",
+    "developerName": "Noontide",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/noontide-co/mainbranch",
+    "defaultPrompt": [
+      "Use /mb-start to start this Main Branch business day",
+      "Use /mb-help to show supported Main Branch Codex commands",
+      "Use /mb-end to plan a checkpoint before saving work"
+    ],
+    "brandColor": "#0F766E",
+    "screenshots": []
+  }
+}
