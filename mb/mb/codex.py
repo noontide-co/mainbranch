@@ -1136,20 +1136,9 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
 
 
 def _repo_flag(repo: str | Path | None) -> str:
-    """` --repo <path>` for a command a person may paste, shell-quoted (#1072).
+    """The shared `--repo` rule (#1072); see `engine.repo_flag`."""
 
-    Empty when no repo is known or the repo is the current directory, the
-    rule `mb update` uses for its operator actions (#1071).
-    """
-
-    if repo is None:
-        return ""
-    target = Path(repo).expanduser().resolve()
-    try:
-        here = Path.cwd().resolve()
-    except OSError:
-        here = None
-    return "" if target == here else f" --repo {shlex.quote(str(target))}"
+    return engine_mod.repo_flag(repo)
 
 
 def repair_command(repo: str | Path | None = None) -> str:
@@ -3905,6 +3894,21 @@ def agents_md_plan(
 
     target = Path(repo).expanduser().resolve()
     path = agents_path(target)
+    if path.is_dir():
+        # #1072: a folder where the file belongs is not ours to read or replace.
+        return {
+            "operations": [],
+            "refused": [
+                _agents_refusal(
+                    "is_directory",
+                    "AGENTS.md is a folder, not a file, so Main Branch cannot read or "
+                    "write the Codex guidance there. It left everything unchanged.",
+                    "Move or rename the AGENTS.md folder (or merge what it holds into a "
+                    f"file of your own), {_agents_rerun_step(target)}",
+                )
+            ],
+            "kept": [],
+        }
     rendered = render_agents_md(target, name=name, gh_username=gh_username)
     existing = path.read_text(encoding="utf-8") if path.exists() else ""
     updated, refusal = _merge_agents_md(existing, rendered, _agents_rerun_step(target))

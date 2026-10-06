@@ -13,6 +13,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- A symlinked `AGENTS.md` is never replaced by an unattended `mb update`,
+  whether or not git tracks it or the link points anywhere. The replacement
+  is listed as a step for you; at a terminal, the prompt names it and a yes
+  may replace it.
 - `mb connect test <provider>` no longer writes its outcome into a
   `.mb/connect.yaml` that git tracks, for every provider and not only Google.
   It prints `recorded: no (.mb/connect.yaml is tracked by git ...)`, and
@@ -50,6 +54,15 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   yes writes it (#1053).
 
 ### Fixed
+
+- Every command `mb update` and `mb doctor repair` suggest now names your
+  business repo (`--repo <path>`), so it works from any folder: the retry
+  and next-step commands, the plugin switch (it said `--repo .`), the
+  `mb status` check, and doctor's own action, surface and apply-choice
+  commands. The flag is left out only when you are already in that repo.
+- `mb update` and `mb doctor repair --only codex` no longer stop with an error
+  when `AGENTS.md` is a folder. They report it as a step for you (move or
+  rename it), change nothing, and finish the rest of the run.
 
 - A tracked `.mb/connect.yaml` is no longer rewritten when git can't answer.
   Before, git missing from `PATH`, a `safe.directory` refusal or a timeout let

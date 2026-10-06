@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import shutil
 import socket
 import subprocess
@@ -801,7 +802,7 @@ def _repo_layout_check(repo: Path) -> dict[str, Any]:
             "ok": False,
             "detail": (
                 "legacy reference/core layout detected. This still works, but "
-                "run `mb skill link --repo .` after upgrading and read "
+                f"run `mb skill link{engine_mod.repo_flag(repo)}` after upgrading and read "
                 "`docs/migrating.md` before moving files."
             ),
             "severity": "warn",
@@ -1815,7 +1816,8 @@ def run(path: str) -> dict[str, Any]:
             else (
                 "Codex AGENTS.md or generated guidance is missing, stale, or missing "
                 "required mb fact commands or lifecycle discovery guidance. "
-                "Run `mb doctor repair --plan`, review, then `mb doctor repair --apply`."
+                f"Run `mb doctor repair{engine_mod.repo_flag(repo)} --plan`, review, "
+                f"then `mb doctor repair{engine_mod.repo_flag(repo)} --apply`."
             ),
             "severity": "ok" if codex_instructions["ok"] else "warn",
             "repair": codex_instructions["repair"],
@@ -1889,7 +1891,8 @@ def run(path: str) -> dict[str, Any]:
                 if wiring_ok
                 else (
                     "Missing Main Branch start wiring for Claude Code. Run "
-                    "`mb doctor repair --plan`, then `mb doctor repair --apply`."
+                    f"`mb doctor repair{engine_mod.repo_flag(repo)} --plan`, then "
+                    f"`mb doctor repair{engine_mod.repo_flag(repo)} --apply`."
                 )
             ),
             "severity": "ok"
@@ -1905,7 +1908,7 @@ def run(path: str) -> dict[str, Any]:
                 "detail": (
                     f"{active_shadows} active personal skill shadow(s), "
                     f"{legacy_globals} legacy personal skill trap(s). "
-                    "Run `mb skill repair --repo .` for details."
+                    f"Run `mb skill repair{engine_mod.repo_flag(repo)}` for details."
                 ),
                 "severity": "error" if active_shadows else "warn",
             }
@@ -2114,6 +2117,59 @@ def _not_business_folder_guard(target: Path, *, mode: str = "plan") -> dict[str,
         },
         "safe_to_share": True,
     }
+
+
+_REPO_FLAG_COMMANDS = (
+    "mb doctor repair",
+    "mb update",
+    "mb validate",
+    "mb checkpoint",
+    "mb skill link",
+    "mb skill repair",
+    "mb migrate",
+)
+_REPO_POSITIONAL_COMMANDS = ("mb status", "mb graph")
+
+
+def _qualify_command(command: str, repo: Path) -> str:
+    """Name the business repo in every `mb` command of a suggested command line (#1072).
+
+    `--repo .` becomes the shared rule's flag; a command with no repo gains it;
+    `mb status` and `mb graph` take the path as an argument. Commands that
+    already name a repo, and anything that is not an `mb` command, are kept.
+    """
+    flag = engine_mod.repo_flag(repo)
+    segments = []
+    for segment in command.split(" && "):
+        if not segment.startswith("mb "):
+            segments.append(segment)
+        elif " --repo . " in f"{segment} ":
+            segments.append(f"{segment} ".replace(" --repo . ", f"{flag} ").rstrip())
+        elif " --repo " in segment:
+            segments.append(segment)
+        elif flag and segment.startswith(_REPO_POSITIONAL_COMMANDS):
+            segments.append(f"{segment} {shlex.quote(str(repo))}")
+        else:
+            prefix = next((p for p in _REPO_FLAG_COMMANDS if segment.startswith(p)), "")
+            if prefix == "mb migrate" and not segment.startswith("mb migrate --"):
+                prefix = ""  # `mb migrate campaigns` takes no --repo
+            segments.append(f"{prefix}{flag}{segment[len(prefix) :]}" if prefix else segment)
+    return " && ".join(segments)
+
+
+def _qualify_report(node: Any, repo: Path) -> None:
+    """Rewrite every suggested-command field of a repair report in place."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key in {"command", "repair_command"} and isinstance(value, str):
+                node[key] = _qualify_command(value, repo)
+            elif key in {"scope_choices", "apply_choices"} and isinstance(value, list):
+                node[key] = [_qualify_command(str(item), repo) for item in value]
+            elif key not in {"raw", "result"}:
+                _qualify_report(value, repo)
+    elif isinstance(node, list):
+        for item in node:
+            _qualify_report(item, repo)
 
 
 def repair_plan(
@@ -2561,7 +2617,7 @@ def repair_plan(
         # #1042: the plugin-rail switch writes the tracked `.claude/settings.json`,
         # so it is a step for a person at a terminal, never a repair an agent
         # applies. Report it the way `mb update` does, in `operator_actions`.
-        operator_actions.append(engine_mod.plugin_switch_operator_action())
+        operator_actions.append(engine_mod.plugin_switch_operator_action(target))
     if int(shadow_report.get("summary", {}).get("repairable", 0) or 0):
         actions.append(
             _action(
@@ -2952,7 +3008,7 @@ def repair_plan(
     else:
         plan_state = "apply_summary"
         plan_summary = "`mb doctor repair --apply` returned an apply summary."
-    return {
+    report: dict[str, Any] = {
         "schema": REPAIR_SCHEMA,
         "schema_version": REPAIR_SCHEMA_VERSION,
         "ok": summary["error"] == 0,
@@ -3018,6 +3074,11 @@ def repair_plan(
             "git": git,
         },
     }
+    _qualify_report(report, target)
+    post_apply = report["post_apply"]
+    for key in ("structural_verification", "validation_frontmatter_debt", "related_links_mirrors"):
+        post_apply[key] = _qualify_command(post_apply[key], target)
+    return report
 
 
 def repair_apply(
