@@ -768,6 +768,15 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
         "repair_command": codex.get("repair", "") or instructions.get("repair_command", ""),
         "plugin_install": plugin_install,
     }
+    # #1067: files doctor keeps in global Codex folders are reported here too,
+    # in the shape the blocked AGENTS.md repair uses, so `mb update` alone tells
+    # the operator. Nothing is deleted on their account.
+    kept_action = codex_mod.global_skill_operator_action(global_skill, repo=repo)
+    if kept_action is not None and not any(
+        item.get("id") == "codex-global-kept" for item in result["operator_actions"]
+    ):
+        result["warnings"].append(str(kept_action.get("note") or ""))
+        result["operator_actions"].append(kept_action)
     if not codex["ok"]:
         # #1053: the same `--repo` form the surface refresh emits, so the two
         # follow-ups collapse to one plan command and every entry names the repo.
@@ -789,7 +798,7 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
             ):
                 agents_plan = codex_mod.agents_md_plan(repo)
                 # #1052: a repair that needs a manual step first says which.
-                blocked = codex_mod.agents_md_operator_action(agents_plan)
+                blocked = codex_mod.agents_md_operator_action(agents_plan, repo=repo)
                 changes = [str(op["rel"]) for op in agents_plan["operations"]]
                 if blocked:
                     blocked["command"] = apply_command

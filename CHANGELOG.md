@@ -32,6 +32,29 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   It and the compatibility guide now say what the `mb doctor repair --plan`
   exit code means: 1 when a check in scope is an error, 0 when the plan only
   lists actions or warnings (#1053).
+- `mb doctor repair --plan` and `--apply` no longer stop with a traceback
+  when a Codex command or skill file under your home is not UTF-8 or cannot
+  be read. The file is kept as it is, never overwritten or deleted, and
+  listed in `codex-global-kept` for you to look at (#1067).
+- The Codex cleanup under your home now checks each file's content again
+  right before deleting it, as the cleanup in your business repo already
+  did. A file that changed after the plan stays and is listed as kept, in
+  both places (#1067).
+- The Codex cleanup no longer walks through a linked folder: a linked
+  `.agents/` folder in your business repo (or a linked folder inside it), or
+  a linked global plugin folder or its `mainbranch` folder under your home.
+  Nothing under the link is deleted; the link is listed as kept, and the
+  reason says it is a link (#1067).
+- A `plugin.json` or `marketplace.json` that repeats a key is no longer
+  taken for a Main Branch file, since a JSON reader keeps only the last
+  value. It stays and is listed as kept (#1067).
+- `mb update`, including `--check`, now tells you about files under your
+  home that the Codex cleanup keeps: the same `codex-global-kept` entry
+  `mb doctor repair --plan --only codex` shows, in `operator_actions` and as a
+  warning (#1067).
+- The Codex repair commands that `mb doctor`, `mb status` and `mb init` print
+  name your business repo with `--repo <path>` when you are not inside it,
+  including the manual step for an `AGENTS.md` they will not change (#1072).
 
 ## [0.6.4] - 2026-10-06
 

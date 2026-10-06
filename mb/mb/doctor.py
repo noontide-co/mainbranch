@@ -2674,7 +2674,7 @@ def repair_plan(
         agents_operations = agents_plan["operations"]
         # #1052: a repair that refuses, or leaves a person's files behind, is a
         # step for a person with a manual repair, never an agent repair.
-        agents_operator_action = codex_mod.agents_md_operator_action(agents_plan)
+        agents_operator_action = codex_mod.agents_md_operator_action(agents_plan, repo=target)
         reason = (
             "AGENTS.md is the repo-local Codex entrypoint; repair writes current "
             "fact grounding, lifecycle routing, and approval boundaries, and removes "
@@ -2711,7 +2711,7 @@ def repair_plan(
             operator_actions.append(agents_operator_action)
     # A file in an old global folder that is not proven to be Main Branch's
     # stays; a person decides what to do with it.
-    global_operator_action = codex_mod.global_skill_operator_action(codex_global_skill)
+    global_operator_action = codex_mod.global_skill_operator_action(codex_global_skill, repo=target)
     if global_operator_action is not None:
         codex_operator_actions.append(global_operator_action)
         operator_actions.append(global_operator_action)

@@ -55,6 +55,8 @@ CODEX_PLUGIN_SKILL_RELATIVE_PATH = (
     f"{CODEX_LEGACY_PLUGIN_DIR_RELATIVE_PATH}/skills/main-branch-owner-loop/SKILL.md"
 )
 CODEX_SUPPORT_LEVEL = "supported_global_main_branch_skill"
+# The bare forms, for text with no business repo in view (#1072). Wherever the
+# repo is known, `repair_command(repo)` and `repair_text(repo)` name it.
 CODEX_REPAIR_COMMAND = "mb doctor repair --apply --only codex"
 CODEX_REPAIR_TEXT = (
     "Run `mb doctor repair --plan --only codex`, review, then "
@@ -1133,17 +1135,96 @@ CODEX_WORKFLOW_INVENTORY: tuple[dict[str, Any], ...] = (
 )
 
 
-def global_plugin_source_root() -> Path:
-    """Return the user-local source directory for the global Codex plugin."""
+def _repo_flag(repo: str | Path | None) -> str:
+    """` --repo <path>` for a command a person may paste, shell-quoted (#1072).
+
+    Empty when no repo is known or the repo is the current directory, the
+    rule `mb update` uses for its operator actions (#1071).
+    """
+
+    if repo is None:
+        return ""
+    target = Path(repo).expanduser().resolve()
+    try:
+        here = Path.cwd().resolve()
+    except OSError:
+        here = None
+    return "" if target == here else f" --repo {shlex.quote(str(target))}"
+
+
+def repair_command(repo: str | Path | None = None) -> str:
+    """The Codex apply command, naming the business repo when one is known (#1072)."""
+
+    return f"mb doctor repair{_repo_flag(repo)} --apply --only codex"
+
+
+def repair_text(repo: str | Path | None = None) -> str:
+    """The Codex plan-then-apply sentence, naming the business repo when known (#1072)."""
+
+    flag = _repo_flag(repo)
+    return (
+        f"Run `mb doctor repair{flag} --plan --only codex`, review, then "
+        f"`mb doctor repair{flag} --apply --only codex`."
+    )
+
+
+def _global_plugin_root_unresolved() -> tuple[Path, bool]:
+    """The global plugin root as configured, before links are resolved, and
+    whether it came from `MAINBRANCH_CODEX_PLUGIN_ROOT`."""
 
     override = os.environ.get("MAINBRANCH_CODEX_PLUGIN_ROOT", "").strip()
     if override:
-        return Path(override).expanduser().resolve()
+        return Path(override).expanduser(), True
     if os.name == "nt":
         base = Path(os.environ.get("LOCALAPPDATA", "") or Path.home() / "AppData" / "Local")
     else:
         base = Path(os.environ.get("XDG_DATA_HOME", "") or Path.home() / ".local" / "share")
-    return (base / "mainbranch" / "codex").expanduser().resolve()
+    return (base / "mainbranch" / "codex").expanduser(), False
+
+
+def global_plugin_source_root() -> Path:
+    """Return the user-local source directory for the global Codex plugin."""
+
+    return _global_plugin_root_unresolved()[0].resolve()
+
+
+def global_plugin_root_link() -> Path | None:
+    """A link at the global plugin root, or at its `mainbranch` folder (#1067).
+
+    Main Branch names those folders; a link there leads somewhere a person
+    chose, so the cleanup does not walk through it. None when neither is a link.
+    """
+
+    root, overridden = _global_plugin_root_unresolved()
+    for candidate in (root,) if overridden else (root.parent, root):
+        if candidate.is_symlink():
+            return candidate
+    return None
+
+
+def _symlinked_ancestor(base: Path, path: Path) -> Path | None:
+    """The first folder strictly between `base` and `path` that is a link (#1067)."""
+
+    current = base
+    for part in path.relative_to(base).parts[:-1]:
+        current = current / part
+        if current.is_symlink():
+            return current
+    return None
+
+
+def _read_text_or_none(path: Path) -> str | None:
+    """The file's UTF-8 text, "" when it is absent, None when it cannot be read.
+
+    Unreadable means an OS error on read or bytes that are not UTF-8 (#1067).
+    """
+
+    if not path.exists():
+        return ""
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
 
 
 def global_skill_source_root() -> Path:
@@ -1737,6 +1818,12 @@ _OWNER_LINE_RE = re.compile(r"^`@[^`\s]*`$")
 AGENTS_RERUN_STEP = "then run `mb doctor repair --plan --only codex` again."
 
 
+def _agents_rerun_step(repo: str | Path | None = None) -> str:
+    """The closing step of a refusal's manual step, naming the repo when known (#1072)."""
+
+    return f"then run `mb doctor repair{_repo_flag(repo)} --plan --only codex` again."
+
+
 def _agents_refusal(code: str, reason: str, manual_step: str) -> dict[str, str]:
     return {
         "path": AGENTS_RELATIVE_PATH,
@@ -1746,7 +1833,7 @@ def _agents_refusal(code: str, reason: str, manual_step: str) -> dict[str, str]:
     }
 
 
-def _marker_refusal(existing: str) -> dict[str, str] | None:
+def _marker_refusal(existing: str, rerun_step: str = AGENTS_RERUN_STEP) -> dict[str, str] | None:
     """Refuse any managed-marker layout other than one begin before one end (#1052).
 
     Without both markers in order, Main Branch cannot tell where its guidance
@@ -1770,7 +1857,7 @@ def _marker_refusal(existing: str) -> dict[str, str] | None:
             "Branch cannot tell where its guidance ends and your own notes begin. "
             "It left the file unchanged.",
             f"Put `{AGENTS_MANAGED_END}` on its own line right after the Main Branch "
-            f"guidance (above any notes of your own), {AGENTS_RERUN_STEP}",
+            f"guidance (above any notes of your own), {rerun_step}",
         )
     if begins == 0 and ends == 1:
         return _agents_refusal(
@@ -1778,7 +1865,7 @@ def _marker_refusal(existing: str) -> dict[str, str] | None:
             "AGENTS.md has the Main Branch end marker but no begin marker, so Main "
             "Branch cannot tell where its guidance starts. It left the file unchanged.",
             f"Put `{AGENTS_MANAGED_BEGIN}` on its own line right before the Main "
-            f"Branch guidance (below any notes of your own), {AGENTS_RERUN_STEP}",
+            f"Branch guidance (below any notes of your own), {rerun_step}",
         )
     return _agents_refusal(
         "marker_mismatch",
@@ -1786,7 +1873,7 @@ def _marker_refusal(existing: str) -> dict[str, str] | None:
         "marker(s), not one of each in order, so Main Branch cannot tell which text "
         "is its guidance. It left the file unchanged.",
         f"Keep exactly one `{AGENTS_MANAGED_BEGIN}` above the Main Branch guidance "
-        f"and one `{AGENTS_MANAGED_END}` below it, {AGENTS_RERUN_STEP}",
+        f"and one `{AGENTS_MANAGED_END}` below it, {rerun_step}",
     )
 
 
@@ -1829,7 +1916,9 @@ def _old_generated_span(existing: str) -> tuple[int, int] | None:
     return None
 
 
-def _merge_agents_md(existing: str, rendered: str) -> tuple[str, dict[str, str] | None]:
+def _merge_agents_md(
+    existing: str, rendered: str, rerun_step: str = AGENTS_RERUN_STEP
+) -> tuple[str, dict[str, str] | None]:
     """The new AGENTS.md text, or the unchanged text and why it was refused.
 
     Only Main Branch's own guidance is replaced: the text between the managed
@@ -1839,7 +1928,7 @@ def _merge_agents_md(existing: str, rendered: str) -> tuple[str, dict[str, str] 
     """
 
     block = _managed_agents_block(rendered)
-    refusal = _marker_refusal(existing)
+    refusal = _marker_refusal(existing, rerun_step)
     if refusal is not None:
         return existing, refusal
     start = existing.find(AGENTS_MANAGED_BEGIN)
@@ -1861,7 +1950,7 @@ def _merge_agents_md(existing: str, rendered: str) -> tuple[str, dict[str, str] 
             "its guidance from text you wrote. It left the file unchanged.",
             f"Put `{AGENTS_MANAGED_BEGIN}` on its own line above the Main Branch "
             f"guidance and `{AGENTS_MANAGED_END}` below it, keeping your own notes "
-            f"outside the markers, {AGENTS_RERUN_STEP}",
+            f"outside the markers, {rerun_step}",
         )
     kept = (existing[: span[0]] + existing[span[1] :]).strip("\n")
     if not kept.strip():
@@ -2667,7 +2756,7 @@ def plugin_install_status(repo: str | Path, *, adapter_files_ok: bool = True) ->
             "slash_commands_ready": False,
             "install_command": install_command,
             "register_command": register_command,
-            "repair": CODEX_REPAIR_TEXT,
+            "repair": repair_text(target),
             "safe_to_share": True,
         }
 
@@ -2698,7 +2787,7 @@ def plugin_install_status(repo: str | Path, *, adapter_files_ok: bool = True) ->
             "plugin_line": "",
             "install_command": install_command,
             "register_command": register_command,
-            "repair": "Run `mb doctor repair --apply --only codex` to install the global plugin.",
+            "repair": f"Run `{repair_command(target)}` to install the global plugin.",
             "safe_to_share": True,
         }
 
@@ -2746,7 +2835,7 @@ def plugin_install_status(repo: str | Path, *, adapter_files_ok: bool = True) ->
     elif not command_files_current:
         state = "slash_commands_stale"
         summary = "Main Branch Codex command files are missing or stale."
-        repair = CODEX_REPAIR_TEXT
+        repair = repair_text(target)
 
     installed_enabled_current = bool(
         state == "ok"
@@ -2814,15 +2903,19 @@ def global_skill_status(repo: str | Path) -> dict[str, Any]:
     stale: list[str] = []
     missing_markers: list[str] = []
     skill_reports: dict[str, dict[str, Any]] = {}
+    unreadable: list[str] = []
     for skill_name, path in path_by_name.items():
         exists = path.is_file()
         text = ""
         skill_read_error = ""
         try:
             text = path.read_text(encoding="utf-8") if exists else ""
-        except OSError as exc:
+        except (OSError, UnicodeDecodeError) as exc:
+            # #1067: unreadable (an OS error, or bytes that are not UTF-8) is
+            # reported, kept and never overwritten; see `global_skill_operations`.
             skill_read_error = str(exc)
             read_error = skill_read_error
+            unreadable.append(str(path))
         markers = (
             f"name: {skill_name}",
             "user-invocable: true",
@@ -2874,28 +2967,36 @@ def global_skill_status(repo: str | Path) -> dict[str, Any]:
         "skills": skill_reports,
         "required_skills": list(CODEX_GLOBAL_SKILL_NAMES),
         "stale": stale,
-        "kept": cleanup["kept"],
+        "kept": [*unreadable, *cleanup["kept"]],
         "missing": missing,
         "missing_markers": missing_markers,
         "read_error": read_error,
         "routes": list(CODEX_SLASH_COMMAND_NAMES),
-        "repair": "" if ok else CODEX_REPAIR_TEXT,
-        "repair_command": CODEX_REPAIR_COMMAND,
+        "repair": "" if ok else repair_text(repo),
+        "repair_command": repair_command(repo),
         "safe_to_share": True,
     }
 
 
 def _owned_tree_cleanup(
-    path: Path, is_owned: Callable[[Path], bool], *, remove_link: bool = True
+    path: Path,
+    is_owned: Callable[[Path], bool],
+    *,
+    remove_link: bool = True,
+    base: Path | None = None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Per-file removals under one Main Branch path, and the entries it keeps (#1056).
 
     Only files `is_owned` recognises are removed, one by one, and a folder
     goes only once it is empty. A symlink at `path` itself is removed as a
     link when `remove_link`, never followed. Symlinks inside and every other
-    file stay, and are returned as kept.
+    file stay, and are returned as kept. When a folder between `base` and
+    `path` is a link, nothing under it is walked; the link is kept (#1067).
     """
 
+    link = _symlinked_ancestor(base, path) if base is not None else None
+    if link is not None:
+        return [], [str(link)] if path.exists() or path.is_symlink() else []
     if path.is_symlink():
         if remove_link:
             return [{"op": "delete", "path": str(path), "root": str(path)}], []
@@ -2919,14 +3020,34 @@ def _owned_tree_cleanup(
     return operations, kept
 
 
+def _unlink_if_proven(path: Path) -> bool:
+    """Remove `path` only if its content is proven to be Main Branch's right now.
+
+    Both applies, repo-local and global, prove each file again just before
+    removing it, so a file changed after the plan stays (#1067).
+    """
+
+    if not _is_mainbranch_transitional_file(path):
+        return False
+    path.unlink()
+    return True
+
+
 def _remove_owned_entry(item: dict[str, Any]) -> bool:
-    """Remove one planned file or link, then any folders it leaves empty up to its root."""
+    """Remove one planned file or link, then any folders it leaves empty up to its root.
+
+    A link is removed, as a link, only where the plan removes the path itself.
+    A file is proven again first; one changed since the plan stays (#1067).
+    """
 
     path = Path(item["path"])
     root = Path(item.get("root") or item["path"])
-    if not (path.is_symlink() or path.is_file()):
+    if path.is_symlink():
+        if path != root:
+            return False
+        path.unlink()  # a link is removed as a link, never followed
+    elif not _unlink_if_proven(path):
         return False
-    path.unlink()  # a link is removed as a link, never followed
     parent = path.parent
     while parent == root or root in parent.parents:
         try:
@@ -2958,6 +3079,9 @@ def global_skill_cleanup() -> dict[str, Any]:
     """
 
     skills_root = global_skill_source_root()
+    plugin_root = global_plugin_source_root()
+    # #1067: a link at the plugin root or its `mainbranch` folder is not walked.
+    plugin_link = global_plugin_root_link()
     # (label, path, owned-file test, Main Branch-named, remove a link at path)
     surfaces: list[tuple[str, Path, Callable[[Path], bool], bool, bool]] = [
         (
@@ -2978,16 +3102,14 @@ def global_skill_cleanup() -> dict[str, Any]:
             )
             for name in CODEX_RETIRED_GLOBAL_SKILL_NAMES
         ),
-        (
-            str(global_plugin_source_root()),
-            global_plugin_source_root(),
-            _is_mainbranch_transitional_file,
-            True,
-            True,
+        *(
+            [(str(plugin_root), plugin_root, _is_mainbranch_transitional_file, True, True)]
+            if plugin_link is None
+            else []
         ),
     ]
     removals: dict[str, list[dict[str, Any]]] = {}
-    kept: list[str] = []
+    kept: list[str] = [str(plugin_link)] if plugin_link and plugin_root.exists() else []
     for label, path, is_owned, main_branch_named, remove_link in surfaces:
         operations, others = _owned_tree_cleanup(path, is_owned, remove_link=remove_link)
         if operations:
@@ -2998,28 +3120,47 @@ def global_skill_cleanup() -> dict[str, Any]:
     return {"removals": removals, "kept": kept}
 
 
-def global_skill_operator_action(status: dict[str, Any]) -> dict[str, Any] | None:
+def _link_note(paths: list[Path]) -> str:
+    """A sentence naming the kept entries that are links, or "" (#1067)."""
+
+    links = [str(path) for path in paths if path.is_symlink()]
+    if not links:
+        return ""
+    return (
+        " "
+        + ", ".join(links)
+        + (" is a link" if len(links) == 1 else " are links")
+        + "; Main Branch does not follow links, so nothing a link leads to is touched."
+    )
+
+
+def global_skill_operator_action(
+    status: dict[str, Any], *, repo: str | Path | None = None
+) -> dict[str, Any] | None:
     """The `operator_actions` entry while old global Codex folders hold unproven files.
 
     None when every file there is proven to be Main Branch's. Otherwise it
     names each kept file and what a person does with it; the apply removes
-    only the proven files (#1062).
+    only the proven files (#1062). `repo` names the business repo in the
+    command (#1072).
     """
 
     kept = [str(item) for item in status.get("kept") or []]
     if not kept:
         return None
     effect = global_skill_apply_effect(status)
+    command = repair_command(repo)
     reason = (
-        "Old global Codex folders hold files Main Branch cannot prove it wrote "
-        "(your own files, or Main Branch files that were changed): "
+        "Global Codex folders hold files Main Branch cannot prove it wrote "
+        "(your own files, Main Branch files that were changed, or files it cannot read): "
         + ", ".join(kept)
         + ". The repair leaves them where they are."
+        + _link_note([Path(item) for item in kept])
     )
     manual_step = (
         "Open each file. Move anything you want to keep somewhere of your own, "
         "then delete the rest yourself. "
-        f"`{CODEX_REPAIR_COMMAND}` "
+        f"`{command}` "
         + (
             "deletes only these unchanged Main Branch files: " + ", ".join(effect["removes"])
             if effect["removes"]
@@ -3027,7 +3168,7 @@ def global_skill_operator_action(status: dict[str, Any]) -> dict[str, Any] | Non
         )
         + "; it keeps the files above."
     )
-    action = engine_mod.operator_action(CODEX_REPAIR_COMMAND, kept, f"{reason} {manual_step}")
+    action = engine_mod.operator_action(command, kept, f"{reason} {manual_step}")
     action.update(
         {
             "id": "codex-global-kept",
@@ -3057,8 +3198,9 @@ def global_skill_operations() -> list[dict[str, Any]]:
     for name in CODEX_GLOBAL_SKILL_NAMES:
         path = global_skill_file_path(name)
         expected = render_codex_global_skill_md(name)
-        existing = path.read_text(encoding="utf-8") if path.exists() else ""
-        if existing != expected:
+        existing = _read_text_or_none(path)
+        # #1067: an unreadable file is not proven to be Main Branch's; it stays.
+        if existing is not None and existing != expected:
             operations.append({"op": "write", "path": str(path), "content": expected})
     for removals in global_skill_cleanup()["removals"].values():
         operations.extend(removals)
@@ -3069,7 +3211,12 @@ def write_global_skill_source() -> dict[str, Any]:
     """Write the global Main Branch Codex skill bundle and remove old surfaces."""
 
     changed_paths: list[str] = []
-    kept = global_skill_cleanup()["kept"]
+    kept = [
+        str(path)
+        for path in map(global_skill_file_path, CODEX_GLOBAL_SKILL_NAMES)
+        if _read_text_or_none(path) is None
+    ]
+    kept.extend(global_skill_cleanup()["kept"])
     for item in global_skill_operations():
         path = Path(item["path"])
         if item["op"] == "write":
@@ -3078,6 +3225,8 @@ def write_global_skill_source() -> dict[str, Any]:
             changed_paths.append(str(path))
         elif _remove_owned_entry(item):
             changed_paths.append(str(path))
+        elif path.exists() or path.is_symlink():
+            kept.append(str(path))  # #1067: changed since the plan, so it stays
 
     return {
         "ok": True,
@@ -3137,7 +3286,8 @@ def plugin_status(repo: str | Path) -> dict[str, Any]:
             continue
         try:
             text = path.read_text(encoding="utf-8")
-        except OSError as exc:
+        except (OSError, UnicodeDecodeError) as exc:
+            # #1067: not UTF-8, or not readable: reported, and the cleanup keeps it.
             read_errors.append(f"{relative}: {exc}")
             continue
         if text != expected_by_path[relative]:
@@ -3174,8 +3324,8 @@ def plugin_status(repo: str | Path) -> dict[str, Any]:
         "stale": stale,
         "missing_markers": missing_markers,
         "read_errors": read_errors,
-        "repair": "" if ok else CODEX_REPAIR_TEXT,
-        "repair_command": CODEX_REPAIR_COMMAND,
+        "repair": "" if ok else repair_text(target),
+        "repair_command": repair_command(target),
         "safe_to_share": True,
     }
 
@@ -3184,6 +3334,18 @@ def write_global_plugin_source() -> dict[str, Any]:
     """Write the global Main Branch Codex plugin source outside business repos."""
 
     root = global_plugin_source_root()
+    link = global_plugin_root_link()
+    if link is not None:
+        # #1067: the root, or its `mainbranch` folder, is a person's link.
+        return {
+            "ok": True,
+            "path": str(root),
+            "changed": False,
+            "changed_paths": [],
+            "kept": [str(link)],
+            "relative_paths": [],
+            "safe_to_share": True,
+        }
     marketplace = marketplace_path(root)
     manifest = plugin_manifest_path(root)
     expected_marketplace = render_codex_marketplace_json()
@@ -3201,8 +3363,16 @@ def write_global_plugin_source() -> dict[str, Any]:
         # #1062: a symlinked commands/ is a person's; never write or walk through it.
         if path.parent == commands_dir and commands_dir.is_symlink():
             continue
+        # #1067: never write or walk through a link inside the plugin root.
+        link = _symlinked_ancestor(root, path)
+        if link is not None:
+            kept.append(str(link))
+            continue
+        existing = _read_text_or_none(path)
+        if existing is None:
+            kept.append(str(path))  # #1067: unreadable, so not proven; it stays
+            continue
         path.parent.mkdir(parents=True, exist_ok=True)
-        existing = path.read_text(encoding="utf-8") if path.exists() else ""
         if existing != text:
             atomic_write_text(path, text)
             changed_paths.append(str(path))
@@ -3212,21 +3382,25 @@ def write_global_plugin_source() -> dict[str, Any]:
         root / CODEX_PLUGIN_DIR_RELATIVE_PATH / "skills",
         root / CODEX_LEGACY_PLUGIN_DIR_RELATIVE_PATH,
     ):
-        operations, others = _owned_tree_cleanup(old, _is_mainbranch_transitional_file)
+        operations, others = _owned_tree_cleanup(old, _is_mainbranch_transitional_file, base=root)
         kept.extend(others)
-        changed_paths.extend(item["path"] for item in operations if _remove_owned_entry(item))
+        for item in operations:
+            if _remove_owned_entry(item):
+                changed_paths.append(item["path"])
+            elif Path(item["path"]).exists():
+                kept.append(item["path"])  # #1067: changed since the plan
     expected_names = {f"{name}.md" for name in CODEX_SLASH_COMMAND_NAMES}
     if commands_dir.is_symlink():
         kept.append(str(commands_dir))
-    elif commands_dir.is_dir():
+    elif commands_dir.is_dir() and _symlinked_ancestor(root, commands_dir) is None:
         for path in sorted(commands_dir.iterdir()):
             if path.name in expected_names:
                 continue
-            if _is_mainbranch_transitional_file(path):
-                path.unlink()
+            if _unlink_if_proven(path):
                 changed_paths.append(str(path))
             else:
                 kept.append(str(path))
+    kept = list(dict.fromkeys(kept))  # a link many paths lead through, once
     return {
         "ok": True,
         "path": str(root),
@@ -3253,8 +3427,7 @@ def _remove_generated_tree(path: Path) -> bool:
         for root, dirs, files in os.walk(path, topdown=False):
             base = Path(root)
             for name in files:
-                if _is_mainbranch_transitional_file(base / name):
-                    (base / name).unlink()
+                _unlink_if_proven(base / name)
             for name in dirs:
                 folder = base / name
                 if not folder.is_symlink():
@@ -3265,10 +3438,7 @@ def _remove_generated_tree(path: Path) -> bool:
         except OSError:
             return False
         return True
-    if path.is_file() and _is_mainbranch_transitional_file(path):
-        path.unlink()
-        return True
-    return False
+    return path.is_file() and _unlink_if_proven(path)
 
 
 def _transitional_repo_paths() -> tuple[str, ...]:
@@ -3287,6 +3457,9 @@ def _remove_empty_transitional_dirs(target: Path) -> None:
         target / ".agents" / "skills",
         target / ".agents",
     ):
+        # #1067: a linked folder, or one under a link, is a person's; left alone.
+        if maybe_empty.is_symlink() or _symlinked_ancestor(target, maybe_empty) is not None:
+            continue
         try:
             if maybe_empty.is_dir() and not any(maybe_empty.iterdir()):
                 maybe_empty.rmdir()
@@ -3316,7 +3489,8 @@ def normalised_generated_digest(name: str, data: bytes) -> str | None:
     manifests are compared as parsed data, re-serialised with sorted keys, so
     a formatter's whitespace or key order does not matter while any added,
     removed or changed key or value does. None when the bytes are not UTF-8
-    text, or not valid JSON for a `.json` name.
+    text, or not valid JSON for a `.json` name, or JSON that repeats a key in
+    any object (#1067: a JSON reader keeps the last value, which hides the first).
     """
 
     try:
@@ -3326,13 +3500,24 @@ def normalised_generated_digest(name: str, data: bytes) -> str | None:
     text = text.replace("\r\n", "\n")
     if name.endswith(".json"):
         try:
-            payload = json.loads(text)
-        except json.JSONDecodeError:
+            payload = json.loads(text, object_pairs_hook=_unique_keys)
+        except ValueError:  # invalid JSON, or a repeated key
             return None
         text = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     else:
         text = _EMBEDDED_VERSION_RE.sub(_EMBEDDED_VERSION_PLACEHOLDER, text)
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _unique_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """A JSON object's pairs as a dict; a key that appears twice is refused (#1067)."""
+
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON key: {key}")
+        result[key] = value
+    return result
 
 
 @lru_cache(maxsize=1)
@@ -3402,6 +3587,13 @@ def _transitional_cleanup(target: Path) -> tuple[list[dict[str, Any]], list[str]
     kept: list[str] = []
     for relative in _transitional_repo_paths():
         candidate = target / relative
+        # #1067: a linked folder above the path (`.agents/` or one under it) is
+        # a person's; nothing under it is walked or removed, and the link is kept.
+        link = _symlinked_ancestor(target, candidate)
+        if link is not None:
+            if candidate.exists() or candidate.is_symlink():
+                kept.append(link.relative_to(target).as_posix())
+            continue
         # #1056: a symlink, live or dangling, is removed as a link, never followed.
         if candidate.is_symlink() or (
             candidate.is_file() and _is_mainbranch_transitional_file(candidate)
@@ -3428,15 +3620,14 @@ def _transitional_cleanup(target: Path) -> tuple[list[dict[str, Any]], list[str]
             {"op": "delete", "path": str(path), "rel": path.relative_to(target).as_posix()}
             for path in sorted(owned)
         )
-    return operations, kept
+    return operations, list(dict.fromkeys(kept))
 
 
 def _remove_transitional_file(path: Path, target: Path) -> bool:
     """Remove one `mb` file, then any folders it leaves empty, up to the repo."""
 
-    if not _is_mainbranch_transitional_file(path):
+    if not _unlink_if_proven(path):
         return False
-    path.unlink()
     parent = path.parent
     while parent != target and target in parent.parents:
         try:
@@ -3484,7 +3675,7 @@ def skill_status(repo: str | Path) -> dict[str, Any]:
         "plugin": plugin_status(repo),
         "read_error": skill["read_error"],
         "repair": skill["repair"],
-        "repair_command": CODEX_REPAIR_COMMAND,
+        "repair_command": repair_command(repo),
         "deprecated": False,
         "summary": ("The global Main Branch Codex skill is the supported Codex surface."),
         "safe_to_share": True,
@@ -3568,8 +3759,8 @@ def instructions_status(repo: str | Path) -> dict[str, Any]:
         "workflow_inventory": workflow_inventory(),
         "approval_boundary_ok": approval_ok,
         "codex_native_ok": slash_ok,
-        "repair": "" if current else CODEX_REPAIR_TEXT,
-        "repair_command": CODEX_REPAIR_COMMAND,
+        "repair": "" if current else repair_text(target),
+        "repair_command": repair_command(target),
         "read_error": read_error,
         "safe_to_share": True,
     }
@@ -3702,7 +3893,7 @@ def agents_md_plan(
     path = agents_path(target)
     rendered = render_agents_md(target, name=name, gh_username=gh_username)
     existing = path.read_text(encoding="utf-8") if path.exists() else ""
-    updated, refusal = _merge_agents_md(existing, rendered)
+    updated, refusal = _merge_agents_md(existing, rendered, _agents_rerun_step(target))
     if refusal is not None:
         return {"operations": [], "refused": [refusal], "kept": []}
     operations: list[dict[str, Any]] = []
@@ -3726,16 +3917,21 @@ def agents_md_operations(
     return list(agents_md_plan(repo, name=name, gh_username=gh_username)["operations"])
 
 
-def agents_md_operator_action(plan: dict[str, Any]) -> dict[str, Any] | None:
+def agents_md_operator_action(
+    plan: dict[str, Any], *, repo: str | Path | None = None
+) -> dict[str, Any] | None:
     """The `operator_actions` entry while the Codex AGENTS.md repair needs a person.
 
     None when the plan only replaces Main Branch's own guidance. Otherwise it
-    names the reason and the manual step (#1052).
+    names the reason and the manual step (#1052). `repo` names the business
+    repo in the command (#1072).
     """
 
     refused = plan.get("refused") or []
     kept = plan.get("kept") or []
     effect = agents_md_apply_effect(plan)
+    command = repair_command(repo)
+    base = Path(repo).expanduser().resolve() if repo is not None else None
     if refused:
         reason = str(refused[0]["reason"])
         manual_step = str(refused[0]["manual_step"])
@@ -3746,13 +3942,14 @@ def agents_md_operator_action(plan: dict[str, Any]) -> dict[str, Any] | None:
             "(your own files, or Main Branch files that were changed): "
             + ", ".join(kept)
             + ". The repair removes only unchanged Main Branch files and leaves these."
+            + (_link_note([base / item for item in kept]) if base is not None else "")
         )
         # #1056: name exactly what an apply does, so the plan and the apply agree.
         removes = effect["removes"]
         manual_step = (
             "Open each file. Move anything you want to keep somewhere of your own, "
             "then delete the rest yourself. "
-            f"`{CODEX_REPAIR_COMMAND}` (or `--all-agents`) "
+            f"`{command}` (or `--all-agents`) "
             + ("rewrites AGENTS.md, " if effect["writes"] else "")
             + (
                 "deletes only these Main Branch files: " + ", ".join(removes)
@@ -3764,7 +3961,7 @@ def agents_md_operator_action(plan: dict[str, Any]) -> dict[str, Any] | None:
         changes = [str(item["rel"]) for item in plan.get("operations", [])]
     else:
         return None
-    action = engine_mod.operator_action(CODEX_REPAIR_COMMAND, changes, f"{reason} {manual_step}")
+    action = engine_mod.operator_action(command, changes, f"{reason} {manual_step}")
     action.update(
         {
             "id": "codex-agents-md",
@@ -3803,12 +4000,15 @@ def write_agents_md(
     target = Path(repo).expanduser().resolve()
     plan = agents_md_plan(target, name=name, gh_username=gh_username)
     changed_paths: list[str] = []
+    kept = list(plan["kept"])
     for item in plan["operations"]:
         if item["op"] == "write":
             atomic_write_text(Path(item["path"]), item["content"])
             changed_paths.append(AGENTS_RELATIVE_PATH)
         elif _apply_transitional_operation(item, target):
             changed_paths.append(f"removed:{item['rel']}")
+        elif Path(item["path"]).exists():
+            kept.append(str(item["rel"]))  # #1067: changed since the plan, so it stays
     if not plan["refused"]:
         _remove_empty_transitional_dirs(target)
     return {
@@ -3817,6 +4017,6 @@ def write_agents_md(
         "changed": bool(changed_paths),
         "changed_paths": changed_paths,
         "refused": plan["refused"],
-        "kept": plan["kept"],
+        "kept": kept,
         "status": instructions_status(target),
     }

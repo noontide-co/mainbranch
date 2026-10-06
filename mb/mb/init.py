@@ -230,7 +230,8 @@ def run(
     operator_actions: list[dict[str, Any]] = []
     if agents_result.get("refused"):
         agents_action = codex_mod.agents_md_operator_action(
-            {"refused": agents_result["refused"], "kept": [], "operations": []}
+            {"refused": agents_result["refused"], "kept": [], "operations": []},
+            repo=target,
         )
         if agents_action is not None:
             warnings.append(str(agents_action["note"]))
