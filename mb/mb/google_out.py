@@ -59,6 +59,15 @@ def _git(
     args: list[str], cwd: Path, *, inherit_env: bool = False
 ) -> subprocess.CompletedProcess[bytes] | None:
     env = {k: v for k, v in os.environ.items() if inherit_env or k not in _GIT_ENV_DROP}
+    if inherit_env:
+        # The caller's shell reads a relative value against its own folder, not `cwd` here.
+        try:
+            shell_folder = os.getcwd()
+        except OSError:
+            return None
+        for var in _GIT_ENV_INHERITED:
+            if env.get(var) and not os.path.isabs(env[var]):
+                env[var] = os.path.join(shell_folder, env[var])
     try:
         return subprocess.run(
             ["git", *args],
@@ -90,7 +99,10 @@ def _judge_git(parent: Path, name: str, shown: str, *, inherit_env: bool) -> Non
         # Without the inherited variables, call `_git` exactly as it always was.
         return _git(args, cwd, inherit_env=True) if inherit_env else _git(args, cwd)
 
-    top = run(["rev-parse", "--show-toplevel"], parent)
+    unknown = _git_env_unusable if inherit_env else _git_unknown
+    # With only GIT_DIR exported, git's work tree is the shell's own folder.
+    start = _shell_folder() if inherit_env else parent
+    top = run(["rev-parse", "--show-toplevel"], start) if start is not None else None
     if top is not None and top.returncode == 0:
         root = Path(top.stdout.decode("utf-8", "replace").strip() or ".")
         try:
@@ -101,10 +113,10 @@ def _judge_git(parent: Path, name: str, shown: str, *, inherit_env: bool) -> Non
                 return
             raise _git_unplaced(shown) from None
         if ".git" in relative.parts:
-            raise _git_unknown(shown)
+            raise unknown(shown)
         verdict = run(["check-ignore", "-q", "--", relative.as_posix()], root)
         if verdict is None or verdict.returncode not in {0, 1}:
-            raise _git_unknown(shown)
+            raise unknown(shown)
         if verdict.returncode == 1:
             raise ReadRefusal(
                 "out_path_in_repo",
@@ -116,24 +128,45 @@ def _judge_git(parent: Path, name: str, shown: str, *, inherit_env: bool) -> Non
         temp = relative.parent / temp_name(name)
         temp_verdict = run(["check-ignore", "-q", "--", temp.as_posix()], root)
         if temp_verdict is None or temp_verdict.returncode not in {0, 1}:
-            raise _git_unknown(shown)
+            raise unknown(shown)
         if temp_verdict.returncode == 1:
             raise _temp_refusal(shown, temp_name(name))
         return
     if inherit_env:
         # The exported variables name a repository git cannot use from here.
-        raise _git_unknown(shown)
+        raise _git_env_unusable(shown)
     if _inside_git_checkout(parent):
         # A checkout is there but git would not say anything about it.
         raise _git_unknown(shown)
 
 
-def _is_inside(folder: Path, root: Path) -> bool:
+def _shell_folder() -> Path | None:
     try:
-        folder.resolve().relative_to(root.resolve())
-    except (OSError, RuntimeError, ValueError):
+        return Path(os.getcwd())
+    except OSError:
+        return None
+
+
+def _is_inside(folder: Path, root: Path) -> bool:
+    """Whether ``folder`` is ``root`` or below it, by file identity and not by spelling."""
+
+    try:
+        real = folder.resolve()
+    except (OSError, RuntimeError):
         return False
-    return True
+    return _identity_ancestor(real, root) is not None
+
+
+def _identity_ancestor(path: Path, target: Path) -> Path | None:
+    """The folder among ``path`` and its parents that is the same file as ``target``."""
+
+    for candidate in (path, *path.parents):
+        try:
+            if os.path.samefile(candidate, target):
+                return candidate
+        except OSError:
+            continue
+    return None
 
 
 def _temp_refusal(shown: str, temp: str) -> ReadRefusal:
@@ -151,6 +184,16 @@ def _git_unknown(shown: str) -> ReadRefusal:
         "out_path_git_unknown",
         f"--out {shown} is inside a git checkout and git could not say whether it is "
         f"ignored; nothing was read or written. {OUT_HINT}.",
+    )
+
+
+def _git_env_unusable(shown: str) -> ReadRefusal:
+    # Same rule as `_git_unknown`; the cause is the caller's GIT_DIR / GIT_WORK_TREE.
+    return ReadRefusal(
+        "out_path_git_unknown",
+        f"--out {shown}: GIT_DIR or GIT_WORK_TREE is set in this shell, but git could not use "
+        "that repository from here, so mb cannot check that git ignores the file; nothing was "
+        "read or written. Unset them (or fix them) and run again.",
     )
 
 
@@ -292,10 +335,13 @@ def display_path(path: Path) -> str:
     """The path as shown: ``~/...`` under the home folder, so no username is printed."""
 
     try:
-        home = Path.home().resolve()
-        return "~/" + path.resolve().relative_to(home).as_posix()
+        real = path.resolve()
+        home = _identity_ancestor(real, Path.home())
+        if home is not None:
+            return "~/" + real.relative_to(home).as_posix()
     except (OSError, RuntimeError, ValueError):
-        return str(path)
+        pass
+    return str(path)
 
 
 def summary(command: str, target: OutTarget, result: dict[str, Any]) -> dict[str, Any]:

@@ -813,10 +813,10 @@ def test_a_failed_cleanup_names_the_leftover_file(
         real_unlink(outdir / ".x.json.mb-out.tmp")
 
 
-def _separate_git_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+def _separate_git_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str = "work") -> Path:
     """A work tree with no `.git` on disk, whose repo is named by GIT_DIR/GIT_WORK_TREE."""
 
-    work = tmp_path / "work"
+    work = tmp_path / name
     gitdir = tmp_path / "sep.git"
     for folder in ("open", "ignored", "elsewhere"):
         (work / folder).mkdir(parents=True)
@@ -919,6 +919,101 @@ def test_a_path_under_home_is_shown_with_a_tilde(
     for text in (human.stdout, as_json.stdout):
         assert str(home) not in text and home.name not in text
     assert (home / "pulls" / "q.json").is_file() and (home / "pulls" / "q2.json").is_file()
+
+
+def _case_insensitive(folder: Path) -> bool:
+    probe = folder / "CaseProbe"
+    probe.mkdir()
+    try:
+        return (folder / "caseprobe").exists()
+    finally:
+        probe.rmdir()
+
+
+def test_a_case_variant_of_the_exported_work_tree_is_refused(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    if not _case_insensitive(tmp_path):
+        pytest.skip("this disk tells apart folder names that differ only in case")
+    api = _signed(repo, client_file, google, monkeypatch)
+    work = _separate_git_dir(tmp_path, monkeypatch, name="Biz")
+
+    _refused(_out(repo, SC_ARGS, work / "open" / "x.json"), "out_path_in_repo")
+    result = _out(repo, SC_ARGS, tmp_path / "BIZ" / "open" / "x.json")
+
+    _refused(result, "out_path_git_unknown")
+    assert api.calls == [] and not (work / "open" / "x.json").exists()
+
+
+def _unusable_text(result: Any) -> None:
+    _refused(result, "out_path_git_unknown")
+    assert "GIT_DIR" in result.stderr and "GIT_WORK_TREE" in result.stderr
+    assert "inside a git checkout" not in result.stderr and "nothing was read" in result.stderr
+
+
+@pytest.mark.parametrize("shape", ["missing_git_dir", "only_work_tree", "relative_git_dir"])
+def test_an_unusable_inherited_git_env_says_so(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    outdir: Path,
+    shape: str,
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    elsewhere = tmp_path / "shellfolder"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    if shape == "missing_git_dir":
+        monkeypatch.setenv("GIT_DIR", str(tmp_path / "nope"))
+    elif shape == "only_work_tree":
+        monkeypatch.setenv("GIT_WORK_TREE", str(tmp_path))
+    else:
+        monkeypatch.setenv("GIT_DIR", ".git")
+
+    _unusable_text(_out(repo, SC_ARGS, outdir / "q.json"))
+
+    assert api.calls == [] and list(outdir.iterdir()) == []
+
+
+def test_a_hook_style_relative_git_dir_judges_from_the_repo_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, checkout: Path, outdir: Path
+) -> None:
+    from mb.google_reads import ReadRefusal
+
+    monkeypatch.chdir(checkout)
+    monkeypatch.setenv("GIT_DIR", ".git")
+
+    assert go_out.check_out(str(checkout / PRIVATE_PULLS / "x.json")).path.name == "x.json"
+    assert go_out.check_out(str(outdir / "x.json")).path.name == "x.json"
+    with pytest.raises(ReadRefusal) as refused:
+        go_out.check_out(str(checkout / "docs" / "x.json"))
+    assert refused.value.rule == "out_path_in_repo"
+
+
+def test_a_case_variant_home_is_still_shown_with_a_tilde(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    if not _case_insensitive(tmp_path):
+        pytest.skip("this disk tells apart folder names that differ only in case")
+    _signed(repo, client_file, google, monkeypatch)
+    (tmp_path / "Homefolder" / "pulls").mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(tmp_path / "Homefolder"))
+
+    result = _out(repo, SC_ARGS, tmp_path / "HOMEFOLDER" / "pulls" / "q.json", "--json")
+
+    assert result.exit_code == 0
+    assert json.loads(result.stdout)["out"] == "~/pulls/q.json"
+    assert "omefolder" not in result.stdout.lower()
 
 
 # --- help ------------------------------------------------------------------------------
