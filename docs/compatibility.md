@@ -321,7 +321,10 @@ whichever repo really holds it. Anything that cannot be checked counts as
 tracked. Every file write replaces the directory entry (a temporary file
 renamed into place), so a file hard-linked into another repo keeps its content,
 and a deletion removes a symlink itself, never the tree it points to.
-Gitignored links and the per-user Codex bundle refresh on their own. When the refresh would change, delete or replace a
+Gitignored links and the per-user Codex bundle refresh on their own. In the
+old per-user Codex folders (the global plugin source and retired skills), the
+refresh deletes only files Main Branch wrote and removes a folder only once it
+is empty; anything else stays and is listed as `kept`. When the refresh would change, delete or replace a
 tracked file:
 
 - at an interactive terminal, it lists those files and asks once (default no);

@@ -224,6 +224,23 @@ def run(
     for created_path in agents_result.get("changed_paths", []):
         if created_path not in created:
             created.append(str(created_path))
+    # #1056: a refused or partial AGENTS.md write is reported the way doctor and
+    # update report it: a warning, plus the operator step with the same reason.
+    warnings: list[str] = []
+    operator_actions: list[dict[str, Any]] = []
+    if agents_result.get("refused"):
+        agents_action = codex_mod.agents_md_operator_action(
+            {"refused": agents_result["refused"], "kept": [], "operations": []}
+        )
+        if agents_action is not None:
+            warnings.append(str(agents_action["note"]))
+            operator_actions.append(agents_action)
+    elif agents_result.get("kept"):
+        warnings.append(
+            "Kept files Main Branch did not write in old repo-local Codex folders: "
+            + ", ".join(str(item) for item in agents_result["kept"])
+            + ". Move or delete them yourself when you no longer need them."
+        )
 
     vocabulary_tmpl = _read_template("core_vocabulary.md.tmpl")
     if vocabulary_tmpl:
@@ -294,6 +311,13 @@ def run(
         "skill_link": link_result,
         "plugin_wiring": plugin_wiring,
         "checkpoint_hook": checkpoint_hook,
+        "codex_agents_md": {
+            "ok": bool(agents_result.get("ok")),
+            "refused": agents_result.get("refused", []),
+            "kept": agents_result.get("kept", []),
+        },
+        "warnings": warnings,
+        "operator_actions": operator_actions,
     }
 
 

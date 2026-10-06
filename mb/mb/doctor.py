@@ -2693,6 +2693,8 @@ def repair_plan(
         )
         action["refused"] = agents_plan["refused"]
         action["kept"] = agents_plan["kept"]
+        # #1056: an explicit apply does exactly this, even while safe_to_apply is false.
+        action["on_apply"] = codex_mod.agents_md_apply_effect(agents_plan)
         _attach_operations(action, target, agents_operations)
         actions.append(action)
         codex_actions.append(action)
@@ -2716,6 +2718,8 @@ def repair_plan(
             ],
             result=codex_global_skill,
         )
+        # #1056: files Main Branch did not write in old global folders stay.
+        action["kept"] = list(codex_global_skill.get("kept", []))
         _attach_operations(action, target, codex_mod.global_skill_operations())
         actions.append(action)
         codex_actions.append(action)
