@@ -14,6 +14,7 @@ import re
 import shlex
 import shutil
 import subprocess
+from collections.abc import Callable
 from importlib import resources
 from pathlib import Path
 from typing import Any
@@ -2867,18 +2868,10 @@ def global_skill_status(repo: str | Path) -> dict[str, Any]:
             "missing_markers": route_missing,
             "read_error": skill_read_error,
         }
-    legacy_skill = global_skill_source_root() / CODEX_LEGACY_GLOBAL_SKILL_NAME
-    if legacy_skill.exists():
-        stale.append(CODEX_LEGACY_GLOBAL_SKILL_NAME)
-    for retired_name in CODEX_RETIRED_GLOBAL_SKILL_NAMES:
-        retired_path = global_skill_source_root() / retired_name
-        if retired_path.exists() and _is_retired_mainbranch_global_skill(
-            retired_path, retired_name
-        ):
-            stale.append(retired_name)
-    legacy_plugin = global_plugin_source_root()
-    if legacy_plugin.exists():
-        stale.append(str(legacy_plugin))
+    # #1056: an old surface is stale while it holds a Main Branch file; a
+    # person's files left in it are reported as kept, never removed.
+    cleanup = global_skill_cleanup()
+    stale.extend(cleanup["removals"])
     ok = bool(not missing and not stale and not read_error and not missing_markers)
     return {
         "checked": True,
@@ -2902,6 +2895,7 @@ def global_skill_status(repo: str | Path) -> dict[str, Any]:
         "skills": skill_reports,
         "required_skills": list(CODEX_GLOBAL_SKILL_NAMES),
         "stale": stale,
+        "kept": cleanup["kept"],
         "missing": missing,
         "missing_markers": missing_markers,
         "read_error": read_error,
@@ -2910,6 +2904,119 @@ def global_skill_status(repo: str | Path) -> dict[str, Any]:
         "repair_command": CODEX_REPAIR_COMMAND,
         "safe_to_share": True,
     }
+
+
+def _owned_tree_cleanup(
+    path: Path, is_owned: Callable[[Path], bool], *, remove_link: bool = True
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Per-file removals under one Main Branch path, and the entries it keeps (#1056).
+
+    Only files `is_owned` recognises are removed, one by one, and a folder
+    goes only once it is empty. A symlink at `path` itself is removed as a
+    link when `remove_link`, never followed. Symlinks inside and every other
+    file stay, and are returned as kept.
+    """
+
+    if path.is_symlink():
+        if remove_link:
+            return [{"op": "delete", "path": str(path), "root": str(path)}], []
+        return [], [str(path)]
+    if path.is_file():
+        if is_owned(path):
+            return [{"op": "delete", "path": str(path), "root": str(path)}], []
+        return [], [str(path)]
+    if not path.is_dir():
+        return [], []
+    operations: list[dict[str, Any]] = []
+    kept: list[str] = []
+    for root, dirs, files in os.walk(path):
+        base = Path(root)
+        for entry in sorted([*files, *(name for name in dirs if (base / name).is_symlink())]):
+            item = base / entry
+            if is_owned(item):
+                operations.append({"op": "delete", "path": str(item), "root": str(path)})
+            else:
+                kept.append(str(item))
+    return operations, kept
+
+
+def _remove_owned_entry(item: dict[str, Any]) -> bool:
+    """Remove one planned file or link, then any folders it leaves empty up to its root."""
+
+    path = Path(item["path"])
+    root = Path(item.get("root") or item["path"])
+    if not (path.is_symlink() or path.is_file()):
+        return False
+    path.unlink()  # a link is removed as a link, never followed
+    parent = path.parent
+    while parent == root or root in parent.parents:
+        try:
+            parent.rmdir()  # only an empty folder; a non-empty one stays
+        except OSError:
+            break
+        parent = parent.parent
+    return True
+
+
+def _is_retired_skill_file(name: str) -> Callable[[Path], bool]:
+    def owned(path: Path) -> bool:
+        return (
+            path.name == "SKILL.md"
+            and path.parent.name == name
+            and not path.is_symlink()
+            and _is_retired_mainbranch_global_skill(path, name)
+        )
+
+    return owned
+
+
+def global_skill_cleanup() -> dict[str, Any]:
+    """Old global Codex surfaces to remove, per file, and what stays (#1056).
+
+    `removals` maps each old surface (the label `global_skill_status` reports
+    as stale) to its delete operations. `kept` lists files Main Branch did not
+    write; they stay where they are.
+    """
+
+    skills_root = global_skill_source_root()
+    # (label, path, owned-file test, Main Branch-named, remove a link at path)
+    surfaces: list[tuple[str, Path, Callable[[Path], bool], bool, bool]] = [
+        (
+            CODEX_LEGACY_GLOBAL_SKILL_NAME,
+            skills_root / CODEX_LEGACY_GLOBAL_SKILL_NAME,
+            _is_mainbranch_transitional_file,
+            True,
+            True,
+        ),
+        *(
+            (
+                name,
+                skills_root / name,
+                _is_retired_skill_file(name),
+                False,
+                # As before: a link here goes only when it leads to Main Branch's skill.
+                _is_retired_mainbranch_global_skill(skills_root / name, name),
+            )
+            for name in CODEX_RETIRED_GLOBAL_SKILL_NAMES
+        ),
+        (
+            str(global_plugin_source_root()),
+            global_plugin_source_root(),
+            _is_mainbranch_transitional_file,
+            True,
+            True,
+        ),
+    ]
+    removals: dict[str, list[dict[str, Any]]] = {}
+    kept: list[str] = []
+    for label, path, is_owned, main_branch_named, remove_link in surfaces:
+        operations, others = _owned_tree_cleanup(path, is_owned, remove_link=remove_link)
+        if operations:
+            removals[label] = operations
+        # A same-name folder with nothing of Main Branch's in it is not ours to report.
+        if operations or main_branch_named:
+            kept.extend(others)
+    return {"removals": removals, "kept": kept}
 
 
 def global_skill_operations() -> list[dict[str, Any]]:
@@ -2922,19 +3029,8 @@ def global_skill_operations() -> list[dict[str, Any]]:
         existing = path.read_text(encoding="utf-8") if path.exists() else ""
         if existing != expected:
             operations.append({"op": "write", "path": str(path), "content": expected})
-
-    removable = [global_skill_source_root() / CODEX_LEGACY_GLOBAL_SKILL_NAME]
-    removable.extend(
-        global_skill_source_root() / retired_name
-        for retired_name in CODEX_RETIRED_GLOBAL_SKILL_NAMES
-        if _is_retired_mainbranch_global_skill(
-            global_skill_source_root() / retired_name, retired_name
-        )
-    )
-    removable.append(global_plugin_source_root())
-    for path in removable:
-        if path.is_dir() or path.is_file():
-            operations.append({"op": "delete_tree", "path": str(path)})
+    for removals in global_skill_cleanup()["removals"].values():
+        operations.extend(removals)
     return operations
 
 
@@ -2942,13 +3038,14 @@ def write_global_skill_source() -> dict[str, Any]:
     """Write the global Main Branch Codex skill bundle and remove old surfaces."""
 
     changed_paths: list[str] = []
+    kept = global_skill_cleanup()["kept"]
     for item in global_skill_operations():
         path = Path(item["path"])
         if item["op"] == "write":
             # Replace the directory entry: a hard-linked file keeps its content.
             atomic_write_text(path, item["content"])
             changed_paths.append(str(path))
-        elif _remove_generated_tree(path):
+        elif _remove_owned_entry(item):
             changed_paths.append(str(path))
 
     return {
@@ -2957,6 +3054,7 @@ def write_global_skill_source() -> dict[str, Any]:
         "skills_root": str(global_skill_source_root()),
         "changed": bool(changed_paths),
         "changed_paths": changed_paths,
+        "kept": kept,
         "relative_paths": [f"{name}/SKILL.md" for name in CODEX_GLOBAL_SKILL_NAMES],
         "status": global_skill_status(Path.cwd()),
         "safe_to_share": True,
@@ -3072,24 +3170,33 @@ def write_global_plugin_source() -> dict[str, Any]:
         if existing != text:
             atomic_write_text(path, text)
             changed_paths.append(str(path))
-    old_skill = root / CODEX_PLUGIN_DIR_RELATIVE_PATH / "skills"
-    if _remove_generated_tree(old_skill):
-        changed_paths.append(str(old_skill))
-    old_plugin = root / CODEX_LEGACY_PLUGIN_DIR_RELATIVE_PATH
-    if _remove_generated_tree(old_plugin):
-        changed_paths.append(str(old_plugin))
+    # #1056: old plugin folders and unknown command files go only when Main
+    # Branch wrote them; anything else stays and is reported as kept.
+    kept: list[str] = []
+    for old in (
+        root / CODEX_PLUGIN_DIR_RELATIVE_PATH / "skills",
+        root / CODEX_LEGACY_PLUGIN_DIR_RELATIVE_PATH,
+    ):
+        operations, others = _owned_tree_cleanup(old, _is_mainbranch_transitional_file)
+        kept.extend(others)
+        changed_paths.extend(item["path"] for item in operations if _remove_owned_entry(item))
     commands_dir = root / CODEX_PLUGIN_COMMANDS_RELATIVE_PATH
     expected_names = {f"{name}.md" for name in CODEX_SLASH_COMMAND_NAMES}
     if commands_dir.is_dir():
-        for path in commands_dir.iterdir():
-            if path.is_file() and path.name not in expected_names:
+        for path in sorted(commands_dir.iterdir()):
+            if path.name in expected_names:
+                continue
+            if _is_mainbranch_transitional_file(path):
                 path.unlink()
                 changed_paths.append(str(path))
+            else:
+                kept.append(str(path))
     return {
         "ok": True,
         "path": str(root),
         "changed": bool(changed_paths),
         "changed_paths": changed_paths,
+        "kept": kept,
         "relative_paths": list(writes),
         "safe_to_share": True,
     }
@@ -3195,7 +3302,8 @@ def _transitional_cleanup(target: Path) -> tuple[list[dict[str, Any]], list[str]
     kept: list[str] = []
     for relative in _transitional_repo_paths():
         candidate = target / relative
-        if (candidate.is_symlink() and candidate.exists()) or (
+        # #1056: a symlink, live or dangling, is removed as a link, never followed.
+        if candidate.is_symlink() or (
             candidate.is_file() and _is_mainbranch_transitional_file(candidate)
         ):
             operations.append({"op": "delete_tree", "path": str(candidate), "rel": relative})
@@ -3330,7 +3438,7 @@ def instructions_status(repo: str | Path) -> dict[str, Any]:
             CODEX_PLUGIN_DIR_RELATIVE_PATH,
             CODEX_LEGACY_PLUGIN_DIR_RELATIVE_PATH,
         )
-        if (target / relative).exists()
+        if (target / relative).exists() or (target / relative).is_symlink()
     ]
     template_match = bool(exists and status_text == expected)
     current = bool(fact_grounding_ok and guidance_metadata_ok and not repo_local_plugin_paths)
@@ -3527,6 +3635,7 @@ def agents_md_operator_action(plan: dict[str, Any]) -> dict[str, Any] | None:
 
     refused = plan.get("refused") or []
     kept = plan.get("kept") or []
+    effect = agents_md_apply_effect(plan)
     if refused:
         reason = str(refused[0]["reason"])
         manual_step = str(refused[0]["manual_step"])
@@ -3537,16 +3646,50 @@ def agents_md_operator_action(plan: dict[str, Any]) -> dict[str, Any] | None:
             + ", ".join(kept)
             + ". The repair removes only the Main Branch files and leaves these."
         )
+        # #1056: name exactly what an apply does, so the plan and the apply agree.
+        removes = effect["removes"]
         manual_step = (
-            "Move or delete those files yourself if you no longer need them, then "
-            "run the command to remove the Main Branch copies."
+            "Move or delete those files yourself when you no longer need them. "
+            f"`{CODEX_REPAIR_COMMAND}` (or `--all-agents`) "
+            + ("rewrites AGENTS.md, " if effect["writes"] else "")
+            + (
+                "deletes only these Main Branch files: " + ", ".join(removes)
+                if removes
+                else "deletes no files"
+            )
+            + "; it keeps the files above."
         )
         changes = [str(item["rel"]) for item in plan.get("operations", [])]
     else:
         return None
     action = engine_mod.operator_action(CODEX_REPAIR_COMMAND, changes, f"{reason} {manual_step}")
-    action.update({"id": "codex-agents-md", "reason": reason, "manual_step": manual_step})
+    action.update(
+        {
+            "id": "codex-agents-md",
+            "reason": reason,
+            "manual_step": manual_step,
+            "on_apply": effect,
+        }
+    )
     return action
+
+
+def agents_md_apply_effect(plan: dict[str, Any]) -> dict[str, list[str]]:
+    """What `--apply --only codex` or `--all-agents` does with this plan (#1056).
+
+    The apply runs `write_agents_md`, which follows the same plan: a refusal
+    writes and deletes nothing; otherwise it rewrites AGENTS.md when the plan
+    says so, deletes exactly the planned Main Branch paths and keeps the rest.
+    """
+
+    if plan.get("refused"):
+        return {"writes": [], "removes": [], "keeps": []}
+    operations = plan.get("operations") or []
+    return {
+        "writes": [str(item["rel"]) for item in operations if item["op"] == "write"],
+        "removes": [str(item["rel"]) for item in operations if item["op"] != "write"],
+        "keeps": [str(item) for item in plan.get("kept") or []],
+    }
 
 
 def write_agents_md(

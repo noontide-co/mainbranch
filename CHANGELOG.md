@@ -103,6 +103,28 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `safe_to_apply`, and `mb doctor repair` and `mb update` list it in
   `operator_actions` with the reason and the manual step; `mb update` makes
   no Codex write. JSON keys are additive (#1052).
+- The Codex global skill refresh (`mb doctor repair --apply --only codex`,
+  `--all-agents`, and the same refresh from `mb update`) no longer removes
+  whole folders under your home. In the old global plugin source
+  (`~/.local/share/mainbranch/codex` or `MAINBRANCH_CODEX_PLUGIN_ROOT`), the
+  old `main-branch-owner-loop` skill and the retired playbook skills, it
+  deletes only files Main Branch wrote, one by one, and removes a folder only
+  once it is empty. Anything else stays, is never followed through a symlink,
+  and is listed as `kept` in the global skill status, the doctor plan and the
+  apply result (#1056).
+- `mb init` reports an `AGENTS.md` it refused to change (managed markers
+  missing or out of order) the way doctor and update do: a warning, plus an
+  `operator_actions` entry with the same `reason` and `manual_step`. The
+  scaffold still succeeds. New keys `codex_agents_md`, `warnings` and
+  `operator_actions` are additive (#1056).
+- While the Codex `AGENTS.md` repair needs a person first, the doctor plan
+  states exactly what an explicit `--apply --only codex` or `--all-agents`
+  does: a new `on_apply` (`writes`, `removes`, `keeps`) on the
+  `codex-agents-md` action and operator entry, and a `manual_step` that names
+  each Main Branch file the apply deletes (#1056).
+- A symlink at an old repo-local Codex path is removed as a link even when it
+  points at nothing; it is never followed. Doctor now lists such a dangling
+  link in the Codex repair plan (#1056).
 - `mb`'s own usage errors (an unknown option, an unexpected extra argument,
   an invalid value) no longer repeat command-line input that could be a
   credential: it is replaced with `(not shown: it may be a credential)`, on

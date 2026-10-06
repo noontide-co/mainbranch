@@ -1011,6 +1011,12 @@ def init_cmd(
             for line in result["created"]:
                 typer.echo(f"  + {line}")
             typer.echo("")
+            for warning in result.get("warnings", []):
+                typer.echo(f"warning: {warning}", err=True)
+            for item in result.get("operator_actions", []):
+                typer.echo(f"  run after the manual step: {item['command']}", err=True)
+            if result.get("warnings"):
+                typer.echo("")
             typer.echo("next:")
             typer.echo(f"  cd {result['path']}")
             typer.echo("  claude")
