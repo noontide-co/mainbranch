@@ -643,6 +643,12 @@ exit code follows `mb connect test`. It refuses, with exit 2 and the next
 step, when no source is recorded, when the source is not an `op://`
 reference, when the 1Password CLI is missing, and when it is not signed in.
 
+A Google sign-in has no source to re-read, so `mb connect rotate google`
+refuses and names the sign-in instead. With no connection, or only metadata,
+it names `mb connect google --oauth`. On a sign-in, it names the `--reauth`
+that renews it, as status does. Only a connection made with a plain access
+token keeps the `--token-stdin` and `--source` path.
+
 Then verify readiness without printing the token:
 
 ```bash
@@ -769,6 +775,16 @@ can't be read (for example, after the credential store was reset), they name
 client file must be passed. Only a connection made with a plain access token
 keeps `--token-stdin`, the one way to replace that token.
 
+Status, `--reauth`, `mb connect test`, `token` and `exec` judge the stored
+sign-in by one rule. It is usable when it holds its OAuth client and a
+refresh token. If it still holds the client but not the refresh token, the
+next step is `mb connect google --oauth --reauth`. If it is gone or its client
+can't be read, the next step is the `--client-file` form. A stored sign-in
+that is gone reads `missing_secret`. One that can't be used reads `invalid`.
+Neither reads `ready`, whatever an earlier check recorded. `--json` shows this
+as two booleans under `secrets.oauth_grant`: `readable` (the client can be
+read) and `usable`. The stored values are never shown.
+
 ### Reading with the sign-in
 
 On a sign-in connection, `mb connect token google` and
@@ -802,7 +818,7 @@ own error text is never shown.
 | `oauth_client_unauthorized` | Google says the client may not use this grant (`unauthorized_client`), usually not a Desktop app client. | Check the client type, then `--reauth --client-file <Desktop client JSON>`. |
 | `oauth_scope_rejected` | Google refused the recorded read-only scopes (`invalid_scope`). | `--reauth --client-file <Desktop client JSON>`. |
 | `token_request_rejected` | Google refused the refresh request for another reason (`invalid_request` or a code `mb` does not know; the code itself is never shown). Nothing about the sign-in is known to be wrong. | Try again later. Nothing is recorded. |
-| `oauth_grant_malformed`, `oauth_grant_missing` | The stored grant cannot be read, or is gone from the credential store. | `mb connect google --oauth --reauth --client-file <Desktop client JSON>`. |
+| `oauth_grant_malformed`, `oauth_grant_missing` | The stored grant can't be read or has no refresh token (`malformed`), or is gone from the credential store (`missing`). | `mb connect google --oauth --reauth --client-file <Desktop client JSON>`. If the grant still holds its OAuth client, `mb connect google --oauth --reauth`. |
 | `token_unreachable`, `token_request_failed`, `token_response_malformed`, `token_unexpected_redirect` | Google's token endpoint could not be reached; answered with a server error, a timeout (408), a rate limit (429) or an error carrying no OAuth code; sent an unreadable answer; or answered with a redirect (never followed, so the grant never reaches a second URL). Nothing about the sign-in is known to be wrong. | Try again later. Nothing is recorded. |
 
 A credential store that is locked or unavailable reads as
@@ -902,6 +918,9 @@ git checkout, the file is treated as tracked. `GIT_DIR`, `GIT_WORK_TREE` and
 person runs to change the connection (`mb connect google --oauth`,
 `--metadata`, `mb connect rotate`) still write it, and their own check is
 recorded with it.
+In such a repo, the Agent Access Dossier row in `mb doctor` shows what the
+check found, followed by `(not recorded: .mb/connect.yaml is tracked by git)`,
+not the stale recorded status.
 
 The probe is conditional. A sign-in (OAuth) connection has one, so
 `stored, unverified` or `unvalidated` on it exits 1 and points at
@@ -984,12 +1003,12 @@ Each exits 2 with fixed text and changes nothing:
 | `oauth_use_reauth` | The repo already has a Google sign-in; renew it with `--reauth` only when asked. |
 | `oauth_reauth_without_grant` | `--reauth` with no sign-in to renew. |
 | `oauth_connection_exists` | `mb connect google --token-stdin` (or `--token`, `--from-env`) on a sign-in connection; it would drop the grant. |
-| `rotate_oauth_use_reauth` | `mb connect rotate google` on a sign-in connection; there is no source to re-read. |
+| `rotate_oauth_use_reauth` | `mb connect rotate google` on a sign-in connection; there is no source to re-read. It names the `--reauth` that works (with `--client-file` when the stored sign-in is gone or can't be read). |
 | `oauth_client_required` | No `--client-file` or `--client-stdin`. |
 | `oauth_client_malformed`, `oauth_client_not_desktop`, `oauth_client_unreadable` | The client file is not a Desktop app client JSON, or cannot be read. |
 | `search_console_site_format`, `ga4_property_id_format`, `oauth_metadata_reserved` | A metadata value is not in the shape above, or sets `oauth_grants`. |
 | `paste_needs_tty` | `--paste` without a terminal on stdin. |
-| `oauth_scope_kept` | `--scope` names a scope other than the one the existing Google connection is recorded in; a renewal keeps the recorded scope. An entry with no stored credential yet (only `--metadata`) is a first sign-in, and `--scope` is honoured there. |
+| `oauth_scope_kept` | `--scope` names a scope other than the one the existing Google connection is recorded in; a renewal keeps the recorded scope. An entry with no stored credential yet (only `--metadata`) is a first sign-in, and `--scope` is honoured there; signing it in with `--scope repo` removes the leftover user-scope entry, whose metadata the repo entry now holds. |
 | `oauth_backend_kept` | `MB_CONNECT_SECRET_BACKEND` names a store other than the one the existing Google connection uses; a renewal writes to the recorded store. A connection recorded under the older `keyring` name accepts `auto` or `keyring` when they resolve to the same native store. |
 | `oauth_option_without_oauth` | `--timeout`, `--client-file`, `--reauth` or another sign-in option without `--oauth`. `--timeout` is refused even at its default (`--timeout 300`); `--port 0`, the default, is not. |
 

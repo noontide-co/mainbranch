@@ -5089,12 +5089,17 @@ def test_tokenless_first_connect_still_counts_in_probe_gap(tmp_path: Path, monke
 
 
 def _record_google_oauth_grant(repo: Path, *, user_scope: bool = False) -> str:
-    """Store a fake grant in the local-file backend and record its ref."""
+    """Store a fake, well-formed grant in the local-file backend and record its ref."""
 
     config = connect_mod._read_config(repo.resolve())
     repo_id = str(config["repo_id"])
     ref = connect_mod._secret_ref(repo_id, "google", connect_mod.GOOGLE_OAUTH_GRANT_SLOT)
-    credential_store_mod.SecretStore("local-file").set(ref, "fake-oauth-grant-json")
+    grant = {
+        "client_id": "fake-client.apps.example.com",
+        "client_secret": "fake-oauth-grant-json",
+        "refresh_token": "fake-oauth-grant-json",
+    }
+    credential_store_mod.SecretStore("local-file").set(ref, json.dumps(grant))
     slot = {"ref": ref, "backend": "local-file"}
     if user_scope:
         data = connect_mod._read_user_scope()
@@ -5149,7 +5154,9 @@ def test_google_recorded_oauth_grant_is_optional_and_oauth_mode(
     assert item["state"] == "unvalidated"
 
 
-def test_google_missing_oauth_grant_is_never_missing_secret(tmp_path: Path, monkeypatch) -> None:
+def test_google_missing_oauth_grant_is_missing_secret(tmp_path: Path, monkeypatch) -> None:
+    """A recorded sign-in grant that is gone is never `ready` (#1073)."""
+
     _local_secret_env(monkeypatch, tmp_path)
     repo = tmp_path / "biz"
     repo.mkdir()
@@ -5163,9 +5170,11 @@ def test_google_missing_oauth_grant_is_never_missing_secret(tmp_path: Path, monk
     grant = item["secrets"][connect_mod.GOOGLE_OAUTH_GRANT_SLOT]
     assert grant["optional"] is True
     assert grant["presence"] == "absent"
-    assert item["state"] != "missing_secret"
-    assert item["stored"] is True
-    assert "oauth_grant" not in item["repair"]
+    assert item["state"] == "missing_secret"
+    assert item["stored"] is False
+    assert item["repair_command"] == (
+        "mb connect google --oauth --reauth --client-file <Desktop client JSON>"
+    )
 
 
 def test_google_user_scope_oauth_grant_survives_hydrate(tmp_path: Path, monkeypatch) -> None:

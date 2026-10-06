@@ -345,24 +345,48 @@ def _stored_client(existing: _Existing) -> OAuthClient | None:
     return client_from_grant(probe.value)
 
 
-def client_from_grant(value: str) -> OAuthClient | None:
-    """The OAuth client in a stored grant's JSON, or None when it cannot be used.
+def _grant_object(value: str) -> dict[str, Any] | None:
+    """The stored grant's JSON object, or None when it is not one.
 
-    ``--reauth`` without a client file needs this, and status uses the same
-    check to decide whether that command would be refused.
+    A hostile, deeply nested value makes the parser raise ``RecursionError``;
+    it reads as unreadable, like any other value that is not a JSON object.
     """
 
     try:
         raw = json.loads(value)
-    except ValueError:
+    except (ValueError, RecursionError):
         return None
-    if not isinstance(raw, dict):
+    return raw if isinstance(raw, dict) else None
+
+
+def client_from_grant(value: str) -> OAuthClient | None:
+    """The OAuth client in a stored grant's JSON, or None when it cannot be used.
+
+    ``--reauth`` without a client file needs this. ``grant_repair_command``
+    builds on it, so status, ``--reauth`` and the mint path judge a grant alike.
+    """
+
+    raw = _grant_object(value)
+    if raw is None:
         return None
     client_id = raw.get("client_id")
     client_secret = raw.get("client_secret") or ""
     if not isinstance(client_id, str) or not client_id or not isinstance(client_secret, str):
         return None
     return OAuthClient(client_id=client_id, client_secret=client_secret)
+
+
+def reauth_command(entry: dict[str, Any]) -> str:
+    """The ``--reauth`` that renews this sign-in entry and is not refused.
+
+    Bare ``--reauth`` reads the OAuth client from the stored grant; when that
+    grant is gone or cannot be read, the command must carry the client file.
+    """
+
+    existing = _Existing(entry=entry, grant=_slot(entry, GRANT_SLOT), token={})
+    if existing.oauth and _stored_client(existing) is not None:
+        return REAUTH_COMMAND
+    return REAUTH_WITH_CLIENT_COMMAND
 
 
 # --- The sign-in -------------------------------------------------------------
@@ -621,6 +645,11 @@ def bootstrap(
     config = connect_mod._read_config(target)
     repo_id = connect_mod._ensure_repo_id(config, target)
     existing = _existing_entry(config, repo_id)
+    # A credential-less entry recorded in user scope (`--metadata` alone); a
+    # first sign-in recorded in repo scope leaves nothing in it worth keeping.
+    user_metadata_only = str(existing.entry.get("scope") or "repo") == "user" and not (
+        existing.oauth or existing.has_access_token
+    )
     _refuse_by_mode(existing, reauth=reauth, replace_access_token=replace_access_token)
     raw_metadata = existing.entry.get("metadata")
     metadata = _oauth_metadata(
@@ -756,6 +785,8 @@ def bootstrap(
             state="metadata_write_failed",
         ) from None
 
+    if user_metadata_only and normalized_scope == "repo":
+        connect_mod._drop_user_scope_metadata_only(repo_id, provider.id)
     check = _check_after_sign_in(provider, target, str(tokens["access_token"]), deadline)
     status = connect_mod.status_provider(provider.id, target, _credential_deadline=deadline)
     return {
@@ -927,26 +958,37 @@ class _Grant:
 
 
 def _grant_fields(value: str) -> _Grant | None:
-    """The client id, client secret and refresh token from the stored grant JSON."""
+    """The client id, client secret and refresh token from the stored grant JSON.
 
-    try:
-        raw = json.loads(value)
-    except ValueError:
+    The client is read by ``client_from_grant``, the rule ``--reauth`` uses;
+    minting also needs the refresh token.
+    """
+
+    client = client_from_grant(value)
+    if client is None:
         return None
-    if not isinstance(raw, dict):
-        return None
-    client_id = raw.get("client_id")
-    client_secret = raw.get("client_secret", "")
+    raw = _grant_object(value) or {}
     refresh_token = raw.get("refresh_token")
-    if (
-        not isinstance(client_id, str)
-        or not client_id
-        or not isinstance(client_secret, str)
-        or not isinstance(refresh_token, str)
-        or not refresh_token
-    ):
+    if not isinstance(refresh_token, str) or not refresh_token:
         return None
-    return _Grant(client_id, client_secret, refresh_token)
+    return _Grant(client.client_id, client.client_secret, refresh_token)
+
+
+def grant_repair_command(value: str | None) -> str:
+    """The one rule for a stored grant: ``""`` when it can mint an access token.
+
+    Otherwise it names the sign-in that replaces it: bare ``--reauth`` when the
+    grant still holds its OAuth client (``--reauth`` reads it from there), and
+    ``--reauth --client-file ...`` when the grant is gone (``None``) or its
+    client cannot be read. Status, ``mb connect test``, ``token`` and ``exec``
+    all name what this returns.
+    """
+
+    if value is None or client_from_grant(value) is None:
+        return REAUTH_WITH_CLIENT_COMMAND
+    if _grant_fields(value) is None:
+        return REAUTH_COMMAND
+    return ""
 
 
 def _lifetime(tokens: go.TokenResponse) -> float:
@@ -1151,8 +1193,11 @@ def read_minted_token(entry: dict[str, Any], *, source: str, target: Path) -> di
             state=go.STATE_INVALID,
             backend_state="ready",
             rule="oauth_grant_malformed",
-            error="the stored Google sign-in grant is unreadable; a person must sign in again",
-            repair_command=REAUTH_WITH_CLIENT_COMMAND,
+            error=(
+                "the stored Google sign-in grant is unreadable or incomplete; a person must "
+                "sign in again"
+            ),
+            repair_command=grant_repair_command(probe.value),
         )
     key = (backend, ref)
     mint = _minted.get(key)

@@ -413,7 +413,8 @@ def test_an_unreadable_grant_never_names_bare_reauth(
 
     _, payload = _status(repo)
 
-    assert payload["state"] == recorded
+    # A recorded grant that is gone is missing, whatever was recorded (#1073).
+    assert payload["state"] == "missing_secret"
     assert payload["repair_command"] == gc.REAUTH_WITH_CLIENT_COMMAND
     assert gc.REAUTH_WITH_CLIENT_COMMAND in payload["repair"] or not payload["repair"]
 
@@ -612,7 +613,10 @@ GRANT_SHAPES = (
     "client_id_missing",
     "client_id_empty",
     "client_secret_not_string",
+    "refresh_token_missing",
 )
+# Shapes whose OAuth client `--reauth` can still read (#1073: one rule for a grant).
+CLIENT_READABLE = ("valid", "refresh_token_missing")
 VALIDATIONS = ("none", "ok", "invalid", "reauth_required")
 SIGN_IN_PREFIX = "mb connect google --oauth"
 
@@ -626,6 +630,9 @@ def _grant_value(shape: str, valid: dict[str, Any]) -> str | None:
         return f"not json {{ {GRANT_SENTINEL}"
     if shape == "json_list":
         return json.dumps([GRANT_SENTINEL, valid["client_id"]])
+    if shape == "refresh_token_missing":
+        # A valid client, so bare `--reauth` works, but nothing to mint with.
+        return json.dumps({key: value for key, value in valid.items() if key != "refresh_token"})
     broken = {**valid, "refresh_token": GRANT_SENTINEL}
     if shape == "client_id_missing":
         broken.pop("client_id")
@@ -723,8 +730,11 @@ def test_every_stored_grant_state_names_a_next_step_that_is_not_refused(
     token: str,
     recorded: str,
 ) -> None:
-    """7 grant shapes x 2 token states x 4 records: every cell is reachable by
-    editing the store or the record after a sign-in, so none is skipped."""
+    """8 grant shapes x 2 token states x 4 records: every cell is reachable by
+    editing the store or the record after a sign-in, so none is skipped.
+
+    Any grant that cannot mint is never `ready` in status, and status and
+    `mb connect test google` name the same next step for it (#1073)."""
 
     seen: list[str] = []
 
@@ -733,7 +743,11 @@ def test_every_stored_grant_state_names_a_next_step_that_is_not_refused(
             return
         assert "<" not in command.replace("<Desktop client JSON>", ""), command
         # Bare --reauth only where the stored grant still holds a usable client.
-        if command.startswith(SIGN_IN_PREFIX) and "--reauth" in command and grant != "valid":
+        if (
+            command.startswith(SIGN_IN_PREFIX)
+            and "--reauth" in command
+            and grant not in CLIENT_READABLE
+        ):
             assert "--client-file" in command, command
         ran = _run_next(repo, client_file, google, monkeypatch, command)
         output = ran.output
@@ -750,8 +764,11 @@ def test_every_stored_grant_state_names_a_next_step_that_is_not_refused(
     payload = json.loads(status_json.stdout)
     named = str(payload.get("repair_command") or "")
     assert _next_line(status_plain.stdout) == named
-    assert set(payload["secrets"]["oauth_grant"]) >= {"present", "readable"}
-    assert payload["secrets"]["oauth_grant"]["readable"] is (grant == "valid")
+    assert set(payload["secrets"]["oauth_grant"]) >= {"present", "readable", "usable"}
+    assert payload["secrets"]["oauth_grant"]["readable"] is (grant in CLIENT_READABLE)
+    assert payload["secrets"]["oauth_grant"]["usable"] is (grant == "valid")
+    if grant != "valid":
+        assert payload["state"] != "ready", payload["state"]
     seen += [status_json.output, status_plain.output]
     if payload["state"] != "ready":
         assert named, payload["state"]
@@ -769,6 +786,9 @@ def test_every_stored_grant_state_names_a_next_step_that_is_not_refused(
     seen.append(tested.output)
     if not result["ok"] or result["status"]["state"] != "ready":
         assert test_named, result
+    if grant != "valid":
+        # One rule: the check and the stored status agree on the next step.
+        assert test_named == named, (test_named, named)
     check(test_named)
 
     # The plain test on another fresh copy names the same next step.
