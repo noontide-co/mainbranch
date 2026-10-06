@@ -85,13 +85,17 @@ human approval over clever automation.
 
 ### Package metadata and dependency surface
 
-- `mb/pyproject.toml` declares four runtime dependencies: `openai`, `typer`,
-  `pyyaml`, and `rich`. Each has a documented floor (`>=`) and no upper
+- `mb/pyproject.toml` declares four runtime dependencies on every platform
+  (`openai`, `typer`, `pyyaml`, `rich`) plus one Linux-only dependency
+  (`SecretStorage`, for Secret Service credential storage). Each has a
+  documented floor (`>=`) and no upper
   bound. Floors come from the lowest version known to work; upper bounds
   would force premature compatibility breaks. The `minimum-dependencies`
   CI job installs every declared floor
   (`uv pip install --resolution lowest-direct`) on the lowest supported
   Python and on 3.12 and loads the CLI, so a floor `mb` cannot run on fails the PR.
+  The job runs on Linux, so the Linux-only `SecretStorage` floor is installed
+  and covered too.
 - The dev extras (`ruff`, `mypy`, `pytest`, `pytest-cov`,
   `types-PyYAML`) are pinned by compatibility-friendly ranges
   (`~=`, `>=,<`).
@@ -123,7 +127,9 @@ human approval over clever automation.
 
 ### No hash-locked install today
 
-- `mb` is a small Typer-shaped CLI with four runtime dependencies.
+- `mb` is a small Typer-shaped CLI with four runtime dependencies on every
+  platform (`openai`, `typer`, `pyyaml`, `rich`), plus the Linux-only
+  `SecretStorage` dependency.
   Introducing `pip-tools`, `uv`, or `poetry` lockfiles would force a new
   dependency manager on contributors before the surface earns it.
 - This is revisable. If the dependency footprint grows or a specific
