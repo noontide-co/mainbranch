@@ -2660,28 +2660,45 @@ def repair_plan(
         },
     ]
     codex_actions: list[dict[str, Any]] = []
+    codex_operator_actions: list[dict[str, Any]] = []
     if not codex_instruction_status["ok"]:
-        agents_operations = codex_mod.agents_md_operations(target)
+        agents_plan = codex_mod.agents_md_plan(target)
+        agents_operations = agents_plan["operations"]
+        # #1052: a repair that refuses, or leaves a person's files behind, is a
+        # step for a person with a manual repair, never an agent repair.
+        agents_operator_action = codex_mod.agents_md_operator_action(agents_plan)
+        reason = (
+            "AGENTS.md is the repo-local Codex entrypoint; repair writes current "
+            "fact grounding, lifecycle routing, and approval boundaries, and removes "
+            "transitional repo-local plugin copies"
+        )
+        if agents_operator_action is not None:
+            reason = f"{reason}. {agents_operator_action['reason']}"
         action = _action(
             id="codex-agents-md",
             title="Refresh Codex AGENTS.md instructions",
             state="warn",
             mode="write",
             command="mb doctor repair --apply --only codex",
-            safe_to_apply=True,
-            reason=(
-                "AGENTS.md is the repo-local Codex entrypoint; repair writes current "
-                "fact grounding, lifecycle routing, and approval boundaries, and removes "
-                "transitional repo-local plugin copies"
+            safe_to_apply=agents_operator_action is None,
+            reason=reason,
+            writes=(
+                []
+                if agents_plan["refused"]
+                else [
+                    "AGENTS.md",
+                    *[str(item["rel"]) for item in agents_operations if item["op"] != "write"],
+                ]
             ),
-            writes=[
-                "AGENTS.md",
-                *[str(item["rel"]) for item in agents_operations if item["op"] == "delete_tree"],
-            ],
         )
+        action["refused"] = agents_plan["refused"]
+        action["kept"] = agents_plan["kept"]
         _attach_operations(action, target, agents_operations)
         actions.append(action)
         codex_actions.append(action)
+        if agents_operator_action is not None:
+            codex_operator_actions.append(agents_operator_action)
+            operator_actions.append(agents_operator_action)
     if not codex_global_skill["ok"]:
         action = _action(
             id="codex-global-skill",
@@ -2927,7 +2944,13 @@ def repair_plan(
         "sections": sections,
         "actions": actions,
         # Steps for a person at a terminal, never run by an agent (#1042).
-        "operator_actions": [] if only == "codex" else operator_actions,
+        "operator_actions": (
+            codex_operator_actions
+            if only == "codex"
+            else [item for item in operator_actions if item not in codex_operator_actions]
+            if only == "claude"
+            else operator_actions
+        ),
         "applied_actions": applied_actions or [],
         "agent_surfaces": agent_surfaces,
         "receipt": _repair_receipt(
@@ -3121,8 +3144,12 @@ def repair_apply(
         applied.append(
             _action(
                 id="codex-agents-md",
-                title="Refreshed Codex repo instructions",
-                state="ok" if agents["ok"] else "error",
+                title=(
+                    "Left Codex AGENTS.md unchanged: it needs a manual repair first"
+                    if agents["refused"]
+                    else "Refreshed Codex repo instructions"
+                ),
+                state="warn" if agents["refused"] or agents["kept"] else "ok",
                 mode="write",
                 command=(
                     "mb doctor repair --apply --only codex"
@@ -3131,15 +3158,20 @@ def repair_apply(
                     if all_agents
                     else "mb doctor repair --apply"
                 ),
-                safe_to_apply=True,
+                safe_to_apply=not (agents["refused"] or agents["kept"]),
                 reason=(
-                    "wrote current Codex AGENTS.md fact grounding, lifecycle routing, "
+                    str(agents["refused"][0]["reason"])
+                    if agents["refused"]
+                    else "wrote current Codex AGENTS.md fact grounding, lifecycle routing, "
                     "and approval boundaries"
+                    + (
+                        "; kept files Main Branch did not write: " + ", ".join(agents["kept"])
+                        if agents["kept"]
+                        else ""
+                    )
                 ),
                 writes=list(agents.get("changed_paths", []))
-                or [
-                    "AGENTS.md",
-                ],
+                or ([] if agents["refused"] else ["AGENTS.md"]),
                 applied=bool(agents["changed"]),
                 result=agents,
             )
