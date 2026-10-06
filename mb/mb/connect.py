@@ -560,6 +560,34 @@ def _connect_command(provider: Provider, *, token_stdin: bool = False) -> str:
     return f"mb connect {provider.id}{custom_flag}{token_flag}"
 
 
+GOOGLE_SIGN_IN_COMMAND = "mb connect google --oauth"
+
+
+def _reconnect_command(
+    provider: Provider, entry: Any = None, *, grant_readable: bool = True
+) -> str:
+    """The next step that stores (or replaces) a provider's credential.
+
+    Google's names the sign-in: ``--oauth`` with no connection, ``--oauth
+    --reauth`` on a sign-in entry whose stored grant (and so its OAuth client)
+    can be read, and ``--oauth --reauth --client-file ...`` when it cannot,
+    since ``--reauth`` alone is then refused. Only a legacy access-token entry
+    keeps ``--token-stdin``, the one path that replaces that token in place.
+    """
+
+    if provider.id != "google":
+        return _connect_command(provider, token_stdin=True)
+    if _entry_records_slot(entry, GOOGLE_OAUTH_GRANT_SLOT):
+        from mb import google_connect
+
+        if grant_readable:
+            return google_connect.REAUTH_COMMAND
+        return google_connect.REAUTH_WITH_CLIENT_COMMAND
+    if _entry_records_slot(entry, "access_token"):
+        return _connect_command(provider, token_stdin=True)
+    return GOOGLE_SIGN_IN_COMMAND
+
+
 def _safe_identity_metadata(metadata: dict[str, Any]) -> dict[str, str]:
     """Return custom-provider metadata safe enough for identity diagnostics.
 
@@ -794,20 +822,43 @@ def config_tracked_by_git(repo: Path) -> bool:
     Business repos ignore it, but an older or hand-made repo may track it.
     Automatic recordings (a read's ``reauth_required``, a check's outcome)
     skip a tracked file, so nothing leaves it modified without a person asking.
-    Any git failure reads as not tracked.
+    When git cannot answer (missing, a timeout, an error such as dubious
+    ownership) inside a git checkout, the file counts as tracked.
     """
 
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if key not in {"GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"}
+    }
     try:
         completed = subprocess.run(
             ["git", "ls-files", "--error-unmatch", "--", CONFIG_RELATIVE_PATH.as_posix()],
             cwd=str(repo),
+            env=env,
             capture_output=True,
             timeout=5,
             check=False,
         )
     except (OSError, subprocess.SubprocessError, ValueError):
-        return False
-    return completed.returncode == 0
+        return _inside_git_checkout(repo)
+    if completed.returncode in {0, 1}:
+        return completed.returncode == 0
+    return _inside_git_checkout(repo)
+
+
+def _inside_git_checkout(repo: Path) -> bool:
+    """Does ``repo`` or an ancestor hold a ``.git`` (directory or worktree file)?"""
+
+    try:
+        start = repo.resolve()
+    except (OSError, RuntimeError):
+        start = repo
+    for directory in (start, *start.parents):
+        with suppress(OSError):
+            if (directory / ".git").exists():
+                return True
+    return False
 
 
 def _user_scope_path() -> Path:
@@ -887,6 +938,35 @@ def _write_user_scope_provider(
     return _write_user_scope(data)
 
 
+def _drop_user_scope_metadata_only(repo_id: str, provider_id: str) -> bool:
+    """Remove this repo's user-scope entry for a provider when it holds no credential.
+
+    Best effort, for a first sign-in recorded in repo scope over a
+    ``--metadata``-only user-scope entry: the repo entry now carries that
+    metadata. An entry that records any secret ref is never touched.
+    """
+
+    try:
+        data = _read_user_scope()
+    except ConfigCorruptError:
+        return False
+    repo_entry = data["repos"].get(repo_id)
+    providers = repo_entry.get("providers") if isinstance(repo_entry, dict) else None
+    entry = providers.get(provider_id) if isinstance(providers, dict) else None
+    if not isinstance(providers, dict) or not isinstance(entry, dict):
+        return False
+    raw_secrets = entry.get("secrets")
+    secrets = raw_secrets if isinstance(raw_secrets, dict) else {}
+    if any(isinstance(slot, dict) and slot.get("ref") for slot in secrets.values()):
+        return False
+    del providers[provider_id]
+    try:
+        _write_user_scope(data)
+    except OSError:
+        return False
+    return True
+
+
 def _secret_ref(repo_id: str, provider_id: str, field: str) -> str:
     digest = hashlib.sha256(f"{repo_id}:{provider_id}:{field}".encode()).hexdigest()[:24]
     return f"mainbranch://{digest}/{provider_id}/{field}"
@@ -925,12 +1005,30 @@ def _unverified_repair(provider: Provider) -> dict[str, str]:
     }
 
 
+def _google_grant_repair(*, gone: bool, readable: bool) -> dict[str, str]:
+    """Status's next step when the recorded Google sign-in grant cannot mint a token."""
+
+    from mb import google_connect
+
+    command = (
+        google_connect.REAUTH_COMMAND if readable else google_connect.REAUTH_WITH_CLIENT_COMMAND
+    )
+    what = "is missing from the credential store" if gone else "is unreadable or incomplete"
+    return {
+        "summary": f"The stored Google sign-in {what}; a person must sign in again.",
+        "repair": f"Run `{command}` in a terminal (a person, not an agent).",
+        "repair_command": command,
+    }
+
+
 def _repair(
     provider: Provider,
     state: str,
     missing: list[str] | None = None,
     validation: dict[str, Any] | None = None,
     backend_reason: str = "",
+    entry: Any = None,
+    secrets: dict[str, Any] | None = None,
 ) -> dict[str, str]:
     if state == BACKEND_FAILURE_STATE:
         # Wins over every provider-level repair: reconnecting a provider
@@ -947,6 +1045,20 @@ def _repair(
     validation = validation or {}
     validation_repair = str(validation.get("repair") or "")
     validation_repair_command = str(validation.get("repair_command") or "")
+    # `--reauth` reads the OAuth client from the stored grant; when the grant
+    # cannot be read, the command must carry the client file or it is refused.
+    raw_grant = (secrets or {}).get(GOOGLE_OAUTH_GRANT_SLOT)
+    grant_readable = not isinstance(raw_grant, dict) or (
+        raw_grant.get("present") is True and raw_grant.get("readable") is True
+    )
+    if (
+        _records_oauth_grant(provider, entry)
+        and isinstance(raw_grant, dict)
+        and raw_grant.get("usable") is not True
+    ):
+        # A grant that is gone or cannot mint decides the next step before
+        # any recorded check, by the rule `mb connect test google` uses.
+        return _google_grant_repair(gone=raw_grant.get("present") is False, readable=grant_readable)
     validation_summary = str(validation.get("summary") or "")
     if validation_repair or validation_repair_command:
         return {
@@ -962,7 +1074,7 @@ def _repair(
     if provider.id == "meta":
         return _meta_repair(state, missing)
     missing_fields = ", ".join(missing or provider.required_secrets)
-    connect_command = _connect_command(provider, token_stdin=True)
+    connect_command = _reconnect_command(provider, entry, grant_readable=grant_readable)
     if state == "not_connected":
         if provider.required_secrets:
             return {
@@ -1779,7 +1891,28 @@ def _secret_statuses(
             "backend_state": probe.reason or "ready",
             "optional": True,
         }
+        if field == GOOGLE_OAUTH_GRANT_SLOT:
+            from mb import google_connect
+
+            if probe.backend_ok and not probe.present:
+                # A recorded sign-in grant that is gone. Presence only.
+                missing.append(field)
+            # The rule `mb connect test` and `--reauth` use: `readable` when
+            # `--reauth` can read its OAuth client from the grant, `usable` when
+            # the grant can mint an access token. Only booleans leave here.
+            grant_repair = google_connect.grant_repair_command(
+                probe.value if probe.present else None
+            )
+            secrets[field]["readable"] = grant_repair != google_connect.REAUTH_WITH_CLIENT_COMMAND
+            secrets[field]["usable"] = not grant_repair
     return secrets, missing
+
+
+def _google_grant_unusable(secrets: dict[str, Any]) -> bool:
+    """Is a recorded Google sign-in grant present but unable to mint a token?"""
+
+    raw = secrets.get(GOOGLE_OAUTH_GRANT_SLOT)
+    return isinstance(raw, dict) and raw.get("present") is True and raw.get("usable") is False
 
 
 def _entry_records_slot(entry: Any, slot: str) -> bool:
@@ -1886,7 +2019,7 @@ def _unhydrated_status(
         repair = _repair(provider, state, missing, None, backend_reason)
         ok = False
     elif missing:
-        repair = _repair(provider, "missing_secret", missing)
+        repair = _repair(provider, "missing_secret", missing, entry=entry, secrets=secrets)
         state = "missing_secret"
         ok = False
     else:
@@ -2159,6 +2292,11 @@ def status_provider(
             # status itself never calls Google.
             state = GOOGLE_REAUTH_REQUIRED_STATE
             ok = False
+        elif _google_grant_unusable(secrets):
+            # The stored grant cannot mint an access token, so an earlier
+            # passing check no longer holds; `mb connect test` says the same.
+            state = "invalid"
+            ok = False
         elif _provider_verified(validation):
             state = "ready"
             ok = True
@@ -2171,7 +2309,7 @@ def status_provider(
         else:
             state = "unvalidated"
             ok = False
-    repair = _repair(provider, state, missing, validation, backend_reason)
+    repair = _repair(provider, state, missing, validation, backend_reason, entry, secrets)
     return {
         "provider": provider.id,
         "name": provider.name,
@@ -2696,7 +2834,7 @@ def read_token(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
 
         return google_connect.read_minted_token(entry, source=source, target=target)
     if not isinstance(entry, dict):
-        repair_command = _connect_command(provider, token_stdin=True)
+        repair_command = _reconnect_command(provider)
         return {
             "ok": False,
             "provider": provider.id,
@@ -2726,7 +2864,7 @@ def read_token(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
             "repair_command": detail["repair_command"],
         }
     if not probe.present:
-        repair_command = _connect_command(provider, token_stdin=True)
+        repair_command = _reconnect_command(provider, entry)
         return {
             "ok": False,
             "provider": provider.id,
@@ -2965,22 +3103,45 @@ def rotate_provider(
     if not provider.required_secrets:
         _refuse("rotate_no_secret", f"{provider.name} stores no secret to rotate.")
     entry, _where = _connected_entry(provider, target)
+    # Google connects with a sign-in, which has no source to re-read; only a
+    # legacy access-token entry keeps the --token-stdin and --source path.
+    google_sign_in = provider.id == "google" and not (
+        entry is not None
+        and _entry_records_slot(entry, "access_token")
+        and not _records_oauth_grant(provider, entry)
+    )
     if entry is None:
+        if google_sign_in:
+            _refuse(
+                "rotate_not_connected",
+                f"{provider.name} is not connected. Sign in with `{GOOGLE_SIGN_IN_COMMAND}`; "
+                "a sign-in has no source to re-read, so it is renewed rather than rotated. "
+                "Nothing was changed.",
+            )
         _refuse(
             "rotate_not_connected",
             f"{provider.name} is not connected. Connect it with a source first: "
             f"`{_connect_command(provider, token_stdin=True)} --source op://vault/item/field`.",
         )
     if _records_oauth_grant(provider, entry):
+        from mb import google_connect
+
         _refuse(
             "rotate_oauth_use_reauth",
             f"this {provider.name} connection uses a Google sign-in (OAuth), which has no "
-            "source to re-read. Renew it with `mb connect google --oauth --reauth` when status "
-            "says reauth_required. Nothing was changed.",
+            f"source to re-read. Renew it with `{google_connect.reauth_command(entry)}` when "
+            "status says reauth_required. Nothing was changed.",
         )
     raw_metadata = entry.get("metadata")
     metadata = raw_metadata if isinstance(raw_metadata, dict) else {}
     source = str(metadata.get("source") or "").strip()
+    if not source and google_sign_in:
+        _refuse(
+            "rotate_no_source",
+            f"{provider.name} has no stored credential to rotate. Sign in with "
+            f"`{GOOGLE_SIGN_IN_COMMAND}`; a sign-in has no source to re-read, so it is "
+            "renewed rather than rotated. Nothing was changed.",
+        )
     if not source:
         _refuse(
             "rotate_no_source",
@@ -3012,7 +3173,11 @@ def rotate_provider(
         custom=provider.category == "custom",
     )
     tested = test_provider(
-        provider.id, target, which_func=which_func, command_runner=command_runner
+        provider.id,
+        target,
+        which_func=which_func,
+        command_runner=command_runner,
+        record_in_tracked_config=True,
     )
     return {
         "ok": bool(connected["ok"]) and bool(tested["ok"]),
@@ -3785,7 +3950,14 @@ def test_provider(
     *,
     which_func: Which | None = None,
     command_runner: CommandRunner | None = None,
+    record_in_tracked_config: bool = False,
 ) -> dict[str, Any]:
+    """Check a stored credential with the provider and record the outcome.
+
+    The outcome is not written into a git-tracked ``.mb/connect.yaml`` unless
+    ``record_in_tracked_config`` (a command that already wrote it, such as
+    ``mb connect rotate``).
+    """
     provider = resolve_provider(provider_id, repo)
     target = Path(repo).resolve()
     config = _read_config(target)
@@ -3893,7 +4065,10 @@ def test_provider(
         if key in validation:
             entry["validation"][key] = validation[key]
     entry["last_checked_at"] = validation["checked_at"]
-    _record_validation(target, config, provider.id, entry)
+    # Recording writes .mb/connect.yaml; a tracked one is left as it is.
+    tracked = not record_in_tracked_config and config_tracked_by_git(target)
+    if not tracked:
+        _record_validation(target, config, provider.id, entry)
     status = status_provider(
         provider.id,
         target,
@@ -3902,7 +4077,7 @@ def test_provider(
         _credential_deadline=deadline,
         _secret_probes=probes,
     )
-    return {
+    result: dict[str, Any] = {
         "ok": bool(validation["ok"]),
         "provider": provider.id,
         "stored": bool(status.get("stored")),
@@ -3912,6 +4087,20 @@ def test_provider(
         "status": status,
         "safe_to_share": True,
     }
+    if tracked:
+        result["recorded"] = False
+        result["not_recorded_reason"] = "connect_yaml_tracked"
+        # The CLI exits on the check itself, by the same rule as a status item:
+        # a probe-less provider left unverified warns without failing.
+        result["needs_action"] = provider_needs_action(
+            {
+                "ok": bool(validation["ok"]),
+                "state": validation["state"],
+                "has_probe": bool(status.get("has_probe")),
+                "provider": provider.id,
+            }
+        )
+    return result
 
 
 def status_all(
@@ -4862,6 +5051,12 @@ def _render_google_products(result: dict[str, Any]) -> None:
     raw_validation = result.get("validation")
     raw_products = raw_validation.get("products") if isinstance(raw_validation, dict) else None
     products = raw_products if isinstance(raw_products, dict) else {}
+    # A read that Google refused records reauth_required without product checks.
+    unchecked = (
+        "not checked since the sign-in expired"
+        if result.get("state") == GOOGLE_REAUTH_REQUIRED_STATE
+        else "not checked yet"
+    )
     for name in GOOGLE_OAUTH_PRODUCTS:
         if name not in granted:
             print(f"  {name}: not granted")
@@ -4870,7 +5065,7 @@ def _render_google_products(result: dict[str, Any]) -> None:
         product: dict[str, Any] = raw_product if isinstance(raw_product, dict) else {}
         state = product.get("state")
         if not state or state == "not_checked":
-            last = "not checked yet"
+            last = unchecked
         elif state in {"ok", "grant_missing"}:
             last = state
         else:
@@ -4899,8 +5094,14 @@ def render_test_result(result: dict[str, Any]) -> None:
         return
     status = result["status"]
     state = "ok" if result["ok"] else "warn"
-    print(f"mb connect test {result['provider']}: {state} ({state_label(status['state'])})")
     validation = result.get("validation") or status.get("validation") or {}
+    # An unrecorded check shows its own outcome; status still holds the last one.
+    shown = (
+        str(validation.get("state") or status["state"])
+        if result.get("not_recorded_reason")
+        else status["state"]
+    )
+    print(f"mb connect test {result['provider']}: {state} ({state_label(shown)})")
     summary = validation.get("summary")
     if summary:
         print(f"summary: {summary}")
@@ -4916,8 +5117,17 @@ def render_test_result(result: dict[str, Any]) -> None:
     scopes = validation.get("scopes") if isinstance(validation, dict) else None
     if isinstance(scopes, dict) and scopes:
         print("reads: " + "  ".join(f"{name}={verdict}" for name, verdict in scopes.items()))
-    if status.get("repair_command"):
-        print(f"next: {status['repair_command']}")
+    if result.get("not_recorded_reason") == "connect_yaml_tracked":
+        print(
+            "recorded: no (.mb/connect.yaml is tracked by git, so checks are not written to "
+            f"it; `mb connect status {result['provider']}` shows the last check a person "
+            "recorded)"
+        )
+        next_command = str(validation.get("repair_command") or "")
+    else:
+        next_command = str(status.get("repair_command") or "")
+    if next_command:
+        print(f"next: {next_command}")
 
 
 def render_rotate_result(result: dict[str, Any]) -> None:

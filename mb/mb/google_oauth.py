@@ -133,7 +133,7 @@ _RULE_MESSAGES: dict[str, str] = {
     ),
     "authorization_code_rejected": (
         "Google refused the authorization code (invalid_grant): it expired, was already "
-        "used, or came from another sign-in attempt."
+        "used, came from another sign-in attempt, or did not match the sign-in request."
     ),
     "token_unreachable": "Google's token endpoint could not be reached.",
     "token_response_malformed": "Google's token endpoint returned an unreadable response.",
