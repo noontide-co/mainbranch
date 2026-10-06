@@ -130,9 +130,16 @@ Entries today:
   only when its content equals a version a released `mb` wrote there (or what
   this `mb` renders), allowing only for the embedded `mb` version number (a
   plain X.Y.Z) and line endings, with JSON files compared as data (whitespace
-  and key order); names and wording are not proof. The repair removes only proven
+  and key order); names and wording are not proof. A JSON file that repeats a
+  key, at any depth, and a file that cannot be read (not UTF-8, or an OS error)
+  are not proven. The repair removes only proven
   files and never touches anything else, including a generated file a person
-  added to (#1062). While
+  added to (#1062). Each file is proven again right before it is removed, so a
+  file changed after the plan, or reached through a folder that became a link
+  after the plan, stays and is listed in the apply's `kept`. A
+  linked folder above a Codex path (`.agents/`, or a folder under it) is not
+  walked: the link is listed in `kept`, the `reason` says it is a link, and
+  nothing under it is touched (#1067). While
   this entry is present, doctor's `codex-agents-md` action has
   `safe_to_apply: false` with the additive `refused` and `kept` lists, and
   `mb update` makes no Codex write (`surface_refresh.codex.blocked: true` and
@@ -144,17 +151,23 @@ Entries today:
   `mb init` returns the same entry, plus a `warnings` line, when it refuses to
   change an existing `AGENTS.md`; `codex_agents_md` has its `ok`, `refused`
   and `kept`.
-- files in the old global Codex folders that are not proven to be Main
-  Branch's (`mb doctor repair`, #1062): any such file in the global plugin
-  source or the legacy `main-branch-owner-loop` skill folder, and in a retired
-  playbook skill folder only when that folder also held a Main Branch file (a
-  same-named folder with nothing of Main Branch's in it is left alone and not
-  listed). This entry has
+- files in the global Codex folders that are not proven to be Main
+  Branch's (`mb doctor repair`, #1062; `mb update`, #1067): any such file in
+  the global plugin source or the legacy `main-branch-owner-loop` skill folder,
+  and in a retired playbook skill folder only when that folder also held a
+  Main Branch file (a same-named folder with nothing of Main Branch's in it is
+  left alone and not listed). A global `mb-*` skill file that cannot be read
+  is listed too, and is not overwritten. A link at the global plugin root, at
+  its `mainbranch` folder, or at a folder under the root is listed instead of
+  what it leads to; nothing under it is walked (#1067). This entry has
   `id: "codex-global-kept"`, `reason`, `manual_step`, `changes` (the kept
   files) and `on_apply`, with the same meaning as above. While it is present,
   doctor's `codex-global-skill` action has `safe_to_apply: false` and the same
   `on_apply`; an explicit apply, or `mb update`, deletes only the proven files
-  and leaves these.
+  and leaves these. `mb update`, including `--check` and
+  `--no-refresh-surfaces`, lists the same entry once, with doctor's fields and
+  its `note` also in `warnings`, so an operator who runs only `mb update` is
+  told.
 
 ```json
 {
@@ -179,8 +192,15 @@ Entries today:
 ```
 
 In `mb update` entries, `<path>` is the business repo's absolute path,
-shell-quoted, so the command runs from any directory; the `--repo` flag is left
-out only when that repo is the current directory. The plugin-rail switch keeps
+shell-quoted, so the command runs from any directory; the `--repo` flag is
+left out only when that repo is the current directory. The same rule applies
+to the Codex `operator_actions` entries of `mb doctor repair` and `mb init`
+(`codex-agents-md`, `codex-global-kept`, including their `manual_step`), and
+to the `repair` and `repair_command` strings in the Codex status blocks
+(`codex_cli` in `mb status` and `mb start`, the Codex checks in `mb doctor`)
+(#1072). Doctor's `actions[].command` stays the bare
+`mb doctor repair --apply --only codex`, as does the workflow inventory's
+`install_hint`, which describes no repo. The plugin-rail switch keeps
 `--repo .`. The list is empty when there is nothing for a person to run.
 `mb doctor repair --apply` never performs an operator action, and
 `mb doctor repair --only codex` lists only the Codex entries (it leaves the

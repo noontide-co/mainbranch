@@ -264,7 +264,8 @@ def test_start_json_routes_to_codex_global_skill_repair_when_skills_are_missing(
     assert codex["plugin_ok"] is False
     assert "mb-start/SKILL.md" in codex["global_skill"]["missing"]
     next_actions = "\n".join(report["next_actions"])
-    assert "mb doctor repair --plan --only codex" in next_actions
+    repo_flag = f"--repo {shlex.quote(str(repo.resolve()))}"
+    assert f"mb doctor repair {repo_flag} --plan --only codex" in next_actions
     assert f"codex -C {shlex.quote(str(repo.resolve()))}" not in next_actions
     assert "Run `claude" not in next_actions
 

@@ -1756,7 +1756,7 @@ def test_status_marks_codex_not_ready_when_global_skills_are_missing(
     finding = next(
         item for item in report["drift"]["items"] if item["id"] == "codex_global_skills_not_ready"
     )
-    assert "mb doctor repair --apply --only codex" in finding["repair"]
+    assert codex_mod.repair_command(repo) in finding["repair"]
 
 
 def test_status_marks_codex_ready_when_global_skills_are_installed(

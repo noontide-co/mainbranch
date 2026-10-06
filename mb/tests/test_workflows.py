@@ -697,7 +697,7 @@ def test_codex_plugin_status_marks_missing_or_stale_commands_not_ready(
     assert status["command_files_current"] is False
     assert status["slash_commands_generated"] is False
     assert status["slash_commands_ready"] is False
-    assert status["repair"] == codex_mod.CODEX_REPAIR_TEXT
+    assert status["repair"] == codex_mod.repair_text(tmp_path / "business")
 
 
 def test_codex_global_skill_upgrade_removes_retired_playbook_skills(
