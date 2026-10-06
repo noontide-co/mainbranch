@@ -494,12 +494,21 @@ _OPENER = urllib.request.build_opener(_NoRedirect)
 
 
 def _urllib_sender(
-    url: str, body: bytes, headers: Mapping[str, str], timeout: float
+    url: str,
+    body: bytes,
+    headers: Mapping[str, str],
+    timeout: float,
+    *,
+    method: str = "POST",
+    max_bytes: int = RESPONSE_MAX_BYTES,
 ) -> tuple[int, bytes]:
-    request = urllib.request.Request(url, data=body, headers=dict(headers), method="POST")
+    """The one HTTPS path for Google calls. ``mb google`` reads pass ``method="GET"``
+    (with no body) and a larger ``max_bytes`` for report answers."""
+    data = body if method == "POST" else None
+    request = urllib.request.Request(url, data=data, headers=dict(headers), method=method)
     try:
         with _OPENER.open(request, timeout=timeout) as response:
-            return int(getattr(response, "status", 0) or 0), response.read(RESPONSE_MAX_BYTES)
+            return int(getattr(response, "status", 0) or 0), response.read(max_bytes)
     except urllib.error.HTTPError as exc:
         payload = b""
         try:

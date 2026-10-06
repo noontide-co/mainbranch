@@ -46,6 +46,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   is treated as transient and never recorded; Google calls never follow a
   redirect; and `mb connect google --metadata ...` on a sign-in connection
   keeps the keys it is not given (part of #1004).
+- `mb google sc query`, `mb google sc sitemaps list` and `mb google ga4 report`
+  read the Search Console site and GA4 property recorded on a Google sign-in,
+  read-only, with a table by default and `--json` envelopes
+  (`mb.google.sc.query`, `mb.google.sc.sitemaps`, `mb.google.ga4.report`).
+  There is no site or property override. The access token is minted in
+  process and never printed or passed on. Only granted products are read,
+  one request at a time with no retry on server errors. GA4 reports return
+  `property_quota` for pacing, and paging is shown by `may_have_more`.
+  Refusals exit 2 with a stable `rule`; credential and Google failures exit 1.
+  No Google error text is shown, and the table view strips terminal escape
+  codes from row values. See `docs/google.md` (part of #1004).
 
 ### Changed
 

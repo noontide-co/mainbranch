@@ -678,7 +678,9 @@ Once signed in, `mb connect token google` and `mb connect exec google`
 hand out a short-lived access token minted from the sign-in (see "Reading
 with the sign-in" below), and `mb connect test google` checks the sign-in
 with one read-only call to each product it granted (see "Checking the
-sign-in"). Typed report commands come in later releases.
+sign-in"). To read reports without handling a token, use the typed
+read-only commands in [`google.md`](google.md): `mb google sc query`,
+`mb google sc sitemaps list` and `mb google ga4 report`.
 
 ### One-time setup in Google Cloud
 

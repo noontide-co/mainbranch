@@ -834,8 +834,18 @@ def _read_result(
     }
 
 
-def _grant_fields(value: str) -> tuple[str, str, str] | None:
-    """``(client_id, client_secret, refresh_token)`` from the stored grant JSON."""
+@dataclass(frozen=True)
+class _Grant:
+    """The stored grant, read once per mint. No field shows in ``repr``, so a
+    traceback that prints locals (rich ``show_locals``) never shows it."""
+
+    client_id: str = field(repr=False)
+    client_secret: str = field(repr=False)
+    refresh_token: str = field(repr=False)
+
+
+def _grant_fields(value: str) -> _Grant | None:
+    """The client id, client secret and refresh token from the stored grant JSON."""
 
     try:
         raw = json.loads(value)
@@ -854,7 +864,7 @@ def _grant_fields(value: str) -> tuple[str, str, str] | None:
         or not refresh_token
     ):
         return None
-    return client_id, client_secret, refresh_token
+    return _Grant(client_id, client_secret, refresh_token)
 
 
 def _lifetime(tokens: go.TokenResponse) -> float:
@@ -893,13 +903,12 @@ _TOKEN_REFUSAL_OTHER = (
 )
 
 
-def _mint(grant: tuple[str, str, str]) -> _Mint:
-    client_id, client_secret, refresh_token = grant
+def _mint(grant: _Grant) -> _Mint:
     try:
         tokens = go.refresh_access_token(
-            client_id=client_id,
-            client_secret=client_secret or None,
-            refresh_token=refresh_token,
+            client_id=grant.client_id,
+            client_secret=grant.client_secret or None,
+            refresh_token=grant.refresh_token,
             sender=token_sender,
         )
     except go.GoogleOAuthError as exc:
