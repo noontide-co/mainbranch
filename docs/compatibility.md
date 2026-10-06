@@ -283,10 +283,11 @@ an installer. Read `upgrade_performed` rather than the exit code to learn
 whether the package itself changed.
 
 A pre-release or local build newer than PyPI's latest release is left alone on
-every install mode: `mb update` reports `installed_ahead_of_latest: true` with
+pipx, uv and wheel installs: `mb update` reports `installed_ahead_of_latest: true` with
 PyPI's version in `latest_version`, keeps `new_version` at the installed
 version, and lists no install command, since installing the latest release
-would be a downgrade. Versions compare by PEP 440, so `0.6.3rc1` is newer than
+would be a downgrade. A git clone never checks PyPI; it compares the checkout
+with `origin/main` instead. Versions compare by PEP 440, so `0.6.3rc1` is newer than
 `0.6.2` and older than `0.6.3`.
 
 When `mb update` cannot reach PyPI's version check (offline, a timeout, or an

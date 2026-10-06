@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import os
 import re
 import sys
 import time
@@ -42,7 +43,13 @@ from typing import Any, TextIO
 
 from mb import connect as connect_mod
 from mb import google_oauth as go
-from mb.credential_store import SecretStore, new_credential_deadline
+from mb.credential_store import (
+    SUPPORTED_BACKENDS,
+    CredentialStoreError,
+    SecretStore,
+    new_credential_deadline,
+    select_secret_backend,
+)
 
 PROVIDER_ID = "google"
 GRANT_SLOT = connect_mod.GOOGLE_OAUTH_GRANT_SLOT
@@ -191,14 +198,31 @@ def normalize_ga4_property_id(value: str) -> str:
 
 
 def normalize_oauth_metadata(given: dict[str, str]) -> dict[str, str]:
-    """``given`` with the site and property ids in their checked form (refuses bad ones)."""
+    """``given`` with the site and property ids in their checked form (refuses bad ones).
+
+    An empty value (``--metadata search_console_site=``) is kept empty: it
+    asks for that key to be removed (see ``merge_oauth_metadata``).
+    """
 
     normalized = dict(given)
-    if METADATA_SITE in normalized:
+    if normalized.get(METADATA_SITE):
         normalized[METADATA_SITE] = normalize_search_console_site(normalized[METADATA_SITE])
-    if METADATA_PROPERTY in normalized:
+    if normalized.get(METADATA_PROPERTY):
         normalized[METADATA_PROPERTY] = normalize_ga4_property_id(normalized[METADATA_PROPERTY])
     return normalized
+
+
+def merge_oauth_metadata(existing: Any, given: dict[str, str]) -> dict[str, str]:
+    """The recorded metadata updated with ``given``: keys given are set, keys
+    given with an empty value are removed, every other recorded key is kept."""
+
+    merged = (
+        {str(key): str(value) for key, value in existing.items() if value not in (None, "")}
+        if isinstance(existing, dict)
+        else {}
+    )
+    merged.update(normalize_oauth_metadata(given))
+    return {key: value for key, value in merged.items() if value != ""}
 
 
 def _oauth_metadata(pairs: list[str], existing: dict[str, Any]) -> dict[str, str]:
@@ -209,10 +233,7 @@ def _oauth_metadata(pairs: list[str], existing: dict[str, Any]) -> dict[str, str
             f"{METADATA_GRANTS} is recorded by the Google sign-in itself and cannot be set "
             "with --metadata. Nothing was stored.",
         )
-    given = normalize_oauth_metadata(given)
-    merged = {str(key): str(value) for key, value in existing.items() if value not in (None, "")}
-    merged.update(given)
-    return merged
+    return merge_oauth_metadata(existing, given)
 
 
 # --- Existing connection -----------------------------------------------------
@@ -276,6 +297,33 @@ def _refuse_by_mode(existing: _Existing, *, reauth: bool, replace_access_token: 
             "connection stops working. Re-run with --replace-access-token to proceed. "
             "Nothing was changed.",
         )
+
+
+def _refuse_other_backend(existing: _Existing, requested: str | None) -> None:
+    """Refuse a credential backend asked for (``MB_CONNECT_SECRET_BACKEND``)
+    that differs from the store this connection is recorded in: the renewal
+    writes to the recorded store, so the request would be ignored."""
+
+    recorded = existing.grant.get("backend") or existing.token.get("backend")
+    if not recorded:
+        return
+    raw = requested if requested is not None else os.environ.get("MB_CONNECT_SECRET_BACKEND")
+    if raw is None or not raw.strip():
+        return
+    try:
+        chosen = select_secret_backend(raw)
+    except (ValueError, CredentialStoreError):
+        chosen = ""
+    if chosen == recorded:
+        return
+    # A hand-edited config could hold anything; name only a known backend.
+    name = recorded if recorded in SUPPORTED_BACKENDS else "the recorded store"
+    connect_mod._refuse(
+        "oauth_backend_kept",
+        f"this repo's Google connection is stored in {name}, and renewing it writes to "
+        "that same store, so the credential backend asked for (MB_CONNECT_SECRET_BACKEND) "
+        f"would be ignored. Unset it, or set it to {name}. Nothing was changed.",
+    )
 
 
 def _stored_client(existing: _Existing) -> OAuthClient | None:
@@ -531,7 +579,7 @@ def bootstrap(
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
     replace_access_token: bool = False,
     account_label: str = "",
-    scope: str = "repo",
+    scope: str = "",
     secret_backend: str | None = None,
     emit: Callable[[str], None] | None = None,
     opener: Opener | None = None,
@@ -580,7 +628,16 @@ def bootstrap(
     if paste and not _stdin_is_tty(stdin):
         raise go.GoogleOAuthError("paste_needs_tty")
     if existing.entry:
-        normalized_scope = str(existing.entry.get("scope") or normalized_scope)
+        recorded_scope = str(existing.entry.get("scope") or "repo")
+        if scope.strip() and normalized_scope != recorded_scope:
+            connect_mod._refuse(
+                "oauth_scope_kept",
+                f"this repo's Google connection is recorded in {recorded_scope} scope, and "
+                f"renewing it keeps that scope, so --scope {normalized_scope} would be ignored. "
+                "Re-run without --scope. Nothing was changed.",
+            )
+        normalized_scope = recorded_scope
+        _refuse_other_backend(existing, secret_backend)
 
     tokens = _sign_in(
         client,
@@ -722,6 +779,9 @@ def _check_after_sign_in(
                 provider.id, target, _credential_deadline=deadline
             ),
             access_token=access_token,
+            # The sign-in has just written .mb/connect.yaml at the person's
+            # request, so its check is recorded there even when git tracks it.
+            record_in_tracked_config=True,
         )
     except Exception as exc:  # the sign-in is stored; never let the check undo that
         return {
@@ -1009,7 +1069,9 @@ def _record_read_state(target: Path, grant_ref: str, *, reauth_required: bool) -
             validation["repair_command"] = REAUTH_COMMAND
             validation["rule"] = STATE_REAUTH_REQUIRED
         entry["validation"] = validation
-        if isinstance(repo_entry, dict):
+        if isinstance(repo_entry, dict) and not connect_mod.config_tracked_by_git(target):
+            # A tracked .mb/connect.yaml is left as it is; the read itself
+            # still reports reauth_required with its repair.
             connect_mod._write_config(target, config)
         if entry.get("scope") == "user" or not isinstance(repo_entry, dict):
             stored = connect_mod._read_user_scope()["repos"].get(repo_id)

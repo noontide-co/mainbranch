@@ -204,11 +204,15 @@ def _range(start: str, end: str) -> tuple[str, str]:
 
 
 def _names(raw: list[str]) -> list[str]:
-    """Comma-separated or repeated option values, in order, without blanks."""
+    """Comma-separated or repeated option values, in order, without blanks.
+
+    Only spaces around a name are trimmed. A newline, tab or other character
+    stays in the name, so the name check refuses it.
+    """
 
     found: list[str] = []
     for item in raw:
-        found.extend(part.strip() for part in item.split(",") if part.strip())
+        found.extend(part.strip(" ") for part in item.split(",") if part.strip(" "))
     return found
 
 
@@ -370,6 +374,12 @@ def _inspection_parts(value: str) -> urllib.parse.SplitResult:
     except ValueError:
         raise bad_format from None
     host = (parsed.hostname or "").lower()
+    if parsed.scheme.lower() in {"http", "https"} and (not host.isascii() or host.endswith(".")):
+        raise ReadRefusal(
+            "url_format",
+            "--url must use the host's punycode (xn--) form with no trailing dot, as Search "
+            "Console records it, such as https://www.xn--bcher-kva.example/page.",
+        )
     if (
         parsed.scheme.lower() not in {"http", "https"}
         or not parsed.netloc
@@ -885,9 +895,17 @@ def _issues(value: Any, keys: tuple[str, ...]) -> list[dict[str, Any]]:
 
 
 def _inspection_link(value: Any) -> str | None:
+    """Google's link to the result, only as one plain ``https://search.google.com/`` token."""
+
     if not isinstance(value, str) or len(value) > STRING_MAX:
         return None
-    if not value.startswith(INSPECTION_LINK_PREFIX) or _CONTROL_RE.search(value):
+    if (
+        not value.startswith(INSPECTION_LINK_PREFIX)
+        or any(ch.isspace() for ch in value)
+        or _CONTROL_RE.search(value)
+        or _BIDI_RE.search(value)
+        or _LINE_SEPARATOR_RE.search(value)
+    ):
         return None
     parsed = urllib.parse.urlsplit(value)
     if parsed.hostname != "search.google.com" or "@" in parsed.netloc:
@@ -1154,6 +1172,14 @@ def sc_inspect(repo: str | Path, *, url: str) -> tuple[dict[str, Any], int]:
         conn = connect(SEARCH_CONSOLE, repo, before_mint=lambda site: inspection_url(url, site))
         endpoint, body = sc_inspect_request(conn.site, url)
         payload = _call(conn, "POST", endpoint, body, quota_advice=INSPECT_QUOTA_ADVICE)
+        result = payload.get("inspectionResult")
+        if result is not None and not isinstance(result, dict):
+            # A result that is there but not an object is not a documented answer.
+            # No result at all still reads as "none returned".
+            raise ReadFailure(
+                "search_console_response_malformed",
+                f"{PRODUCT_NAMES[SEARCH_CONSOLE]} returned an unreadable answer; try again later.",
+            )
     except (ReadRefusal, ReadFailure) as exc:
         return failure_result(exc)
     return shape_sc_inspect(payload, site=conn.site, url=url), 0

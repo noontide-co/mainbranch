@@ -286,6 +286,62 @@ def test_doctor_required_update_unknown_install_is_mode_neutral(
     assert "with the tool that installed it" in version_check["detail"]
 
 
+def test_doctor_flags_final_release_for_rc_install(tmp_path: Path, monkeypatch) -> None:
+    # #1043: version_key dropped the pre-release marker, so an rc install
+    # treated the final release as equal and never saw the update. The
+    # mocked dict uses severity "current" so the fallback comparison in
+    # _mainbranch_version_check (not the severity branch) is exercised.
+    monkeypatch.setattr(doctor_mod, "install_mode", lambda: "wheel")
+    monkeypatch.setattr(
+        doctor_mod,
+        "package_update_status",
+        lambda repo: {
+            "installed": "0.6.3rc1",
+            "latest": "0.6.3",
+            "minimum_supported": "0.5.0",
+            "severity": "current",
+            "command": "mb update",
+            "post_update_commands": [],
+            "reason": "Installed version is current.",
+        },
+    )
+
+    report = doctor_mod.run(path=str(tmp_path))
+
+    version_check = next(
+        check for check in report["checks"] if check["name"] == "mainbranch-version"
+    )
+    assert version_check["ok"] is False
+    assert version_check["severity"] == "warn"
+    assert "installed 0.6.3rc1, latest is 0.6.3" in version_check["detail"]
+
+
+def test_doctor_does_not_flag_rc_for_final_install(tmp_path: Path, monkeypatch) -> None:
+    # #1043: the reverse must hold too: a final install is never told that
+    # an rc of the same release is an update.
+    monkeypatch.setattr(doctor_mod, "install_mode", lambda: "wheel")
+    monkeypatch.setattr(
+        doctor_mod,
+        "package_update_status",
+        lambda repo: {
+            "installed": "0.6.3",
+            "latest": "0.6.3rc1",
+            "minimum_supported": "0.5.0",
+            "severity": "current",
+            "command": "mb update",
+            "post_update_commands": [],
+            "reason": "Installed version is current.",
+        },
+    )
+
+    report = doctor_mod.run(path=str(tmp_path))
+
+    version_check = next(
+        check for check in report["checks"] if check["name"] == "mainbranch-version"
+    )
+    assert version_check["ok"] is True
+
+
 def test_doctor_command_still_runs_after_repair_subcommand_added(tmp_path: Path) -> None:
     result = runner.invoke(app, ["doctor", str(tmp_path), "--json"])
 

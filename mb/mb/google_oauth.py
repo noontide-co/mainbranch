@@ -50,6 +50,8 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from typing import Any, TextIO
 
+from mb import http_safe
+
 SCOPE_SEARCH_CONSOLE = "https://www.googleapis.com/auth/webmasters.readonly"
 SCOPE_ANALYTICS = "https://www.googleapis.com/auth/analytics.readonly"
 SCOPES: tuple[str, ...] = (SCOPE_SEARCH_CONSOLE, SCOPE_ANALYTICS)
@@ -117,6 +119,22 @@ _RULE_MESSAGES: dict[str, str] = {
     "paste_needs_tty": "Paste mode needs an interactive terminal; run it in a normal terminal.",
     "paste_empty": "No sign-in URL was pasted.",
     "token_request_failed": "Google's token endpoint refused the request.",
+    # The code exchange at sign-in, by the OAuth `error` code (never its text).
+    "oauth_client_rejected": (
+        "Google refused the OAuth client (invalid_client): it was deleted, or the client "
+        "file is out of date."
+    ),
+    "oauth_client_unauthorized": (
+        "Google says this OAuth client may not be used for this sign-in "
+        "(unauthorized_client); check that it is a Desktop app client."
+    ),
+    "oauth_scope_rejected": (
+        "Google refused the read-only Search Console and Analytics scopes (invalid_scope)."
+    ),
+    "authorization_code_rejected": (
+        "Google refused the authorization code (invalid_grant): it expired, was already "
+        "used, or came from another sign-in attempt."
+    ),
     "token_unreachable": "Google's token endpoint could not be reached.",
     "token_response_malformed": "Google's token endpoint returned an unreadable response.",
     "token_unexpected_redirect": (
@@ -481,18 +499,6 @@ class LoopbackReceiver:
 Sender = Callable[[str, bytes, Mapping[str, str], float], tuple[int, bytes]]
 
 
-class _NoRedirect(urllib.request.HTTPRedirectHandler):
-    """Refuse every redirect: the request carries a bearer token or a form
-    body with secrets, and neither may reach a second URL. The 3xx comes
-    back as an ordinary non-ok answer."""
-
-    def redirect_request(self, *args: Any, **kwargs: Any) -> None:
-        return None
-
-
-_OPENER = urllib.request.build_opener(_NoRedirect)
-
-
 def _urllib_sender(
     url: str,
     body: bytes,
@@ -507,7 +513,9 @@ def _urllib_sender(
     data = body if method == "POST" else None
     request = urllib.request.Request(url, data=data, headers=dict(headers), method=method)
     try:
-        with _OPENER.open(request, timeout=timeout) as response:
+        # The request carries a bearer token or a form body with secrets, so a
+        # 3xx is never followed: it comes back as an ordinary non-ok answer.
+        with http_safe.open_no_redirect(request, timeout=timeout) as response:
             return int(getattr(response, "status", 0) or 0), response.read(max_bytes)
     except urllib.error.HTTPError as exc:
         payload = b""
@@ -670,17 +678,35 @@ class TokenResponse(Mapping[str, Any]):
     __str__ = __repr__
 
 
-def _token_call(fields: dict[str, str], sender: Sender | None) -> TokenResponse:
+# Code-exchange refusals by the OAuth `error` code: (rule, state). The refresh
+# grant keeps `token_request_failed`; `mb connect token` words those itself.
+_EXCHANGE_REFUSALS: dict[str, tuple[str, str]] = {
+    "invalid_client": ("oauth_client_rejected", STATE_INVALID),
+    "unauthorized_client": ("oauth_client_unauthorized", STATE_INVALID),
+    "invalid_scope": ("oauth_scope_rejected", STATE_INVALID),
+    # At sign-in this is the one-time code, not a stored grant, so a new
+    # sign-in (not `--reauth`) is the repair.
+    "invalid_grant": ("authorization_code_rejected", STATE_INVALID),
+}
+
+
+def _token_call(
+    fields: dict[str, str], sender: Sender | None, *, exchange: bool = False
+) -> TokenResponse:
     result = http_post_form(TOKEN_ENDPOINT, fields, sender=sender)
     if not result.ok:
         status = result.upstream.get("http_status")
+        state = result.state
         if not result.upstream["response_received"]:
             rule = "token_unreachable"
         elif isinstance(status, int) and 300 <= status < 400:
             rule = "token_unexpected_redirect"
         else:
             rule = "token_request_failed"
-        raise GoogleOAuthError(rule, result.state, upstream=result.upstream)
+            code = str(result.upstream.get("error_code") or "")
+            if exchange and state != STATE_UNVALIDATED and code in _EXCHANGE_REFUSALS:
+                rule, state = _EXCHANGE_REFUSALS[code]
+        raise GoogleOAuthError(rule, state, upstream=result.upstream)
     access_token = result.payload.get("access_token")
     if not isinstance(access_token, str) or not access_token:
         raise GoogleOAuthError(
@@ -711,7 +737,7 @@ def exchange_code(
     }
     if client_secret:
         fields["client_secret"] = client_secret
-    return _token_call(fields, sender)
+    return _token_call(fields, sender, exchange=True)
 
 
 def refresh_access_token(
