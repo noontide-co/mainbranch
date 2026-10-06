@@ -598,7 +598,9 @@ def _codex_new_repo_files(
 
     `tracked_changes` names only files git already tracks, so a missing
     AGENTS.md is not in it. A new AGENTS.md still shows in `git status`, so it
-    needs the same yes as a tracked write.
+    needs the same yes as a tracked write. A dangling, untracked AGENTS.md link
+    counts too: the apply replaces the link itself (`replace_link`), so the
+    inside-repo check resolves the parent folder, never the link.
     """
     repo_real = os.path.realpath(repo)
     seen = {item["path"] for item in known}
@@ -610,15 +612,16 @@ def _codex_new_repo_files(
             if not isinstance(operation, dict) or operation.get("op") != "write":
                 continue
             path = str(operation.get("path") or "")
-            if not path or os.path.lexists(path):
+            if not path or os.path.exists(path):
                 continue
-            real = os.path.realpath(path)
+            real = os.path.join(os.path.realpath(os.path.dirname(path)), os.path.basename(path))
             if not real.startswith(repo_real + os.sep):
                 continue
             rel = os.path.relpath(real, repo_real).replace(os.sep, "/")
             if rel not in seen:
                 seen.add(rel)
-                found.append({"path": rel, "op": "create"})
+                op = "replace_link" if os.path.islink(path) else "create"
+                found.append({"path": rel, "op": op})
     return found
 
 
@@ -1339,7 +1342,7 @@ def _render_surface_plan(result: dict[str, Any]) -> None:
     if not isinstance(planned, dict) or not planned.get("apply_commands"):
         return
     files = ", ".join(str(path) for path in planned.get("tracked_files", []))
-    print(f"left tracked files unchanged: {files}")
+    print(f"left repo files unchanged: {files}")
 
 
 def _render_operator_actions(result: dict[str, Any]) -> None:

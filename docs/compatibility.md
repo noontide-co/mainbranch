@@ -339,7 +339,8 @@ tracked file:
 
 - at an interactive terminal, it lists those files and asks once (default no);
 - without one, and always with `--json`, it changes no tracked file and
-  creates no `AGENTS.md` that is missing (#1053). It reports the plan in
+  creates no `AGENTS.md` that is missing, nor replaces a dangling
+  `AGENTS.md` link (#1053). It reports the plan in
   `surface_refresh.planned` and lists the apply commands in
   `operator_actions`, not `next_actions`. Applying them is the operator's
   step.
@@ -347,7 +348,8 @@ tracked file:
 `surface_refresh.planned` has `consent` (`not_needed`, `no_terminal`,
 `declined` or `approved`), `tracked_files` (the repo files that would change),
 `tracked_changes` (each with its `op`: `write`, `delete`, `delete_tree`,
-`create_link`, `replace_link`, or `create` for a missing `AGENTS.md`) and `apply_commands` (what is left to run).
+`create_link`, `replace_link`, or `create` for a missing `AGENTS.md`; a dangling `AGENTS.md` link is
+`replace_link`) and `apply_commands` (what is left to run).
 After applying, `mb update` compares the business repo's `git status` with what
 it saw before. This check is a backstop for a case the plan missed, not part
 of the guarantee: if a tracked file changed that was not approved, it sets `ok`

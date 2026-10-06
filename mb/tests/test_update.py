@@ -3066,3 +3066,58 @@ def test_operator_actions_doc_example_matches_real_entries(
     for command, item in shown.items():
         assert set(item) == set(real[command]), command
         assert item["changes"] == real[command]["changes"], command
+
+
+def _dangling_agents_link(repo: Path, tmp_path: Path, where: str) -> str:
+    """An untracked AGENTS.md link to a missing file; returns its target."""
+    _without_agents_md(repo)
+    target = "docs/nowhere.md" if where == "inside" else str(tmp_path / "elsewhere" / "x.md")
+    (repo / "AGENTS.md").symlink_to(target)
+    return target
+
+
+@pytest.mark.parametrize("where", ["inside", "outside"])
+def test_unattended_update_leaves_a_dangling_agents_md_link(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path, where: str
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    target = _dangling_agents_link(business_repo, tmp_path, where)
+
+    result = update_mod.run(repo=business_repo, interactive=False)
+
+    link = business_repo / "AGENTS.md"
+    assert link.is_symlink()
+    assert os.readlink(link) == target
+    assert not any("--apply" in args for args in calls)
+    assert result["ok"] is True, result["errors"]
+    planned = result["surface_refresh"]["planned"]
+    assert planned["consent"] == "no_terminal"
+    assert planned["tracked_files"] == ["AGENTS.md"]
+    assert {"path": "AGENTS.md", "op": "replace_link"} in planned["tracked_changes"]
+    codex_apply = f"mb doctor repair --repo {shlex.quote(str(business_repo))} --apply --only codex"
+    entries = [item for item in result["operator_actions"] if item["command"] == codex_apply]
+    assert len(entries) == 1
+    assert entries[0]["changes"] == ["AGENTS.md"]
+
+
+def test_terminal_yes_replaces_a_dangling_agents_md_link(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    _dangling_agents_link(business_repo, tmp_path, "outside")
+    asked: list[list[str]] = []
+
+    def say_yes(repo: Path, files: list[str]) -> bool:
+        asked.append(files)
+        return True
+
+    result = update_mod.run(repo=business_repo, interactive=True, confirm_surfaces=say_yes)
+
+    assert asked == [["AGENTS.md (replace link)"]]
+    assert result["ok"] is True, result["errors"]
+    link = business_repo / "AGENTS.md"
+    assert not link.is_symlink()
+    assert link.is_file()
+    assert not (tmp_path / "elsewhere").exists()
