@@ -257,6 +257,7 @@ If the operator cannot articulate the shape, ask: "What goal are you trying to h
 | publish | Stage, commit, push | Current shape publish step |
 | instrumentation | Analytics, tags, booking/form widgets, and event mapping | [`references/site-measurement.md`](references/site-measurement.md) |
 | check | Paid-traffic readiness | [`references/site-measurement.md`](references/site-measurement.md) |
+| search data | Which queries or pages bring clicks, is a page indexed, sitemap status, sessions | [`references/search-data.md`](references/search-data.md) |
 | recover | Resume after compaction | [`references/site-recovery.md`](references/site-recovery.md) |
 
 ## Reference Map
@@ -270,6 +271,7 @@ If the operator cannot articulate the shape, ask: "What goal are you trying to h
   channel, account, person, push, and results model.
 - [`references/sales-video.md`](references/sales-video.md) - sales video, VSL, about-page video, lander video, and embedded pitch scripts for owned surfaces.
 - [`references/site-measurement.md`](references/site-measurement.md) - `mb site check` and paid-traffic readiness states.
+- [`references/search-data.md`](references/search-data.md) - real Search Console and GA4 numbers through `mb google ... --json` (queries, indexing, sitemaps, sessions); recorded site and property only.
 - [`references/seo.md`](references/seo.md) - SEO doctrine: content silos, keyword selection math, PageSpeed thresholds, blog/backlink rules, AI search, the API-first data layer, and the fulfillment loop.
 - [`references/site-recovery.md`](references/site-recovery.md) - compaction recovery and scope boundaries.
 

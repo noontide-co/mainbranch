@@ -316,7 +316,7 @@ Detect what the user wants from natural language. Route internally to the right 
 | "I want ideas for an ad", "brainstorm" | Ideation | Account check (if available) + concept generation |
 | "research winning ads", "mine reviews", "analyze competitors first" | Research / Mining | Route to `/mb-think` winning-ad research before generation |
 | "launch ads", "paid traffic plan", "Google Ads launch", "$X/day for Y days" | Launch Plan | Provider-safe plan/check mode, no account mutation |
-| "analytics", "instrumentation", "GA4", "Google Analytics", "GTM", "Meta pixel", "HubSpot form", "Calendly", "booking link", "form test" | Instrumentation | Route through `/mb-site` and `mb site check`; no provider mutation |
+| "analytics", "instrumentation", "GA4", "Google Analytics", "GTM", "Meta pixel", "HubSpot form", "Calendly", "booking link", "form test" | Instrumentation | Route through `/mb-site` and `mb site check`; no provider mutation. Real GA4 sessions/conversions: `mb google ga4 report --json`, see [references/ga4-search-reads.md](references/ga4-search-reads.md) |
 | "check launch", "how are ads doing", "continue or kill" | Launch Check | Read status/outcomes/operator exports, recommend continue/change/stop |
 | "weekly pack", "daily read", "stop rules", "day-14 verdict" | Launch Plan / Check | Meta pack loop: [references/meta-pack-loop.md](references/meta-pack-loop.md) |
 | "Google Ads daily check", "search terms", "negatives" | Launch Check | Scored rubric: [references/google-ads-check.md](references/google-ads-check.md) |

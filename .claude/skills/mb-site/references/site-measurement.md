@@ -60,6 +60,14 @@ Before paid launch, name the manual smoke that remains:
 - reconcile provider-reported human clicks with site telemetry when live traffic
   looks crawler-heavy or inflated.
 
+## Real Numbers
+
+For traffic and conversions that actually happened, use `mb google ga4 report --json`;
+for search clicks and indexing, `mb google sc query|inspect|sitemaps list --json`.
+The site and property are the ones the repo recorded. If the repo is not
+signed in, the person runs `mb connect google --oauth`, or you ask for a
+manual export. Details: [search-data.md](search-data.md).
+
 ## Secrets Boundary
 
 Never ask the operator to paste Google Ads, GTM, OAuth, or API tokens into chat.
