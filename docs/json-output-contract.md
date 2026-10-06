@@ -135,7 +135,8 @@ Entries today:
   are not proven. The repair removes only proven
   files and never touches anything else, including a generated file a person
   added to (#1062). Each file is proven again right before it is removed, so a
-  file changed after the plan stays and is listed in the apply's `kept`. A
+  file changed after the plan, or reached through a folder that became a link
+  after the plan, stays and is listed in the apply's `kept`. A
   linked folder above a Codex path (`.agents/`, or a folder under it) is not
   walked: the link is listed in `kept`, the `reason` says it is a link, and
   nothing under it is touched (#1067). While
@@ -190,13 +191,16 @@ Entries today:
 }
 ```
 
-In `mb update` entries and the Codex entries of `mb doctor repair`, `<path>`
-is the business repo's absolute path, shell-quoted, so the command runs from
-any directory; the `--repo` flag is left out only when that repo is the
-current directory. The Codex `repair` and `repair_command` strings in
-`mb status` and `mb doctor` follow the same rule (#1072); the workflow
-inventory's `install_hint`, which describes no repo, keeps the bare
-`mb doctor repair --apply --only codex`. The plugin-rail switch keeps
+In `mb update` entries, `<path>` is the business repo's absolute path,
+shell-quoted, so the command runs from any directory; the `--repo` flag is
+left out only when that repo is the current directory. The same rule applies
+to the Codex `operator_actions` entries of `mb doctor repair` and `mb init`
+(`codex-agents-md`, `codex-global-kept`, including their `manual_step`), and
+to the `repair` and `repair_command` strings in the Codex status blocks
+(`codex_cli` in `mb status` and `mb start`, the Codex checks in `mb doctor`)
+(#1072). Doctor's `actions[].command` stays the bare
+`mb doctor repair --apply --only codex`, as does the workflow inventory's
+`install_hint`, which describes no repo. The plugin-rail switch keeps
 `--repo .`. The list is empty when there is nothing for a person to run.
 `mb doctor repair --apply` never performs an operator action, and
 `mb doctor repair --only codex` lists only the Codex entries (it leaves the

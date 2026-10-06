@@ -3020,13 +3020,24 @@ def _owned_tree_cleanup(
     return operations, kept
 
 
-def _unlink_if_proven(path: Path) -> bool:
+def _link_on_the_way(base: Path, path: Path) -> bool:
+    """Whether `base`, or a folder between it and `path`, is now a link (#1067)."""
+
+    return path != base and (base.is_symlink() or _symlinked_ancestor(base, path) is not None)
+
+
+def _unlink_if_proven(path: Path, base: Path | None = None) -> bool:
     """Remove `path` only if its content is proven to be Main Branch's right now.
 
     Both applies, repo-local and global, prove each file again just before
-    removing it, so a file changed after the plan stays (#1067).
+    removing it, so a file changed after the plan stays (#1067). With `base`
+    (where the plan's walk started) it also stays when `base` or a folder
+    between them is now a link: the plan walked through none, so a link there
+    appeared after it, and the file is no longer where the plan saw it.
     """
 
+    if base is not None and _link_on_the_way(base, path):
+        return False
     if not _is_mainbranch_transitional_file(path):
         return False
     path.unlink()
@@ -3046,7 +3057,7 @@ def _remove_owned_entry(item: dict[str, Any]) -> bool:
         if path != root:
             return False
         path.unlink()  # a link is removed as a link, never followed
-    elif not _unlink_if_proven(path):
+    elif not _unlink_if_proven(path, root):
         return False
     parent = path.parent
     while parent == root or root in parent.parents:
@@ -3396,7 +3407,7 @@ def write_global_plugin_source() -> dict[str, Any]:
         for path in sorted(commands_dir.iterdir()):
             if path.name in expected_names:
                 continue
-            if _unlink_if_proven(path):
+            if _unlink_if_proven(path, root):
                 changed_paths.append(str(path))
             else:
                 kept.append(str(path))
@@ -3412,14 +3423,17 @@ def write_global_plugin_source() -> dict[str, Any]:
     }
 
 
-def _remove_generated_tree(path: Path) -> bool:
+def _remove_generated_tree(path: Path, target: Path) -> bool:
     """Remove a transitional path the plan found to hold only `mb` files.
 
     A link is removed as a link. A folder is never removed whole: each file is
     checked again and removed only when proven, then folders that are left
-    empty go; anything else stays with its folders.
+    empty go; anything else stays with its folders. Nothing is removed when a
+    folder between the repo and `path` has become a link since the plan (#1067).
     """
 
+    if _symlinked_ancestor(target, path) is not None:
+        return False
     if path.is_symlink():
         path.unlink()  # the link only, never the tree it points into
         return True
@@ -3427,7 +3441,7 @@ def _remove_generated_tree(path: Path) -> bool:
         for root, dirs, files in os.walk(path, topdown=False):
             base = Path(root)
             for name in files:
-                _unlink_if_proven(base / name)
+                _unlink_if_proven(base / name, target)
             for name in dirs:
                 folder = base / name
                 if not folder.is_symlink():
@@ -3438,7 +3452,7 @@ def _remove_generated_tree(path: Path) -> bool:
         except OSError:
             return False
         return True
-    return path.is_file() and _unlink_if_proven(path)
+    return path.is_file() and _unlink_if_proven(path, target)
 
 
 def _transitional_repo_paths() -> tuple[str, ...]:
@@ -3626,7 +3640,7 @@ def _transitional_cleanup(target: Path) -> tuple[list[dict[str, Any]], list[str]
 def _remove_transitional_file(path: Path, target: Path) -> bool:
     """Remove one `mb` file, then any folders it leaves empty, up to the repo."""
 
-    if not _unlink_if_proven(path):
+    if not _unlink_if_proven(path, target):
         return False
     parent = path.parent
     while parent != target and target in parent.parents:
@@ -3642,7 +3656,7 @@ def _apply_transitional_operation(item: dict[str, Any], target: Path) -> bool:
     path = Path(item["path"])
     if item["op"] == "delete":
         return _remove_transitional_file(path, target)
-    return _remove_generated_tree(path)
+    return _remove_generated_tree(path, target)
 
 
 def remove_repo_local_codex_plugin_files(repo: str | Path) -> list[str]:

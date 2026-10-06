@@ -202,6 +202,52 @@ def test_the_repo_apply_reports_a_file_changed_after_the_plan(
     assert ".agents/plugins/marketplace.json" in result["kept"]
 
 
+def _swap_for_link(folder: Path, outside: Path) -> list[Path]:
+    """Move `folder` to `outside` and leave a link to it in its place; return its files."""
+
+    outside.parent.mkdir(parents=True, exist_ok=True)
+    folder.rename(outside)
+    folder.symlink_to(outside, target_is_directory=True)
+    return sorted(path for path in outside.rglob("*") if path.is_file())
+
+
+def test_the_global_apply_keeps_files_whose_folder_became_a_link_after_the_plan(
+    roots: tuple[Path, Path], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plugin_root, _skills_root = roots
+    _place(plugin_root, _released_files("0.3.35", "plugin"))
+    commands = plugin_root / codex_mod.CODEX_PLUGIN_COMMANDS_RELATIVE_PATH
+    planned = codex_mod.global_skill_operations()
+    assert any(item["path"].startswith(str(commands) + os.sep) for item in planned)
+    moved = _swap_for_link(commands, tmp_path / "my-commands")
+    monkeypatch.setattr(codex_mod, "global_skill_operations", lambda: planned)
+
+    result = codex_mod.write_global_skill_source()
+
+    assert moved and all(path.is_file() for path in moved)
+    assert commands.is_symlink()
+    assert str(commands / "mb-start.md") in result["kept"]
+    assert not (plugin_root / codex_mod.CODEX_PLUGIN_MANIFEST_RELATIVE_PATH).exists()
+
+
+def test_the_repo_apply_keeps_files_whose_agents_folder_became_a_link_after_the_plan(
+    repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _place(repo, _released_files("0.3.30", "repo"))
+    plan = codex_mod.agents_md_plan(repo)
+    removals = [item["rel"] for item in plan["operations"] if item["op"] != "write"]
+    assert removals
+    moved = _swap_for_link(repo / ".agents", tmp_path / "shared-agents")
+    monkeypatch.setattr(codex_mod, "agents_md_plan", lambda *args, **kwargs: plan)
+
+    result = codex_mod.write_agents_md(repo)
+
+    assert moved and all(path.is_file() for path in moved)
+    assert (repo / ".agents").is_symlink()
+    assert sorted(result["kept"]) == sorted(removals)
+    assert not any(path.startswith("removed:") for path in result["changed_paths"])
+
+
 # --- 3. Walks stop at a linked folder ----------------------------------------
 
 

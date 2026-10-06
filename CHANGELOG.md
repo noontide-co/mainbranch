@@ -38,8 +38,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   listed in `codex-global-kept` for you to look at (#1067).
 - The Codex cleanup under your home now checks each file's content again
   right before deleting it, as the cleanup in your business repo already
-  did. A file that changed after the plan stays and is listed as kept, in
-  both places (#1067).
+  did. A file that changed after the plan, or whose folder became a link
+  after the plan, stays and is listed as kept, in both places (#1067).
 - The Codex cleanup no longer walks through a linked folder: a linked
   `.agents/` folder in your business repo (or a linked folder inside it), or
   a linked global plugin folder or its `mainbranch` folder under your home.
@@ -52,9 +52,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   home that the Codex cleanup keeps: the same `codex-global-kept` entry
   `mb doctor repair --plan --only codex` shows, in `operator_actions` and as a
   warning (#1067).
-- The Codex repair commands that `mb doctor`, `mb status` and `mb init` print
-  name your business repo with `--repo <path>` when you are not inside it,
-  including the manual step for an `AGENTS.md` they will not change (#1072).
+- The Codex steps for a person (`operator_actions` from `mb doctor repair`
+  and `mb init`, with their manual steps, including the one for an
+  `AGENTS.md` Main Branch will not change) and the Codex `repair` hints in
+  `mb status`, `mb start` and `mb doctor` checks name your business repo with
+  `--repo <path>` when you are not inside it. Doctor's own action commands
+  are unchanged for now (#1072).
 
 ## [0.6.4] - 2026-10-06
 
