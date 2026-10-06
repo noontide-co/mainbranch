@@ -545,6 +545,116 @@ def test_doctor_repair_only_claude_filters_codex_actions(
     assert all(not action["id"].startswith("codex-") for action in payload["actions"])
 
 
+def _agents_md_without_end_marker(repo: Path) -> str:
+    """Current guidance whose end marker a person deleted, plus their notes (#1052)."""
+    text = (repo / "AGENTS.md").read_text(encoding="utf-8")
+    # Guidance from an older template, so the repair is due.
+    stale = text.replace(codex_mod.guidance_template_hash(), "0000000000000000")
+    broken = stale.replace(codex_mod.AGENTS_MANAGED_END + "\n", "") + "\n## Our notes\n\nKeep.\n"
+    (repo / "AGENTS.md").write_text(broken, encoding="utf-8")
+    return broken
+
+
+def _codex_repair(repo: Path, mode: str) -> dict[str, Any]:
+    result = runner.invoke(
+        app, ["doctor", "repair", "--repo", str(repo), mode, "--only", "codex", "--json"]
+    )
+    assert result.exit_code in {0, 1}, result.output
+    payload: dict[str, Any] = json.loads(result.stdout)
+    return payload
+
+
+def test_doctor_codex_repair_that_would_refuse_is_an_operator_action(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _prepare_codex_global_skill_roots(tmp_path, monkeypatch)
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    broken = _agents_md_without_end_marker(repo)
+
+    plan = _codex_repair(repo, "--plan")
+
+    actions = {action["id"]: action for action in plan["actions"]}
+    agents_action = actions["codex-agents-md"]
+    assert agents_action["safe_to_apply"] is False
+    assert agents_action["audience"] == "operator_decision"
+    assert agents_action["writes"] == []
+    assert agents_action["operations"] == []
+    assert [item["code"] for item in agents_action["refused"]] == ["missing_end_marker"]
+    entries = [item for item in plan["operator_actions"] if item.get("id") == "codex-agents-md"]
+    assert len(entries) == 1
+    entry = entries[0]
+    assert entry["command"] == "mb doctor repair --apply --only codex"
+    assert "no end marker" in entry["reason"]
+    assert codex_mod.AGENTS_MANAGED_END in entry["manual_step"]
+    assert entry["manual_step"] in entry["note"]
+
+    applied = _codex_repair(repo, "--apply")
+
+    assert (repo / "AGENTS.md").read_text(encoding="utf-8") == broken
+    agents_applied = next(
+        item for item in applied["applied_actions"] if item["id"] == "codex-agents-md"
+    )
+    assert agents_applied["applied"] is False
+    assert agents_applied["safe_to_apply"] is False
+    assert agents_applied["result"]["refused"][0]["code"] == "missing_end_marker"
+    assert any(item.get("id") == "codex-agents-md" for item in applied["operator_actions"])
+
+
+def test_doctor_codex_repair_keeping_a_persons_file_is_an_operator_action(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _prepare_codex_global_skill_roots(tmp_path, monkeypatch)
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    folder = repo / ".agents" / "skills" / "main-branch"
+    folder.mkdir(parents=True)
+    (folder / "my-notes.md").write_text("Mine.\n", encoding="utf-8")
+    (folder / "SKILL.md").write_text(
+        codex_mod.render_codex_global_skill_md("main-branch"), encoding="utf-8"
+    )
+
+    plan = _codex_repair(repo, "--plan")
+
+    agents_action = next(item for item in plan["actions"] if item["id"] == "codex-agents-md")
+    assert agents_action["safe_to_apply"] is False
+    assert agents_action["kept"] == [".agents/skills/main-branch/my-notes.md"]
+    assert agents_action["operations"] == [
+        {"op": "delete", "path": str((folder / "SKILL.md").resolve())}
+    ]
+    entry = next(item for item in plan["operator_actions"] if item.get("id") == "codex-agents-md")
+    assert entry["changes"] == [".agents/skills/main-branch/SKILL.md"]
+    assert ".agents/skills/main-branch/my-notes.md" in entry["reason"]
+
+    _codex_repair(repo, "--apply")
+
+    assert (folder / "my-notes.md").read_text(encoding="utf-8") == "Mine.\n"
+    assert not (folder / "SKILL.md").exists()
+
+
+def test_doctor_codex_repair_of_a_plain_agents_md_stays_an_agent_repair(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _prepare_codex_global_skill_roots(tmp_path, monkeypatch)
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    (repo / "AGENTS.md").write_text("# Our notes\n\nKeep.\n", encoding="utf-8")
+
+    plan = _codex_repair(repo, "--plan")
+
+    agents_action = next(item for item in plan["actions"] if item["id"] == "codex-agents-md")
+    assert agents_action["safe_to_apply"] is True
+    assert agents_action["refused"] == []
+    assert agents_action["kept"] == []
+    assert plan["operator_actions"] == []
+
+    _codex_repair(repo, "--apply")
+
+    text = (repo / "AGENTS.md").read_text(encoding="utf-8")
+    assert text.startswith(codex_mod.AGENTS_MANAGED_BEGIN)
+    assert text.endswith("# Our notes\n\nKeep.\n")
+
+
 def test_doctor_repair_rejects_mixed_agent_scope(tmp_path: Path) -> None:
     result = runner.invoke(
         app,
@@ -929,7 +1039,8 @@ def test_doctor_repair_removes_stale_repo_local_codex_plugin(tmp_path: Path) -> 
     init_run(path=str(repo), name="Acme")
     command = repo / ".agents" / "plugins" / "main-branch-owner-loop" / "commands" / "mb-start.md"
     command.parent.mkdir(parents=True, exist_ok=True)
-    command.write_text("# stale\n", encoding="utf-8")
+    # #1052: shaped like the shim `mb` wrote; only those files are removed.
+    command.write_text("# /mb-start\n\nUse the Main Branch owner-loop skill.\n", encoding="utf-8")
 
     plan_result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
     assert plan_result.exit_code in {0, 1}

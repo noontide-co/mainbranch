@@ -591,6 +591,16 @@ def _codex_tracked_changes(plan: dict[str, Any]) -> list[dict[str, str]] | None:
     return changes
 
 
+def _codex_blocked_actions(plan: dict[str, Any]) -> list[dict[str, Any]]:
+    """The plan's Codex AGENTS.md steps that need a person first (#1052)."""
+
+    return [
+        item
+        for item in plan.get("operator_actions", [])
+        if isinstance(item, dict) and item.get("id") == "codex-agents-md"
+    ]
+
+
 def _change_label(change: dict[str, str]) -> str:
     label = CHANGE_LABELS.get(change["op"])
     return f"{change['path']} ({label})" if label else change["path"]
@@ -739,9 +749,13 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
                 "--apply --only codex" in str(item.get("command", ""))
                 for item in result["operator_actions"]
             ):
-                changes = [str(op["rel"]) for op in codex_mod.agents_md_operations(repo)]
+                agents_plan = codex_mod.agents_md_plan(repo)
+                # #1052: a repair that needs a manual step first says which.
+                blocked = codex_mod.agents_md_operator_action(agents_plan)
+                changes = [str(op["rel"]) for op in agents_plan["operations"]]
                 result["operator_actions"].append(
-                    operator_action(
+                    blocked
+                    or operator_action(
                         codex_mod.CODEX_REPAIR_COMMAND,
                         changes or ["AGENTS.md"],
                         SURFACE_CODEX_APPLY_NOTE,
@@ -878,6 +892,11 @@ def _refresh_surfaces(
             "`mb update` again."
         )
         return
+    # #1052: a Codex AGENTS.md repair that would refuse, or leave a person's
+    # files behind, needs a manual step first. No consent prompt, no write.
+    codex_blocked = _codex_blocked_actions(codex_plan)
+    if codex_blocked:
+        codex_changes = []
     link_writes = list(dict.fromkeys(item["path"] for item in link_changes))
     codex_writes = list(dict.fromkeys(item["path"] for item in codex_changes))
     tracked_changes = list(
@@ -895,7 +914,7 @@ def _refresh_surfaces(
         else:
             planned["consent"] = "no_terminal"
     apply_link = approved or not link_writes
-    apply_codex = approved or not codex_writes
+    apply_codex = (approved or not codex_writes) and not codex_blocked
 
     link_apply_command = f"mb skill link{_repo_flag(target_repo)}"
     codex_apply_command = f"mb doctor repair{_repo_flag(target_repo)} --apply --only codex"
@@ -931,7 +950,30 @@ def _refresh_surfaces(
             result["errors"].extend(link_errors)
             return
 
-    if not apply_codex:
+    if codex_blocked:
+        surface["codex"] = {
+            "ok": True,
+            "applied": False,
+            "blocked": True,
+            "reason": " ".join(str(item.get("reason") or "") for item in codex_blocked),
+            "tracked_writes": [],
+            "command": codex_apply_command,
+        }
+        result["warnings"].extend(str(item.get("note") or "") for item in codex_blocked)
+        result["next_actions"].append(
+            f"mb doctor repair{_repo_flag(target_repo)} --plan --only codex"
+        )
+        for item in codex_blocked:
+            entry = operator_action(
+                codex_apply_command,
+                [str(path) for path in item.get("changes", [])],
+                str(item.get("note") or ""),
+            )
+            for key in ("id", "reason", "manual_step"):
+                if key in item:
+                    entry[key] = item[key]
+            result["operator_actions"].append(entry)
+    elif not apply_codex:
         surface["codex"] = {
             "ok": True,
             "applied": False,
@@ -994,7 +1036,7 @@ def _refresh_surfaces(
             else SURFACE_PLAN_NO_TERMINAL_MESSAGE
         )
         result["warnings"].append(template.format(files=", ".join(tracked_files)))
-        if not apply_codex:
+        if not apply_codex and not codex_blocked:
             # Review before apply: the plan names every file the repair writes.
             result["next_actions"].append(
                 f"mb doctor repair{_repo_flag(target_repo)} --plan --only codex"
@@ -1006,7 +1048,7 @@ def _refresh_surfaces(
             result["operator_actions"].append(
                 operator_action(link_apply_command, link_writes, SURFACE_LINK_APPLY_NOTE)
             )
-        if not apply_codex:
+        if not apply_codex and not codex_blocked:
             result["operator_actions"].append(
                 operator_action(codex_apply_command, codex_writes, SURFACE_CODEX_APPLY_NOTE)
             )
