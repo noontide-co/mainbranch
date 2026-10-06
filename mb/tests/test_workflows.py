@@ -651,7 +651,11 @@ def test_codex_global_plugin_source_generates_slash_commands_and_removes_visible
         / "SKILL.md"
     )
     old_skill.parent.mkdir(parents=True, exist_ok=True)
-    old_skill.write_text("# stale\n", encoding="utf-8")
+    # The shape `mb` wrote; a file without Main Branch text would be kept (#1056).
+    old_skill.write_text(
+        "---\nname: main-branch-owner-loop\n---\n\n# Main Branch owner loop for Codex\n",
+        encoding="utf-8",
+    )
 
     result = codex_mod.write_global_plugin_source()
 
@@ -723,7 +727,10 @@ def test_codex_global_skill_upgrade_removes_retired_playbook_skills(
     assert result["status"]["ok"] is True
     for name in codex_mod.CODEX_RETIRED_GLOBAL_SKILL_NAMES:
         assert not (codex_mod.global_skill_source_root() / name).exists()
-        assert str(codex_mod.global_skill_source_root() / name) in result["changed_paths"]
+        # #1056: removed per file, then the folder once it is empty.
+        assert (
+            str(codex_mod.global_skill_source_root() / name / "SKILL.md") in result["changed_paths"]
+        )
 
 
 def test_codex_global_skill_upgrade_preserves_manual_same_name_playbook_skill(

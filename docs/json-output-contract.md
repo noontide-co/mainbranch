@@ -123,7 +123,14 @@ Entries today:
   this entry is present, doctor's `codex-agents-md` action has
   `safe_to_apply: false` with the additive `refused` and `kept` lists, and
   `mb update` makes no Codex write (`surface_refresh.codex.blocked: true` and
-  a `reason`) and asks no consent for it.
+  a `reason`) and asks no consent for it. The action and this entry both carry
+  `on_apply` (`writes`, `removes`, `keeps`): exactly what an explicit
+  `mb doctor repair --apply --only codex` or `--all-agents` does. A refusal
+  writes and removes nothing; otherwise it rewrites `AGENTS.md` when listed,
+  deletes only the listed Main Branch files and keeps the rest (#1056).
+  `mb init` returns the same entry, plus a `warnings` line, when it refuses to
+  change an existing `AGENTS.md`; `codex_agents_md` has its `ok`, `refused`
+  and `kept`.
 
 ```json
 {

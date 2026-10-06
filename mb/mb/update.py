@@ -969,7 +969,7 @@ def _refresh_surfaces(
                 [str(path) for path in item.get("changes", [])],
                 str(item.get("note") or ""),
             )
-            for key in ("id", "reason", "manual_step"):
+            for key in ("id", "reason", "manual_step", "on_apply"):
                 if key in item:
                     entry[key] = item[key]
             result["operator_actions"].append(entry)
