@@ -54,21 +54,32 @@ def _git(cwd: Path, *args: str) -> None:
     subprocess.run(["git", *GIT_ID, *args], cwd=cwd, env=env, check=True, capture_output=True)
 
 
-@pytest.fixture()
-def checkout(tmp_path: Path) -> Path:
-    """A git checkout that ignores `.mb/` and `private/`."""
+TEMPLATE_GITIGNORE = (
+    Path(__file__).resolve().parents[1] / "mb" / "_data" / "templates" / ".gitignore.tmpl"
+)
+PRIVATE_PULLS = ".mb/private/pulls"
 
-    root = tmp_path / "checkout"
+
+def _checkout_with(root: Path, gitignore: str) -> Path:
     root.mkdir()
     _git(root, "init", "-q")
-    (root / ".gitignore").write_text(".mb/\nprivate/\n", encoding="utf-8")
+    (root / ".gitignore").write_text(gitignore, encoding="utf-8")
     (root / "tracked.json").write_text("{}", encoding="utf-8")
-    (root / "docs").mkdir()
-    (root / "private").mkdir()
-    (root / ".mb").mkdir()
-    _git(root, "add", ".gitignore", "tracked.json")
+    for folder in ("docs", "exports", PRIVATE_PULLS, ".mb/pulls"):
+        (root / folder).mkdir(parents=True)
+    _git(root, "add", "-f", ".gitignore", "tracked.json")
     _git(root, "commit", "-q", "-m", "start")
     return root
+
+
+@pytest.fixture()
+def checkout(tmp_path: Path) -> Path:
+    """A git checkout with the `.gitignore` that `mb init` writes (the real template)."""
+
+    return _checkout_with(
+        tmp_path / "checkout",
+        TEMPLATE_GITIGNORE.read_text(encoding="utf-8") + "private/\n",
+    )
 
 
 @pytest.fixture()
@@ -279,16 +290,14 @@ def test_the_business_repo_itself_is_refused(
     api = _signed(repo, client_file, google, monkeypatch)
 
     _refused(_out(repo, SC_ARGS, repo / "pull.json"), "out_path_in_repo")
-    # `.mb/` is the repo's own ignored folder only once git ignores it.
+    # `.mb/` itself is not ignored by git, so nothing is allowed there.
     (repo / ".mb").mkdir(exist_ok=True)
-    result = _out(repo, SC_ARGS, repo / ".mb" / "pull.json")
+    _refused(_out(repo, SC_ARGS, repo / ".mb" / "pull.json"), "out_path_in_repo")
 
-    assert api.calls == [] or result.exit_code == 0
-    if result.exit_code != 0:
-        _refused(result, "out_path_in_repo")
+    assert api.calls == []
 
 
-@pytest.mark.parametrize("where", [".mb/pull.json", "private/pull.json"])
+@pytest.mark.parametrize("where", [f"{PRIVATE_PULLS}/pull.json", ".mb/private/pull.json"])
 def test_an_ignored_path_in_a_checkout_is_allowed(
     where: str,
     repo: Path,
@@ -391,12 +400,12 @@ def test_a_folder_link_into_a_checkout_is_judged_where_it_leads(
 ) -> None:
     api = _signed(repo, client_file, google, monkeypatch)
     (outdir / "into-docs").symlink_to(checkout / "docs")
-    (outdir / "into-private").symlink_to(checkout / "private")
+    (outdir / "into-private").symlink_to(checkout / PRIVATE_PULLS)
 
     _refused(_out(repo, SC_ARGS, outdir / "into-docs" / "x.json"), "out_path_in_repo")
     assert api.calls == []
     assert _out(repo, SC_ARGS, outdir / "into-private" / "x.json").exit_code == 0
-    assert (checkout / "private" / "x.json").is_file()
+    assert (checkout / PRIVATE_PULLS / "x.json").is_file()
 
 
 def test_a_folder_is_not_a_file(
@@ -423,7 +432,7 @@ def test_when_git_cannot_answer_inside_a_checkout_the_path_is_refused(
         return None
 
     monkeypatch.setattr(go_out, "_git", broken)
-    _refused(_out(repo, SC_ARGS, checkout / "private" / "x.json"), "out_path_git_unknown")
+    _refused(_out(repo, SC_ARGS, checkout / PRIVATE_PULLS / "x.json"), "out_path_git_unknown")
 
     def failing(args: list[str], cwd: Path) -> Any:
         done = real(args, cwd)
@@ -433,9 +442,9 @@ def test_when_git_cannot_answer_inside_a_checkout_the_path_is_refused(
         return done
 
     monkeypatch.setattr(go_out, "_git", failing)
-    _refused(_out(repo, SC_ARGS, checkout / "private" / "x.json"), "out_path_git_unknown")
+    _refused(_out(repo, SC_ARGS, checkout / PRIVATE_PULLS / "x.json"), "out_path_git_unknown")
 
-    assert api.calls == [] and not (checkout / "private" / "x.json").exists()
+    assert api.calls == [] and not (checkout / PRIVATE_PULLS / "x.json").exists()
 
 
 def test_git_missing_inside_a_checkout_is_refused_and_outside_is_allowed(
@@ -449,7 +458,7 @@ def test_git_missing_inside_a_checkout_is_refused_and_outside_is_allowed(
     _signed(repo, client_file, google, monkeypatch)
     monkeypatch.setenv("PATH", "")  # no git to run
 
-    _refused(_out(repo, SC_ARGS, checkout / "private" / "x.json"), "out_path_git_unknown")
+    _refused(_out(repo, SC_ARGS, checkout / PRIVATE_PULLS / "x.json"), "out_path_git_unknown")
     assert _out(repo, SC_ARGS, outdir / "ok.json").exit_code == 0
 
 
@@ -478,6 +487,143 @@ def test_the_path_is_shown_without_terminal_escapes(repo: Path, outdir: Path) ->
     result = _out(repo, SC_ARGS, outdir / "no\x1b[31mpe" / "x.json")
 
     assert "\x1b" not in result.stderr and result.exit_code == 2
+
+
+# --- the temporary file must not be committable either -----------------------------------
+
+
+def _porcelain(root: Path) -> str:
+    return subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=all"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+
+
+def _dry_add(root: Path) -> str:
+    return subprocess.run(
+        ["git", "add", "-A", "--dry-run"], cwd=root, capture_output=True, text=True, check=True
+    ).stdout
+
+
+@pytest.mark.parametrize(
+    ("gitignore", "where"),
+    [
+        ("report.json\n", "report.json"),
+        ("*.json\n", "data.json"),
+        ("exports/*.json\n", "exports/a.json"),
+    ],
+)
+def test_a_file_name_ignore_alone_is_refused(
+    gitignore: str,
+    where: str,
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    # The target's own name is ignored, but its temporary file would not be.
+    root = _checkout_with(tmp_path / "pattern", gitignore)
+    api = _signed(repo, client_file, google, monkeypatch)
+    before = _porcelain(root)
+
+    result = _out(repo, SC_ARGS, root / where)
+
+    _refused(result, "out_folder_not_ignored")
+    assert ".mb/private/" in result.stderr and ".mb/ " not in result.stderr
+    assert api.calls == [] and not (root / where).exists()
+    assert _porcelain(root) == before
+
+
+def test_during_a_write_git_never_sees_a_file_in_the_folder(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    checkout: Path,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    seen: list[tuple[list[str], str, str]] = []
+    real = os.fsync
+
+    def spy(fd: int) -> None:
+        folder = checkout / PRIVATE_PULLS
+        seen.append(
+            (sorted(p.name for p in folder.iterdir()), _porcelain(checkout), _dry_add(checkout))
+        )
+        real(fd)
+
+    monkeypatch.setattr(os, "fsync", spy)
+
+    result = _out(repo, SC_ARGS, checkout / PRIVATE_PULLS / "q.json")
+
+    assert result.exit_code == 0, result.stderr
+    names, porcelain, dry = seen[0]
+    assert len(names) == 1 and names[0].endswith(".tmp")  # the temp file existed
+    assert porcelain == "" and dry == ""
+    assert _porcelain(checkout) == "" and _dry_add(checkout) == ""
+
+
+def test_a_killed_write_leaves_nothing_git_could_commit(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    checkout: Path,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+
+    def killed(fd: int) -> None:
+        # A SIGKILL runs no cleanup: stand in by leaving the temp file behind.
+        monkeypatch.setattr(os, "unlink", lambda *_a, **_k: None)
+        raise OSError("killed (synthetic)")
+
+    monkeypatch.setattr(os, "fsync", killed)
+    _out(repo, SC_ARGS, checkout / PRIVATE_PULLS / "q.json")
+
+    left = [p.name for p in (checkout / PRIVATE_PULLS).iterdir()]
+    assert len(left) == 1 and left[0].endswith(".tmp")
+    assert _porcelain(checkout) == "" and _dry_add(checkout) == ""
+
+
+def test_the_recommended_place_works_in_a_fresh_mb_init_repo(
+    repo: Path, client_file: Path, google: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from mb import init as init_mod
+
+    business = tmp_path / "fresh"
+    assert (
+        runner.invoke(
+            app,
+            [
+                "init",
+                str(business),
+                "--name",
+                "Example Co",
+                "--owner-name",
+                "Pat Example",
+                "--owner-github",
+                "pat-example",
+            ],
+        ).exit_code
+        == 0
+    )
+    assert init_mod  # the real `mb init` wrote the repo's .gitignore
+    _signed(repo, client_file, google, monkeypatch)
+    (business / ".mb" / "private" / "pulls").mkdir(parents=True)
+    (business / ".mb" / "pulls").mkdir(parents=True)
+
+    ok = _out(repo, SC_ARGS, business / ".mb" / "private" / "pulls" / "q.json")
+    refused = _out(repo, SC_ARGS, business / ".mb" / "pulls" / "q.json")
+
+    assert ok.exit_code == 0, ok.stderr
+    assert (business / ".mb" / "private" / "pulls" / "q.json").is_file()
+    _refused(refused, "out_path_in_repo")
+    assert ".mb/private/pulls/" in refused.stderr
+    assert _porcelain(business).count("q.json") == 0
 
 
 # --- help ------------------------------------------------------------------------------

@@ -6,7 +6,9 @@ is judged before anything is read from Google, so a refused path costs no
 quota. A path is refused when:
 
 - it is inside a git checkout and git does not report it ignored (a tracked
-  file, or one a ``git add`` would pick up), including the business repo;
+  file, or one a ``git add`` would pick up), including the business repo, or
+  its folder is not ignored as a whole (the temporary file written beside the
+  target would not be covered by a rule for the file name alone);
 - git cannot answer inside a checkout (fail closed);
 - it already exists and ``--force`` was not given, or it exists and is not a
   plain file;
@@ -37,7 +39,9 @@ from mb.google_reads import ReadRefusal, terminal_safe
 
 OUT_MODE = 0o600
 GIT_TIMEOUT_SECONDS = 5
-OUT_HINT = "write it outside the repo, or under a folder .gitignore lists (such as .mb/)"
+OUT_HINT = (
+    "write it outside the repo, or in a folder git ignores as a whole, such as .mb/private/pulls/"
+)
 
 _GIT_ENV_DROP = {"GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"}
 
@@ -86,10 +90,29 @@ def _check_git(parent: Path, name: str, shown: str) -> None:
                 f"--out {shown} is inside a git checkout and git does not ignore it, so the "
                 f"data could be committed; nothing was read or written. {OUT_HINT}.",
             )
+        # The temp file is written beside the target under another name, so the
+        # whole folder must be ignored, not just the target's own name.
+        folder = relative.parent
+        if folder.as_posix() in {"", "."}:
+            raise _folder_refusal(shown)
+        folder_verdict = _git(["check-ignore", "-q", "--", folder.as_posix() + "/"], root)
+        if folder_verdict is None or folder_verdict.returncode not in {0, 1}:
+            raise _git_unknown(shown)
+        if folder_verdict.returncode == 1:
+            raise _folder_refusal(shown)
         return
     if _inside_git_checkout(parent):
         # A checkout is there but git would not say anything about it.
         raise _git_unknown(shown)
+
+
+def _folder_refusal(shown: str) -> ReadRefusal:
+    return ReadRefusal(
+        "out_folder_not_ignored",
+        f"--out {shown}: inside a git checkout the whole folder must be ignored by git "
+        "(the file is written through a temporary file beside it, which an ignore rule for "
+        f"the file name alone would not cover); nothing was read or written. {OUT_HINT}.",
+    )
 
 
 def _git_unknown(shown: str) -> ReadRefusal:

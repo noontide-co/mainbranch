@@ -203,6 +203,7 @@ read from Google (a refused path costs no quota) and refuses with exit 2:
 | `rule` | When |
 | --- | --- |
 | `out_path_in_repo` | PATH is inside a git checkout, the business repo included, and git does not report it ignored (a tracked file, or one `git add` would pick up). `--force` never lifts this. |
+| `out_folder_not_ignored` | PATH is in a git checkout and its target name is ignored, but the folder as a whole is not (for example `.gitignore` lists `report.json` or `*.json`). The file is written through a temporary file beside it, which a rule for the file name alone would not cover, so the folder itself must be ignored. |
 | `out_path_git_unknown` | PATH is inside a checkout and git could not answer. The path is refused. |
 | `out_path_exists` | The file exists and `--force` was not given. |
 | `out_path_not_file` | PATH exists and is not a plain file (a folder, for example). |
@@ -218,9 +219,10 @@ folder you run the command from, not `--repo`. A failed read writes nothing. If
 the read worked but the file cannot be written, the command exits 1 with
 `out_write_failed` and leaves no partial file.
 
-Put the file outside the repo (for example `~/pulls/`), or in a folder
-`.gitignore` lists. `.mb/` is ignored in business repos made by `mb init`, so
-`.mb/pulls/` works once that folder exists. Never commit it: the rows are
+Put the file outside the repo (for example `~/pulls/`), or in a folder git
+ignores as a whole. `mb init` repos ignore `.mb/private/`, so
+`.mb/private/pulls/` works once that folder exists; `.mb/` itself is not
+ignored (a folder like `.mb/pulls/` is refused). Never commit it: the rows are
 private business data.
 
 ## Quotas and pacing

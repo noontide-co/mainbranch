@@ -13,8 +13,8 @@ never call Google through `mb connect exec`.
   site or property; there are no flags for them.
 - Add `--json` and read the result; quote numbers as Google returned them.
   For a large pull (thousands of rows), add `--out <file>` instead, where
-  the file is outside the repo or under a folder `.gitignore` lists such as
-  `.mb/`. `--out` writes a private file and prints only a short summary; read the
+  the file is outside the repo or in a folder git ignores as a whole, such as
+  `.mb/private/pulls/`. `--out` writes a private file and prints only a short summary; read the
   file with a tool, then summarize. Never commit it, never paste it whole.
 - The answers are the business's private data. Share conclusions, not raw rows.
 
