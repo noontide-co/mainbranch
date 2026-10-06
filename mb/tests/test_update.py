@@ -7,6 +7,7 @@ import os
 import shlex
 import shutil
 import subprocess
+import urllib.request
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,7 @@ from typer.testing import CliRunner
 from mb import __version__
 from mb import codex as codex_mod
 from mb import engine as engine_mod
+from mb import freshness as freshness_mod
 from mb import update as update_mod
 from mb.cli import app
 
@@ -465,6 +467,15 @@ def test_update_points_to_scoped_codex_repair_when_adapter_missing(
     assert result["ok"] is True
     assert result["codex_adapter"]["ok"] is False
     assert "mb doctor repair --plan --only codex" in result["next_actions"]
+    # #1049: the apply rewrites the tracked AGENTS.md, so a person runs it.
+    assert "mb doctor repair --apply --only codex" not in result["next_actions"]
+    codex_apply = [
+        item
+        for item in result["operator_actions"]
+        if item["command"] == "mb doctor repair --apply --only codex"
+    ]
+    assert len(codex_apply) == 1
+    assert "AGENTS.md" in codex_apply[0]["changes"]
     assert any(
         "Codex AGENTS.md guidance still needs repo repair" in item for item in result["warnings"]
     )
@@ -956,6 +967,7 @@ def test_update_wheel_install_json_exits_zero_with_next_action(
 ) -> None:
     monkeypatch.setattr(update_mod, "install_mode", lambda: "wheel")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "9.9.9")
     monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner([]))
 
     invoked = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--json"])
@@ -1107,6 +1119,7 @@ def test_update_uv_accepted_prompt_runs_install_then_relinks(
 
     monkeypatch.setattr(update_mod, "install_mode", lambda: "uv")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "9.9.9")
     monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
     monkeypatch.setattr(update_mod, "_run_command", fake_run)
 
@@ -1140,6 +1153,7 @@ def test_update_uv_install_failure_surfaces_command(monkeypatch: Any, tmp_path: 
 
     monkeypatch.setattr(update_mod, "install_mode", lambda: "uv")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "9.9.9")
     monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
     monkeypatch.setattr(update_mod, "_run_command", fake_run)
 
@@ -1160,6 +1174,7 @@ def test_update_uv_install_failure_surfaces_command(monkeypatch: Any, tmp_path: 
 def test_update_uv_missing_binary_returns_error(monkeypatch: Any, tmp_path: Path) -> None:
     monkeypatch.setattr(update_mod, "install_mode", lambda: "uv")
     monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "9.9.9")
     monkeypatch.setattr("mb.update.shutil.which", lambda name: None)
 
     result = update_mod.run(
@@ -1660,6 +1675,268 @@ def test_update_dev_build_of_published_release_is_behind_pypi(
     assert update_mod.UV_UPDATE_COMMAND_TEXT in result["next_actions"]
 
 
+# Installed and PyPI versions for each relation the #1036 matrix covers.
+_RELATIONS = {
+    "current": ("0.6.3", "0.6.3"),
+    "behind": ("0.6.2", "0.6.3"),
+    "ahead": ("0.6.4rc1", "0.6.3"),
+}
+_INSTALLER_TEXT = ("uv tool install", "pipx upgrade", "pipx install", "pip install")
+
+
+def _installed_against_pypi(
+    monkeypatch: Any, tmp_path: Path, mode: str, installed: str, latest: str
+) -> None:
+    monkeypatch.setattr(update_mod, "install_mode", lambda: mode)
+    monkeypatch.setattr(update_mod, "engine_root", lambda: tmp_path / "_engine")
+    monkeypatch.setattr(update_mod, "_engine_version", lambda root=None: installed)
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: latest)
+    monkeypatch.setattr(update_mod, "_version_from_mb_command", lambda: latest)
+    monkeypatch.setattr(update_mod, "bundled_skills", lambda: ["mb-start"])
+    monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
+
+
+def _install_commands(result: dict[str, Any]) -> list[str]:
+    return [a for a in result["next_actions"] if a.startswith(_INSTALLER_TEXT)]
+
+
+@pytest.mark.parametrize("mode", ["uv", "wheel"])
+def test_update_check_already_current_names_no_install_command(
+    monkeypatch: Any, tmp_path: Path, mode: str
+) -> None:
+    # #1036: a uv or wheel install that already runs PyPI's latest needs no
+    # reinstall, so neither the JSON nor the human check offers one.
+    calls: list[list[str]] = []
+    _installed_against_pypi(monkeypatch, tmp_path, mode, "0.6.3", "0.6.3")
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    cli = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--check", "--json"])
+    human = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--check"])
+
+    assert cli.exit_code == 0
+    payload = json.loads(cli.stdout)
+    assert payload["ok"] is True
+    assert payload["old_version"] == "0.6.3"
+    assert payload["new_version"] == "0.6.3"
+    assert payload["latest_version"] == "0.6.3"
+    assert payload["installed_ahead_of_latest"] is False
+    assert payload["latest_version_unknown"] is False
+    assert payload["manual_update_command"] == ""
+    assert _install_commands(payload) == []
+    assert payload["warnings"] == []
+    assert payload["release"]["source"] == "not_newer"
+    assert human.exit_code == 0
+    assert "Main Branch is already current (0.6.3)." in human.stdout
+    assert "0.6.3 -> 0.6.3" not in human.stdout
+    assert "uv tool install" not in human.stdout
+    assert "pip install" not in human.stdout
+    assert _installer_calls(calls) == []
+
+
+@pytest.mark.parametrize("mode", ["uv", "wheel"])
+def test_update_run_already_current_runs_and_asks_nothing(
+    monkeypatch: Any, tmp_path: Path, mode: str, capsys: Any
+) -> None:
+    calls: list[list[str]] = []
+    _installed_against_pypi(monkeypatch, tmp_path, mode, "0.6.3", "0.6.3")
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    def never_prompt(command: str, root: Path | None) -> bool:
+        raise AssertionError("must not offer to reinstall the version already installed")
+
+    result = update_mod.run(repo=tmp_path / "biz", interactive=True, confirm=never_prompt)
+
+    assert result["ok"] is True
+    assert result["new_version"] == "0.6.3"
+    assert result["upgrade_performed"] is False
+    assert result["manual_update_command"] == ""
+    assert _install_commands(result) == []
+    assert result["warnings"] == []
+    assert result["skills_relinked_count"] == 1
+    assert _installer_calls(calls) == []
+
+    update_mod.render_human(result)
+    output = capsys.readouterr().out
+    assert "Main Branch is already current (0.6.3)." in output
+    assert "did not upgrade" not in output
+    assert "next: uv tool install" not in output
+    assert "next: pip install" not in output
+
+
+@pytest.mark.parametrize("mode", ["uv", "wheel"])
+def test_update_cli_json_already_current_names_no_install_command(
+    monkeypatch: Any, tmp_path: Path, mode: str
+) -> None:
+    calls: list[list[str]] = []
+    _installed_against_pypi(monkeypatch, tmp_path, mode, "0.6.3", "0.6.3")
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    cli = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--json"])
+
+    assert cli.exit_code == 0
+    payload = json.loads(cli.stdout)
+    assert payload["new_version"] == "0.6.3"
+    assert payload["manual_update_command"] == ""
+    assert _install_commands(payload) == []
+    assert payload["warnings"] == []
+    assert _installer_calls(calls) == []
+
+
+_EXPECTED_CHECK_COMMAND = {
+    ("uv", "behind"): update_mod.UV_UPDATE_COMMAND_TEXT,
+    ("wheel", "behind"): update_mod.PIP_UPDATE_COMMAND_TEXT,
+}
+
+
+@pytest.mark.parametrize("relation", ["current", "behind", "ahead"])
+@pytest.mark.parametrize("mode", ["uv", "wheel", "pipx"])
+def test_update_check_install_command_by_mode_and_relation(
+    monkeypatch: Any, tmp_path: Path, mode: str, relation: str
+) -> None:
+    # Only a behind uv or wheel install is handed a command. pipx keeps its
+    # "would run" action whenever it is not ahead, as before #1036.
+    installed, latest = _RELATIONS[relation]
+    _installed_against_pypi(monkeypatch, tmp_path, mode, installed, latest)
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner([]))
+
+    result = update_mod.run(repo=tmp_path / "biz", check=True)
+
+    command = _EXPECTED_CHECK_COMMAND.get((mode, relation), "")
+    assert result["manual_update_command"] == command
+    assert _install_commands(result) == ([command] if command else [])
+    assert result["installed_ahead_of_latest"] is (relation == "ahead")
+    assert result["new_version"] == (latest if relation == "behind" else installed)
+    pipx_action = f"would run `{update_mod.PIPX_UPDATE_COMMAND_TEXT}`"
+    assert (pipx_action in result["actions"]) is (mode == "pipx" and relation != "ahead")
+
+
+@pytest.mark.parametrize("relation", ["current", "behind", "ahead"])
+@pytest.mark.parametrize("mode", ["uv", "wheel", "pipx"])
+def test_update_run_installer_by_mode_and_relation(
+    monkeypatch: Any, tmp_path: Path, mode: str, relation: str
+) -> None:
+    # Interactive run: a behind uv install is asked once and installs on yes;
+    # a current or ahead one is never asked. pipx upgrades unless ahead. A
+    # wheel install never runs an installer.
+    calls: list[list[str]] = []
+    prompts: list[str] = []
+    installed, latest = _RELATIONS[relation]
+    _installed_against_pypi(monkeypatch, tmp_path, mode, installed, latest)
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    def confirm(command: str, root: Path | None) -> bool:
+        prompts.append(command)
+        return True
+
+    result = update_mod.run(repo=tmp_path / "biz", interactive=True, confirm=confirm)
+
+    expected_installs = {
+        ("uv", "behind"): [update_mod.UV_UPDATE_COMMAND],
+        ("pipx", "behind"): [["pipx", "upgrade", "mainbranch"]],
+        ("pipx", "current"): [["pipx", "upgrade", "mainbranch"]],
+    }.get((mode, relation), [])
+    assert result["ok"] is True
+    assert _installer_calls(calls) == expected_installs
+    assert prompts == (
+        [update_mod.UV_UPDATE_COMMAND_TEXT] if (mode, relation) == ("uv", "behind") else []
+    )
+    expected_manual = (
+        update_mod.PIP_UPDATE_COMMAND_TEXT if (mode, relation) == ("wheel", "behind") else ""
+    )
+    assert result["manual_update_command"] == expected_manual
+
+
+def _rc_sees_release(monkeypatch: Any, tmp_path: Path, installed: str, latest: str) -> list[str]:
+    looked_up: list[str] = []
+
+    def release_context(version: str) -> dict[str, Any]:
+        looked_up.append(version)
+        return {
+            "version": version,
+            "tag": f"oe-v{version}",
+            "url": f"https://github.com/noontide-co/mainbranch/releases/tag/oe-v{version}",
+            "name": f"Main Branch {version}",
+            "published_at": "2026-10-01T00:00:00Z",
+            "summary": "Test release summary.",
+            "available": True,
+            "source": "github_release",
+        }
+
+    _installed_against_pypi(monkeypatch, tmp_path, "uv", installed, latest)
+    monkeypatch.setattr(update_mod, "_release_context", release_context)
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner([]))
+    return looked_up
+
+
+def test_update_check_rc_install_gets_final_release_context(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    # #1039: 0.6.3 is newer than 0.6.3rc1 under PEP 440, so the check reads the
+    # final release's notes instead of reporting it as not newer.
+    looked_up = _rc_sees_release(monkeypatch, tmp_path, "0.6.3rc1", "0.6.3")
+
+    result = update_mod.run(repo=tmp_path / "biz", check=True)
+
+    assert looked_up == ["0.6.3"]
+    assert result["new_version"] == "0.6.3"
+    assert result["release"]["source"] == "github_release"
+    assert result["release"]["summary"] == "Test release summary."
+    assert result["manual_update_command"] == update_mod.UV_UPDATE_COMMAND_TEXT
+
+
+def test_update_check_final_install_gets_no_release_context_for_same_release(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    looked_up = _rc_sees_release(monkeypatch, tmp_path, "0.6.3", "0.6.3")
+
+    result = update_mod.run(repo=tmp_path / "biz", check=True)
+
+    assert looked_up == []
+    assert result["release"]["source"] == "not_newer"
+
+
+class _PyPIResponse:
+    def __init__(self, body: str) -> None:
+        self._body = body.encode("utf-8")
+
+    def __enter__(self) -> _PyPIResponse:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+    def read(self) -> bytes:
+        return self._body
+
+
+@pytest.mark.parametrize("body", ["[1, 2]", "null", "3", '"x"'])
+@pytest.mark.parametrize("mode", ["uv", "pipx", "wheel"])
+def test_update_with_non_object_pypi_json_reports_latest_unknown(
+    monkeypatch: Any, tmp_path: Path, mode: str, body: str
+) -> None:
+    # #1039: valid JSON that is not an object must read as "latest unknown",
+    # not stop `mb update` with a traceback.
+    calls: list[list[str]] = []
+    _installed_against_pypi(monkeypatch, tmp_path, mode, "0.6.3", "0.6.3")
+    monkeypatch.setattr(
+        urllib.request,
+        "urlopen",
+        lambda url, timeout=0.0: _PyPIResponse(body),
+    )
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", freshness_mod.latest_pypi_version)
+    monkeypatch.setattr(update_mod, "_run_command", _surface_refresh_runner(calls))
+
+    cli = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--json"])
+
+    assert cli.exit_code == 0
+    assert cli.exception is None
+    payload = json.loads(cli.stdout)
+    assert payload["latest_version_unknown"] is True
+    assert payload["manual_update_command"] == ""
+    assert _install_commands(payload) == []
+    assert _installer_calls(calls) == []
+
+
 def _latest_unknown(monkeypatch: Any, tmp_path: Path, mode: str, latest: str | None) -> None:
     """The 0.6.3 release-gate scenario: 0.6.3 installed, PyPI's answer unusable."""
     monkeypatch.setattr(update_mod, "install_mode", lambda: mode)
@@ -1815,7 +2092,12 @@ def test_update_surfaces_plugin_migration_for_symlink_era_repo(
     result = update_mod.run(repo=tmp_path / "biz", check=True)
 
     assert result["plugin_rail"]["wired"] is False
-    assert any("symlink-only skill wiring" in w for w in result["warnings"])
+    warning = next(w for w in result["warnings"] if "symlink-only skill wiring" in w)
+    # #1042: the warning points to `operator_actions` and names no command an
+    # agent could read as its own step.
+    assert "operator_actions" in warning
+    assert "mb skill link" not in warning
+    assert "mb doctor repair" not in warning
     # #1023: the switch writes a tracked file, so it is a step for a person,
     # never an unattended next action an agent might run.
     assert not any("--plugin" in action for action in result["next_actions"])
@@ -2117,8 +2399,20 @@ def test_update_without_terminal_leaves_tracked_files_and_reports_plan(
         f"mb doctor repair --repo {business_repo} --apply --only codex",
     ]
     assert planned["apply_commands"] == apply_commands
+    # #1049: the apply commands write tracked files, so they are steps for a
+    # person in `operator_actions`, never unattended `next_actions`.
     for command in apply_commands:
-        assert command in result["next_actions"]
+        assert command not in result["next_actions"]
+    assert not any("--apply" in action for action in result["next_actions"])
+    assert f"mb doctor repair --repo {business_repo} --plan --only codex" in result["next_actions"]
+    surface_actions = [
+        item for item in result["operator_actions"] if item["command"] in apply_commands
+    ]
+    assert [item["command"] for item in surface_actions] == apply_commands
+    assert [item["changes"] for item in surface_actions] == [[".gitignore"], ["AGENTS.md"]]
+    for item in surface_actions:
+        assert set(item) == set(engine_mod.plugin_switch_operator_action())
+        assert item["note"].startswith("For a person to run at a terminal, not an agent")
     assert result["surface_refresh"]["claude"]["applied"] is False
     assert result["surface_refresh"]["claude"]["tracked_writes"] == [".gitignore"]
     assert result["surface_refresh"]["codex"]["applied"] is False
@@ -2167,7 +2461,13 @@ def test_update_terminal_no_leaves_tracked_files(
     assert asked == [[".gitignore", "AGENTS.md"]], result["errors"]
     assert _tracked_state(business_repo) == before
     assert result["surface_refresh"]["planned"]["consent"] == "declined"
-    assert f"mb doctor repair --repo {business_repo} --apply --only codex" in result["next_actions"]
+    codex_apply = f"mb doctor repair --repo {business_repo} --apply --only codex"
+    link_apply = f"mb skill link --repo {business_repo}"
+    assert codex_apply not in result["next_actions"]
+    assert link_apply not in result["next_actions"]
+    commands = [item["command"] for item in result["operator_actions"]]
+    assert link_apply in commands
+    assert codex_apply in commands
 
 
 def test_update_terminal_yes_applies_once_then_unattended_runs_need_no_consent(
@@ -2187,6 +2487,7 @@ def test_update_terminal_yes_applies_once_then_unattended_runs_need_no_consent(
     assert result["ok"] is True, result["errors"]
     assert result["surface_refresh"]["planned"]["consent"] == "approved"
     assert result["surface_refresh"]["planned"]["apply_commands"] == []
+    assert not [item for item in result["operator_actions"] if "--plugin" not in item["command"]]
     changed = sorted(line[3:] for line in _git(business_repo, "status", "--porcelain").splitlines())
     assert changed == [".gitignore", "AGENTS.md"]
     agents_md = (business_repo / "AGENTS.md").read_text(encoding="utf-8")
@@ -2285,6 +2586,7 @@ def test_emitted_commands_quote_a_repo_path_with_spaces_and_parens(
     emitted = [
         *planned["apply_commands"],
         *[a for a in result["next_actions"] if a.startswith("mb ") and "--repo" in a],
+        *[item["command"] for item in result["operator_actions"] if "--repo" in item["command"]],
         result["surface_refresh"]["claude"]["command"],
         result["surface_refresh"]["codex"]["command"],
     ]
@@ -2295,12 +2597,20 @@ def test_emitted_commands_quote_a_repo_path_with_spaces_and_parens(
         assert argv[argv.index("--repo") + 1] == real, command
 
     update_mod.render_human(result)
+    out = capsys.readouterr().out.splitlines()
     printed = [
         line.removeprefix("next: ")
-        for line in capsys.readouterr().out.splitlines()
+        for line in out
         if line.startswith("next: mb ") and "--repo" in line
     ]
-    assert len(printed) == 3
+    assert len(printed) == 1
+    for_you = [
+        line.removeprefix("for you to run: ")
+        for line in out
+        if line.startswith("for you to run: mb ") and "--repo" in line
+    ]
+    assert len(for_you) == 2
+    printed.extend(for_you)
     for command in printed:
         argv = shlex.split(command)
         assert argv[argv.index("--repo") + 1] == real, command
@@ -2353,7 +2663,8 @@ def _probe_repo(repo: Path, tmp_path: Path, kind: str) -> str:
     elif kind == "codex_cleanup":
         legacy = repo / ".agents" / "skills" / "main-branch" / "SKILL.md"
         legacy.parent.mkdir(parents=True)
-        legacy.write_text("legacy skill\n", encoding="utf-8")
+        # #1052: only a file `mb` wrote there is removed.
+        legacy.write_text(codex_mod.render_codex_global_skill_md("main-branch"), encoding="utf-8")
         at_risk = ".agents/skills/main-branch"
     _commit_all(repo, "Probe setup")
     assert _git(repo, "status", "--porcelain") == ""
@@ -2412,6 +2723,71 @@ def test_review_probe_yes_changes_only_listed_files(
             listed,
         )
     assert result["ok"] is True, result["errors"]
+
+
+def _agents_md_missing_end_marker(repo: Path) -> str:
+    codex_mod.write_agents_md(repo)
+    text = (repo / "AGENTS.md").read_text(encoding="utf-8")
+    # Guidance from an older template, so the repair is due.
+    stale = text.replace(codex_mod.guidance_template_hash(), "0000000000000000")
+    broken = stale.replace(codex_mod.AGENTS_MANAGED_END + "\n", "") + "\n## Our notes\n\nKeep.\n"
+    (repo / "AGENTS.md").write_text(broken, encoding="utf-8")
+    _commit_all(repo, "Notes under the guidance")
+    return broken
+
+
+@pytest.mark.parametrize("interactive", [False, True])
+def test_update_reports_a_refused_codex_repair_and_writes_nothing(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, interactive: bool
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    _with_current_gitignore(business_repo)
+    broken = _agents_md_missing_end_marker(business_repo)
+    asked: list[list[str]] = []
+
+    def say_yes(repo: Path, files: list[str]) -> bool:
+        asked.append(files)
+        return True
+
+    result = update_mod.run(repo=business_repo, interactive=interactive, confirm_surfaces=say_yes)
+
+    assert (business_repo / "AGENTS.md").read_text(encoding="utf-8") == broken
+    assert _git(business_repo, "status", "--porcelain") == ""
+    assert not any("--apply" in args and "codex" in args for args in calls)
+    assert all("AGENTS.md" not in files for files in asked)
+    codex_surface = result["surface_refresh"]["codex"]
+    assert codex_surface["applied"] is False
+    assert codex_surface["blocked"] is True
+    assert "no end marker" in codex_surface["reason"]
+    assert "AGENTS.md" not in result["surface_refresh"]["planned"]["tracked_files"]
+    entries = [item for item in result["operator_actions"] if item.get("id") == "codex-agents-md"]
+    assert len(entries) == 1
+    entry = entries[0]
+    assert entry["command"] == f"mb doctor repair --repo {business_repo} --apply --only codex"
+    assert entry["changes"] == ["AGENTS.md"]
+    assert codex_mod.AGENTS_MANAGED_END in entry["manual_step"]
+    assert entry["manual_step"] in entry["note"]
+    assert not any(
+        item["note"] == update_mod.SURFACE_CODEX_APPLY_NOTE for item in result["operator_actions"]
+    )
+    assert f"mb doctor repair --repo {business_repo} --plan --only codex" in result["next_actions"]
+    assert any(entry["reason"] in warning for warning in result["warnings"])
+    assert result["ok"] is True, result["errors"]
+
+
+def test_update_codex_follow_up_names_the_manual_step(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path
+) -> None:
+    _agents_md_missing_end_marker(business_repo)
+    result: dict[str, Any] = {"operator_actions": [], "warnings": [], "next_actions": []}
+
+    update_mod._add_codex_follow_up(result, business_repo)
+
+    entries = [item for item in result["operator_actions"] if item.get("id") == "codex-agents-md"]
+    assert len(entries) == 1
+    assert codex_mod.AGENTS_MANAGED_END in entries[0]["manual_step"]
+    assert entries[0]["command"] == codex_mod.CODEX_REPAIR_COMMAND
 
 
 def test_unattended_guard_reports_a_tracked_change_the_plan_missed(

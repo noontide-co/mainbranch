@@ -11,6 +11,60 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- `mb connect google --oauth` signs a business repo in to Google once for
+  read-only Search Console and GA4: browser or `--paste` sign-in with PKCE on
+  `127.0.0.1`, the grant kept in the credential store, `search_console_site`,
+  `ga4_property_id` and the granted products recorded in repo metadata. It
+  refuses to replace a stored Google access token without
+  `--replace-access-token`, and token reconnects and `mb connect rotate` on a
+  sign-in connection refuse instead of dropping the grant. Setup, the 100-token limit and headless use are in
+  `docs/connect.md` (part of #1004).
+- `mb connect token google` and `mb connect exec google` on a Google sign-in
+  connection mint a short-lived access token from the stored grant, once per
+  `mb` process, and hand out only that token (`GOOGLE_OAUTH_TOKEN` for
+  `exec`). The refresh token and client secret never leave the process.
+  Google refusing the sign-in gives `reauth_required` with the repair
+  `mb connect google --oauth --reauth`, recorded so `mb connect status google`
+  shows it without calling Google; an unreachable token endpoint or a
+  corrupt grant has its own rule. Status adds
+  `oauth.refresh_token_expires_on` (a date) for sign-in connections. Plain
+  Google access-token connections and `ga4` are unchanged (part of #1004).
+- `mb connect test google` on a Google sign-in connection checks it against
+  Google with one read-only call per granted product (Search Console
+  `searchAnalytics.query` and GA4 `runReport`, one past day, one row), and the
+  sign-in's last step runs the same check. Verified means every recorded
+  product passed; a product not granted is skipped, a missing site or
+  property id names the exact `--metadata` command, and a 403 names the
+  account permission or the API to enable. Network, quota and server trouble
+  exits 1 without changing the recorded status. Only sign-in connections
+  gain this probe: a plain Google access-token connection still exits 0 as
+  stored and unverified, and `ga4`, `status` and `doctor` are unchanged and
+  never call Google. Token refusals other than an expired sign-in now name
+  the actual problem; a token-endpoint timeout, rate limit or code-less error
+  is treated as transient and never recorded; Google calls never follow a
+  redirect; and `mb connect google --metadata ...` on a sign-in connection
+  keeps the keys it is not given (part of #1004).
+- `mb google sc query`, `mb google sc sitemaps list` and `mb google ga4 report`
+  read the Search Console site and GA4 property recorded on a Google sign-in,
+  read-only, with a table by default and `--json` envelopes
+  (`mb.google.sc.query`, `mb.google.sc.sitemaps`, `mb.google.ga4.report`).
+  There is no site or property override. The access token is minted in
+  process and never printed or passed on. Only granted products are read,
+  one request at a time with no retry on server errors. GA4 reports return
+  `property_quota` for pacing, and paging is shown by `may_have_more`.
+  Refusals exit 2 with a stable `rule`; credential and Google failures exit 1.
+  No Google error text is shown, and the table view strips terminal escape
+  codes from row values. See `docs/google.md` (part of #1004).
+- `mb google sc inspect --url URL` shows the index status of one URL of the
+  recorded Search Console site (`urlInspection.index.inspect`, the version in
+  Google's index only), as a short summary or a `mb.google.sc.inspect`
+  envelope with `--json`. A URL outside the recorded site is refused with
+  `url_outside_site` before anything is sent, and only Google's documented
+  result fields are passed through. The per-site quota (2,000 a day, 600 a
+  minute) is in `--help` and `docs/google.md` (part of #1004).
+
 ### Changed
 
 - `mb update` lists the plugin-rail switch (`mb skill link --repo . --plugin`)
@@ -24,6 +78,77 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- `mb google` reads: the table view also removes bidi controls and turns
+  line separators into spaces; `ga4 report` accepts the pre-October-2020
+  `customEvent:parameter[event]` names and refuses an ambiguous `--order-by`
+  with `order_by_ambiguous`; the unreachable message says "could not be
+  reached, or did not answer"; and a credential probe's `repr` no longer
+  shows the secret value (part of #1004).
+- `mb connect test` never follows an HTTP redirect with a credential. The
+  GitHub, Cloudflare, Stripe, Apify and `ga4` probes, the Cloudflare Pages read
+  behind `mb fleet`, and the fal.ai image request now refuse a 3xx instead of
+  sending the token to the `Location` URL. A probe that gets a redirect records
+  `unvalidated` with the rule `provider_unexpected_redirect`, like a network
+  failure: it is never recorded as an invalid credential and never asks for a
+  reconnect (#1058).
+- `mb doctor repair --apply --only codex` (and the same Codex refresh from
+  `mb update`) no longer deletes what a person wrote. In an `AGENTS.md` from
+  before the managed markers it replaces only the old generated text, matched
+  against the template its metadata names, and keeps the person's sections
+  after the new block; if that text was edited, it refuses. It also refuses
+  when a begin or end marker is missing or out of order. It never replaces
+  the whole file. In the old repo-local Codex paths it deletes only files
+  Main Branch wrote and leaves the rest, along with their folders. While the
+  repair would refuse or leave a person's files, `codex-agents-md` is not
+  `safe_to_apply`, and `mb doctor repair` and `mb update` list it in
+  `operator_actions` with the reason and the manual step; `mb update` makes
+  no Codex write. JSON keys are additive (#1052).
+- The Codex global skill refresh (`mb doctor repair --apply --only codex`,
+  `--all-agents`, and the same refresh from `mb update`) no longer removes
+  whole folders under your home. In the old global plugin source
+  (`~/.local/share/mainbranch/codex` or `MAINBRANCH_CODEX_PLUGIN_ROOT`), the
+  old `main-branch-owner-loop` skill and the retired playbook skills, it
+  deletes only files Main Branch wrote, one by one, and removes a folder only
+  once it is empty. Anything else stays, is never followed through a symlink,
+  and is listed as `kept` in the global skill status, the doctor plan and the
+  apply result (#1056).
+- `mb init` reports an `AGENTS.md` it refused to change (managed markers
+  missing or out of order) the way doctor and update do: a warning, plus an
+  `operator_actions` entry with the same `reason` and `manual_step`. The
+  scaffold still succeeds. New keys `codex_agents_md`, `warnings` and
+  `operator_actions` are additive (#1056).
+- While the Codex `AGENTS.md` repair needs a person first, the doctor plan
+  states exactly what an explicit `--apply --only codex` or `--all-agents`
+  does: a new `on_apply` (`writes`, `removes`, `keeps`) on the
+  `codex-agents-md` action and operator entry, and a `manual_step` that names
+  each Main Branch file the apply deletes (#1056).
+- A symlink at an old repo-local Codex path is removed as a link even when it
+  points at nothing; it is never followed. Doctor now lists such a dangling
+  link in the Codex repair plan (#1056).
+- `mb`'s own usage errors (an unknown option, an unexpected extra argument,
+  an invalid value) no longer repeat command-line input that could be a
+  credential: it is replaced with `(not shown: it may be a credential)`, on
+  `mb`, `mb connect` and every subcommand. An ordinary typo such as `--jsno`
+  is still shown; the exit code (2) and the usage line are unchanged, and
+  `--json` still prints no envelope for these errors (#1037).
+- `mb connect --metadata` refuses a metadata key that looks like a credential
+  (rule `metadata_secret_key`, exit 2), with or without a token, without
+  repeating it, and stores nothing. A key like that already in
+  `.mb/connect.yaml` no longer appears in `mb connect status` or
+  `mb connect identity` output (#1033).
+- `mb doctor repair --apply` no longer switches a symlink-era repo to the
+  plugin rail. `mb doctor repair` now lists the switch in a new
+  `operator_actions` field, the way `mb update` does, for a person to run at a
+  terminal; `mb update`'s symlink-only warning points there instead of naming
+  commands; and `docs/json-output-contract.md` documents `operator_actions`
+  (#1042).
+- `mb update` lists the surface-refresh apply commands it declined to run
+  without a person (`mb skill link --repo ...` and
+  `mb doctor repair --repo ... --apply --only codex`) in `operator_actions`,
+  with the tracked files each one changes, instead of `next_actions`. Its Codex
+  follow-up does the same for `mb doctor repair --apply --only codex`. The
+  read-only `--plan --only codex` stays in `next_actions`, and
+  `surface_refresh.planned.apply_commands` is unchanged (#1049).
 - `mainbranch` now requires `pyyaml>=6.0.1`. PyYAML 6.0 does not build on
   Python 3.12, and the minimum-dependency CI job now also runs on 3.12 so a
   floor like that fails the PR (#1028).
@@ -36,6 +161,16 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - No test assert reads straight out of `os.environ` or a captured environment
   any more, so a failing test prints only the checked value, never the whole
   environment; a guard test keeps the pattern out (#1025).
+- `mb update` and `mb update --check` on a uv or pip (wheel) install that
+  already runs PyPI's latest release say "Main Branch is already current"
+  and list no install command, instead of offering to reinstall the same
+  version or asking to confirm one. A behind install still gets its command
+  (#1036).
+- `mb update` treats a PyPI answer that is valid JSON but not an object (a
+  list, `null`, a number or a string) as "latest unknown" instead of stopping
+  with a traceback, and a release-candidate install that sees the final
+  release now gets that release's notes and summary in `mb update --check`
+  (#1039).
 
 ## [0.6.3] - 2026-10-05
 

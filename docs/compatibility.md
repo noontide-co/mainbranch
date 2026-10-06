@@ -165,7 +165,7 @@ smoke evidence exist.
 
 | Runtime surface | Status | Invocation | Skill/workflow discovery | Routing and automation | Observability and packaging |
 |---|---|---|---|---|---|
-| Claude Code | Supported | `mb start --repo "$repo"` prints the `claude` handoff; `mb start --launch` may launch after readiness checks. The normal user command stays `/mb-start` through the project-local bridge. Plugin-native skills are namespaced, so `/mainbranch:mb-start` is the direct plugin smoke command. | `mb init`, `mb onboard`, and scoped Claude repair write the shared plugin wiring in `.claude/settings.json` and keep project-local `.claude/skills/mb-*` bridge links for friendly slash commands. `mb skill link --repo "$repo"` refreshes the bridge fallback and `.claude/settings.local.json`. | Slash skills such as `/mb-start` own conversation and judgment; they call deterministic `mb` commands for facts. Release smoke also proves the namespaced plugin command. | `mb doctor`, `mb status --json`, `mb start --json`, `mb skill repair`, and runtime dogfood evidence gate release claims. The plugin is the durable distribution rail; packaged project-local skill links keep the friendly compatibility command. |
+| Claude Code | Supported | `mb start --repo "$repo"` prints the `claude` handoff; `mb start --launch` may launch after readiness checks. The normal user command stays `/mb-start` through the project-local bridge. Plugin-native skills are namespaced, so `/mainbranch:mb-start` is the direct plugin smoke command. | `mb init` and `mb onboard` write the shared plugin wiring in `.claude/settings.json` (on an older symlink-era repo, `mb update` and `mb doctor repair` list the switch in `operator_actions` for a person to run) and keep project-local `.claude/skills/mb-*` bridge links for friendly slash commands. `mb skill link --repo "$repo"` refreshes the bridge fallback and `.claude/settings.local.json`. | Slash skills such as `/mb-start` own conversation and judgment; they call deterministic `mb` commands for facts. Release smoke also proves the namespaced plugin command. | `mb doctor`, `mb status --json`, `mb start --json`, `mb skill repair`, and runtime dogfood evidence gate release claims. The plugin is the durable distribution rail; packaged project-local skill links keep the friendly compatibility command. |
 | Codex CLI | Supported | Can call deterministic `mb` commands as a subprocess when pointed at a business repo. `AGENTS.md` gives Codex the repo bootstrap, and global Main Branch skills give Codex `mb-*` workflow routes. | Fresh `mb onboard` repos include tracked `AGENTS.md`. `mb doctor repair --plan --only codex` / `--apply --only codex` refresh repo guidance and install or repair the global Codex skill bundle. Use `--all-agents` only after reviewing both Claude and Codex surface writes. | Codex `mb-*` skills run `mb status --json --peek`, `mb start --json`, `mb doctor repair --plan --json`, `mb checkpoint --plan --json`, `mb validate --json`, and `mb workflow list --runtime codex --json` as needed, translate facts into business language, and ask before writes. | `mb doctor`, `mb status --json`, `mb start --json`, and `mb workflow list` expose Codex readiness and workflow support. Codex support covers start/status/setup/update/doctor, think/codify, end/checkpoint/save, validate, and workflow discovery. Ads, organic, site, and bet routes remain read-only planning unless their support level says otherwise. Draft/manual playbooks are inventory-only or surfaced behind first-class routes such as `mb-ads`; retired provisional playbook skeletons are not default Codex routes, and stale generated global skill dirs are cleaned up only when Main Branch markers prove ownership. |
 | Cursor | Roadmap | Can call deterministic `mb` commands from terminal/tasks when pointed at a business repo. | No supported Cursor rules/package adapter yet. | No supported Main Branch routing contract. | Needs adapter docs, install/update rules, conflict handling, and smoke evidence. |
 | OpenClaw | Roadmap | Target public runtime surface. It should call `mb` through stable CLI/JSON commands rather than clone-era paths. | No supported OpenClaw adapter yet. | Main Branch should coexist with OpenClaw as the business repo/GitHub memory layer, not replace it. | Needs explicit adapter shape, migration notes, generated-file rules, and smoke evidence. |
@@ -321,13 +321,17 @@ whichever repo really holds it. Anything that cannot be checked counts as
 tracked. Every file write replaces the directory entry (a temporary file
 renamed into place), so a file hard-linked into another repo keeps its content,
 and a deletion removes a symlink itself, never the tree it points to.
-Gitignored links and the per-user Codex bundle refresh on their own. When the refresh would change, delete or replace a
+Gitignored links and the per-user Codex bundle refresh on their own. In the
+old per-user Codex folders (the global plugin source and retired skills), the
+refresh deletes only files Main Branch wrote and removes a folder only once it
+is empty; anything else stays and is listed as `kept`. When the refresh would change, delete or replace a
 tracked file:
 
 - at an interactive terminal, it lists those files and asks once (default no);
 - without one, and always with `--json`, it changes no tracked file. It
-  reports the plan in `surface_refresh.planned` and puts the apply commands in
-  `next_actions`. Applying them is the operator's step.
+  reports the plan in `surface_refresh.planned` and lists the apply commands
+  in `operator_actions`, not `next_actions`. Applying them is the operator's
+  step.
 
 `surface_refresh.planned` has `consent` (`not_needed`, `no_terminal`,
 `declined` or `approved`), `tracked_files` (the repo files that would change),

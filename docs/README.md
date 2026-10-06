@@ -37,6 +37,7 @@ Pick the route that matches what you are doing.
 - [`source-ingestion.md`](source-ingestion.md) — manifest-first privacy rail for transcripts, authenticated sources, and provider exports.
 - [`issue-drafting.md`](issue-drafting.md) — privacy-safe `mb issue` flow.
 - [`connect.md`](connect.md) — `mb connect`: store a credential, run commands with it through `exec`, probe what it can reach.
+- [`google.md`](google.md) — `mb google`: read-only Search Console and GA4 reads with the repo's Google sign-in.
 - [`connection-model.md`](connection-model.md) — why agents use secrets without seeing them.
 - [`feedback.md`](feedback.md) — `mb feedback`: log mb friction and self-logged refusals locally, roll them up weekly.
 - [`session-excavation.md`](session-excavation.md) — turn transcripts, chat exports, and session logs into prioritized public-safe follow-ups.

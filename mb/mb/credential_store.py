@@ -168,6 +168,14 @@ class SecretProbe(NamedTuple):
     # changes cannot prompt), "legacy" when a Python interpreter does.
     owner: str = ""
 
+    def __repr__(self) -> str:
+        # The value is a secret: keep it out of repr, str and Rich's show_locals.
+        return (
+            f"SecretProbe(value=<{'set' if self.value else 'empty'}>, present={self.present!r}, "
+            f"backend_ok={self.backend_ok!r}, reason={self.reason!r}, "
+            f"migrated={self.migrated!r}, owner={self.owner!r})"
+        )
+
 
 def select_secret_backend(requested: str | None = None) -> str:
     """Select one backend without silently falling back to plaintext storage."""

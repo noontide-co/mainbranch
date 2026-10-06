@@ -91,9 +91,7 @@ REFERENCE_COMPAT_LINKS = {
 STATE_ORDER = {"ok": 0, "info": 1, "warn": 2, "error": 3}
 AUDIENCE_VALUES = frozenset({"mechanical", "operator_decision", "informational"})
 AGENT_REPAIR_SCOPES = frozenset({"claude", "codex"})
-CLAUDE_ACTION_IDS = frozenset(
-    {"skill-link", "plugin-wiring", "skill-shadow-repair", "legacy-claude-link-repair"}
-)
+CLAUDE_ACTION_IDS = frozenset({"skill-link", "skill-shadow-repair", "legacy-claude-link-repair"})
 CODEX_ACTION_IDS = frozenset({"codex-agents-md", "codex-global-skill"})
 AGENT_ACTION_IDS = CLAUDE_ACTION_IDS | CODEX_ACTION_IDS
 AGENT_SECTION_IDS = frozenset({"claude-wiring", "codex-wiring", "git"})
@@ -2096,6 +2094,7 @@ def _not_business_folder_guard(target: Path, *, mode: str = "plan") -> dict[str,
             )
         ],
         "actions": [],
+        "operator_actions": [],
         "applied_actions": [],
         "post_apply": {
             "structural_verification": "mb onboard",
@@ -2126,6 +2125,7 @@ def repair_plan(
         return guard
     doctor_report = run(str(target))
     actions: list[dict[str, Any]] = []
+    operator_actions: list[dict[str, Any]] = []
     sections: list[dict[str, Any]] = []
 
     update = doctor_report.get("update", {})
@@ -2548,26 +2548,10 @@ def repair_plan(
             )
         )
     if not engine_mod.plugin_wiring_status(target).get("wired"):
-        # Plan/apply parity: repair_apply writes plugin wiring when unwired
-        # (gated on apply_claude), so the plan must surface it too — otherwise
-        # `--plan` shows nothing while `--apply` writes a tracked file, breaking
-        # the review-before-apply contract precisely on the Stage-3 migration.
-        actions.append(
-            _action(
-                id="plugin-wiring",
-                title="Wire the Main Branch plugin into tracked settings",
-                state="warn",
-                mode="write",
-                command="mb skill link --repo . --plugin --json",
-                safe_to_apply=True,
-                reason=(
-                    "wires the worktree-durable, cross-surface plugin rail (Claude "
-                    "Desktop + CLI + IDEs) so skill discovery survives worktrees; "
-                    "symlinks remain the fallback (decision 2026-06-10, Stage 3)"
-                ),
-                writes=[".claude/settings.json"],
-            )
-        )
+        # #1042: the plugin-rail switch writes the tracked `.claude/settings.json`,
+        # so it is a step for a person at a terminal, never a repair an agent
+        # applies. Report it the way `mb update` does, in `operator_actions`.
+        operator_actions.append(engine_mod.plugin_switch_operator_action())
     if int(shadow_report.get("summary", {}).get("repairable", 0) or 0):
         actions.append(
             _action(
@@ -2684,28 +2668,47 @@ def repair_plan(
         },
     ]
     codex_actions: list[dict[str, Any]] = []
+    codex_operator_actions: list[dict[str, Any]] = []
     if not codex_instruction_status["ok"]:
-        agents_operations = codex_mod.agents_md_operations(target)
+        agents_plan = codex_mod.agents_md_plan(target)
+        agents_operations = agents_plan["operations"]
+        # #1052: a repair that refuses, or leaves a person's files behind, is a
+        # step for a person with a manual repair, never an agent repair.
+        agents_operator_action = codex_mod.agents_md_operator_action(agents_plan)
+        reason = (
+            "AGENTS.md is the repo-local Codex entrypoint; repair writes current "
+            "fact grounding, lifecycle routing, and approval boundaries, and removes "
+            "transitional repo-local plugin copies"
+        )
+        if agents_operator_action is not None:
+            reason = f"{reason}. {agents_operator_action['reason']}"
         action = _action(
             id="codex-agents-md",
             title="Refresh Codex AGENTS.md instructions",
             state="warn",
             mode="write",
             command="mb doctor repair --apply --only codex",
-            safe_to_apply=True,
-            reason=(
-                "AGENTS.md is the repo-local Codex entrypoint; repair writes current "
-                "fact grounding, lifecycle routing, and approval boundaries, and removes "
-                "transitional repo-local plugin copies"
+            safe_to_apply=agents_operator_action is None,
+            reason=reason,
+            writes=(
+                []
+                if agents_plan["refused"]
+                else [
+                    "AGENTS.md",
+                    *[str(item["rel"]) for item in agents_operations if item["op"] != "write"],
+                ]
             ),
-            writes=[
-                "AGENTS.md",
-                *[str(item["rel"]) for item in agents_operations if item["op"] == "delete_tree"],
-            ],
         )
+        action["refused"] = agents_plan["refused"]
+        action["kept"] = agents_plan["kept"]
+        # #1056: an explicit apply does exactly this, even while safe_to_apply is false.
+        action["on_apply"] = codex_mod.agents_md_apply_effect(agents_plan)
         _attach_operations(action, target, agents_operations)
         actions.append(action)
         codex_actions.append(action)
+        if agents_operator_action is not None:
+            codex_operator_actions.append(agents_operator_action)
+            operator_actions.append(agents_operator_action)
     if not codex_global_skill["ok"]:
         action = _action(
             id="codex-global-skill",
@@ -2723,6 +2726,8 @@ def repair_plan(
             ],
             result=codex_global_skill,
         )
+        # #1056: files Main Branch did not write in old global folders stay.
+        action["kept"] = list(codex_global_skill.get("kept", []))
         _attach_operations(action, target, codex_mod.global_skill_operations())
         actions.append(action)
         codex_actions.append(action)
@@ -2950,6 +2955,14 @@ def repair_plan(
         },
         "sections": sections,
         "actions": actions,
+        # Steps for a person at a terminal, never run by an agent (#1042).
+        "operator_actions": (
+            codex_operator_actions
+            if only == "codex"
+            else [item for item in operator_actions if item not in codex_operator_actions]
+            if only == "claude"
+            else operator_actions
+        ),
         "applied_actions": applied_actions or [],
         "agent_surfaces": agent_surfaces,
         "receipt": _repair_receipt(
@@ -3105,26 +3118,8 @@ def repair_apply(
             )
         )
 
-    if apply_claude and not engine_mod.plugin_wiring_status(target).get("wired"):
-        plugin_wiring = engine_mod.write_plugin_wiring(target)
-        applied.append(
-            _action(
-                id="plugin-wiring",
-                title="Wired the Main Branch plugin into tracked settings",
-                state="ok" if plugin_wiring["ok"] else "error",
-                mode="write",
-                command="mb skill link --repo . --plugin --json",
-                safe_to_apply=True,
-                reason=(
-                    "wired the worktree-durable, cross-surface plugin rail (Claude "
-                    "Desktop + CLI + IDEs) so skill discovery survives worktrees; "
-                    "symlinks remain the fallback (decision 2026-06-10, Stage 3)"
-                ),
-                writes=[".claude/settings.json"],
-                applied=True,
-                result=plugin_wiring,
-            )
-        )
+    # #1042: never switch a repo to the plugin rail here. The switch writes the
+    # tracked `.claude/settings.json`; the plan lists it in `operator_actions`.
 
     legacy_links = _legacy_claude_symlinks(target)
     repaired_links = (
@@ -3161,8 +3156,12 @@ def repair_apply(
         applied.append(
             _action(
                 id="codex-agents-md",
-                title="Refreshed Codex repo instructions",
-                state="ok" if agents["ok"] else "error",
+                title=(
+                    "Left Codex AGENTS.md unchanged: it needs a manual repair first"
+                    if agents["refused"]
+                    else "Refreshed Codex repo instructions"
+                ),
+                state="warn" if agents["refused"] or agents["kept"] else "ok",
                 mode="write",
                 command=(
                     "mb doctor repair --apply --only codex"
@@ -3171,15 +3170,20 @@ def repair_apply(
                     if all_agents
                     else "mb doctor repair --apply"
                 ),
-                safe_to_apply=True,
+                safe_to_apply=not (agents["refused"] or agents["kept"]),
                 reason=(
-                    "wrote current Codex AGENTS.md fact grounding, lifecycle routing, "
+                    str(agents["refused"][0]["reason"])
+                    if agents["refused"]
+                    else "wrote current Codex AGENTS.md fact grounding, lifecycle routing, "
                     "and approval boundaries"
+                    + (
+                        "; kept files Main Branch did not write: " + ", ".join(agents["kept"])
+                        if agents["kept"]
+                        else ""
+                    )
                 ),
                 writes=list(agents.get("changed_paths", []))
-                or [
-                    "AGENTS.md",
-                ],
+                or ([] if agents["refused"] else ["AGENTS.md"]),
                 applied=bool(agents["changed"]),
                 result=agents,
             )
@@ -3328,6 +3332,12 @@ def render_repair(report: dict[str, Any]) -> None:
             console.print(f"    why: {action['reason']}")
     else:
         console.print("\n[green]No repair actions needed.[/green]")
+    if report.get("operator_actions"):
+        console.print("\n[bold]For you to run[/bold]")
+        for item in report["operator_actions"]:
+            console.print(f"  - {item['command']}", markup=False)
+            if item.get("note"):
+                console.print(f"    {item['note']}", markup=False)
     console.print("\n[bold]After apply[/bold]")
     console.print(f"  structural: {report['post_apply']['structural_verification']}")
     console.print(f"  validation: {report['post_apply']['validation_frontmatter_debt']}")
