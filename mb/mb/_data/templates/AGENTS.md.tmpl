@@ -390,6 +390,11 @@ the operator asks for plumbing.
   A question that spans several repos or sites (what is deployed, is CI red,
   what is behind) -> `mb fleet status` (read-only; `mb fleet refresh` first;
   needs Python 3.11+).
+  Real Search Console or GA4 numbers (queries, indexing, sitemaps, sessions,
+  conversions) -> `mb google sc query|inspect|sitemaps list` or
+  `mb google ga4 report` with `--json` (`--out <private file>` for big pulls;
+  read-only, recorded site and property only; not connected -> the person runs
+  `mb connect google --oauth`).
   "Show me the business" ->
   `mb dashboard open` (local, read-only, never committed). Commands that
   need a credential -> `mb connect exec <provider> -- <command>` (the secret

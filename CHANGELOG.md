@@ -11,6 +11,21 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- `mb google` reads take `--out PATH`: a large Search Console or GA4 pull goes
+  to a private file (mode 0600, created in one step) and the terminal shows only
+  the path, row count and `may_have_more`. The path is refused, before anything
+  is read, inside a git checkout unless git ignores it (so a pull cannot be
+  committed by accident), when it already exists (unless `--force`), when its
+  folder is missing, or when it is a link. `docs/google.md` has the rules and
+  the recommended places.
+- The `mb-site` and `mb-ads` skills use the typed reads for real numbers (which
+  queries and pages bring clicks, whether a page is indexed, sitemap status,
+  GA4 sessions and conversions), and the generated Codex `AGENTS.md` routes to
+  them. When the repo is not signed in they tell you to run
+  `mb connect google --oauth` and offer a manual export.
+
 ### Changed
 
 - `mb connect test <provider>` no longer writes its outcome into a

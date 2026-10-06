@@ -16,6 +16,17 @@ Each prints a table by default. Add `--json` to get one result envelope
 `mb.google.sc.sitemaps`, `mb.google.sc.inspect` or `mb.google.ga4.report`. Every command takes
 `--repo PATH` (default `.`).
 
+## Who uses these reads
+
+The `mb-site` skill (queries, indexing, sitemaps, sessions) and the `mb-ads`
+skill (GA4 sessions and conversions) call these commands with `--json`, or
+`--out` for large pulls, and read the site and property only from the repo's
+recorded sign-in. When the repo is not signed in, they tell the person to run
+`mb connect google --oauth` themselves (an agent never runs the sign-in) and
+fall back to asking for a manual export. Codex reaches the same commands
+through the generated `AGENTS.md` routing rules. Inspect one page at a time:
+never loop over a sitemap.
+
 ## Before you start
 
 A person signs the repo in once, in a terminal:
@@ -173,6 +184,45 @@ The JSON result has `property_id`, `range`, `dimensions`, `metrics`,
 `{name: value}`, with values as the strings Google returns), `order_by` when
 given, and `property_quota`.
 
+## `--out`: keep a large pull in a private file
+
+Every read takes `--out PATH`. It writes the same JSON that `--json` prints
+(the envelope, never a token or grant) to PATH with mode 0600, created in one
+step, and prints only a short summary: the path, the row count and
+`may_have_more`. With `--json` the summary is JSON (`mb.google.out`). Add
+`--force` to replace an existing file.
+
+```bash
+mb google sc query --start 2026-09-01 --end 2026-09-30 --dimensions query,page \
+  --row-limit 25000 --out ~/pulls/queries-2026-09.json
+```
+
+A pull is the business's private data, so `--out` is judged before anything is
+read from Google (a refused path costs no quota) and refuses with exit 2:
+
+| `rule` | When |
+| --- | --- |
+| `out_path_in_repo` | PATH is inside a git checkout, the business repo included, and git does not report it ignored (a tracked file, or one `git add` would pick up). `--force` never lifts this. |
+| `out_path_git_unknown` | PATH is inside a checkout and git could not answer. The path is refused. |
+| `out_path_exists` | The file exists and `--force` was not given. |
+| `out_path_not_file` | PATH exists and is not a plain file (a folder, for example). |
+| `out_parent_missing` | The folder does not exist. `mb` never creates folders. |
+| `out_path_link` | PATH itself is a link, even a dangling one. |
+| `out_path_invalid` | PATH is empty or has no file name. |
+| `out_force_without_out` | `--force` was given without `--out`. |
+
+Folders above the file may be links (macOS keeps `/tmp` behind one): the
+folder is resolved first and the checks run on where it really is, so a link
+into a repo is refused by the git rule. A relative PATH is relative to the
+folder you run the command from, not `--repo`. A failed read writes nothing. If
+the read worked but the file cannot be written, the command exits 1 with
+`out_write_failed` and leaves no partial file.
+
+Put the file outside the repo (for example `~/pulls/`), or in a folder
+`.gitignore` lists. `.mb/` is ignored in business repos made by `mb init`, so
+`.mb/pulls/` works once that folder exists. Never commit it: the rows are
+private business data.
+
 ## Quotas and pacing
 
 Each command sends one request. If Google could not be reached, or no answer
@@ -255,6 +305,8 @@ and quotas
 | 2 | `--url` is not under the recorded Search Console site. | `url_outside_site` |
 | 2 | `--sitemap-index` is not an http(s) URL. | `sitemap_index_format` |
 | 2 | `.mb/connect.yaml` could not be used. | `connect_config_refused` |
+| 2 | `--out` refused (see `--out`; nothing was read). | `out_*` |
+| 1 | The read worked but the `--out` file could not be written. | `out_write_failed` |
 
 A refusal (exit 2) calls nothing: no token is minted and Google is not asked.
 Failures print `mb google ...: <summary> (<rule>)` and a `next:` line on
@@ -277,5 +329,4 @@ A read never changes the recorded status, except for `reauth_required`.
 
 ## Not here yet
 
-A private `--out` file mode and skill wiring come in later releases. Request indexing has no API; it stays in
-the Search Console website.
+Request indexing has no API; it stays in the Search Console website.
