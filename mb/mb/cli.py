@@ -199,6 +199,34 @@ books_report_app = typer.Typer(
 )
 books_app.add_typer(books_report_app, name="report")
 
+google_app = typer.Typer(
+    name="google",
+    help="Read Search Console and GA4 with this repo's Google sign-in (read-only).",
+    no_args_is_help=True,
+)
+app.add_typer(google_app, name="google")
+
+google_sc_app = typer.Typer(
+    name="sc",
+    help="Read the recorded Search Console site (read-only).",
+    no_args_is_help=True,
+)
+google_app.add_typer(google_sc_app, name="sc")
+
+google_sc_sitemaps_app = typer.Typer(
+    name="sitemaps",
+    help="Read the recorded site's submitted sitemaps (read-only).",
+    no_args_is_help=True,
+)
+google_sc_app.add_typer(google_sc_sitemaps_app, name="sitemaps")
+
+google_ga4_app = typer.Typer(
+    name="ga4",
+    help="Read the recorded GA4 property (read-only).",
+    no_args_is_help=True,
+)
+google_app.add_typer(google_ga4_app, name="ga4")
+
 ads_app = typer.Typer(
     name="ads",
     help="Read paid-channel account summaries.",
@@ -1800,7 +1828,7 @@ def _no_secret_traceback(func: _F) -> _F:
         except Exception as exc:
             try:
                 _connect_failure(
-                    f"mb {func.__name__.removesuffix('_cmd')}",
+                    f"mb {func.__name__.removesuffix('_cmd').replace('_', ' ')}",
                     f"unexpected error ({type(exc).__name__}); details are hidden because "
                     "they may hold a secret",
                     json_out=bool(kwargs.get("json_out")),
@@ -3751,6 +3779,144 @@ def skill_repair_cmd(
             typer.echo("To move stale or broken Main Branch symlinks to backup:")
             typer.echo("  mb skill repair --repo . --apply")
     raise typer.Exit(0 if result["ok"] else 1)
+
+
+# --- mb google: typed read-only reads (#1004) ---------------------------------
+
+
+def _google_read_exit(
+    command: str, schema_name: str, result: dict[str, Any], code: int, json_out: bool
+) -> NoReturn:
+    """Print one `mb google` result and exit. Failures also go to stderr."""
+    from mb import google_reads as google_reads_mod
+
+    if json_out:
+        typer.echo(_json_payload(result, command=command, schema_name=schema_name))
+    if code:
+        google_reads_mod.render_failure(command, result, lambda line: typer.echo(line, err=True))
+    elif not json_out:
+        renderers = {
+            google_reads_mod.SCHEMA_SC_QUERY: google_reads_mod.render_sc_query,
+            google_reads_mod.SCHEMA_SC_SITEMAPS: google_reads_mod.render_sc_sitemaps,
+            google_reads_mod.SCHEMA_GA4_REPORT: google_reads_mod.render_ga4_report,
+        }
+        for line in renderers[schema_name](result):
+            typer.echo(line)
+    raise typer.Exit(code)
+
+
+GOOGLE_SC_DIMENSIONS_OPTION = typer.Option(
+    [],
+    "--dimensions",
+    help="Group by: query, page, date, country, device, searchAppearance (comma-separated).",
+)
+GOOGLE_SC_FILTER_OPTION = typer.Option(
+    [],
+    "--filter",
+    help=("dimension:operator:expression, e.g. query:contains:shoes (repeatable; all must match)."),
+)
+GOOGLE_GA4_METRICS_OPTION = typer.Option(
+    ..., "--metrics", help="Metric names, e.g. activeUsers,sessions (comma-separated)."
+)
+GOOGLE_GA4_DIMENSIONS_OPTION = typer.Option(
+    [], "--dimensions", help="Dimension names, e.g. date,sessionDefaultChannelGroup."
+)
+
+
+@google_sc_app.command("query")
+@_no_secret_traceback
+def google_sc_query_cmd(
+    start: str = typer.Option(..., "--start", help="First day, YYYY-MM-DD (Pacific Time)."),
+    end: str = typer.Option(..., "--end", help="Last day, YYYY-MM-DD (Pacific Time)."),
+    dimensions: list[str] = GOOGLE_SC_DIMENSIONS_OPTION,
+    search_type: str = typer.Option(
+        "web", "--type", help="web, image, video, news, discover or googleNews."
+    ),
+    filters: list[str] = GOOGLE_SC_FILTER_OPTION,
+    row_limit: int = typer.Option(1000, "--row-limit", help="Rows to return, 1-25,000."),
+    start_row: int = typer.Option(0, "--start-row", help="Zero-based first row, for paging."),
+    fresh: bool = typer.Option(
+        False, "--fresh", help="Include fresh, not yet final data (dataState: all)."
+    ),
+    repo: str = typer.Option(".", "--repo", help="Business repo with the Google sign-in."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Search performance for the recorded site (searchAnalytics.query, read-only)."""
+    from mb import google_reads as google_reads_mod
+
+    result, code = google_reads_mod.sc_query(
+        repo,
+        start=start,
+        end=end,
+        dimensions=dimensions,
+        search_type=search_type,
+        filters=filters,
+        row_limit=row_limit,
+        start_row=start_row,
+        fresh=fresh,
+    )
+    _google_read_exit(
+        google_reads_mod.SC_QUERY_COMMAND, google_reads_mod.SCHEMA_SC_QUERY, result, code, json_out
+    )
+
+
+@google_sc_sitemaps_app.command("list")
+@_no_secret_traceback
+def google_sc_sitemaps_list_cmd(
+    sitemap_index: str = typer.Option(
+        "", "--sitemap-index", help="List the sitemaps inside this sitemap index URL instead."
+    ),
+    repo: str = typer.Option(".", "--repo", help="Business repo with the Google sign-in."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Sitemaps submitted for the recorded site (sitemaps.list, read-only)."""
+    from mb import google_reads as google_reads_mod
+
+    result, code = google_reads_mod.sc_sitemaps_list(repo, sitemap_index=sitemap_index)
+    _google_read_exit(
+        google_reads_mod.SC_SITEMAPS_COMMAND,
+        google_reads_mod.SCHEMA_SC_SITEMAPS,
+        result,
+        code,
+        json_out,
+    )
+
+
+@google_ga4_app.command("report")
+@_no_secret_traceback
+def google_ga4_report_cmd(
+    metrics: list[str] = GOOGLE_GA4_METRICS_OPTION,
+    start: str = typer.Option(..., "--start", help="First day, YYYY-MM-DD."),
+    end: str = typer.Option(..., "--end", help="Last day, YYYY-MM-DD."),
+    dimensions: list[str] = GOOGLE_GA4_DIMENSIONS_OPTION,
+    limit: int = typer.Option(1000, "--limit", help="Rows to return, 1-250,000."),
+    offset: int = typer.Option(0, "--offset", help="Zero-based first row, for paging."),
+    order_by: str = typer.Option(
+        "", "--order-by", help="A requested metric or dimension, NAME or NAME:desc."
+    ),
+    repo: str = typer.Option(".", "--repo", help="Business repo with the Google sign-in."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """A GA4 report for the recorded property (runReport, read-only)."""
+    from mb import google_reads as google_reads_mod
+
+    result, code = google_reads_mod.ga4_report(
+        repo,
+        start=start,
+        end=end,
+        metrics=metrics,
+        dimensions=dimensions,
+        limit=limit,
+        offset=offset,
+        order_by=order_by,
+    )
+    _google_read_exit(
+        google_reads_mod.GA4_REPORT_COMMAND,
+        google_reads_mod.SCHEMA_GA4_REPORT,
+        result,
+        code,
+        json_out,
+    )
 
 
 def _entry() -> None:
