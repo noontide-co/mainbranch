@@ -71,6 +71,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- `mb connect test` never follows an HTTP redirect with a credential. The
+  GitHub, Cloudflare, Stripe, Apify and `ga4` probes, the Cloudflare Pages read
+  behind `mb fleet`, and the fal.ai image request now refuse a 3xx instead of
+  sending the token to the `Location` URL. A probe that gets a redirect records
+  `unvalidated` with the rule `provider_unexpected_redirect`, like a network
+  failure: it is never recorded as an invalid credential and never asks for a
+  reconnect (#1058).
 - `mb doctor repair --apply --only codex` (and the same Codex refresh from
   `mb update`) no longer deletes what a person wrote. In an `AGENTS.md` from
   before the managed markers it replaces only the old generated text, matched
