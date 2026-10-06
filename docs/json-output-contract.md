@@ -120,8 +120,9 @@ Entries today:
   no longer matches the template its metadata names), or when old repo-local
   Codex paths hold files Main Branch cannot prove it wrote. A file is proven
   only when its content equals a version a released `mb` wrote there (or what
-  this `mb` renders), allowing only for the embedded `mb` version and line
-  endings; names and wording are not proof. The repair removes only proven
+  this `mb` renders), allowing only for the embedded `mb` version number (a
+  plain X.Y.Z) and line endings, with JSON files compared as data (whitespace
+  and key order); names and wording are not proof. The repair removes only proven
   files and never touches anything else, including a generated file a person
   added to (#1062). While
   this entry is present, doctor's `codex-agents-md` action has
@@ -135,9 +136,12 @@ Entries today:
   `mb init` returns the same entry, plus a `warnings` line, when it refuses to
   change an existing `AGENTS.md`; `codex_agents_md` has its `ok`, `refused`
   and `kept`.
-- files in the old global Codex folders (the global plugin source, the legacy
-  `main-branch-owner-loop` skill and the retired playbook skills) that are not
-  proven to be Main Branch's (`mb doctor repair`, #1062). This entry has
+- files in the old global Codex folders that are not proven to be Main
+  Branch's (`mb doctor repair`, #1062): any such file in the global plugin
+  source or the legacy `main-branch-owner-loop` skill folder, and in a retired
+  playbook skill folder only when that folder also held a Main Branch file (a
+  same-named folder with nothing of Main Branch's in it is left alone and not
+  listed). This entry has
   `id: "codex-global-kept"`, `reason`, `manual_step`, `changes` (the kept
   files) and `on_apply`, with the same meaning as above. While it is present,
   doctor's `codex-global-skill` action has `safe_to_apply: false` and the same

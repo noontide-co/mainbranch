@@ -250,9 +250,36 @@ def test_released_repo_local_files_are_removed_whole(repo: Path) -> None:
     assert not (repo / ".agents").exists()
 
 
+def test_a_note_in_the_version_slot_is_kept_and_reported(
+    repo: Path, roots: tuple[Path, Path]
+) -> None:
+    plugin_root, _skills_root = roots
+    released = (RELEASED / SAMPLE).read_bytes().replace(b"`0.3.30`", SLOT_NOTE, 1)
+    relative = ".agents/plugins/main-branch-owner-loop/commands/mb-start.md"
+    in_repo = repo / relative
+    in_repo.parent.mkdir(parents=True)
+    in_repo.write_bytes(released)
+    global_files = _released_files("0.3.33", "plugin")
+    global_files[relative] = global_files[relative].replace(b"`0.3.33`", SLOT_NOTE, 1)
+    placed = _place(plugin_root, global_files)
+    in_home = plugin_root / relative
+
+    plan = _doctor(repo, "--plan", "--only", "codex")
+    applied = _doctor(repo, "--apply", "--only", "codex")
+
+    operator = {item["id"]: item for item in plan["operator_actions"]}
+    assert operator["codex-agents-md"]["on_apply"]["keeps"] == [relative]
+    assert str(in_home) in operator["codex-global-kept"]["changes"]
+    assert applied["exit_code"] == 0
+    assert in_repo.read_bytes() == released
+    assert SLOT_NOTE in in_home.read_bytes()
+    assert not any(path.exists() for path in placed if path != in_home)
+
+
 # --- The content comparison ---------------------------------------------------
 
 SAMPLE = "0.3.30/repo/.agents/plugins/main-branch-owner-loop/commands/mb-start.md"
+SLOT_NOTE = b"`0.3.30 - TEAM NOTE: we pin our fork, ask the owner before upgrading`"
 
 
 def _proven(tmp_path: Path, relative: str, data: bytes) -> bool:
@@ -279,9 +306,18 @@ def test_the_embedded_version_and_line_endings_are_normalised(tmp_path: Path) ->
         lambda data: data.replace(b"Main Branch", b"Main  Branch", 1),
         lambda data: data[:-2] + data[-1:],
         lambda data: data.replace(b"`0.3.30`", b"0.3.30", 1),
+        lambda data: data.replace(b"`0.3.30`", SLOT_NOTE, 1),
         lambda data: b"\xff" + data,
     ],
-    ids=["newline", "appended", "one-space", "one-byte-gone", "version-unquoted", "not-utf8"],
+    ids=[
+        "newline",
+        "appended",
+        "one-space",
+        "one-byte-gone",
+        "version-unquoted",
+        "text-in-version-slot",
+        "not-utf8",
+    ],
 )
 def test_any_other_change_to_a_released_file_is_not_proven(tmp_path: Path, mutate: Any) -> None:
     data = (RELEASED / SAMPLE).read_bytes()

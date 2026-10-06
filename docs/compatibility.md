@@ -325,7 +325,9 @@ Gitignored links and the per-user Codex bundle refresh on their own. In the
 old per-user Codex folders (the global plugin source and retired skills), the
 refresh deletes only files whose content is proven to be a version Main Branch
 wrote there, and removes a folder only once it is empty; anything else,
-including a Main Branch file someone edited, stays and is listed as `kept`. When the refresh would change, delete or replace a
+including a Main Branch file someone edited, stays. It is listed as `kept`,
+except in a retired skill folder that held nothing of Main Branch's, which is
+left alone and not reported. When the refresh would change, delete or replace a
 tracked file:
 
 - at an interactive terminal, it lists those files and asks once (default no);

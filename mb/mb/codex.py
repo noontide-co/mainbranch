@@ -3296,8 +3296,9 @@ def _remove_empty_transitional_dirs(target: Path) -> None:
 
 # The `mb` version a release embedded in its Codex command and skill text, in
 # the two sentences that carried it: "by Main Branch `0.3.30`. If runtime ..."
-# and "`0.3.30`. If the runtime reports ...".
-_EMBEDDED_VERSION_RE = re.compile(r"`[^`\n]+`(?=\. If (?:the )?runtime )")
+# and "`0.3.30`. If the runtime reports ...". Every release wrote a plain
+# X.Y.Z there; anything else in that slot is a person's text and is compared.
+_EMBEDDED_VERSION_RE = re.compile(r"`\d+\.\d+\.\d+`(?=\. If (?:the )?runtime )")
 _EMBEDDED_VERSION_PLACEHOLDER = "`<mb-version>`"
 
 
