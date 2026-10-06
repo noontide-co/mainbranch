@@ -668,7 +668,7 @@ def test_generate_fal_image_decodes_data_uri_response(monkeypatch) -> None:
         body = json.dumps({"images": [{"url": f"data:image/png;base64,{encoded}"}]})
         return _FakeResponse(body.encode("utf-8"))
 
-    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr("mb.http_safe.open_no_redirect", fake_urlopen)
 
     image_bytes = image_rail_mod._generate_fal_image(
         "fixture-safe fal prompt",
@@ -711,7 +711,7 @@ def test_generate_fal_image_rejects_missing_or_insecure_image_url(monkeypatch) -
     )
 
     monkeypatch.setattr(
-        "urllib.request.urlopen",
+        "mb.http_safe.open_no_redirect",
         lambda request, timeout=None: _FakeResponse(next(responses)),
     )
 

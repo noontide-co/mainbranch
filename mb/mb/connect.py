@@ -24,6 +24,7 @@ from typing import Any, NoReturn
 
 import yaml
 
+from mb import http_safe
 from mb._credential_helper import STAGE_SUFFIX
 from mb.credential_store import (
     KEYCHAIN_REPAIR_ALL_COMMAND,
@@ -3067,6 +3068,7 @@ def _extract_upstream_errors(
 
 
 RESPONSE_HEADER_MAX_CHARS = 512
+PROVIDER_REDIRECT_RULE = "provider_unexpected_redirect"
 
 
 def _http_get_json(
@@ -3107,12 +3109,36 @@ def _http_get_json(
     }
     got_headers: dict[str, str] = {}
     try:
-        with urllib.request.urlopen(request, timeout=VALIDATION_TIMEOUT_SECONDS) as response:
+        with http_safe.open_no_redirect(request, timeout=VALIDATION_TIMEOUT_SECONDS) as response:
             status = int(getattr(response, "status", 0) or 0)
             body = response.read(8192)
             got_headers = picked(getattr(response, "headers", None))
     except urllib.error.HTTPError as exc:
         got_headers = picked(exc.headers)
+        if http_safe.is_redirect(int(exc.code)):
+            # The credential is never sent to a second URL. A redirect says
+            # nothing about the credential, so it is not "invalid" and nothing
+            # asks the person to reconnect.
+            with suppress(OSError):
+                exc.close()
+            upstream.update(
+                {
+                    "http_status": int(exc.code),
+                    "response_received": True,
+                    "rule": PROVIDER_REDIRECT_RULE,
+                }
+            )
+            return {
+                "ok": False,
+                "state": "unvalidated",
+                "summary": (
+                    f"{provider_name} answered with a redirect (HTTP {int(exc.code)}), which "
+                    "Main Branch never follows with a credential. Retry later."
+                ),
+                "upstream": upstream,
+                "safe_to_share": True,
+                "headers": got_headers,
+            }
         body = b""
         with suppress(OSError):
             body = exc.read(8192)

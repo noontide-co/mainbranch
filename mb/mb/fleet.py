@@ -30,7 +30,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from mb import topology
+from mb import http_safe, topology
 from mb.credential_store import KEYCHAIN_REPAIR_COMMAND
 
 FLEET_SCHEMA = "mb.fleet.v0"
@@ -219,7 +219,7 @@ class GitHub:
 def _http_get(url: str, headers: dict[str, str]) -> tuple[int, Any]:
     request = urllib.request.Request(url, headers=headers)
     try:
-        with urllib.request.urlopen(request, timeout=CLOUDFLARE_TIMEOUT_SECONDS) as response:
+        with http_safe.open_no_redirect(request, timeout=CLOUDFLARE_TIMEOUT_SECONDS) as response:
             status = int(getattr(response, "status", 200) or 200)
             body = response.read()
     except urllib.error.HTTPError as exc:

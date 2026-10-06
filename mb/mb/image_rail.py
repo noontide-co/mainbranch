@@ -17,6 +17,8 @@ from typing import Any, Literal
 
 import yaml
 
+from mb import http_safe
+
 DEFAULT_PUSH_SLUG = "2026-05-13-openai-image-rail-smoke"
 DEFAULT_ASSET_ID = "fake-openai-image-001"
 DEFAULT_PROMPT_KEY = "lost-thread-branch-map.v1"
@@ -338,7 +340,7 @@ def _generate_fal_image(prompt: str, *, model: str, size: str, quality: str) -> 
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=DEFAULT_TIMEOUT_SECONDS) as response:
+        with http_safe.open_no_redirect(request, timeout=DEFAULT_TIMEOUT_SECONDS) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         # `from None` drops the HTTPError, whose response body may echo
