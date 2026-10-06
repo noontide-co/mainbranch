@@ -1224,6 +1224,7 @@ def run(
             infer_github_identity=bool(github_repo.strip()),
         )
         created.extend(str(item) for item in init_result.get("created", []))
+        warnings.extend(str(item) for item in init_result.get("warnings", []))
         if init_result["status"] == "error":
             errors.append(str(init_result.get("error") or "mb init failed"))
         elif init_result["status"] == "already-initialized":

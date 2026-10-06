@@ -47,15 +47,16 @@ would change one, it leaves it alone and reports it:
 `surface_refresh.planned.consent` is `no_terminal`,
 `surface_refresh.planned.tracked_files` names the files (writes and
 deletions), and
-`surface_refresh.planned.apply_commands` (also in `next_actions`) holds the
-commands that would apply them. Tell the user which files would change and
+`surface_refresh.planned.apply_commands` (also in `operator_actions`, not
+`next_actions`) holds the commands that would apply them. Tell the user which files would change and
 give them those commands. Applying them is the operator's step: do not run
 them yourself unless the user asks you to in this conversation. Gitignored skill
 links still refresh on their own.
 
 **For a person only.** `operator_actions` lists steps that change tracked
 files, such as the plugin-rail switch. Show each `command` and `note` to the
-user as theirs to run at a terminal; never run them yourself.
+user as theirs to run at a terminal; never run them yourself. `mb doctor
+repair` lists the same switch there and never applies it.
 
 ---
 

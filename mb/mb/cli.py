@@ -15,9 +15,10 @@ import sys
 from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, NoReturn, TypeVar
+from typing import Any, NoReturn, TypeVar, cast
 
 import typer
+from typer.core import TyperGroup
 
 from mb import __version__
 from mb import ads as ads_mod
@@ -57,8 +58,64 @@ from mb import validate as validate_mod
 from mb.freshness import format_update_alert, looks_like_business_repo, package_update_status
 from mb.json_result import envelope, json_default
 
+# Click's own usage error, from whichever Click this Typer ships with.
+_CLICK_USAGE_ERROR = cast(
+    "type[Exception]",
+    next(cls for cls in typer.BadParameter.__mro__ if cls.__name__ == "UsageError"),
+)
+
+
+def _hide_credential_input(exc: Exception, argv: list[str]) -> None:
+    """Replace credential-shaped command-line input in a Click usage error.
+
+    Click repeats what it could not parse ("No such option: --<text>", an
+    unexpected extra argument, an invalid value). Input that could be a
+    credential is replaced with the same marker `mb connect` failures use; an
+    ordinary typo such as ``--jsno`` still shows so it can be fixed.
+    """
+    message = getattr(exc, "message", None)
+    if not isinstance(message, str):
+        return
+    hidden: set[str] = set()
+    for token in argv:
+        for piece in {token, *token.split("=", 1)}:
+            core = piece.strip().lstrip("-")
+            if len(core) >= 8 and not connect_mod.echoable_input(core):
+                hidden.update({piece, core})
+    for text in sorted(hidden, key=len, reverse=True):
+        message = message.replace(text, connect_mod.HIDDEN_INPUT)
+    exc.message = message  # type: ignore[attr-defined]
+
+
+class _UsageErrorRedactingGroup(TyperGroup):
+    """The `mb` root group: Click usage errors never repeat credential-shaped input.
+
+    Every subcommand is parsed inside the root's ``invoke``, so catching here
+    covers `mb`, `mb connect` and their subcommands. Exit code 2 and the
+    usage line are Click's own.
+    """
+
+    def make_context(self, info_name: Any, args: list[str], *rest: Any, **extra: Any) -> Any:
+        argv = list(args)
+        try:
+            ctx = super().make_context(info_name, args, *rest, **extra)
+        except _CLICK_USAGE_ERROR as exc:
+            _hide_credential_input(exc, argv)
+            raise
+        ctx.meta["mb.argv"] = argv
+        return ctx
+
+    def invoke(self, ctx: Any) -> Any:
+        try:
+            return super().invoke(ctx)
+        except _CLICK_USAGE_ERROR as exc:
+            _hide_credential_input(exc, list(ctx.meta.get("mb.argv") or []))
+            raise
+
+
 app = typer.Typer(
     name="mb",
+    cls=_UsageErrorRedactingGroup,
     help=(
         "Run your business as files in git. Main Branch scaffolds your repo, "
         "checks it, graphs it, and wires it into Claude Code."
@@ -141,6 +198,34 @@ books_report_app = typer.Typer(
     no_args_is_help=True,
 )
 books_app.add_typer(books_report_app, name="report")
+
+google_app = typer.Typer(
+    name="google",
+    help="Read Search Console and GA4 with this repo's Google sign-in (read-only).",
+    no_args_is_help=True,
+)
+app.add_typer(google_app, name="google")
+
+google_sc_app = typer.Typer(
+    name="sc",
+    help="Read the recorded Search Console site (read-only).",
+    no_args_is_help=True,
+)
+google_app.add_typer(google_sc_app, name="sc")
+
+google_sc_sitemaps_app = typer.Typer(
+    name="sitemaps",
+    help="Read the recorded site's submitted sitemaps (read-only).",
+    no_args_is_help=True,
+)
+google_sc_app.add_typer(google_sc_sitemaps_app, name="sitemaps")
+
+google_ga4_app = typer.Typer(
+    name="ga4",
+    help="Read the recorded GA4 property (read-only).",
+    no_args_is_help=True,
+)
+google_app.add_typer(google_ga4_app, name="ga4")
 
 ads_app = typer.Typer(
     name="ads",
@@ -723,6 +808,9 @@ def _is_interactive_terminal() -> bool:
 
 
 CONNECT_JSON_SCHEMA = "mainbranch.connect"
+# `mb connect google --oauth --timeout`; kept here so the CLI does not import
+# the OAuth modules until --oauth is used. Matches google_connect.
+GOOGLE_OAUTH_TIMEOUT_DEFAULT = 300
 
 
 def _connect_failure(
@@ -923,6 +1011,12 @@ def init_cmd(
             for line in result["created"]:
                 typer.echo(f"  + {line}")
             typer.echo("")
+            for warning in result.get("warnings", []):
+                typer.echo(f"warning: {warning}", err=True)
+            for item in result.get("operator_actions", []):
+                typer.echo(f"  run after the manual step: {item['command']}", err=True)
+            if result.get("warnings"):
+                typer.echo("")
             typer.echo("next:")
             typer.echo(f"  cd {result['path']}")
             typer.echo("  claude")
@@ -1740,7 +1834,7 @@ def _no_secret_traceback(func: _F) -> _F:
         except Exception as exc:
             try:
                 _connect_failure(
-                    f"mb {func.__name__.removesuffix('_cmd')}",
+                    f"mb {func.__name__.removesuffix('_cmd').replace('_', ' ')}",
                     f"unexpected error ({type(exc).__name__}); details are hidden because "
                     "they may hold a secret",
                     json_out=bool(kwargs.get("json_out")),
@@ -1751,6 +1845,136 @@ def _no_secret_traceback(func: _F) -> _F:
                 raise typer.Exit(exit_exc.exit_code) from None
 
     return wrapper  # type: ignore[return-value]
+
+
+def _connect_google_oauth(
+    *,
+    target: str,
+    provider: str,
+    repo: str,
+    account_label: str,
+    scope: str,
+    metadata: list[str],
+    client_file: str,
+    client_stdin: bool,
+    reauth: bool,
+    paste: bool,
+    no_browser: bool,
+    port: int,
+    timeout: int,
+    replace_access_token: bool,
+    conflicts: list[str],
+    json_out: bool,
+) -> NoReturn:
+    """`mb connect google --oauth`: the one-time Google sign-in (#1004).
+
+    Runs inside `connect_cmd`, so `_no_secret_traceback` covers it; Ctrl-C
+    gets a fixed line here too, naming what the sign-in had already stored.
+    Every message below is fixed text.
+    """
+    from mb import google_connect as google_connect_mod
+    from mb import google_oauth as google_oauth_mod
+
+    command = "mb connect google"
+    if target != "google" or provider:
+        _connect_usage_exit(
+            "mb connect", "--oauth is only for `mb connect google`", json_out=json_out
+        )
+    if conflicts:
+        _connect_usage_exit(
+            command, f"--oauth cannot be combined with {', '.join(conflicts)}", json_out=json_out
+        )
+    if client_file and client_stdin:
+        _connect_usage_exit(
+            command, "choose one of --client-file and --client-stdin", json_out=json_out
+        )
+    if paste and client_stdin:
+        _connect_usage_exit(
+            command,
+            "--paste reads the redirect from the terminal; pass the client with --client-file",
+            json_out=json_out,
+        )
+    progress = google_connect_mod.Progress()
+    try:
+        if client_file:
+            client_json: str | None = google_connect_mod.read_client_file(client_file)
+        elif client_stdin:
+            client_json = sys.stdin.read(google_connect_mod.CLIENT_JSON_MAX_BYTES + 1)
+        else:
+            client_json = None
+        result = google_connect_mod.bootstrap(
+            repo,
+            client_json=client_json,
+            metadata_pairs=metadata,
+            reauth=reauth,
+            paste=paste,
+            no_browser=no_browser,
+            port=port,
+            timeout=float(timeout),
+            replace_access_token=replace_access_token,
+            account_label=account_label,
+            scope=scope,
+            emit=lambda line: typer.echo(line, err=True),
+            progress=progress,
+        )
+    except KeyboardInterrupt:
+        _connect_failure(
+            command,
+            google_connect_mod.cancelled_message(progress),
+            json_out=json_out,
+            exit_code=130,
+            state="cancelled",
+        )
+    except google_oauth_mod.GoogleOAuthError as exc:
+        _connect_failure(
+            command,
+            f"{exc} Nothing was stored.",
+            json_out=json_out,
+            exit_code=2 if exc.rule == "paste_needs_tty" else 1,
+            state=exc.state,
+            rule=exc.rule,
+            repair=exc.repair,
+            repair_command=exc.repair if exc.repair.startswith("mb ") else "",
+        )
+    except google_connect_mod.GoogleConnectError as exc:
+        _connect_failure(
+            command,
+            str(exc),
+            json_out=json_out,
+            exit_code=1,
+            state=exc.state,
+            rule=exc.rule,
+            backend_state=exc.backend_state,
+        )
+    except (
+        connect_mod.ConnectRefusal,
+        connect_mod.ConfigBoundaryError,
+        connect_mod.ConfigCorruptError,
+    ) as exc:
+        _connect_error_exit(command, exc, json_out=json_out)
+    except connect_mod.KeychainError as exc:
+        _connect_runtime_exit(command, exc, json_out=json_out)
+    except Exception as exc:
+        # Before the first write, `_no_secret_traceback` reports it. After
+        # it, say what is stored; the exception's text is never shown.
+        if not google_connect_mod.wrote_anything(progress):
+            raise
+        _connect_failure(
+            command,
+            google_connect_mod.cancelled_message(
+                progress,
+                lead=f"Google sign-in stopped on an unexpected error ({type(exc).__name__}; "
+                "details are hidden because they may hold a secret)",
+            ),
+            json_out=json_out,
+            exit_code=1,
+            state="unexpected_error",
+        )
+    if json_out:
+        typer.echo(json.dumps(result, indent=2))
+    else:
+        google_connect_mod.render_result(result)
+    raise typer.Exit(0 if result["ok"] else 1)
 
 
 @app.command("connect")
@@ -1799,6 +2023,64 @@ def connect_cmd(
         ),
     ),
     metadata: list[str] = CONNECT_METADATA_OPTION,
+    oauth: bool = typer.Option(
+        False,
+        "--oauth",
+        help=(
+            "With `mb connect google`: sign in to Google in a browser for read-only Search "
+            "Console and GA4. A person runs this, never an agent."
+        ),
+    ),
+    client_file: str = typer.Option(
+        "",
+        "--client-file",
+        help="With --oauth, path to the Desktop app OAuth client JSON from Google Cloud.",
+    ),
+    client_stdin: bool = typer.Option(
+        False,
+        "--client-stdin",
+        help="With --oauth, read the OAuth client JSON from stdin.",
+    ),
+    reauth: bool = typer.Option(
+        False,
+        "--reauth",
+        help="With --oauth, renew this repo's Google sign-in (only when status says so).",
+    ),
+    paste: bool = typer.Option(
+        False,
+        "--paste",
+        help=(
+            "With --oauth, no local browser: open the printed URL anywhere, then paste the "
+            "127.0.0.1 address it lands on. Needs a real terminal."
+        ),
+    ),
+    no_browser: bool = typer.Option(
+        False,
+        "--no-browser",
+        help="With --oauth, print the sign-in URL instead of opening a browser.",
+    ),
+    port: int = typer.Option(
+        0,
+        "--port",
+        min=0,
+        max=65535,
+        help="With --oauth, fixed 127.0.0.1 port for the sign-in redirect (0 picks one).",
+    ),
+    oauth_timeout: int = typer.Option(
+        GOOGLE_OAUTH_TIMEOUT_DEFAULT,
+        "--timeout",
+        min=10,
+        max=3600,
+        help="With --oauth, seconds to wait for the browser sign-in.",
+    ),
+    replace_access_token: bool = typer.Option(
+        False,
+        "--replace-access-token",
+        help=(
+            "With --oauth, replace a stored Google access token; its Drive, Docs and Sheets "
+            "use stops working."
+        ),
+    ),
     all_providers: bool = typer.Option(
         False,
         "--all",
@@ -1842,6 +2124,45 @@ def connect_cmd(
         _connect_usage_exit(
             "mb connect",
             f"unexpected extra argument {connect_mod.quoted_input(command[0])}",
+            json_out=json_out,
+        )
+    oauth_only = {
+        "--client-file": bool(client_file),
+        "--client-stdin": client_stdin,
+        "--reauth": reauth,
+        "--paste": paste,
+        "--no-browser": no_browser,
+        "--port": port != 0,
+        "--timeout": oauth_timeout != GOOGLE_OAUTH_TIMEOUT_DEFAULT,
+        "--replace-access-token": replace_access_token,
+    }
+    if oauth or any(oauth_only.values()):
+        if not oauth:
+            used = next(name for name, on in oauth_only.items() if on)
+            _connect_usage_exit("mb connect", f"{used} needs --oauth", json_out=json_out)
+        conflicts = {
+            "--token": bool(token),
+            "--token-stdin": token_stdin,
+            "--from-env": from_env,
+            "--source": bool(source),
+            "--custom": custom,
+        }
+        _connect_google_oauth(
+            target=target,
+            provider=provider,
+            repo=repo,
+            account_label=account_label,
+            scope=scope,
+            metadata=metadata,
+            client_file=client_file,
+            client_stdin=client_stdin,
+            reauth=reauth,
+            paste=paste,
+            no_browser=no_browser,
+            port=port,
+            timeout=oauth_timeout,
+            replace_access_token=replace_access_token,
+            conflicts=[name for name, on in conflicts.items() if on],
             json_out=json_out,
         )
     if not target:
@@ -2067,7 +2388,12 @@ def connect_cmd(
             typer.echo(json.dumps(result, indent=2))
         else:
             connect_mod.render_test_result(result)
-        raise typer.Exit(1 if connect_mod.provider_needs_action(result["status"]) else 0)
+        # `needs_action` is set only by checks that can fail without changing
+        # the recorded status (a Google sign-in on a network blip).
+        needs_action = connect_mod.provider_needs_action(result["status"]) or bool(
+            result.get("needs_action")
+        )
+        raise typer.Exit(1 if needs_action else 0)
     if provider:
         _connect_usage_exit(
             "mb connect",
@@ -3459,6 +3785,171 @@ def skill_repair_cmd(
             typer.echo("To move stale or broken Main Branch symlinks to backup:")
             typer.echo("  mb skill repair --repo . --apply")
     raise typer.Exit(0 if result["ok"] else 1)
+
+
+# --- mb google: typed read-only reads (#1004) ---------------------------------
+
+
+def _google_read_exit(
+    command: str, schema_name: str, result: dict[str, Any], code: int, json_out: bool
+) -> NoReturn:
+    """Print one `mb google` result and exit. Failures also go to stderr."""
+    from mb import google_reads as google_reads_mod
+
+    if json_out:
+        typer.echo(_json_payload(result, command=command, schema_name=schema_name))
+    if code:
+        google_reads_mod.render_failure(command, result, lambda line: typer.echo(line, err=True))
+    elif not json_out:
+        renderers = {
+            google_reads_mod.SCHEMA_SC_QUERY: google_reads_mod.render_sc_query,
+            google_reads_mod.SCHEMA_SC_SITEMAPS: google_reads_mod.render_sc_sitemaps,
+            google_reads_mod.SCHEMA_SC_INSPECT: google_reads_mod.render_sc_inspect,
+            google_reads_mod.SCHEMA_GA4_REPORT: google_reads_mod.render_ga4_report,
+        }
+        for line in renderers[schema_name](result):
+            typer.echo(line)
+    raise typer.Exit(code)
+
+
+GOOGLE_SC_DIMENSIONS_OPTION = typer.Option(
+    [],
+    "--dimensions",
+    help="Group by: query, page, date, country, device, searchAppearance (comma-separated).",
+)
+GOOGLE_SC_FILTER_OPTION = typer.Option(
+    [],
+    "--filter",
+    help=("dimension:operator:expression, e.g. query:contains:shoes (repeatable; all must match)."),
+)
+GOOGLE_GA4_METRICS_OPTION = typer.Option(
+    ..., "--metrics", help="Metric names, e.g. activeUsers,sessions (comma-separated)."
+)
+GOOGLE_GA4_DIMENSIONS_OPTION = typer.Option(
+    [], "--dimensions", help="Dimension names, e.g. date,sessionDefaultChannelGroup."
+)
+
+
+@google_sc_app.command("query")
+@_no_secret_traceback
+def google_sc_query_cmd(
+    start: str = typer.Option(..., "--start", help="First day, YYYY-MM-DD (Pacific Time)."),
+    end: str = typer.Option(..., "--end", help="Last day, YYYY-MM-DD (Pacific Time)."),
+    dimensions: list[str] = GOOGLE_SC_DIMENSIONS_OPTION,
+    search_type: str = typer.Option(
+        "web", "--type", help="web, image, video, news, discover or googleNews."
+    ),
+    filters: list[str] = GOOGLE_SC_FILTER_OPTION,
+    row_limit: int = typer.Option(1000, "--row-limit", help="Rows to return, 1-25,000."),
+    start_row: int = typer.Option(0, "--start-row", help="Zero-based first row, for paging."),
+    fresh: bool = typer.Option(
+        False, "--fresh", help="Include fresh, not yet final data (dataState: all)."
+    ),
+    repo: str = typer.Option(".", "--repo", help="Business repo with the Google sign-in."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Search performance for the recorded site (searchAnalytics.query, read-only)."""
+    from mb import google_reads as google_reads_mod
+
+    result, code = google_reads_mod.sc_query(
+        repo,
+        start=start,
+        end=end,
+        dimensions=dimensions,
+        search_type=search_type,
+        filters=filters,
+        row_limit=row_limit,
+        start_row=start_row,
+        fresh=fresh,
+    )
+    _google_read_exit(
+        google_reads_mod.SC_QUERY_COMMAND, google_reads_mod.SCHEMA_SC_QUERY, result, code, json_out
+    )
+
+
+@google_sc_sitemaps_app.command("list")
+@_no_secret_traceback
+def google_sc_sitemaps_list_cmd(
+    sitemap_index: str = typer.Option(
+        "", "--sitemap-index", help="List the sitemaps inside this sitemap index URL instead."
+    ),
+    repo: str = typer.Option(".", "--repo", help="Business repo with the Google sign-in."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Sitemaps submitted for the recorded site (sitemaps.list, read-only)."""
+    from mb import google_reads as google_reads_mod
+
+    result, code = google_reads_mod.sc_sitemaps_list(repo, sitemap_index=sitemap_index)
+    _google_read_exit(
+        google_reads_mod.SC_SITEMAPS_COMMAND,
+        google_reads_mod.SCHEMA_SC_SITEMAPS,
+        result,
+        code,
+        json_out,
+    )
+
+
+@google_sc_app.command("inspect")
+@_no_secret_traceback
+def google_sc_inspect_cmd(
+    url: str = typer.Option(
+        ..., "--url", help="A page of the recorded site, e.g. https://www.example.com/page."
+    ),
+    repo: str = typer.Option(".", "--repo", help="Business repo with the Google sign-in."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Index status of one URL of the recorded site (urlInspection.index.inspect, read-only).
+
+    Shows the version in Google's index only; there is no live test. Quota: 2,000
+    inspections a day and 600 a minute per site.
+    """
+    from mb import google_reads as google_reads_mod
+
+    result, code = google_reads_mod.sc_inspect(repo, url=url)
+    _google_read_exit(
+        google_reads_mod.SC_INSPECT_COMMAND,
+        google_reads_mod.SCHEMA_SC_INSPECT,
+        result,
+        code,
+        json_out,
+    )
+
+
+@google_ga4_app.command("report")
+@_no_secret_traceback
+def google_ga4_report_cmd(
+    metrics: list[str] = GOOGLE_GA4_METRICS_OPTION,
+    start: str = typer.Option(..., "--start", help="First day, YYYY-MM-DD."),
+    end: str = typer.Option(..., "--end", help="Last day, YYYY-MM-DD."),
+    dimensions: list[str] = GOOGLE_GA4_DIMENSIONS_OPTION,
+    limit: int = typer.Option(1000, "--limit", help="Rows to return, 1-250,000."),
+    offset: int = typer.Option(0, "--offset", help="Zero-based first row, for paging."),
+    order_by: str = typer.Option(
+        "", "--order-by", help="A requested metric or dimension, NAME or NAME:desc."
+    ),
+    repo: str = typer.Option(".", "--repo", help="Business repo with the Google sign-in."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """A GA4 report for the recorded property (runReport, read-only)."""
+    from mb import google_reads as google_reads_mod
+
+    result, code = google_reads_mod.ga4_report(
+        repo,
+        start=start,
+        end=end,
+        metrics=metrics,
+        dimensions=dimensions,
+        limit=limit,
+        offset=offset,
+        order_by=order_by,
+    )
+    _google_read_exit(
+        google_reads_mod.GA4_REPORT_COMMAND,
+        google_reads_mod.SCHEMA_GA4_REPORT,
+        result,
+        code,
+        json_out,
+    )
 
 
 def _entry() -> None:

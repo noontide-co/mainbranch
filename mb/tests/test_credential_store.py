@@ -881,3 +881,17 @@ def test_helper_never_emits_raw_exception_text(
     assert json.loads(captured.out) == {"state": "unavailable"}
     assert sentinel not in captured.out
     assert captured.err == ""
+
+
+def test_secret_probe_repr_hides_the_value() -> None:
+    from rich.pretty import pretty_repr
+
+    secret = "SYNTH-PROBE-SECRET-0001"
+    probe = store_mod.SecretProbe(secret, True, True, "", False, "security")
+    for text in (repr(probe), str(probe), pretty_repr({"probe": probe}), f"{probe!r}"):
+        assert secret not in text
+        assert "present=True" in text
+    assert "value=<empty>" in repr(store_mod.SecretProbe("", False, True, ""))
+    # The value itself, equality and tuple behaviour are unchanged.
+    assert probe.value == secret and probe[0] == secret
+    assert probe == store_mod.SecretProbe(secret, True, True, "", False, "security")

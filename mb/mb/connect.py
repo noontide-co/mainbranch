@@ -24,6 +24,7 @@ from typing import Any, NoReturn
 
 import yaml
 
+from mb import http_safe
 from mb._credential_helper import STAGE_SUFFIX
 from mb.credential_store import (
     KEYCHAIN_REPAIR_ALL_COMMAND,
@@ -83,6 +84,11 @@ UNVERIFIED_STATE = "stored_unverified"
 PROBE_PROVIDERS: frozenset[str] = frozenset(
     {"cloudflare", "apify", "meta", "stripe", "github", "ga4"}
 )
+# Providers whose probe depends on how the connection was made. `google` is
+# probed only in OAuth mode (its entry records an `oauth_grant`; see
+# `mb/google_probe.py`); an access-token `google` connection stays probe-less,
+# so it keeps exiting 0 as it always has. Disjoint from `PROBE_PROVIDERS`.
+CONDITIONAL_PROBE_PROVIDERS: frozenset[str] = frozenset({"google"})
 
 
 # `mb connect token` without `--print` when stdout is a terminal or a pipe.
@@ -109,9 +115,18 @@ def _refuse(rule: str, message: str) -> NoReturn:
     raise ConnectRefusal(rule, message)
 
 
-def has_provider_probe(provider_id: str) -> bool:
-    """Can Main Branch confirm this provider's credential by calling it?"""
-    return provider_id in PROBE_PROVIDERS
+def has_provider_probe(provider_id: str, entry: Any = None) -> bool:
+    """Can Main Branch confirm this provider's credential by calling it?
+
+    ``entry`` is the connection's recorded entry. It matters only for
+    `CONDITIONAL_PROBE_PROVIDERS`: `google` has a probe only when the entry
+    records an OAuth grant. Without an entry the answer is the unconditional one.
+    """
+    if provider_id in PROBE_PROVIDERS:
+        return True
+    if provider_id in CONDITIONAL_PROBE_PROVIDERS:
+        return _entry_records_slot(entry, GOOGLE_OAUTH_GRANT_SLOT)
+    return False
 
 
 def provider_needs_action(item: dict[str, Any]) -> bool:
@@ -126,6 +141,10 @@ def provider_needs_action(item: dict[str, Any]) -> bool:
     if item.get("ok"):
         return False
     if item.get("state") == UNVERIFIED_STATE:
+        # A status item carries `has_probe`, computed from its entry, which is
+        # what a conditional probe needs; a bare item falls back to the id.
+        if "has_probe" in item:
+            return bool(item["has_probe"])
         return has_provider_probe(str(item.get("provider") or ""))
     return True
 
@@ -171,6 +190,10 @@ class ConfigCorruptError(ValueError):
 # Optional `google` slot holding one OAuth grant (client and refresh token) as
 # a single credential-store item. Its presence makes the connection OAuth mode.
 GOOGLE_OAUTH_GRANT_SLOT = "oauth_grant"
+# Repo metadata key the sign-in writes: the Google products it granted.
+GOOGLE_OAUTH_GRANTS_METADATA = "oauth_grants"
+# State a read records when Google refuses the stored grant (`invalid_grant`).
+GOOGLE_REAUTH_REQUIRED_STATE = "reauth_required"
 
 
 @dataclass(frozen=True)
@@ -550,7 +573,7 @@ def _safe_identity_metadata(metadata: dict[str, Any]) -> dict[str, str]:
         lowered = key.lower().replace("-", "_")
         if key in recorded or value is None or value == "":
             continue
-        if metadata_value_rule(str(value)):
+        if metadata_value_rule(str(value)) or metadata_value_rule(key):
             continue
         if lowered not in SAFE_METADATA_KEYS and any(
             part in lowered for part in SENSITIVE_KEY_PARTS
@@ -575,7 +598,9 @@ def _safe_status_metadata(metadata: dict[str, Any]) -> dict[str, str]:
         if raw_value is None or raw_value == "":
             continue
         value = str(raw_value)
-        if metadata_value_rule(value):
+        # A key that is itself secret-shaped is dropped like a secret value:
+        # this output is marked safe to share.
+        if metadata_value_rule(value) or metadata_value_rule(key):
             continue
         if key.lower().replace("-", "_") not in SAFE_METADATA_KEYS:
             flagged, _reason = _classify_credential_value(key, value)
@@ -1372,6 +1397,15 @@ def _parse_metadata(pairs: list[str]) -> dict[str, str]:
                 "Nothing was stored. Pass the credential with --token-stdin; "
                 "metadata holds labels and ids only.",
             )
+        key_rule = metadata_value_rule(key)
+        if key_rule:
+            _refuse(
+                "metadata_secret_key",
+                f"metadata key {HIDDEN_INPUT} (--metadata argument {position}) "
+                f"looks like a secret (rule: {key_rule}). "
+                "Nothing was stored. Pass the credential with --token-stdin; "
+                "metadata keys are names such as zone_id.",
+            )
         metadata[key] = value
     return metadata
 
@@ -1533,6 +1567,20 @@ def connect_provider(
     if not token and provider.id not in providers:
         raw_existing_entry = _user_scope_provider_entry(repo_id, provider.id)
     existing_entry = raw_existing_entry if isinstance(raw_existing_entry, dict) else {}
+    oauth_candidate: Any = None
+    if token and GOOGLE_OAUTH_GRANT_SLOT in provider.optional_secrets:
+        # A token reconnect rebuilds `secrets` from the primary slot only, which
+        # would drop the grant ref and orphan its credential-store item.
+        oauth_candidate = providers.get(provider.id)
+        if not isinstance(oauth_candidate, dict):
+            oauth_candidate = _user_scope_provider_entry(repo_id, provider.id)
+    if _records_oauth_grant(provider, oauth_candidate):
+        _refuse(
+            "oauth_connection_exists",
+            f"this {provider.name} connection uses a Google sign-in (OAuth). Storing a token "
+            "here would drop the sign-in and orphan its stored grant. Renew the sign-in with "
+            "`mb connect google --oauth --reauth`. Nothing was stored.",
+        )
     if source:
         if not metadata_pairs:
             raw_existing_metadata = existing_entry.get("metadata")
@@ -1583,6 +1631,28 @@ def connect_provider(
                     for field, raw_secret in existing_secrets.items()
                     if isinstance(raw_secret, dict)
                 }
+                if _records_oauth_grant(provider, existing_entry):
+                    from mb import google_connect
+
+                    # Which Google products the sign-in granted is recorded by
+                    # the sign-in itself; a metadata edit neither drops nor sets
+                    # it. The edit updates the keys given and keeps the rest, so
+                    # the `--metadata` repair `mb connect test google` names for
+                    # one product leaves the other product's id in place.
+                    metadata.pop(GOOGLE_OAUTH_GRANTS_METADATA, None)
+                    raw_existing_metadata = existing_entry.get("metadata")
+                    metadata = {
+                        **(
+                            {
+                                str(key): str(value)
+                                for key, value in raw_existing_metadata.items()
+                                if value not in (None, "")
+                            }
+                            if isinstance(raw_existing_metadata, dict)
+                            else {}
+                        ),
+                        **google_connect.normalize_oauth_metadata(metadata),
+                    }
             else:
                 # A tokenless first connect records metadata and source only.
                 # No ref points at an item that was never written, and the
@@ -1602,6 +1672,10 @@ def connect_provider(
         "secrets": secrets,
         "metadata": metadata,
     }
+    raw_oauth = existing_entry.get("oauth")
+    if not token and _records_oauth_grant(provider, existing_entry) and isinstance(raw_oauth, dict):
+        # The sign-in's coarse refresh-token expiry outlives a metadata edit.
+        providers[provider.id]["oauth"] = dict(raw_oauth)
     user_scope_path = ""
     if normalized_scope == "user":
         user_scope_path = str(
@@ -1689,7 +1763,25 @@ def _secret_statuses(
     return secrets, missing
 
 
-def _credential_mode(provider: Provider, entry: dict[str, Any]) -> dict[str, str]:
+def _entry_records_slot(entry: Any, slot: str) -> bool:
+    """Does this entry record a ref for ``slot``? Reads metadata only."""
+
+    if not isinstance(entry, dict):
+        return False
+    stored_secrets = entry.get("secrets")
+    raw = stored_secrets.get(slot) if isinstance(stored_secrets, dict) else None
+    return isinstance(raw, dict) and bool(raw.get("ref"))
+
+
+def _records_oauth_grant(provider: Provider, entry: Any) -> bool:
+    """Does this entry record a Google OAuth grant (OAuth mode)?"""
+
+    if GOOGLE_OAUTH_GRANT_SLOT not in provider.optional_secrets:
+        return False
+    return _entry_records_slot(entry, GOOGLE_OAUTH_GRANT_SLOT)
+
+
+def _credential_mode(provider: Provider, entry: dict[str, Any]) -> dict[str, Any]:
     """``credential_mode`` for providers with optional slots, else nothing.
 
     `google` reads ``oauth`` once its entry records an OAuth grant and
@@ -1698,10 +1790,13 @@ def _credential_mode(provider: Provider, entry: dict[str, Any]) -> dict[str, str
 
     if GOOGLE_OAUTH_GRANT_SLOT not in provider.optional_secrets:
         return {}
-    stored_secrets = entry.get("secrets") if isinstance(entry.get("secrets"), dict) else {}
-    raw = stored_secrets.get(GOOGLE_OAUTH_GRANT_SLOT) if isinstance(stored_secrets, dict) else None
-    recorded = isinstance(raw, dict) and bool(raw.get("ref"))
-    return {"credential_mode": "oauth" if recorded else "access_token"}
+    if not _records_oauth_grant(provider, entry):
+        return {"credential_mode": "access_token"}
+    from mb import google_connect
+
+    # A coarse date only, and "" unless Google put a time limit on the sign-in.
+    expires_on = google_connect.refresh_token_expires_on(entry)
+    return {"credential_mode": "oauth", "oauth": {"refresh_token_expires_on": expires_on}}
 
 
 def _secret_presence(probe: SecretProbe) -> str:
@@ -1784,7 +1879,7 @@ def _unhydrated_status(
         "state": state,
         "stored": bool(provider.required_secrets) and not missing and not backend_reason,
         **_credential_mode(provider, entry),
-        "has_probe": has_provider_probe(provider.id),
+        "has_probe": has_provider_probe(provider.id, entry),
         "provider_verified": _provider_verified(stored_validation),
         "verified_at": _verified_at(stored_validation),
         "summary": repair["summary"],
@@ -2026,6 +2121,13 @@ def status_provider(
         if validation_state == "invalid":
             state = "invalid"
             ok = False
+        elif validation_state == GOOGLE_REAUTH_REQUIRED_STATE and _records_oauth_grant(
+            provider, entry
+        ):
+            # Recorded by a read that Google refused (`mb connect token`/`exec`);
+            # status itself never calls Google.
+            state = GOOGLE_REAUTH_REQUIRED_STATE
+            ok = False
         elif _provider_verified(validation):
             state = "ready"
             ok = True
@@ -2048,7 +2150,7 @@ def status_provider(
         "state": state,
         "stored": stored,
         **_credential_mode(provider, entry),
-        "has_probe": has_provider_probe(provider.id),
+        "has_probe": has_provider_probe(provider.id, entry),
         "provider_verified": _provider_verified(validation),
         "verified_at": _verified_at(validation),
         "summary": repair["summary"],
@@ -2527,6 +2629,8 @@ def read_token(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
     callers must never log it, persist it, or embed it in shareable output.
     Falls back to user scope when the repo config has no entry, so worktrees
     and scheduled tasks resolve the same credential as the primary checkout.
+    A `google` entry with an OAuth grant returns a freshly minted access
+    token instead of the stored one; the grant itself is never returned.
     """
     provider = resolve_provider(provider_id, repo)
     if not provider.required_secrets:
@@ -2541,6 +2645,11 @@ def read_token(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
     if not isinstance(entry, dict):
         entry = _user_scope_provider_entry(repo_id, provider.id)
         source = "user"
+    if _records_oauth_grant(provider, entry):
+        # OAuth mode: mint a short-lived access token from the stored grant.
+        from mb import google_connect
+
+        return google_connect.read_minted_token(entry, source=source, target=target)
     if not isinstance(entry, dict):
         repair_command = _connect_command(provider, token_stdin=True)
         return {
@@ -2656,6 +2765,9 @@ def exec_with_secret(
     runner: Callable[..., subprocess.CompletedProcess[Any]] = subprocess.run,
 ) -> dict[str, Any]:
     """Run ``command`` with the stored credential in its environment only.
+
+    For an OAuth-mode `google` connection that credential is the short-lived
+    access token `read_token` mints; the refresh token never reaches the child.
 
     No shell is involved and stdin, stdout and stderr are inherited, so the
     secret travels in the child's environment and nowhere else: it is never
@@ -2814,6 +2926,13 @@ def rotate_provider(
             f"{provider.name} is not connected. Connect it with a source first: "
             f"`{_connect_command(provider, token_stdin=True)} --source op://vault/item/field`.",
         )
+    if _records_oauth_grant(provider, entry):
+        _refuse(
+            "rotate_oauth_use_reauth",
+            f"this {provider.name} connection uses a Google sign-in (OAuth), which has no "
+            "source to re-read. Renew it with `mb connect google --oauth --reauth` when status "
+            "says reauth_required. Nothing was changed.",
+        )
     raw_metadata = entry.get("metadata")
     metadata = raw_metadata if isinstance(raw_metadata, dict) else {}
     source = str(metadata.get("source") or "").strip()
@@ -2949,6 +3068,7 @@ def _extract_upstream_errors(
 
 
 RESPONSE_HEADER_MAX_CHARS = 512
+PROVIDER_REDIRECT_RULE = "provider_unexpected_redirect"
 
 
 def _http_get_json(
@@ -2989,12 +3109,36 @@ def _http_get_json(
     }
     got_headers: dict[str, str] = {}
     try:
-        with urllib.request.urlopen(request, timeout=VALIDATION_TIMEOUT_SECONDS) as response:
+        with http_safe.open_no_redirect(request, timeout=VALIDATION_TIMEOUT_SECONDS) as response:
             status = int(getattr(response, "status", 0) or 0)
             body = response.read(8192)
             got_headers = picked(getattr(response, "headers", None))
     except urllib.error.HTTPError as exc:
         got_headers = picked(exc.headers)
+        if http_safe.is_redirect(int(exc.code)):
+            # The credential is never sent to a second URL. A redirect says
+            # nothing about the credential, so it is not "invalid" and nothing
+            # asks the person to reconnect.
+            with suppress(OSError):
+                exc.close()
+            upstream.update(
+                {
+                    "http_status": int(exc.code),
+                    "response_received": True,
+                    "rule": PROVIDER_REDIRECT_RULE,
+                }
+            )
+            return {
+                "ok": False,
+                "state": "unvalidated",
+                "summary": (
+                    f"{provider_name} answered with a redirect (HTTP {int(exc.code)}), which "
+                    "Main Branch never follows with a credential. Retry later."
+                ),
+                "upstream": upstream,
+                "safe_to_share": True,
+                "headers": got_headers,
+            }
         body = b""
         with suppress(OSError):
             body = exc.read(8192)
@@ -3566,6 +3710,30 @@ def _validate_with_provider(
     }
 
 
+def _record_validation(
+    target: Path,
+    config: dict[str, Any],
+    provider_id: str,
+    entry: dict[str, Any],
+) -> None:
+    """Write a tested entry back: repo metadata, and user scope for a user-scope entry."""
+
+    config["providers"][provider_id] = entry
+    _write_config(target, config)
+    if entry.get("scope") == "user":
+        identity = {
+            "source": str(config.get("repo_identity", {}).get("source") or ""),
+            "basis_sha256": str(config.get("repo_identity", {}).get("basis_sha256") or ""),
+            "repo_id_source": str(config.get("repo_identity", {}).get("repo_id_source") or ""),
+        }
+        _write_user_scope_provider(
+            str(config.get("repo_id") or _repo_identity(target)["repo_id"]),
+            repo_identity=identity,
+            provider_id=provider_id,
+            entry=entry,
+        )
+
+
 def test_provider(
     provider_id: str,
     repo: str | Path = ".",
@@ -3603,6 +3771,26 @@ def test_provider(
             "status": status,
             "safe_to_share": True,
         }
+
+    if _records_oauth_grant(provider, entry):
+        # OAuth-mode `google`: mint from the grant and read each granted
+        # product once. A legacy access-token entry never reaches this.
+        from mb import google_probe
+
+        return google_probe.test_google(
+            provider,
+            target,
+            source="repo",
+            before=status,
+            status_again=lambda: status_provider(
+                provider.id,
+                target,
+                which_func=which_func,
+                command_runner=command_runner,
+                _credential_deadline=deadline,
+                _secret_probes=probes,
+            ),
+        )
 
     if not provider.required_secrets:
         # Nothing is stored and nothing can be verified with a provider: this
@@ -3660,20 +3848,7 @@ def test_provider(
         if key in validation:
             entry["validation"][key] = validation[key]
     entry["last_checked_at"] = validation["checked_at"]
-    config["providers"][provider.id] = entry
-    _write_config(target, config)
-    if entry.get("scope") == "user":
-        identity = {
-            "source": str(config.get("repo_identity", {}).get("source") or ""),
-            "basis_sha256": str(config.get("repo_identity", {}).get("basis_sha256") or ""),
-            "repo_id_source": str(config.get("repo_identity", {}).get("repo_id_source") or ""),
-        }
-        _write_user_scope_provider(
-            str(config.get("repo_id") or _repo_identity(target)["repo_id"]),
-            repo_identity=identity,
-            provider_id=provider.id,
-            entry=entry,
-        )
+    _record_validation(target, config, provider.id, entry)
     status = status_provider(
         provider.id,
         target,
@@ -4645,6 +4820,11 @@ def render_doctor(result: dict[str, Any]) -> None:
 
 
 def render_test_result(result: dict[str, Any]) -> None:
+    if result.get("provider") == "google" and "products" in result:
+        from mb import google_probe
+
+        google_probe.render_test_result(result)
+        return
     status = result["status"]
     state = "ok" if result["ok"] else "warn"
     print(f"mb connect test {result['provider']}: {state} ({state_label(status['state'])})")

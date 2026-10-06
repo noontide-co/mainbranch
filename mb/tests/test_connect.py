@@ -26,6 +26,7 @@ from typer.testing import CliRunner
 from mb import codex as codex_mod
 from mb import connect as connect_mod
 from mb import credential_store as credential_store_mod
+from mb import http_safe as http_safe_mod
 from mb.cli import app
 
 runner = CliRunner()
@@ -3473,6 +3474,31 @@ def test_probe_provider_set_matches_validate_with_provider(tmp_path: Path, monke
     # Custom providers are never in the set.
     assert connect_mod.has_provider_probe("mercury") is False
 
+    # The conditional set: `google` is probed only when its entry records an
+    # OAuth grant (`mb/google_probe.py` runs then, not `_validate_with_provider`,
+    # which the loop above shows stays probe-less for it).
+    assert frozenset({"google"}) == connect_mod.CONDITIONAL_PROBE_PROVIDERS
+    assert not connect_mod.CONDITIONAL_PROBE_PROVIDERS & connect_mod.PROBE_PROVIDERS
+    assert connect_mod.CONDITIONAL_PROBE_PROVIDERS.issubset({p.id for p in connect_mod.PROVIDERS})
+    legacy = {"secrets": {"access_token": {"ref": "ref-1", "backend": "local-file"}}}
+    oauth = {
+        "secrets": {
+            "access_token": {"ref": "ref-1", "backend": "local-file"},
+            "oauth_grant": {"ref": "ref-2", "backend": "local-file"},
+        }
+    }
+    unrecorded = {"secrets": {**legacy["secrets"], "oauth_grant": {"ref": ""}}}
+    for provider_id in connect_mod.CONDITIONAL_PROBE_PROVIDERS:
+        assert connect_mod.has_provider_probe(provider_id) is False
+        assert connect_mod.has_provider_probe(provider_id, legacy) is False
+        assert connect_mod.has_provider_probe(provider_id, unrecorded) is False
+        assert connect_mod.has_provider_probe(provider_id, oauth) is True
+    for provider_id in connect_mod.PROBE_PROVIDERS:
+        assert connect_mod.has_provider_probe(provider_id, legacy) is True
+    # Recording the slot gives a probe only to the provider that has one.
+    assert connect_mod.has_provider_probe("resend", oauth) is False
+    assert connect_mod.has_provider_probe("mercury", oauth) is False
+
 
 def test_provider_needs_action_splits_on_whether_a_probe_exists() -> None:
     unverified = {"ok": False, "state": connect_mod.UNVERIFIED_STATE}
@@ -3494,6 +3520,13 @@ def test_provider_needs_action_splits_on_whether_a_probe_exists() -> None:
         ), state
 
     assert connect_mod.provider_needs_action({"ok": True, "state": "ready"}) is False
+
+    # A status item's own `has_probe` wins: that is how a conditional probe
+    # (an OAuth-mode `google`) reaches the exit code.
+    google = {**unverified, "provider": "google"}
+    assert connect_mod.provider_needs_action(google) is False
+    assert connect_mod.provider_needs_action({**google, "has_probe": False}) is False
+    assert connect_mod.provider_needs_action({**google, "has_probe": True}) is True
 
 
 def test_connect_probeless_unverified_exits_zero_on_all_three_surfaces(
@@ -4430,7 +4463,7 @@ def test_http_get_json_returns_only_named_headers(monkeypatch) -> None:
         seen["method"] = request.get_method()
         return FakeResponse()
 
-    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(http_safe_mod, "open_no_redirect", fake_urlopen)
 
     result = connect_mod._http_get_json(
         "https://api.example.test/user",
@@ -4481,7 +4514,7 @@ def test_github_probe_redacts_secret_reflected_in_scope_header(monkeypatch, stat
             )
         return FakeResponse()
 
-    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(http_safe_mod, "open_no_redirect", fake_urlopen)
 
     result = connect_mod._validate_with_provider(connect_mod.normalize_provider("github"), secret)
 
@@ -4504,7 +4537,7 @@ def test_http_get_json_redacts_and_caps_returned_headers(monkeypatch) -> None:
         headers["X-OAuth-Scopes"] = f"repo,{secret}," + "x" * 2000
         raise urllib.error.HTTPError(request.full_url, 403, "Forbidden", headers, io.BytesIO(b""))
 
-    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(http_safe_mod, "open_no_redirect", fake_urlopen)
 
     result = connect_mod._http_get_json(
         "https://api.example.test/user",
@@ -5156,3 +5189,113 @@ def test_google_user_scope_oauth_grant_survives_hydrate(tmp_path: Path, monkeypa
     item = hydrated["statuses"][0]
     assert item["credential_mode"] == "oauth"
     assert item["secrets"][connect_mod.GOOGLE_OAUTH_GRANT_SLOT]["presence"] == "present"
+
+
+def _tree_snapshot(root: Path) -> dict[str, bytes]:
+    if not root.exists():
+        return {}
+    return {str(path): path.read_bytes() for path in sorted(root.rglob("*")) if path.is_file()}
+
+
+@pytest.mark.parametrize("json_flag", [["--json"], []])
+@pytest.mark.parametrize("with_token", [False, True], ids=["tokenless", "token"])
+def test_connect_refuses_a_credential_shaped_metadata_key(
+    tmp_path: Path, monkeypatch, with_token: bool, json_flag: list[str]
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, metadata_pairs=["zone_id=demo-zone"])
+    before = (_tree_snapshot(repo / ".mb"), _tree_snapshot(tmp_path / "home"))
+    dummy = STDERR_DUMMY_CREDENTIAL
+    token_args = ["--token-stdin"] if with_token else []
+
+    result = runner.invoke(
+        app,
+        [
+            "connect",
+            "cloudflare",
+            *token_args,
+            "--metadata",
+            f"{dummy}=a-label",
+            "--repo",
+            str(repo),
+            *json_flag,
+        ],
+        input="cf-fixture-token-0000" if with_token else "",
+    )
+
+    # Booleans only, so a failure never prints the dummy or the output.
+    after = (_tree_snapshot(repo / ".mb"), _tree_snapshot(tmp_path / "home"))
+    refused = result.exit_code == 2
+    on_stdout = dummy in result.stdout
+    on_stderr = dummy in result.stderr
+    marked = connect_mod.HIDDEN_INPUT in result.stderr
+    unchanged = before == after
+    assert (refused, on_stdout, on_stderr, marked, unchanged) == (True, False, False, True, True)
+    if json_flag:
+        payload = _assert_json_failure(result, exit_code=2, state="refused")
+        assert payload["rule"] == "metadata_secret_key"
+
+
+def test_connect_metadata_keys_like_zone_id_still_work(tmp_path: Path, monkeypatch) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(
+        app,
+        [
+            "connect",
+            "cloudflare",
+            "--metadata",
+            "zone_id=demo-zone",
+            "--metadata",
+            "account_id=demo-account",
+            "--repo",
+            str(repo),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code in {0, 1}, result.output
+    assert connect_mod.read_metadata("cloudflare", repo) == {
+        "zone_id": "demo-zone",
+        "account_id": "demo-account",
+    }
+
+
+def test_status_and_identity_hide_a_stored_credential_shaped_metadata_key(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _local_secret_env(monkeypatch, tmp_path)
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    connect_mod.connect_provider("cloudflare", repo=repo, metadata_pairs=["zone_id=demo-zone"])
+    connect_mod.connect_provider(
+        "mercury",
+        repo=repo,
+        token="mercury-fixture-token",
+        metadata_pairs=["role=operating_cash_source"],
+        custom=True,
+    )
+    dummy = STDERR_DUMMY_CREDENTIAL
+    # Stored by hand (or by an older mb that accepted it).
+    config_path = repo / ".mb" / "connect.yaml"
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    config["providers"]["cloudflare"]["metadata"][dummy] = "a-label"
+    config["providers"]["mercury"]["metadata"][dummy] = "a-label"
+    config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
+
+    status = runner.invoke(app, ["connect", "status", "--repo", str(repo), "--json"])
+    identity = runner.invoke(app, ["connect", "identity", "--repo", str(repo), "--json"])
+
+    # Booleans only, so a failure never prints the dummy or the output.
+    in_status = dummy in status.output
+    in_identity = dummy in identity.output
+    assert (in_status, in_identity) == (False, False)
+    by_id = {item["provider"]: item for item in json.loads(status.stdout)["providers"]}
+    assert by_id["cloudflare"]["metadata"]["zone_id"] == "demo-zone"
+    assert by_id["cloudflare"]["safe_to_share"] is True
+    identities = {item["provider"]: item for item in json.loads(identity.stdout)["providers"]}
+    assert identities["mercury"]["identity"]["role"] == "operating_cash_source"

@@ -26,6 +26,8 @@ Required commands:
 
 `mb doctor repair --plan` is read-only. If it exits nonzero while returning `plan_interpretation` and `actions`, treat that as findings to review, not as an opaque command failure.
 
+`operator_actions` (in `mb doctor repair` and `mb update` JSON) are steps for the user, such as the plugin-rail switch: show each `command` and `note` as theirs to run at a terminal, and never run them yourself.
+
 Required fact paths:
 
 - `money_path`

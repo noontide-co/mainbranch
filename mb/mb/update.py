@@ -26,6 +26,8 @@ from mb.engine import (
     engine_root,
     install_mode,
     looks_like_uv_tool_install,
+    operator_action,
+    plugin_switch_operator_action,
     plugin_wiring_status,
 )
 
@@ -43,7 +45,6 @@ from mb.freshness import (
     checked_release_version,
     compare_versions,
     release_notes_url,
-    version_key,
 )
 from mb.freshness import (
     latest_pypi_version as _latest_pypi_version,
@@ -64,14 +65,6 @@ UV_UPDATE_COMMAND = [
     PACKAGE_NAME,
     f"{PACKAGE_NAME}@latest",
 ]
-# The plugin-rail switch writes a tracked file, so `mb update` lists it in
-# `operator_actions` for a person, never in `next_actions` (#1023).
-PLUGIN_SWITCH_COMMAND = "mb skill link --repo . --plugin"
-PLUGIN_SWITCH_NOTE = (
-    "For a person to run at a terminal, not an agent: switches this repo to the "
-    "Main Branch plugin rail by writing the tracked `.claude/settings.json`. "
-    "Restart Claude Code afterwards."
-)
 UV_MANUAL_MESSAGE = (
     "Main Branch was installed as a uv tool. Upgrading replaces the installed "
     "command, so it only runs after an explicit yes at an interactive prompt. "
@@ -96,6 +89,15 @@ SURFACE_PLAN_NO_TERMINAL_MESSAGE = (
 )
 SURFACE_PLAN_DECLINED_MESSAGE = (
     "Left tracked files unchanged: {files}. Run the commands below whenever you want these changes."
+)
+SURFACE_LINK_APPLY_NOTE = (
+    "For a person to run at a terminal, not an agent: refreshes this repo's "
+    "Claude Code skill links, which writes the tracked files listed in `changes`."
+)
+SURFACE_CODEX_APPLY_NOTE = (
+    "For a person to run at a terminal, not an agent: refreshes this repo's "
+    "Codex guidance, which writes or deletes the tracked files listed in "
+    "`changes`. Review the read-only plan in `next_actions` first."
 )
 AHEAD_OF_PYPI_MESSAGE = (
     "Installed Main Branch {installed} is newer than PyPI's latest release "
@@ -336,6 +338,22 @@ def _note_ahead_of_pypi(result: dict[str, Any], latest: str | None) -> bool:
     return True
 
 
+def _note_already_current(result: dict[str, Any], latest: str | None) -> bool:
+    """Record a uv or wheel install that already runs PyPI's latest release (#1036).
+
+    Returns True when the installed version equals ``latest``. The result then
+    keeps `new_version` at the installed version, leaves `manual_update_command`
+    empty and lists no install command: reinstalling the same release changes
+    nothing, so there is nothing for the operator to confirm or run.
+    """
+    old = str(result.get("old_version") or "")
+    if not latest or not old or compare_versions(old, latest) != 0:
+        return False
+    result["latest_version"] = latest
+    result["new_version"] = old
+    return True
+
+
 def _looks_like_pipx_package_spec_parse_failure(
     result: subprocess.CompletedProcess[str],
 ) -> bool:
@@ -573,6 +591,16 @@ def _codex_tracked_changes(plan: dict[str, Any]) -> list[dict[str, str]] | None:
     return changes
 
 
+def _codex_blocked_actions(plan: dict[str, Any]) -> list[dict[str, Any]]:
+    """The plan's Codex AGENTS.md steps that need a person first (#1052)."""
+
+    return [
+        item
+        for item in plan.get("operator_actions", [])
+        if isinstance(item, dict) and item.get("id") == "codex-agents-md"
+    ]
+
+
 def _change_label(change: dict[str, str]) -> str:
     label = CHANGE_LABELS.get(change["op"])
     return f"{change['path']} ({label})" if label else change["path"]
@@ -714,10 +742,25 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
                 "`mb doctor repair --plan --only codex`, review it, then approve "
                 "`mb doctor repair --apply --only codex`."
             )
-            next_actions = [
-                "mb doctor repair --plan --only codex",
-                "mb doctor repair --apply --only codex",
-            ]
+            next_actions = ["mb doctor repair --plan --only codex"]
+            # #1049: the apply rewrites the tracked AGENTS.md, so it is a step
+            # for a person; the surface refresh may already have listed it.
+            if not any(
+                "--apply --only codex" in str(item.get("command", ""))
+                for item in result["operator_actions"]
+            ):
+                agents_plan = codex_mod.agents_md_plan(repo)
+                # #1052: a repair that needs a manual step first says which.
+                blocked = codex_mod.agents_md_operator_action(agents_plan)
+                changes = [str(op["rel"]) for op in agents_plan["operations"]]
+                result["operator_actions"].append(
+                    blocked
+                    or operator_action(
+                        codex_mod.CODEX_REPAIR_COMMAND,
+                        changes or ["AGENTS.md"],
+                        SURFACE_CODEX_APPLY_NOTE,
+                    )
+                )
         elif not codex.get("global_skill_ok", False):
             message = (
                 "The global Main Branch Codex skills are not ready, so `mb-*` "
@@ -767,19 +810,12 @@ def _add_plugin_follow_up(result: dict[str, Any], repo: Path) -> None:
         result["warnings"].append(
             "This repo is on symlink-only skill wiring. The Main Branch plugin is "
             "the default cross-surface rail (Claude Desktop and the terminal, and "
-            "it survives git worktrees). Migrate when you're ready with "
-            "`mb skill link --repo . --plugin` (or `mb doctor repair --apply "
-            "--all-agents`), then restart Claude Code."
+            "it survives git worktrees). The switch writes a tracked file, so it "
+            "is listed under `operator_actions` for a person to run at a terminal."
         )
         # #1023: the switch writes tracked `.claude/settings.json`, so it is a
         # step for a person at a terminal, never an unattended next action.
-        result["operator_actions"].append(
-            {
-                "command": PLUGIN_SWITCH_COMMAND,
-                "changes": [".claude/settings.json"],
-                "note": PLUGIN_SWITCH_NOTE,
-            }
-        )
+        result["operator_actions"].append(plugin_switch_operator_action())
 
     install_state = str(install.get("state") or "")
     if install_state in {"stale", "installed_not_enabled", "disabled", "not_installed"}:
@@ -856,6 +892,11 @@ def _refresh_surfaces(
             "`mb update` again."
         )
         return
+    # #1052: a Codex AGENTS.md repair that would refuse, or leave a person's
+    # files behind, needs a manual step first. No consent prompt, no write.
+    codex_blocked = _codex_blocked_actions(codex_plan)
+    if codex_blocked:
+        codex_changes = []
     link_writes = list(dict.fromkeys(item["path"] for item in link_changes))
     codex_writes = list(dict.fromkeys(item["path"] for item in codex_changes))
     tracked_changes = list(
@@ -873,7 +914,7 @@ def _refresh_surfaces(
         else:
             planned["consent"] = "no_terminal"
     apply_link = approved or not link_writes
-    apply_codex = approved or not codex_writes
+    apply_codex = (approved or not codex_writes) and not codex_blocked
 
     link_apply_command = f"mb skill link{_repo_flag(target_repo)}"
     codex_apply_command = f"mb doctor repair{_repo_flag(target_repo)} --apply --only codex"
@@ -909,7 +950,30 @@ def _refresh_surfaces(
             result["errors"].extend(link_errors)
             return
 
-    if not apply_codex:
+    if codex_blocked:
+        surface["codex"] = {
+            "ok": True,
+            "applied": False,
+            "blocked": True,
+            "reason": " ".join(str(item.get("reason") or "") for item in codex_blocked),
+            "tracked_writes": [],
+            "command": codex_apply_command,
+        }
+        result["warnings"].extend(str(item.get("note") or "") for item in codex_blocked)
+        result["next_actions"].append(
+            f"mb doctor repair{_repo_flag(target_repo)} --plan --only codex"
+        )
+        for item in codex_blocked:
+            entry = operator_action(
+                codex_apply_command,
+                [str(path) for path in item.get("changes", [])],
+                str(item.get("note") or ""),
+            )
+            for key in ("id", "reason", "manual_step", "on_apply"):
+                if key in item:
+                    entry[key] = item[key]
+            result["operator_actions"].append(entry)
+    elif not apply_codex:
         surface["codex"] = {
             "ok": True,
             "applied": False,
@@ -972,12 +1036,22 @@ def _refresh_surfaces(
             else SURFACE_PLAN_NO_TERMINAL_MESSAGE
         )
         result["warnings"].append(template.format(files=", ".join(tracked_files)))
-        if not apply_codex:
+        if not apply_codex and not codex_blocked:
             # Review before apply: the plan names every file the repair writes.
             result["next_actions"].append(
                 f"mb doctor repair{_repo_flag(target_repo)} --plan --only codex"
             )
-        result["next_actions"].extend(planned["apply_commands"])
+        # #1049: each apply command writes tracked files `mb update` declined
+        # to change without a person, so it is a step for a person, not an
+        # unattended next action. `apply_commands` keeps them for readers.
+        if not apply_link:
+            result["operator_actions"].append(
+                operator_action(link_apply_command, link_writes, SURFACE_LINK_APPLY_NOTE)
+            )
+        if not apply_codex and not codex_blocked:
+            result["operator_actions"].append(
+                operator_action(codex_apply_command, codex_writes, SURFACE_CODEX_APPLY_NOTE)
+            )
 
 
 def run(
@@ -997,8 +1071,8 @@ def run(
 
     The surface refresh changes tracked files in the business repo (`AGENTS.md`,
     `.gitignore`) only after one explicit yes at an interactive prompt. Without
-    one, it plans those changes into `surface_refresh.planned` and hands back
-    the apply commands as `next_actions` (#1012).
+    one, it plans those changes into `surface_refresh.planned` and lists the
+    apply commands in `operator_actions` for a person (#1012, #1049).
     """
     target_repo = Path(repo).resolve()
     wants_prompt = _is_interactive_terminal() if interactive is None else interactive
@@ -1031,6 +1105,10 @@ def run(
                 "would leave this install alone; PyPI's latest version could not be checked",
             ]
             _note_latest_unknown(result, retry="mb update --check")
+        elif mode in {"uv", "wheel"} and _note_already_current(result, latest):
+            result["actions"] = [
+                "would leave this install alone; it already runs PyPI's latest release",
+            ]
         elif mode == "uv":
             result["actions"] = [
                 f"would run `{UV_UPDATE_COMMAND_TEXT}` after an explicit yes",
@@ -1108,7 +1186,7 @@ def run(
             result["actions"].append("would skip agent surface refresh")
         new_version = str(result.get("new_version") or "")
         old_version = str(result.get("old_version") or "")
-        if new_version and version_key(new_version) > version_key(old_version):
+        if new_version and old_version and compare_versions(new_version, old_version) > 0:
             result["release"] = _release_context(new_version)
         elif new_version:
             result["release"] = {
@@ -1132,6 +1210,8 @@ def run(
         _note_latest_unknown(result, retry="mb update")
     elif mode in {"pipx", "uv"} and _note_ahead_of_pypi(result, latest):
         result["actions"].append("left this install alone; it is newer than PyPI's latest")
+    elif mode in {"uv", "wheel"} and _note_already_current(result, latest):
+        result["actions"].append("left this install alone; it already runs PyPI's latest release")
     elif mode == "pipx":
         if shutil.which("pipx") is None:
             result["ok"] = False
@@ -1244,6 +1324,16 @@ def render_human(result: dict[str, Any]) -> None:
     ahead = result.get("installed_ahead_of_latest") is True
     latest = result.get("latest_version") or "unknown"
     latest_unknown = result.get("latest_version_unknown") is True
+    # uv and wheel installs that already run PyPI's latest carry no install
+    # command (#1036); pipx and clone checks keep their "would run" line.
+    already_current = (
+        mode in {"uv", "wheel"}
+        and not ahead
+        and not latest_unknown
+        and not result.get("manual_update_command")
+        and bool(result.get("latest_version"))
+        and old == new
+    )
 
     if result.get("check"):
         print(f"install mode: {mode}")
@@ -1251,6 +1341,9 @@ def render_human(result: dict[str, Any]) -> None:
             print(f"version: {old} (newer than PyPI's latest, {latest})")
         elif latest_unknown:
             print(f"version: {old} (PyPI's latest version could not be checked)")
+        elif already_current:
+            print(f"version: {old}")
+            print(f"Main Branch is already current ({old}).")
         else:
             print(f"version: {old} -> {new}")
         raw_release = result.get("release")

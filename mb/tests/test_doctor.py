@@ -286,6 +286,62 @@ def test_doctor_required_update_unknown_install_is_mode_neutral(
     assert "with the tool that installed it" in version_check["detail"]
 
 
+def test_doctor_flags_final_release_for_rc_install(tmp_path: Path, monkeypatch) -> None:
+    # #1043: version_key dropped the pre-release marker, so an rc install
+    # treated the final release as equal and never saw the update. The
+    # mocked dict uses severity "current" so the fallback comparison in
+    # _mainbranch_version_check (not the severity branch) is exercised.
+    monkeypatch.setattr(doctor_mod, "install_mode", lambda: "wheel")
+    monkeypatch.setattr(
+        doctor_mod,
+        "package_update_status",
+        lambda repo: {
+            "installed": "0.6.3rc1",
+            "latest": "0.6.3",
+            "minimum_supported": "0.5.0",
+            "severity": "current",
+            "command": "mb update",
+            "post_update_commands": [],
+            "reason": "Installed version is current.",
+        },
+    )
+
+    report = doctor_mod.run(path=str(tmp_path))
+
+    version_check = next(
+        check for check in report["checks"] if check["name"] == "mainbranch-version"
+    )
+    assert version_check["ok"] is False
+    assert version_check["severity"] == "warn"
+    assert "installed 0.6.3rc1, latest is 0.6.3" in version_check["detail"]
+
+
+def test_doctor_does_not_flag_rc_for_final_install(tmp_path: Path, monkeypatch) -> None:
+    # #1043: the reverse must hold too: a final install is never told that
+    # an rc of the same release is an update.
+    monkeypatch.setattr(doctor_mod, "install_mode", lambda: "wheel")
+    monkeypatch.setattr(
+        doctor_mod,
+        "package_update_status",
+        lambda repo: {
+            "installed": "0.6.3",
+            "latest": "0.6.3rc1",
+            "minimum_supported": "0.5.0",
+            "severity": "current",
+            "command": "mb update",
+            "post_update_commands": [],
+            "reason": "Installed version is current.",
+        },
+    )
+
+    report = doctor_mod.run(path=str(tmp_path))
+
+    version_check = next(
+        check for check in report["checks"] if check["name"] == "mainbranch-version"
+    )
+    assert version_check["ok"] is True
+
+
 def test_doctor_command_still_runs_after_repair_subcommand_added(tmp_path: Path) -> None:
     result = runner.invoke(app, ["doctor", str(tmp_path), "--json"])
 
@@ -543,6 +599,116 @@ def test_doctor_repair_only_claude_filters_codex_actions(
     assert payload["only"] == "claude"
     assert [section["id"] for section in payload["sections"]] == ["claude-wiring", "git"]
     assert all(not action["id"].startswith("codex-") for action in payload["actions"])
+
+
+def _agents_md_without_end_marker(repo: Path) -> str:
+    """Current guidance whose end marker a person deleted, plus their notes (#1052)."""
+    text = (repo / "AGENTS.md").read_text(encoding="utf-8")
+    # Guidance from an older template, so the repair is due.
+    stale = text.replace(codex_mod.guidance_template_hash(), "0000000000000000")
+    broken = stale.replace(codex_mod.AGENTS_MANAGED_END + "\n", "") + "\n## Our notes\n\nKeep.\n"
+    (repo / "AGENTS.md").write_text(broken, encoding="utf-8")
+    return broken
+
+
+def _codex_repair(repo: Path, mode: str) -> dict[str, Any]:
+    result = runner.invoke(
+        app, ["doctor", "repair", "--repo", str(repo), mode, "--only", "codex", "--json"]
+    )
+    assert result.exit_code in {0, 1}, result.output
+    payload: dict[str, Any] = json.loads(result.stdout)
+    return payload
+
+
+def test_doctor_codex_repair_that_would_refuse_is_an_operator_action(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _prepare_codex_global_skill_roots(tmp_path, monkeypatch)
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    broken = _agents_md_without_end_marker(repo)
+
+    plan = _codex_repair(repo, "--plan")
+
+    actions = {action["id"]: action for action in plan["actions"]}
+    agents_action = actions["codex-agents-md"]
+    assert agents_action["safe_to_apply"] is False
+    assert agents_action["audience"] == "operator_decision"
+    assert agents_action["writes"] == []
+    assert agents_action["operations"] == []
+    assert [item["code"] for item in agents_action["refused"]] == ["missing_end_marker"]
+    entries = [item for item in plan["operator_actions"] if item.get("id") == "codex-agents-md"]
+    assert len(entries) == 1
+    entry = entries[0]
+    assert entry["command"] == "mb doctor repair --apply --only codex"
+    assert "no end marker" in entry["reason"]
+    assert codex_mod.AGENTS_MANAGED_END in entry["manual_step"]
+    assert entry["manual_step"] in entry["note"]
+
+    applied = _codex_repair(repo, "--apply")
+
+    assert (repo / "AGENTS.md").read_text(encoding="utf-8") == broken
+    agents_applied = next(
+        item for item in applied["applied_actions"] if item["id"] == "codex-agents-md"
+    )
+    assert agents_applied["applied"] is False
+    assert agents_applied["safe_to_apply"] is False
+    assert agents_applied["result"]["refused"][0]["code"] == "missing_end_marker"
+    assert any(item.get("id") == "codex-agents-md" for item in applied["operator_actions"])
+
+
+def test_doctor_codex_repair_keeping_a_persons_file_is_an_operator_action(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _prepare_codex_global_skill_roots(tmp_path, monkeypatch)
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    folder = repo / ".agents" / "skills" / "main-branch"
+    folder.mkdir(parents=True)
+    (folder / "my-notes.md").write_text("Mine.\n", encoding="utf-8")
+    (folder / "SKILL.md").write_text(
+        codex_mod.render_codex_global_skill_md("main-branch"), encoding="utf-8"
+    )
+
+    plan = _codex_repair(repo, "--plan")
+
+    agents_action = next(item for item in plan["actions"] if item["id"] == "codex-agents-md")
+    assert agents_action["safe_to_apply"] is False
+    assert agents_action["kept"] == [".agents/skills/main-branch/my-notes.md"]
+    assert agents_action["operations"] == [
+        {"op": "delete", "path": str((folder / "SKILL.md").resolve())}
+    ]
+    entry = next(item for item in plan["operator_actions"] if item.get("id") == "codex-agents-md")
+    assert entry["changes"] == [".agents/skills/main-branch/SKILL.md"]
+    assert ".agents/skills/main-branch/my-notes.md" in entry["reason"]
+
+    _codex_repair(repo, "--apply")
+
+    assert (folder / "my-notes.md").read_text(encoding="utf-8") == "Mine.\n"
+    assert not (folder / "SKILL.md").exists()
+
+
+def test_doctor_codex_repair_of_a_plain_agents_md_stays_an_agent_repair(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _prepare_codex_global_skill_roots(tmp_path, monkeypatch)
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    (repo / "AGENTS.md").write_text("# Our notes\n\nKeep.\n", encoding="utf-8")
+
+    plan = _codex_repair(repo, "--plan")
+
+    agents_action = next(item for item in plan["actions"] if item["id"] == "codex-agents-md")
+    assert agents_action["safe_to_apply"] is True
+    assert agents_action["refused"] == []
+    assert agents_action["kept"] == []
+    assert plan["operator_actions"] == []
+
+    _codex_repair(repo, "--apply")
+
+    text = (repo / "AGENTS.md").read_text(encoding="utf-8")
+    assert text.startswith(codex_mod.AGENTS_MANAGED_BEGIN)
+    assert text.endswith("# Our notes\n\nKeep.\n")
 
 
 def test_doctor_repair_rejects_mixed_agent_scope(tmp_path: Path) -> None:
@@ -929,7 +1095,8 @@ def test_doctor_repair_removes_stale_repo_local_codex_plugin(tmp_path: Path) -> 
     init_run(path=str(repo), name="Acme")
     command = repo / ".agents" / "plugins" / "main-branch-owner-loop" / "commands" / "mb-start.md"
     command.parent.mkdir(parents=True, exist_ok=True)
-    command.write_text("# stale\n", encoding="utf-8")
+    # #1052: shaped like the shim `mb` wrote; only those files are removed.
+    command.write_text("# /mb-start\n\nUse the Main Branch owner-loop skill.\n", encoding="utf-8")
 
     plan_result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
     assert plan_result.exit_code in {0, 1}
@@ -2057,19 +2224,24 @@ def test_doctor_guard_passes_business_folders(tmp_path: Path) -> None:
     assert len(plan["sections"]) > 1
 
 
-def test_doctor_repair_apply_migrates_symlink_era_repo_to_plugin(tmp_path: Path) -> None:
-    # Stage 3 (decision 2026-06-10): doctor repair backfills the plugin rail on
-    # a symlink-era repo that has no plugin wiring yet.
+def test_doctor_repair_apply_never_switches_symlink_era_repo_to_plugin(tmp_path: Path) -> None:
+    # #1042: the plugin-rail switch writes tracked `.claude/settings.json`, so
+    # it is a step for a person (M22 on #1023). An agent running
+    # `repair --apply` must never switch a repo's wiring, under any scope.
     repo = tmp_path / "biz"
     init_run(path=str(repo), name="Acme")
     # Simulate symlink-era: remove the plugin wiring init now writes by default.
     (repo / ".claude" / "settings.json").unlink()
     assert engine_mod.plugin_wiring_status(repo)["wired"] is False
 
-    applied = doctor_mod.repair_apply(repo=repo, only="claude")
-    applied_actions = {action["id"]: action for action in applied["applied_actions"]}
-    assert "plugin-wiring" in applied_actions
-    assert engine_mod.plugin_wiring_status(repo)["wired"] is True
+    for scope in ({"only": "claude"}, {"all_agents": True}, {}):
+        applied = doctor_mod.repair_apply(repo=repo, **scope)
+        assert "plugin-wiring" not in {action["id"] for action in applied["applied_actions"]}
+        assert engine_mod.plugin_wiring_status(repo)["wired"] is False
+        assert not (repo / ".claude" / "settings.json").exists()
+        assert [item["command"] for item in applied["operator_actions"]] == [
+            "mb skill link --repo . --plugin"
+        ]
 
 
 def test_doctor_claude_code_detail_is_plugin_first_when_missing(
@@ -2101,20 +2273,30 @@ def test_doctor_claude_code_detail_is_path_when_present(tmp_path: Path, monkeypa
     assert check["detail"] == "/usr/local/bin/claude"
 
 
-def test_doctor_repair_plan_surfaces_plugin_wiring_on_symlink_era_repo(tmp_path: Path) -> None:
-    # Plan/apply parity: on a symlink-healthy-but-unwired repo, `--plan` must
-    # show the plugin-wiring action that `--apply` would perform — otherwise the
-    # write happens without preview (the contract doctor itself instructs).
+def test_doctor_repair_plan_lists_plugin_switch_for_a_person(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # #1042: on a symlink-era repo the plan reports the plugin-rail switch the
+    # way `mb update` does: in `operator_actions`, never as a repair action.
     repo = tmp_path / "biz"
     init_run(path=str(repo), name="Acme")
     (repo / ".claude" / "settings.json").unlink()
     assert engine_mod.plugin_wiring_status(repo)["wired"] is False
 
     plan = doctor_mod.repair_plan(repo, only="claude")
-    actions = {action["id"]: action for action in plan["actions"]}
-    assert "plugin-wiring" in actions
-    assert actions["plugin-wiring"]["mode"] == "write"
-    assert ".claude/settings.json" in actions["plugin-wiring"]["writes"]
+    assert not any("--plugin" in action["command"] for action in plan["actions"])
+    assert plan["operator_actions"] == [engine_mod.plugin_switch_operator_action()]
+    assert plan["operator_actions"][0]["changes"] == [".claude/settings.json"]
+    assert "not an agent" in plan["operator_actions"][0]["note"]
+
+    bare = doctor_mod.repair_plan(repo)
+    assert bare["operator_actions"] == plan["operator_actions"]
+    assert doctor_mod.repair_plan(repo, only="codex")["operator_actions"] == []
+
+    doctor_mod.render_repair(plan)
+    out = capsys.readouterr().out
+    assert "For you to run" in out
+    assert "mb skill link --repo . --plugin" in out
 
 
 def test_doctor_repair_plan_omits_plugin_wiring_when_already_wired(tmp_path: Path) -> None:
@@ -2124,6 +2306,7 @@ def test_doctor_repair_plan_omits_plugin_wiring_when_already_wired(tmp_path: Pat
 
     plan = doctor_mod.repair_plan(repo, only="claude")
     assert "plugin-wiring" not in {action["id"] for action in plan["actions"]}
+    assert plan["operator_actions"] == []
 
 
 def test_doctor_repair_apply_already_wired_is_noop_for_plugin(tmp_path: Path) -> None:
@@ -2134,25 +2317,3 @@ def test_doctor_repair_apply_already_wired_is_noop_for_plugin(tmp_path: Path) ->
 
     applied = doctor_mod.repair_apply(repo=repo, only="claude")
     assert "plugin-wiring" not in {action["id"] for action in applied["applied_actions"]}
-
-
-def test_doctor_repair_apply_plugin_migration_requires_claude_scope(tmp_path: Path) -> None:
-    # Pin the scope contract: only `--only claude` / `--all-agents` migrate the
-    # plugin. Bare `--apply` and `--only codex` do NOT (matching skill-link).
-    # See issue #931 for the UX question this raises.
-    repo = tmp_path / "biz"
-    init_run(path=str(repo), name="Acme")
-    (repo / ".claude" / "settings.json").unlink()
-    assert engine_mod.plugin_wiring_status(repo)["wired"] is False
-
-    codex_only = doctor_mod.repair_apply(repo=repo, only="codex")
-    assert "plugin-wiring" not in {action["id"] for action in codex_only["applied_actions"]}
-    assert engine_mod.plugin_wiring_status(repo)["wired"] is False
-
-    bare = doctor_mod.repair_apply(repo=repo)
-    assert "plugin-wiring" not in {action["id"] for action in bare["applied_actions"]}
-    assert engine_mod.plugin_wiring_status(repo)["wired"] is False
-
-    scoped = doctor_mod.repair_apply(repo=repo, all_agents=True)
-    assert "plugin-wiring" in {action["id"] for action in scoped["applied_actions"]}
-    assert engine_mod.plugin_wiring_status(repo)["wired"] is True
