@@ -7,8 +7,9 @@ quota. A path is refused when:
 
 - it is inside a git checkout and git does not report it ignored (a tracked
   file, or one a ``git add`` would pick up), including the business repo, or
-  its folder is not ignored as a whole (the temporary file written beside the
-  target would not be covered by a rule for the file name alone);
+  git does not ignore the temporary file written beside the target
+  (``.<name>.mb-out.tmp``; a rule for the file name alone, or a negation that
+  re-includes the temporary file, would not cover it);
 - git cannot answer inside a checkout (fail closed);
 - it already exists and ``--force`` was not given, or it exists and is not a
   plain file;
@@ -28,7 +29,6 @@ from __future__ import annotations
 import os
 import stat
 import subprocess
-import tempfile
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
@@ -90,28 +90,27 @@ def _check_git(parent: Path, name: str, shown: str) -> None:
                 f"--out {shown} is inside a git checkout and git does not ignore it, so the "
                 f"data could be committed; nothing was read or written. {OUT_HINT}.",
             )
-        # The temp file is written beside the target under another name, so the
-        # whole folder must be ignored, not just the target's own name.
-        folder = relative.parent
-        if folder.as_posix() in {"", "."}:
-            raise _folder_refusal(shown)
-        folder_verdict = _git(["check-ignore", "-q", "--", folder.as_posix() + "/"], root)
-        if folder_verdict is None or folder_verdict.returncode not in {0, 1}:
+        # The report is first written to a fixed temporary name beside the target, so
+        # git must ignore that exact path too (a negation can re-include it).
+        temp = relative.parent / temp_name(name)
+        temp_verdict = _git(["check-ignore", "-q", "--", temp.as_posix()], root)
+        if temp_verdict is None or temp_verdict.returncode not in {0, 1}:
             raise _git_unknown(shown)
-        if folder_verdict.returncode == 1:
-            raise _folder_refusal(shown)
+        if temp_verdict.returncode == 1:
+            raise _temp_refusal(shown, temp_name(name))
         return
     if _inside_git_checkout(parent):
         # A checkout is there but git would not say anything about it.
         raise _git_unknown(shown)
 
 
-def _folder_refusal(shown: str) -> ReadRefusal:
+def _temp_refusal(shown: str, temp: str) -> ReadRefusal:
     return ReadRefusal(
-        "out_folder_not_ignored",
-        f"--out {shown}: inside a git checkout the whole folder must be ignored by git "
-        "(the file is written through a temporary file beside it, which an ignore rule for "
-        f"the file name alone would not cover); nothing was read or written. {OUT_HINT}.",
+        "out_temp_not_ignored",
+        f"--out {shown}: inside a git checkout git must ignore both the file and its temporary "
+        f"file {temp}, which holds the whole report while it is written; a rule for the file "
+        "name alone, or a negation that re-includes the temporary file, would let it be "
+        f"committed; nothing was read or written. {OUT_HINT}.",
     )
 
 
@@ -121,6 +120,10 @@ def _git_unknown(shown: str) -> ReadRefusal:
         f"--out {shown} is inside a git checkout and git could not say whether it is "
         f"ignored; nothing was read or written. {OUT_HINT}.",
     )
+
+
+def temp_name(name: str) -> str:
+    return f".{name}.mb-out.tmp"
 
 
 def check_out(raw: str, *, force: bool = False) -> OutTarget:
@@ -184,32 +187,51 @@ def _shown(raw: str) -> str:
 
 
 class OutWriteError(OSError):
-    """The file could not be written; the read itself had already succeeded."""
+    """The file could not be written; the read itself had already succeeded.
+
+    ``existing_temp`` names a temporary file that was already there (an earlier
+    or concurrent run); it was left untouched.
+    """
+
+    def __init__(self, message: str, existing_temp: str = "") -> None:
+        super().__init__(message)
+        self.existing_temp = existing_temp
 
 
 def write_out(target: OutTarget, text: str) -> None:
-    """Create the file with mode 0600, atomically. Without ``--force`` it never replaces one."""
+    """Create the file with mode 0600, atomically. Without ``--force`` it never replaces one.
 
-    parent = target.path.parent
-    tmp_name = ""
+    The report goes through ``.<name>.mb-out.tmp`` in the same folder, created
+    exclusively (an existing one is never reused or removed), after
+    ``check_out`` saw that git ignores that exact path.
+    """
+
+    tmp = target.path.with_name(temp_name(target.path.name))
+    created = False
     try:
-        fd, tmp_name = tempfile.mkstemp(prefix=f".{target.path.name}.", suffix=".tmp", dir=parent)
+        try:
+            fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, OUT_MODE)
+        except FileExistsError:
+            raise OutWriteError("temporary file exists", tmp.name) from None
+        created = True
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             os.fchmod(handle.fileno(), OUT_MODE)
             handle.write(text)
             handle.flush()
             os.fsync(handle.fileno())
         if target.force:
-            os.replace(tmp_name, target.path)
-            tmp_name = ""
+            os.replace(tmp, target.path)
+            created = False
         else:
-            os.link(tmp_name, target.path)
+            os.link(tmp, target.path)
+    except OutWriteError:
+        raise
     except OSError as exc:
         raise OutWriteError(str(exc)) from None
     finally:
-        if tmp_name:
+        if created:
             with suppress(OSError):
-                os.unlink(tmp_name)
+                os.unlink(tmp)
 
 
 SCHEMA_OUT = "mb.google.out"

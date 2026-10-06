@@ -16,8 +16,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - `mb google` reads take `--out PATH`: a large Search Console or GA4 pull goes
   to a private file (mode 0600, created in one step) and the terminal shows only
   the path, row count and `may_have_more`. The path is refused, before anything
-  is read, inside a git checkout unless git ignores its whole folder, for
-  example `.mb/private/pulls/` (so a pull cannot be committed by accident), when it already exists (unless `--force`), when its
+  is read, inside a git checkout unless git ignores both the file and its temporary
+  file `.<name>.mb-out.tmp`, for example under `.mb/private/pulls/` (so a pull
+  cannot be committed by accident), when it already exists (unless `--force`), when its
   folder is missing, or when it is a link. `docs/google.md` has the rules and
   the recommended places.
 - The `mb-site` and `mb-ads` skills use the typed reads for real numbers (which

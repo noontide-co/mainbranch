@@ -508,36 +508,6 @@ def _dry_add(root: Path) -> str:
     ).stdout
 
 
-@pytest.mark.parametrize(
-    ("gitignore", "where"),
-    [
-        ("report.json\n", "report.json"),
-        ("*.json\n", "data.json"),
-        ("exports/*.json\n", "exports/a.json"),
-    ],
-)
-def test_a_file_name_ignore_alone_is_refused(
-    gitignore: str,
-    where: str,
-    repo: Path,
-    client_file: Path,
-    google: Any,
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-) -> None:
-    # The target's own name is ignored, but its temporary file would not be.
-    root = _checkout_with(tmp_path / "pattern", gitignore)
-    api = _signed(repo, client_file, google, monkeypatch)
-    before = _porcelain(root)
-
-    result = _out(repo, SC_ARGS, root / where)
-
-    _refused(result, "out_folder_not_ignored")
-    assert ".mb/private/" in result.stderr and ".mb/ " not in result.stderr
-    assert api.calls == [] and not (root / where).exists()
-    assert _porcelain(root) == before
-
-
 def test_during_a_write_git_never_sees_a_file_in_the_folder(
     repo: Path,
     client_file: Path,
@@ -624,6 +594,143 @@ def test_the_recommended_place_works_in_a_fresh_mb_init_repo(
     _refused(refused, "out_path_in_repo")
     assert ".mb/private/pulls/" in refused.stderr
     assert _porcelain(business).count("q.json") == 0
+
+
+# --- the fixed matrix: ignore shapes that decide whether the temporary file is safe ------
+
+TEMPLATE = TEMPLATE_GITIGNORE.read_text(encoding="utf-8")
+ALLOW, REFUSE = "allow", "refuse"
+# id -> (.gitignore, extra files {path: text}, info/exclude, global excludes, target, verdict)
+SHAPES: dict[str, tuple[str, dict[str, str], str, str, str, str]] = {
+    "01 dir/": ("dir/\n", {}, "", "", "dir/a.json", ALLOW),
+    "02 dir": ("dir\n", {}, "", "", "dir/a.json", ALLOW),
+    "03 dir/*": ("dir/*\n", {}, "", "", "dir/a.json", ALLOW),
+    "04 dir/**": ("dir/**\n", {}, "", "", "dir/a.json", ALLOW),
+    "05 dir/*/": ("dir/*/\n", {}, "", "", "dir/x/a.json", ALLOW),
+    "06 **/pulls/": ("**/pulls/\n", {}, "", "", "sub/pulls/a.json", ALLOW),
+    "07 dir/* !dir/*.tmp": ("dir/*\n!dir/*.tmp\n", {}, "", "", "dir/a.json", REFUSE),
+    "08 dir/* !dir/.*": ("dir/*\n!dir/.*\n", {}, "", "", "dir/a.json", REFUSE),
+    "09 dir/** !dir/**/.*.tmp": ("dir/**\n!dir/**/.*.tmp\n", {}, "", "", "dir/a.json", REFUSE),
+    "10 dir/* !.*.tmp": ("dir/*\n!.*.tmp\n", {}, "", "", "dir/a.json", REFUSE),
+    "11 dir/ !.*.tmp": ("dir/\n!.*.tmp\n", {}, "", "", "dir/a.json", ALLOW),
+    "12 nested * !.*.tmp": ("", {"dir/.gitignore": "*\n!.*.tmp\n"}, "", "", "dir/a.json", REFUSE),
+    "13 nested pulls/* !pulls/.*": (
+        "",
+        {"sub/.gitignore": "pulls/*\n!pulls/.*\n"},
+        "",
+        "",
+        "sub/pulls/a.json",
+        REFUSE,
+    ),
+    "14 nested *": ("", {"dir/.gitignore": "*\n"}, "", "", "dir/a.json", ALLOW),
+    "15 report.json": ("report.json\n", {}, "", "", "report.json", REFUSE),
+    "16 *.json": ("*.json\n", {}, "", "", "a.json", REFUSE),
+    "17 exports/*.json": ("exports/*.json\n", {}, "", "", "exports/a.json", REFUSE),
+    "18 info/exclude": ("", {}, "dir/*\n!dir/*.tmp\n", "", "dir/a.json", REFUSE),
+    "19 global excludes": ("", {}, "", "dir/*\n!dir/*.tmp\n", "dir/a.json", REFUSE),
+    "20 template": (TEMPLATE, {}, "", "", ".mb/private/pulls/a.json", ALLOW),
+    "21 template !tmp": (
+        TEMPLATE + "!.mb/private/pulls/*.tmp\n",
+        {},
+        "",
+        "",
+        ".mb/private/pulls/a.json",
+        ALLOW,
+    ),
+    "22 template .mb/pulls": (TEMPLATE, {}, "", "", ".mb/pulls/a.json", REFUSE),
+}
+
+
+def _shape_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, shape: str) -> tuple[Path, str]:
+    gitignore, extra, info, global_excludes, target, _ = SHAPES[shape]
+    home = tmp_path / "home"
+    home.mkdir()
+    if global_excludes:
+        (home / "excludes").write_text(global_excludes, encoding="utf-8")
+        (home / ".gitconfig").write_text(
+            f"[core]\n\texcludesFile = {home / 'excludes'}\n", encoding="utf-8"
+        )
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
+    root = tmp_path / "matrix"
+    root.mkdir()
+    _git(root, "init", "-q")
+    (root / ".gitignore").write_text(gitignore, encoding="utf-8")
+    for name, text in extra.items():
+        (root / name).parent.mkdir(parents=True, exist_ok=True)
+        (root / name).write_text(text, encoding="utf-8")
+    if info:
+        (root / ".git" / "info").mkdir(exist_ok=True)
+        (root / ".git" / "info" / "exclude").write_text(info, encoding="utf-8")
+    (root / target).parent.mkdir(parents=True, exist_ok=True)
+    _git(root, "add", "-f", "-A")
+    _git(root, "commit", "-q", "-m", "start", "--allow-empty")
+    return root, target
+
+
+@pytest.mark.parametrize("shape", list(SHAPES))
+def test_the_ignore_shape_matrix(
+    shape: str,
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    root, target = _shape_repo(tmp_path, monkeypatch, shape)
+    verdict = SHAPES[shape][5]
+    api = _signed(repo, client_file, google, monkeypatch)
+    calls_before = len(api.calls)
+    seen: list[tuple[str, str]] = []
+    real_fsync = os.fsync
+
+    def spy(fd: int) -> None:
+        seen.append((_porcelain(root), _dry_add(root)))
+        real_fsync(fd)
+
+    monkeypatch.setattr(os, "fsync", spy)
+    result = _out(repo, SC_ARGS, root / target)
+
+    if verdict == REFUSE:
+        assert result.exit_code == 2, result.stdout + result.stderr
+        assert "(out_path_in_repo)" in result.stderr or "(out_temp_not_ignored)" in result.stderr
+        assert "nothing was read" in result.stderr
+        assert len(api.calls) == calls_before, "a refused path must not read from Google"
+        assert not (root / target).exists()
+        assert list(root.rglob("*mb-out.tmp")) == []
+        return
+
+    assert result.exit_code == 0, result.stderr
+    # (i) during the write, the temporary file existed and git saw nothing
+    assert seen and seen[0] == ("", "")
+    assert (_porcelain(root), _dry_add(root)) == ("", "")
+    # (ii) after a run killed mid-write, the temporary file is left and git sees nothing
+    (root / target).unlink()
+
+    def killed(fd: int) -> None:
+        monkeypatch.setattr(os, "unlink", lambda *_a, **_k: None)
+        raise OSError("killed (synthetic)")
+
+    monkeypatch.setattr(os, "fsync", killed)
+    _out(repo, SC_ARGS, root / target)
+    left = list(root.rglob("*mb-out.tmp"))
+    assert len(left) == 1 and left[0].name == f".{Path(target).name}.mb-out.tmp"
+    assert (_porcelain(root), _dry_add(root)) == ("", "")
+
+
+def test_an_existing_temporary_file_is_named_and_left_alone(
+    repo: Path, client_file: Path, google: Any, monkeypatch: pytest.MonkeyPatch, outdir: Path
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    temp = outdir / ".a.json.mb-out.tmp"
+    temp.write_text("an earlier run", encoding="utf-8")
+
+    result = _out(repo, SC_ARGS, outdir / "a.json")
+
+    assert result.exit_code == 1
+    assert "(out_write_failed)" in result.stderr and ".a.json.mb-out.tmp" in result.stderr
+    assert temp.read_text(encoding="utf-8") == "an earlier run"
+    assert not (outdir / "a.json").exists()
 
 
 # --- help ------------------------------------------------------------------------------

@@ -3846,10 +3846,17 @@ def _google_read_exit(
             google_out_mod.write_out(
                 out, _json_payload(result, command=command, schema_name=schema_name) + "\n"
             )
-        except google_out_mod.OutWriteError:
+        except google_out_mod.OutWriteError as exc:
+            if exc.existing_temp:
+                detail = (
+                    f"{exc.existing_temp} is already there (an earlier or concurrent run); "
+                    "it was left as it is. Remove it and run again."
+                )
+            else:
+                detail = "nothing was left behind."
             typer.echo(
                 f"{command}: the answer was read but the --out file could not be written; "
-                "nothing was left behind. (out_write_failed)",
+                f"{detail} (out_write_failed)",
                 err=True,
             )
             raise typer.Exit(1) from None
@@ -3901,7 +3908,8 @@ GOOGLE_OUT_OPTION = typer.Option(
     "--out",
     help=(
         "Write the JSON result to this new private file (mode 0600) and print a short "
-        "summary. Refused inside a git checkout unless git ignores the path."
+        "summary. Refused inside a git checkout unless git ignores the file and its "
+        "temporary file (.NAME.mb-out.tmp)."
     ),
 )
 GOOGLE_FORCE_OPTION = typer.Option(False, "--force", help="With --out: replace an existing file.")
