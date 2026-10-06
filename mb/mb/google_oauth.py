@@ -69,8 +69,10 @@ RESPONSE_MAX_BYTES = 65536
 
 PKCE_VERIFIER_MIN = 43
 PKCE_VERIFIER_MAX = 128
-_PKCE_VERIFIER_RE = re.compile(r"^[A-Za-z0-9\-._~]+$")
-_OAUTH_CODE_RE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
+_PKCE_VERIFIER_RE = re.compile(r"[A-Za-z0-9\-._~]+")
+_OAUTH_CODE_RE = re.compile(r"[a-z][a-z0-9_]{0,63}")
+# Token-endpoint answers that are transient whatever their body says.
+TRANSIENT_HTTP_STATUSES = frozenset({408, 429})
 
 # Request fields whose values are secrets; the POST helper redacts each one
 # it sends from everything it hands back.
@@ -117,6 +119,9 @@ _RULE_MESSAGES: dict[str, str] = {
     "token_request_failed": "Google's token endpoint refused the request.",
     "token_unreachable": "Google's token endpoint could not be reached.",
     "token_response_malformed": "Google's token endpoint returned an unreadable response.",
+    "token_unexpected_redirect": (
+        "Google's token endpoint answered with a redirect, which is never followed."
+    ),
 }
 
 
@@ -156,9 +161,9 @@ def new_code_verifier() -> str:
 def code_challenge(verifier: str) -> str:
     """The ``S256`` challenge for ``verifier``."""
 
-    if not (PKCE_VERIFIER_MIN <= len(verifier) <= PKCE_VERIFIER_MAX) or not _PKCE_VERIFIER_RE.match(
-        verifier
-    ):
+    if not (
+        PKCE_VERIFIER_MIN <= len(verifier) <= PKCE_VERIFIER_MAX
+    ) or not _PKCE_VERIFIER_RE.fullmatch(verifier):
         raise GoogleOAuthError("pkce_verifier_format")
     digest = hashlib.sha256(verifier.encode("ascii")).digest()
     return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
@@ -476,13 +481,34 @@ class LoopbackReceiver:
 Sender = Callable[[str, bytes, Mapping[str, str], float], tuple[int, bytes]]
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Refuse every redirect: the request carries a bearer token or a form
+    body with secrets, and neither may reach a second URL. The 3xx comes
+    back as an ordinary non-ok answer."""
+
+    def redirect_request(self, *args: Any, **kwargs: Any) -> None:
+        return None
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect)
+
+
 def _urllib_sender(
-    url: str, body: bytes, headers: Mapping[str, str], timeout: float
+    url: str,
+    body: bytes,
+    headers: Mapping[str, str],
+    timeout: float,
+    *,
+    method: str = "POST",
+    max_bytes: int = RESPONSE_MAX_BYTES,
 ) -> tuple[int, bytes]:
-    request = urllib.request.Request(url, data=body, headers=dict(headers), method="POST")
+    """The one HTTPS path for Google calls. ``mb google`` reads pass ``method="GET"``
+    (with no body) and a larger ``max_bytes`` for report answers."""
+    data = body if method == "POST" else None
+    request = urllib.request.Request(url, data=data, headers=dict(headers), method=method)
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            return int(getattr(response, "status", 0) or 0), response.read(RESPONSE_MAX_BYTES)
+        with _OPENER.open(request, timeout=timeout) as response:
+            return int(getattr(response, "status", 0) or 0), response.read(max_bytes)
     except urllib.error.HTTPError as exc:
         payload = b""
         try:
@@ -496,7 +522,7 @@ def _safe_code(value: Any) -> str:
     """An OAuth ``error``/``error_subtype`` value, or ``other`` if it is not one."""
 
     text = str(value or "")
-    return text if _OAUTH_CODE_RE.match(text) else ("" if not text else "other")
+    return text if _OAUTH_CODE_RE.fullmatch(text) else ("" if not text else "other")
 
 
 def _secret_values(fields: Mapping[str, str], headers: Mapping[str, str]) -> tuple[str, ...]:
@@ -566,7 +592,8 @@ def http_post_form(
     payload: dict[str, Any] = {}
     try:
         parsed = json.loads(raw.decode("utf-8")) if raw else {}
-    except (UnicodeDecodeError, ValueError):
+    except (UnicodeDecodeError, ValueError, RecursionError):
+        # RecursionError: a hostile, deeply nested body reads as unreadable.
         parsed = {}
     if isinstance(parsed, dict):
         payload = parsed
@@ -598,6 +625,14 @@ def classify_error(
     if timed_out:
         return STATE_BOOTSTRAP_TIMEOUT
     if network_failure or (http_status is not None and http_status >= 500):
+        return STATE_UNVALIDATED
+    if http_status is not None and (
+        http_status in TRANSIENT_HTTP_STATUSES
+        or 300 <= http_status < 400
+        or (http_status >= 400 and not error_code and not error_subtype)
+    ):
+        # A timeout, a rate limit, a redirect (never followed) or an error with
+        # no OAuth code says nothing about the client or the grant.
         return STATE_UNVALIDATED
     if error_code == "invalid_grant" or error_subtype == "invalid_rapt":
         return STATE_REAUTH_REQUIRED
@@ -638,11 +673,13 @@ class TokenResponse(Mapping[str, Any]):
 def _token_call(fields: dict[str, str], sender: Sender | None) -> TokenResponse:
     result = http_post_form(TOKEN_ENDPOINT, fields, sender=sender)
     if not result.ok:
-        rule = (
-            "token_unreachable"
-            if not result.upstream["response_received"]
-            else "token_request_failed"
-        )
+        status = result.upstream.get("http_status")
+        if not result.upstream["response_received"]:
+            rule = "token_unreachable"
+        elif isinstance(status, int) and 300 <= status < 400:
+            rule = "token_unexpected_redirect"
+        else:
+            rule = "token_request_failed"
         raise GoogleOAuthError(rule, result.state, upstream=result.upstream)
     access_token = result.payload.get("access_token")
     if not isinstance(access_token, str) or not access_token:

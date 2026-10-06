@@ -672,12 +672,51 @@ def test_ctrl_c_before_any_write_says_nothing_was_stored(
     repo: Path, client_file: Path, google: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     google()
-    InterruptingSet(monkeypatch, 0, KeyboardInterrupt())
+
+    def interrupted_browser(url: str) -> bool:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(gc, "open_browser", interrupted_browser)
 
     result = _oauth(repo, *_signin_args(client_file), "--json")
 
     assert result.exit_code == 130
     assert "Nothing was stored." in json.loads(result.stdout)["summary"]
+    assert _local_secrets() == {}
+
+
+def test_ctrl_c_during_the_grant_write_says_it_may_have_been_stored(
+    repo: Path, client_file: Path, google: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    google()
+    InterruptingSet(monkeypatch, 0, KeyboardInterrupt())
+
+    result = _oauth(repo, *_signin_args(client_file), "--json")
+
+    assert result.exit_code == 130
+    summary = json.loads(result.stdout)["summary"]
+    assert "Nothing was stored" not in summary
+    assert "may have been stored" in summary
+    assert "the connection is not set up" in summary
+    assert "Re-run `mb connect google --oauth` to finish it." in summary
+    assert_no_sentinel(result.output)
+
+
+def test_ctrl_c_during_the_grant_write_on_reauth(
+    repo: Path, client_file: Path, google: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _signed_in(repo, client_file, google)
+    google(refresh=REFRESH_2)
+    InterruptingSet(monkeypatch, 0, KeyboardInterrupt())
+
+    result = _oauth(repo, "--reauth", "--client-file", str(client_file), "--json")
+
+    assert result.exit_code == 130
+    summary = json.loads(result.stdout)["summary"]
+    assert "may have been stored" in summary
+    assert "replaced the old grant" in summary
+    assert "`mb connect test google`" in summary
+    assert_no_sentinel(result.output)
 
 
 def test_ctrl_c_after_grant_write_on_first_sign_in(
