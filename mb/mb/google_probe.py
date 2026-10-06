@@ -528,6 +528,7 @@ def test_google(
     before: dict[str, Any],
     status_again: Callable[[], dict[str, Any]],
     access_token: str | None = None,
+    record_in_tracked_config: bool = False,
 ) -> dict[str, Any]:
     """``mb connect test google`` for an OAuth-mode entry (see the module docstring).
 
@@ -567,8 +568,13 @@ def test_google(
         overall = _token_failure(minted)
 
     recorded = False
+    not_recorded_reason = ""
     validation: dict[str, Any]
-    if overall["record"]:
+    # Recording writes .mb/connect.yaml; a tracked one is left as it is.
+    tracked = not record_in_tracked_config and connect_mod.config_tracked_by_git(target)
+    if tracked:
+        not_recorded_reason = "connect_yaml_tracked"
+    if overall["record"] and not tracked:
         # Re-read: minting may have just cleared a recorded `reauth_required`.
         config = connect_mod._read_config(target)
         repo_entry = config["providers"].get(provider.id)
@@ -583,7 +589,7 @@ def test_google(
     else:
         validation = _validation_record(overall, products, {}, checked_at)
         # `read_minted_token` has already recorded this one for status.
-        recorded = overall["state"] == gc.STATE_REAUTH_REQUIRED
+        recorded = overall["state"] == gc.STATE_REAUTH_REQUIRED and not tracked
     status = status_again()
     return {
         "ok": bool(overall["ok"]),
@@ -596,6 +602,7 @@ def test_google(
         "summary": overall["summary"],
         "repair_command": overall["repair_command"],
         "recorded": recorded,
+        "not_recorded_reason": not_recorded_reason,
         # The CLI exits 1 on this even when an unrecorded failure leaves the
         # stored status green.
         "needs_action": not overall["ok"],
@@ -629,7 +636,12 @@ def render_test_result(result: dict[str, Any]) -> None:
     if result.get("summary"):
         print(f"summary: {result['summary']}")
     render_products(result.get("products") or {})
-    if not result["ok"] and not result.get("recorded"):
+    if result.get("not_recorded_reason") == "connect_yaml_tracked":
+        print(
+            "recorded: no (.mb/connect.yaml is tracked by git, so checks are not written to "
+            "it; `mb connect status google` shows the last check a person recorded)"
+        )
+    elif not result["ok"] and not result.get("recorded"):
         print(
             "recorded: no (this says nothing about the sign-in itself; "
             f"status still reads {connect_mod.state_label(str(result['status'].get('state')))})"

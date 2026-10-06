@@ -67,6 +67,16 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- `mb connect google --oauth` names the class when Google refuses the
+  sign-in's code exchange: `oauth_client_rejected`,
+  `oauth_client_unauthorized`, `oauth_scope_rejected` or
+  `authorization_code_rejected` (an expired or reused code, which no longer
+  reads as `reauth_required`), with `token_request_failed` kept for anything
+  else; Google's text is never shown. An explicit `--scope` or
+  `MB_CONNECT_SECRET_BACKEND` that an existing Google connection would ignore
+  now refuses (`oauth_scope_kept`, `oauth_backend_kept`), and any sign-in
+  option without `--oauth`, `--timeout 300` included, refuses with
+  `oauth_option_without_oauth` (part of #1004).
 - `mb update` lists the plugin-rail switch (`mb skill link --repo . --plugin`)
   in a new `operator_actions` field for a person to run at a terminal, not in
   `next_actions`, so an agent running `next_actions` never rewires a repo
@@ -78,6 +88,21 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- Google sign-in hardening (part of #1004): `mb connect status google` shows
+  one line per product (granted or not, and its last check), with additive
+  `oauth.grants` and `validation.products` in `--json`; a recorded
+  `search_console_site` or `ga4_property_id` can be removed with an empty
+  `--metadata` value; a repo that tracks `.mb/connect.yaml` in git no longer
+  has `reauth_required` or a check outcome written into it automatically
+  (the read or test says so instead); an unexpected error in
+  `mb connect token` (and the other subcommands) names the subcommand;
+  `mb google sc inspect` drops a result link that holds a space, bidi or
+  line-separator character, answers a non-object `inspectionResult` with
+  `search_console_response_malformed` (exit 1), and tells a Unicode or
+  trailing-dot host to use the punycode (`xn--`) form; GA4 and Search
+  Console names keep only space trimming, so a trailing newline is refused
+  with `name_format`. The Google token calls now use the shared
+  no-redirect opener from #1058 (same behaviour).
 - `mb google` reads: the table view also removes bidi controls and turns
   line separators into spaces; `ga4 report` accepts the pre-October-2020
   `customEvent:parameter[event]` names and refuses an ambiguous `--order-by`
