@@ -189,7 +189,11 @@ given, and `property_quota`.
 Every read takes `--out PATH`. It writes the same JSON that `--json` prints
 (the envelope, never a token or grant) to PATH with mode 0600, created in one
 step, and prints only a short summary: the path, the row count and
-`may_have_more`. With `--json` the summary is JSON (`mb.google.out`). Add
+`may_have_more`. With `--json` the summary is JSON (`mb.google.out`). A path
+under your home folder is shown as `~/...`, so the summary never prints your
+username, and `safe_to_share: true` holds; there is no absolute-path field, so
+an agent opens the file by the path it passed to `--out` (expand `~` to the
+home folder). Add
 `--force` to replace an existing file.
 
 ```bash
@@ -202,9 +206,9 @@ read from Google (a refused path costs no quota) and refuses with exit 2:
 
 | `rule` | When |
 | --- | --- |
-| `out_path_in_repo` | PATH is inside a git checkout, the business repo included, and git does not report it ignored (a tracked file, or one `git add` would pick up). `--force` never lifts this. |
+| `out_path_in_repo` | PATH is inside a git checkout, the business repo included, and git does not report it ignored (a tracked file, or one `git add` would pick up). `--force` never lifts this. When `GIT_DIR` or `GIT_WORK_TREE` is exported, the path is judged a second time with them, and refused unless both answers allow it. |
 | `out_temp_not_ignored` | PATH is in a git checkout and git ignores the file, but not its temporary file `.<name>.mb-out.tmp` in the same folder (for example `.gitignore` lists only `report.json` or `*.json`, or `dir/*` followed by `!dir/*.tmp`). The report is written to that temporary file first, so git must ignore both paths; a negation that re-includes the temporary file is refused. |
-| `out_path_git_unknown` | PATH is inside a checkout and git could not answer. The path is refused. |
+| `out_path_git_unknown` | PATH is inside a checkout and git could not answer, or `mb` could not place the path in the checkout (for example `BIZ/` for `Biz/` on a case-insensitive disk), so it cannot check the ignore rule. The path is refused and nothing is read; the message says which. |
 | `out_path_exists` | The file exists and `--force` was not given. |
 | `out_path_not_file` | PATH exists and is not a plain file (a folder, for example). |
 | `out_parent_missing` | The folder does not exist. `mb` never creates folders. |
@@ -217,13 +221,14 @@ folder is resolved first and the checks run on where it really is, so a link
 into a repo is refused by the git rule. A relative PATH is relative to the
 folder you run the command from, not `--repo`. A failed read writes nothing. If
 the read worked but the file cannot be written, the command exits 1 with
-`out_write_failed`. The report goes through `.<name>.mb-out.tmp` beside the
+`out_write_failed` (with `--json`, the failure envelope is also on stdout, like the read failures). If `mb` cannot remove its own temporary file after a failed write, the message names it and says to remove it; "nothing was left behind" is only printed when that is true. The report goes through `.<name>.mb-out.tmp` beside the
 file, created exclusively: if that name already exists (a run killed mid-write,
 or two runs at once) nothing is written, the existing file is left as it is and
 the message names it so you can remove it.
 
-Put the file outside the repo (for example `~/pulls/`), or in a folder git
-ignores as a whole (git must ignore the file and its `.<name>.mb-out.tmp`). `mb init` repos ignore `.mb/private/`, so
+Put the file outside the repo (for example `~/pulls/`), or under a folder git
+ignores. The rule is path-exact: git must ignore the file and its
+`.<name>.mb-out.tmp`, both. `mb init` repos ignore `.mb/private/`, so
 `.mb/private/pulls/` works once that folder exists; `.mb/` itself is not
 ignored (a folder like `.mb/pulls/` is refused). Never commit it: the rows are
 private business data.

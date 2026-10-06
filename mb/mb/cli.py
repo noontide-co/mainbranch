@@ -3852,13 +3852,20 @@ def _google_read_exit(
                     f"{exc.existing_temp} is already there (an earlier or concurrent run); "
                     "it was left as it is. Remove it and run again."
                 )
+            elif exc.leftover_temp:
+                detail = (
+                    f"the temporary file {exc.leftover_temp} could not be removed and is still "
+                    "there; remove it yourself."
+                )
             else:
                 detail = "nothing was left behind."
-            typer.echo(
-                f"{command}: the answer was read but the --out file could not be written; "
-                f"{detail} (out_write_failed)",
-                err=True,
-            )
+            reason = f"the answer was read but the --out file could not be written; {detail}"
+            if json_out:
+                failed, _ = google_reads_mod.failure_result(
+                    google_reads_mod.ReadFailure("out_write_failed", reason)
+                )
+                typer.echo(_json_payload(failed, command=command, schema_name=schema_name))
+            typer.echo(f"{command}: {reason} (out_write_failed)", err=True)
             raise typer.Exit(1) from None
         info = google_out_mod.summary(command, out, result)
         if json_out:
@@ -3908,8 +3915,9 @@ GOOGLE_OUT_OPTION = typer.Option(
     "--out",
     help=(
         "Write the JSON result to this new private file (mode 0600) and print a short "
-        "summary. Refused inside a git checkout unless git ignores the file and its "
-        "temporary file (.NAME.mb-out.tmp)."
+        "summary. Refused inside a git checkout unless git ignores both the file and its "
+        "temporary file (.NAME.mb-out.tmp). Safe places: a folder outside the repo, or "
+        ".mb/private/pulls/."
     ),
 )
 GOOGLE_FORCE_OPTION = typer.Option(False, "--force", help="With --out: replace an existing file.")

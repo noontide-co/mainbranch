@@ -733,6 +733,194 @@ def test_an_existing_temporary_file_is_named_and_left_alone(
     assert not (outdir / "a.json").exists()
 
 
+# --- follow-ups from the #1077 reviews (#1080) -------------------------------------------
+
+
+def _failing_link(monkeypatch: pytest.MonkeyPatch) -> None:
+    def refuse(*_: Any, **__: Any) -> None:
+        raise OSError("disk says no (synthetic)")
+
+    monkeypatch.setattr(os, "link", refuse)
+
+
+def test_a_write_failure_with_json_puts_the_envelope_on_stdout(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    outdir: Path,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    _failing_link(monkeypatch)
+
+    result = _out(repo, SC_ARGS, outdir / "x.json", "--json")
+
+    assert result.exit_code == 1
+    envelope = json.loads(result.stdout)
+    assert envelope["ok"] is False and envelope["rule"] == "out_write_failed"
+    assert envelope["exit_code"] == 1 and envelope["state"] == "out_write_failed"
+    assert envelope["errors"][0]["code"] == "out_write_failed"
+    assert envelope["safe_to_share"] is True
+    assert "(out_write_failed)" in result.stderr
+    assert "synthetic" not in result.stdout + result.stderr
+    assert str(outdir) not in result.stdout
+    assert list(outdir.iterdir()) == []
+
+
+def test_a_clean_write_failure_still_says_nothing_was_left_behind(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    outdir: Path,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    _failing_link(monkeypatch)
+
+    result = _out(repo, SC_ARGS, outdir / "x.json")
+
+    assert "nothing was left behind" in result.stderr
+
+
+def test_a_failed_cleanup_names_the_leftover_file(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    outdir: Path,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    _failing_link(monkeypatch)
+    real_unlink = os.unlink
+
+    def stuck(path: Any, *args: Any, **kwargs: Any) -> None:
+        if str(path).endswith(".mb-out.tmp"):
+            raise OSError("cannot remove (synthetic)")
+        real_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(os, "unlink", stuck)
+
+    for extra in ((), ("--json",)):
+        result = _out(repo, SC_ARGS, outdir / "x.json", *extra)
+
+        assert result.exit_code == 1 and "(out_write_failed)" in result.stderr
+        assert "nothing was left behind" not in result.stderr
+        assert ".x.json.mb-out.tmp" in result.stderr and "remove" in result.stderr
+        assert "synthetic" not in result.stdout + result.stderr
+        assert str(outdir) not in result.stderr
+        if extra:
+            assert ".x.json.mb-out.tmp" in json.loads(result.stdout)["summary"]
+        real_unlink(outdir / ".x.json.mb-out.tmp")
+
+
+def _separate_git_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A work tree with no `.git` on disk, whose repo is named by GIT_DIR/GIT_WORK_TREE."""
+
+    work = tmp_path / "work"
+    gitdir = tmp_path / "sep.git"
+    for folder in ("open", "ignored", "elsewhere"):
+        (work / folder).mkdir(parents=True)
+    (tmp_path / "elsewhere").mkdir()
+    env = {"HOME": str(tmp_path), "PATH": os.environ["PATH"], "GIT_DIR": str(gitdir)}
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, env=env, check=True, capture_output=True)
+    (gitdir / "info").mkdir(exist_ok=True)
+    (gitdir / "info" / "exclude").write_text("ignored/\n", encoding="utf-8")
+    monkeypatch.setenv("GIT_DIR", str(gitdir))
+    monkeypatch.setenv("GIT_WORK_TREE", str(work))
+    return work
+
+
+def test_an_inherited_git_dir_is_judged_too(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from mb.google_reads import ReadRefusal
+
+    work = _separate_git_dir(tmp_path, monkeypatch)
+
+    with pytest.raises(ReadRefusal) as refused:
+        go_out.check_out(str(work / "open" / "x.json"))
+    assert refused.value.rule == "out_path_in_repo"
+    with pytest.raises(ReadRefusal) as refused_force:
+        go_out.check_out(str(work / "open" / "x.json"), force=True)
+    assert refused_force.value.rule == "out_path_in_repo"
+    # Both judgments ignore this one, and this one is outside the inherited work tree.
+    assert go_out.check_out(str(work / "ignored" / "x.json")).path.name == "x.json"
+    assert go_out.check_out(str(tmp_path / "elsewhere" / "x.json")).path.name == "x.json"
+
+
+def test_an_inherited_git_dir_refusal_reads_nothing(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    work = _separate_git_dir(tmp_path, monkeypatch)
+
+    result = _out(repo, SC_ARGS, work / "open" / "x.json")
+
+    _refused(result, "out_path_in_repo")
+    assert api.calls == [] and not (work / "open" / "x.json").exists()
+
+
+def test_a_path_mb_cannot_place_in_the_checkout_says_so(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from mb.google_reads import ReadRefusal
+
+    (tmp_path / "Biz").mkdir()
+
+    def elsewhere(args: list[str], cwd: Path) -> Any:
+        # git names a checkout the folder cannot be mapped into (a case-variant spelling).
+        return subprocess.CompletedProcess(args, 0, b"/no/such/checkout\n", b"")
+
+    monkeypatch.setattr(go_out, "_git", elsewhere)
+
+    with pytest.raises(ReadRefusal) as refused:
+        go_out.check_out(str(tmp_path / "Biz" / "x.json"))
+
+    assert refused.value.rule == "out_path_git_unknown"
+    text = str(refused.value)
+    assert "could not place" in text and "could not say" not in text
+    assert "nothing was read or written" in text
+
+
+def test_the_hint_states_the_path_exact_rule(checkout: Path) -> None:
+    from mb.google_reads import ReadRefusal
+
+    assert "as a whole" not in go_out.OUT_HINT
+    assert ".mb-out.tmp" in go_out.OUT_HINT and ".mb/private/pulls/" in go_out.OUT_HINT
+    with pytest.raises(ReadRefusal) as refused:
+        go_out.check_out(str(checkout / "docs" / "x.json"))
+    assert refused.value.rule == "out_path_in_repo"
+    assert "as a whole" not in str(refused.value) and ".mb-out.tmp" in str(refused.value)
+
+
+def test_a_path_under_home_is_shown_with_a_tilde(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    home = tmp_path / "homefolder"
+    (home / "pulls").mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(home))
+
+    human = _out(repo, SC_ARGS, home / "pulls" / "q.json")
+    as_json = _out(repo, SC_ARGS, home / "pulls" / "q2.json", "--json")
+
+    assert human.exit_code == 0 and as_json.exit_code == 0
+    assert human.stdout.splitlines()[0] == "mb google sc query: wrote ~/pulls/q.json (mode 0600)"
+    info = json.loads(as_json.stdout)
+    assert info["out"] == "~/pulls/q2.json"
+    for text in (human.stdout, as_json.stdout):
+        assert str(home) not in text and home.name not in text
+    assert (home / "pulls" / "q.json").is_file() and (home / "pulls" / "q2.json").is_file()
+
+
 # --- help ------------------------------------------------------------------------------
 
 

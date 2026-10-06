@@ -29,7 +29,6 @@ from __future__ import annotations
 import os
 import stat
 import subprocess
-from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -40,10 +39,12 @@ from mb.google_reads import ReadRefusal, terminal_safe
 OUT_MODE = 0o600
 GIT_TIMEOUT_SECONDS = 5
 OUT_HINT = (
-    "write it outside the repo, or in a folder git ignores as a whole, such as .mb/private/pulls/"
+    "write it outside the repo, or under a folder git ignores, such as .mb/private/pulls/ "
+    "(git must ignore both the file and its temporary file .<name>.mb-out.tmp)"
 )
 
 _GIT_ENV_DROP = {"GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"}
+_GIT_ENV_INHERITED = ("GIT_DIR", "GIT_WORK_TREE")
 
 
 @dataclass(frozen=True)
@@ -54,8 +55,10 @@ class OutTarget:
     force: bool
 
 
-def _git(args: list[str], cwd: Path) -> subprocess.CompletedProcess[bytes] | None:
-    env = {k: v for k, v in os.environ.items() if k not in _GIT_ENV_DROP}
+def _git(
+    args: list[str], cwd: Path, *, inherit_env: bool = False
+) -> subprocess.CompletedProcess[bytes] | None:
+    env = {k: v for k, v in os.environ.items() if inherit_env or k not in _GIT_ENV_DROP}
     try:
         return subprocess.run(
             ["git", *args],
@@ -70,18 +73,36 @@ def _git(args: list[str], cwd: Path) -> subprocess.CompletedProcess[bytes] | Non
 
 
 def _check_git(parent: Path, name: str, shown: str) -> None:
-    """Allow a path outside any checkout, or one git reports ignored; refuse the rest."""
+    """Allow a path outside any checkout, or one git reports ignored; refuse the rest.
 
-    top = _git(["rev-parse", "--show-toplevel"], parent)
+    The path is judged with the repository variables dropped (what a plain ``git``
+    in that folder sees). When the caller exported ``GIT_DIR`` or ``GIT_WORK_TREE``,
+    it is judged again with them, and both answers must allow it.
+    """
+
+    _judge_git(parent, name, shown, inherit_env=False)
+    if any(os.environ.get(var) for var in _GIT_ENV_INHERITED):
+        _judge_git(parent, name, shown, inherit_env=True)
+
+
+def _judge_git(parent: Path, name: str, shown: str, *, inherit_env: bool) -> None:
+    def run(args: list[str], cwd: Path) -> subprocess.CompletedProcess[bytes] | None:
+        # Without the inherited variables, call `_git` exactly as it always was.
+        return _git(args, cwd, inherit_env=True) if inherit_env else _git(args, cwd)
+
+    top = run(["rev-parse", "--show-toplevel"], parent)
     if top is not None and top.returncode == 0:
         root = Path(top.stdout.decode("utf-8", "replace").strip() or ".")
         try:
             relative = parent.resolve().relative_to(root.resolve()) / name
         except (OSError, RuntimeError, ValueError):
-            raise _git_unknown(shown) from None
+            if inherit_env and not _is_inside(parent, root):
+                # The exported work tree does not hold this folder: it says nothing about it.
+                return
+            raise _git_unplaced(shown) from None
         if ".git" in relative.parts:
             raise _git_unknown(shown)
-        verdict = _git(["check-ignore", "-q", "--", relative.as_posix()], root)
+        verdict = run(["check-ignore", "-q", "--", relative.as_posix()], root)
         if verdict is None or verdict.returncode not in {0, 1}:
             raise _git_unknown(shown)
         if verdict.returncode == 1:
@@ -93,15 +114,26 @@ def _check_git(parent: Path, name: str, shown: str) -> None:
         # The report is first written to a fixed temporary name beside the target, so
         # git must ignore that exact path too (a negation can re-include it).
         temp = relative.parent / temp_name(name)
-        temp_verdict = _git(["check-ignore", "-q", "--", temp.as_posix()], root)
+        temp_verdict = run(["check-ignore", "-q", "--", temp.as_posix()], root)
         if temp_verdict is None or temp_verdict.returncode not in {0, 1}:
             raise _git_unknown(shown)
         if temp_verdict.returncode == 1:
             raise _temp_refusal(shown, temp_name(name))
         return
+    if inherit_env:
+        # The exported variables name a repository git cannot use from here.
+        raise _git_unknown(shown)
     if _inside_git_checkout(parent):
         # A checkout is there but git would not say anything about it.
         raise _git_unknown(shown)
+
+
+def _is_inside(folder: Path, root: Path) -> bool:
+    try:
+        folder.resolve().relative_to(root.resolve())
+    except (OSError, RuntimeError, ValueError):
+        return False
+    return True
 
 
 def _temp_refusal(shown: str, temp: str) -> ReadRefusal:
@@ -119,6 +151,17 @@ def _git_unknown(shown: str) -> ReadRefusal:
         "out_path_git_unknown",
         f"--out {shown} is inside a git checkout and git could not say whether it is "
         f"ignored; nothing was read or written. {OUT_HINT}.",
+    )
+
+
+def _git_unplaced(shown: str) -> ReadRefusal:
+    # Same rule as `_git_unknown`: the folder is refused, but the cause is on mb's side
+    # (for example `BIZ/` for `Biz/` on a case-insensitive disk), not git's.
+    return ReadRefusal(
+        "out_path_git_unknown",
+        f"--out {shown} is inside a git checkout, but mb could not place the path in that "
+        "checkout (a differently spelled folder name, for example), so it cannot check "
+        f"that git ignores it; nothing was read or written. {OUT_HINT}.",
     )
 
 
@@ -190,12 +233,14 @@ class OutWriteError(OSError):
     """The file could not be written; the read itself had already succeeded.
 
     ``existing_temp`` names a temporary file that was already there (an earlier
-    or concurrent run); it was left untouched.
+    or concurrent run); it was left untouched. ``leftover_temp`` names this run's
+    own temporary file when removing it failed, so the file is still there.
     """
 
-    def __init__(self, message: str, existing_temp: str = "") -> None:
+    def __init__(self, message: str, existing_temp: str = "", leftover_temp: str = "") -> None:
         super().__init__(message)
         self.existing_temp = existing_temp
+        self.leftover_temp = leftover_temp
 
 
 def write_out(target: OutTarget, text: str) -> None:
@@ -208,6 +253,7 @@ def write_out(target: OutTarget, text: str) -> None:
 
     tmp = target.path.with_name(temp_name(target.path.name))
     created = False
+    failure: OutWriteError | None = None
     try:
         try:
             fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, OUT_MODE)
@@ -227,14 +273,29 @@ def write_out(target: OutTarget, text: str) -> None:
     except OutWriteError:
         raise
     except OSError as exc:
-        raise OutWriteError(str(exc)) from None
+        failure = OutWriteError(str(exc))
     finally:
         if created:
-            with suppress(OSError):
+            try:
                 os.unlink(tmp)
+            except OSError:
+                if failure is not None:
+                    failure.leftover_temp = tmp.name
+    if failure is not None:
+        raise failure
 
 
 SCHEMA_OUT = "mb.google.out"
+
+
+def display_path(path: Path) -> str:
+    """The path as shown: ``~/...`` under the home folder, so no username is printed."""
+
+    try:
+        home = Path.home().resolve()
+        return "~/" + path.resolve().relative_to(home).as_posix()
+    except (OSError, RuntimeError, ValueError):
+        return str(path)
 
 
 def summary(command: str, target: OutTarget, result: dict[str, Any]) -> dict[str, Any]:
@@ -248,7 +309,7 @@ def summary(command: str, target: OutTarget, result: dict[str, Any]) -> dict[str
         count = 1 if result.get("inspection_result") else 0
     return {
         "ok": True,
-        "out": str(target.path),
+        "out": display_path(target.path),
         "mode": "0600",
         "source_command": command,
         "row_count": count,

@@ -323,6 +323,18 @@ markdown. Use `overall_state` as summary health and `findings[].code` for
 repair cards, such as `content_strategy_unindexed_layer` when a layer exists
 but is not indexed from `core/content-strategy.md`.
 
+### `mb google ... --out --json`
+
+The summary (`schema: mb.google.out`) carries `out`, the path of the private
+file, shown as `~/...` when it is under the home folder, so the summary has no
+username and `safe_to_share: true` is accurate. There is no absolute-path field:
+an agent opens the file by the path it passed to `--out` (expanding `~` to the
+home folder). If the read worked but the file could not be written, stdout
+carries the usual failure envelope (`ok: false`, `rule: out_write_failed`,
+`exit_code: 1`), the same shape as the read failures, and the process exits 1.
+The message names at most the temporary file's name (`.<name>.mb-out.tmp`),
+never a full path. See [google.md](google.md#--out-keep-a-large-pull-in-a-private-file).
+
 ## First Migrated Surfaces
 
 The v1 envelope is present on:
