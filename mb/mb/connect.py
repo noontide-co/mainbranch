@@ -192,6 +192,11 @@ class ConfigCorruptError(ValueError):
 GOOGLE_OAUTH_GRANT_SLOT = "oauth_grant"
 # Repo metadata key the sign-in writes: the Google products it granted.
 GOOGLE_OAUTH_GRANTS_METADATA = "oauth_grants"
+# The products a Google sign-in can grant, and the per-product outcomes a
+# check records (`google_probe`); status shows only these.
+GOOGLE_OAUTH_PRODUCTS: tuple[str, ...] = ("search_console", "ga4")
+GOOGLE_PRODUCT_STATES = frozenset({"ok", "grant_missing", "unvalidated", "invalid", "not_checked"})
+_GOOGLE_PRODUCT_RULE_RE = re.compile(r"[a-z][a-z0-9_]{0,63}")
 # State a read records when Google refuses the stored grant (`invalid_grant`).
 GOOGLE_REAUTH_REQUIRED_STATE = "reauth_required"
 
@@ -781,6 +786,28 @@ def _write_config(repo: Path, config: dict[str, Any]) -> Path:
     text = yaml.safe_dump(config, sort_keys=False)
     atomic_write_text(path, text)
     return path
+
+
+def config_tracked_by_git(repo: Path) -> bool:
+    """Is ``.mb/connect.yaml`` tracked by git in ``repo``?
+
+    Business repos ignore it, but an older or hand-made repo may track it.
+    Automatic recordings (a read's ``reauth_required``, a check's outcome)
+    skip a tracked file, so nothing leaves it modified without a person asking.
+    Any git failure reads as not tracked.
+    """
+
+    try:
+        completed = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", "--", CONFIG_RELATIVE_PATH.as_posix()],
+            cwd=str(repo),
+            capture_output=True,
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return False
+    return completed.returncode == 0
 
 
 def _user_scope_path() -> Path:
@@ -1639,20 +1666,12 @@ def connect_provider(
                     # it. The edit updates the keys given and keeps the rest, so
                     # the `--metadata` repair `mb connect test google` names for
                     # one product leaves the other product's id in place.
+                    # An empty value (`--metadata search_console_site=`) removes
+                    # that key, so the reads refuse with `site_not_recorded`.
                     metadata.pop(GOOGLE_OAUTH_GRANTS_METADATA, None)
-                    raw_existing_metadata = existing_entry.get("metadata")
-                    metadata = {
-                        **(
-                            {
-                                str(key): str(value)
-                                for key, value in raw_existing_metadata.items()
-                                if value not in (None, "")
-                            }
-                            if isinstance(raw_existing_metadata, dict)
-                            else {}
-                        ),
-                        **google_connect.normalize_oauth_metadata(metadata),
-                    }
+                    metadata = google_connect.merge_oauth_metadata(
+                        existing_entry.get("metadata"), metadata
+                    )
             else:
                 # A tokenless first connect records metadata and source only.
                 # No ref points at an item that was never written, and the
@@ -1796,7 +1815,19 @@ def _credential_mode(provider: Provider, entry: dict[str, Any]) -> dict[str, Any
 
     # A coarse date only, and "" unless Google put a time limit on the sign-in.
     expires_on = google_connect.refresh_token_expires_on(entry)
-    return {"credential_mode": "oauth", "oauth": {"refresh_token_expires_on": expires_on}}
+    raw_metadata = entry.get("metadata")
+    raw_grants = (
+        raw_metadata.get(GOOGLE_OAUTH_GRANTS_METADATA) if isinstance(raw_metadata, dict) else ""
+    )
+    granted = {label.strip() for label in str(raw_grants or "").split(",")}
+    return {
+        "credential_mode": "oauth",
+        "oauth": {
+            "refresh_token_expires_on": expires_on,
+            # Which products the sign-in granted, from a fixed list.
+            "grants": [label for label in GOOGLE_OAUTH_PRODUCTS if label in granted],
+        },
+    }
 
 
 def _secret_presence(probe: SecretProbe) -> str:
@@ -2201,6 +2232,20 @@ def _safe_probe_details(validation: dict[str, Any]) -> dict[str, Any]:
             for scope in token_scopes
             if GITHUB_SCOPE_RE.fullmatch(str(scope)) and not metadata_value_rule(str(scope))
         ]
+    products = validation.get("products")
+    if isinstance(products, dict):
+        safe_products: dict[str, dict[str, str]] = {}
+        for name in GOOGLE_OAUTH_PRODUCTS:
+            product = products.get(name)
+            if not isinstance(product, dict) or product.get("state") not in GOOGLE_PRODUCT_STATES:
+                continue
+            rule = str(product.get("rule") or "")
+            safe_products[name] = {
+                "state": str(product["state"]),
+                "rule": rule if _GOOGLE_PRODUCT_RULE_RE.fullmatch(rule) else "",
+            }
+        if safe_products:
+            details["products"] = safe_products
     withheld = validation.get("token_scopes_withheld")
     if isinstance(withheld, int) and not isinstance(withheld, bool):
         details["token_scopes_withheld"] = withheld
@@ -4802,8 +4847,35 @@ def render_provider_status(result: dict[str, Any]) -> None:
     )
     if result.get("summary"):
         print(f"summary: {result['summary']}")
+    if result.get("credential_mode") == "oauth":
+        _render_google_products(result)
     if result.get("repair_command"):
         print(f"next: {result['repair_command']}")
+
+
+def _render_google_products(result: dict[str, Any]) -> None:
+    """One line per Google product: granted or not, and its last recorded check."""
+
+    raw_oauth = result.get("oauth")
+    grants = raw_oauth.get("grants") if isinstance(raw_oauth, dict) else None
+    granted = set(grants) if isinstance(grants, list) else set()
+    raw_validation = result.get("validation")
+    raw_products = raw_validation.get("products") if isinstance(raw_validation, dict) else None
+    products = raw_products if isinstance(raw_products, dict) else {}
+    for name in GOOGLE_OAUTH_PRODUCTS:
+        if name not in granted:
+            print(f"  {name}: not granted")
+            continue
+        raw_product = products.get(name)
+        product: dict[str, Any] = raw_product if isinstance(raw_product, dict) else {}
+        state = product.get("state")
+        if not state or state == "not_checked":
+            last = "not checked yet"
+        elif state in {"ok", "grant_missing"}:
+            last = state
+        else:
+            last = f"{state} ({product.get('rule') or 'no rule'})"
+        print(f"  {name}: granted, last check: {last}")
 
 
 def render_doctor(result: dict[str, Any]) -> None:

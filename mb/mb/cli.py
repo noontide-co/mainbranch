@@ -1817,6 +1817,24 @@ def issue_open_cmd(
 _F = TypeVar("_F", bound=Callable[..., Any])
 
 
+_CONNECT_SUBCOMMANDS = frozenset(
+    {
+        "list",
+        "plan",
+        "status",
+        "doctor",
+        "hygiene",
+        "identity",
+        "test",
+        "exec",
+        "rotate",
+        "token",
+        "hydrate",
+        "repair",
+    }
+)
+
+
 def _no_secret_traceback(func: _F) -> _F:
     """Turn an unexpected error into a one-line message with no traceback.
 
@@ -1832,9 +1850,14 @@ def _no_secret_traceback(func: _F) -> _F:
         except (typer.Exit, typer.Abort):
             raise
         except Exception as exc:
+            label = f"mb {func.__name__.removesuffix('_cmd').replace('_', ' ')}"
+            # `mb connect token` (and the other subcommands) name themselves;
+            # only a fixed subcommand name is used, never other input.
+            if kwargs.get("target") in _CONNECT_SUBCOMMANDS:
+                label = f"{label} {kwargs['target']}"
             try:
                 _connect_failure(
-                    f"mb {func.__name__.removesuffix('_cmd').replace('_', ' ')}",
+                    label,
                     f"unexpected error ({type(exc).__name__}); details are hidden because "
                     "they may hold a secret",
                     json_out=bool(kwargs.get("json_out")),
@@ -1995,9 +2018,9 @@ def connect_cmd(
     repo: str = typer.Option(".", "--repo", help="Business repo whose metadata is updated."),
     account_label: str = typer.Option("", "--account", "--label", help="Human account label."),
     scope: str = typer.Option(
-        "repo",
+        "",
         "--scope",
-        help="Connection metadata scope: repo or user.",
+        help="Connection metadata scope: repo or user (default repo).",
     ),
     token: str = typer.Option(
         "",
@@ -2066,12 +2089,12 @@ def connect_cmd(
         max=65535,
         help="With --oauth, fixed 127.0.0.1 port for the sign-in redirect (0 picks one).",
     ),
-    oauth_timeout: int = typer.Option(
-        GOOGLE_OAUTH_TIMEOUT_DEFAULT,
+    oauth_timeout: int | None = typer.Option(
+        None,
         "--timeout",
         min=10,
         max=3600,
-        help="With --oauth, seconds to wait for the browser sign-in.",
+        help="With --oauth, seconds to wait for the browser sign-in (default 300).",
     ),
     replace_access_token: bool = typer.Option(
         False,
@@ -2133,13 +2156,21 @@ def connect_cmd(
         "--paste": paste,
         "--no-browser": no_browser,
         "--port": port != 0,
-        "--timeout": oauth_timeout != GOOGLE_OAUTH_TIMEOUT_DEFAULT,
+        # None unless given, so `--timeout 300` without --oauth is caught too.
+        "--timeout": oauth_timeout is not None,
         "--replace-access-token": replace_access_token,
     }
     if oauth or any(oauth_only.values()):
         if not oauth:
             used = next(name for name, on in oauth_only.items() if on)
-            _connect_usage_exit("mb connect", f"{used} needs --oauth", json_out=json_out)
+            _connect_failure(
+                "mb connect",
+                f"{used} needs --oauth",
+                json_out=json_out,
+                exit_code=2,
+                state="usage_error",
+                rule="oauth_option_without_oauth",
+            )
         conflicts = {
             "--token": bool(token),
             "--token-stdin": token_stdin,
@@ -2160,7 +2191,7 @@ def connect_cmd(
             paste=paste,
             no_browser=no_browser,
             port=port,
-            timeout=oauth_timeout,
+            timeout=GOOGLE_OAUTH_TIMEOUT_DEFAULT if oauth_timeout is None else oauth_timeout,
             replace_access_token=replace_access_token,
             conflicts=[name for name, on in conflicts.items() if on],
             json_out=json_out,

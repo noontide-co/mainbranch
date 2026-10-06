@@ -643,7 +643,8 @@ def test_status_expiry_is_empty_without_a_time_limit_or_when_hand_edited(
 
     item = connect_mod.status_provider("google", repo)
 
-    assert item["oauth"] == {"refresh_token_expires_on": ""}
+    # `grants` was added beside it (additive, #1004 hardening).
+    assert item["oauth"] == {"refresh_token_expires_on": "", "grants": ["search_console", "ga4"]}
     assert gc.refresh_token_expires_on({}) == ""
     assert gc._expires_on(go.TokenResponse({"access_token": MINTED})) == ""
     assert gc._expires_on(go.TokenResponse({"refresh_token_expires_in": True})) == ""

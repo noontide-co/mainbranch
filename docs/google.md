@@ -33,7 +33,9 @@ Setup, the Google Cloud steps and headless sign-in are in
 The site and the property come only from what the sign-in recorded. There
 are no `--site` or `--property` flags. To change either, record it again
 with `mb connect google --metadata search_console_site=<site>` or
-`--metadata ga4_property_id=<property-id>`.
+`--metadata ga4_property_id=<property-id>`. An empty value
+(`--metadata search_console_site=`) removes it, and the reads then refuse
+with `site_not_recorded` or `property_not_recorded`.
 
 The Google sign-in can read every property the Google account can see.
 These commands read only the recorded ones, but a command run through
@@ -104,7 +106,10 @@ characters, `\`, or `.` or `..` path segments. For a domain site
 subdomains. For a URL-prefix site (`https://www.example.com/blog/`), the
 URL must start with the prefix: the scheme and host are compared in lower
 case and the path is compared exactly. Any other URL is refused with
-`url_outside_site`, and nothing is sent to Google. The request sends the
+`url_outside_site`, and nothing is sent to Google. Use the host's punycode
+form (`xn--...`) with no trailing dot, as Search Console records it; a
+Unicode or trailing-dot host is refused with `url_format`, and the message
+says so. The request sends the
 recorded site as `siteUrl`, so there is no flag to change it.
 
 The JSON result has `site`, `inspection_url` and `inspection_result`, which
@@ -121,7 +126,8 @@ keeps only Google's documented fields:
 - `richResultsResult`: `verdict` and `detectedItems` (`richResultType`, and
   `items` with `name` and `issues`).
 - `inspectionResultLink`, but only when it is a
-  `https://search.google.com/` link.
+  `https://search.google.com/` link with no space, control, bidi or line
+  separator character in it.
 
 Any other field is dropped. Strings longer than 2,048 characters are cut and
 end in `…`, and each list keeps at most 32 entries. The default output is a
@@ -149,6 +155,8 @@ mb google ga4 report --metrics activeUsers,sessions \
 | `--order-by` | One requested metric or dimension, `NAME` or `NAME:desc` (`NAME:asc` also works). Custom names keep their colons: `customEvent:plan` or `customEvent:plan:desc`. |
 
 Names must start with a letter and use only letters, digits, `_` and `:`.
+Spaces around a name are trimmed; a newline, tab or other character in a
+name is refused with `name_format`.
 They may end in `[event_name]`, the form GA4 uses for custom definitions
 registered before October 2020, such as `customEvent:level[level_up]`.
 
@@ -231,7 +239,7 @@ and quotas
 | 1 | A redirect (3xx). It is never followed, so the token never reaches a second URL. | `search_console_unexpected_redirect`, `ga4_unexpected_redirect` |
 | 1 | A 5xx answer, which is not retried. | `search_console_server_error`, `ga4_server_error` |
 | 1 | Google could not be reached, or no answer came back, after one retry. | `search_console_unreachable`, `ga4_unreachable` |
-| 1 | An unreadable answer. | `search_console_response_malformed`, `ga4_response_malformed` |
+| 1 | An unreadable answer, or an inspection whose `inspectionResult` is not an object. | `search_console_response_malformed`, `ga4_response_malformed` |
 | 2 | No `search_console_site` is recorded. | `site_not_recorded` |
 | 2 | No `ga4_property_id` is recorded. | `property_not_recorded` |
 | 2 | A date is not `YYYY-MM-DD`, or `--start` is after `--end`. | `bad_date` |
