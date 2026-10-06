@@ -348,14 +348,24 @@ def _dossier_verify_section(repo: Path) -> dict[str, Any]:
             ok = bool(result.get("ok"))
             raw_status = result.get("status")
             status: dict[str, Any] = raw_status if isinstance(raw_status, dict) else {}
-            state_text = connect_mod.state_label(
-                str(status.get("state") or ("ready" if ok else "failed"))
-            )
+            summary_tail = ""
+            if result.get("not_recorded_reason"):
+                # The check was not written to a tracked .mb/connect.yaml, so
+                # the stored status is stale: show what the check itself found.
+                raw_validation = result.get("validation")
+                validation = raw_validation if isinstance(raw_validation, dict) else {}
+                checked = str(result.get("state") or validation.get("state") or "")
+                state_text = connect_mod.state_label(checked or ("ready" if ok else "failed"))
+                summary_tail = " (not recorded: .mb/connect.yaml is tracked by git)"
+            else:
+                state_text = connect_mod.state_label(
+                    str(status.get("state") or ("ready" if ok else "failed"))
+                )
             checks.append(
                 {
                     "name": provider_label,
                     "state": "ok" if ok else "warn",
-                    "summary": f"`mb connect test {provider_id}` → {state_text}",
+                    "summary": f"`mb connect test {provider_id}` → {state_text}{summary_tail}",
                 }
             )
         else:

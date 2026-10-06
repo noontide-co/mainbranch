@@ -503,9 +503,13 @@ def test_corrupt_grant(
     assert result["ok"] is False
     assert result["rule"] == "oauth_grant_malformed"
     assert result["state"] == "invalid"
-    assert result["repair_command"] == gc.REAUTH_WITH_CLIENT_COMMAND
+    # One rule (#1073): a grant that still holds its OAuth client renews with
+    # bare --reauth, which reads the client from it; otherwise the client file.
+    expected = gc.REAUTH_COMMAND if gc.client_from_grant(stored) else gc.REAUTH_WITH_CLIENT_COMMAND
+    assert result["repair_command"] == expected
     assert token.exit_code == 1
-    assert "--reauth --client-file" in token.stderr
+    assert expected in token.stderr
+    assert ("--client-file" in token.stderr) is (expected == gc.REAUTH_WITH_CLIENT_COMMAND)
     for sentinel in GRANT_SENTINELS:
         assert sentinel not in token.output + json.dumps(result)
     assert _status(repo)[1]["state"] == before["state"]

@@ -938,6 +938,35 @@ def _write_user_scope_provider(
     return _write_user_scope(data)
 
 
+def _drop_user_scope_metadata_only(repo_id: str, provider_id: str) -> bool:
+    """Remove this repo's user-scope entry for a provider when it holds no credential.
+
+    Best effort, for a first sign-in recorded in repo scope over a
+    ``--metadata``-only user-scope entry: the repo entry now carries that
+    metadata. An entry that records any secret ref is never touched.
+    """
+
+    try:
+        data = _read_user_scope()
+    except ConfigCorruptError:
+        return False
+    repo_entry = data["repos"].get(repo_id)
+    providers = repo_entry.get("providers") if isinstance(repo_entry, dict) else None
+    entry = providers.get(provider_id) if isinstance(providers, dict) else None
+    if not isinstance(providers, dict) or not isinstance(entry, dict):
+        return False
+    raw_secrets = entry.get("secrets")
+    secrets = raw_secrets if isinstance(raw_secrets, dict) else {}
+    if any(isinstance(slot, dict) and slot.get("ref") for slot in secrets.values()):
+        return False
+    del providers[provider_id]
+    try:
+        _write_user_scope(data)
+    except OSError:
+        return False
+    return True
+
+
 def _secret_ref(repo_id: str, provider_id: str, field: str) -> str:
     digest = hashlib.sha256(f"{repo_id}:{provider_id}:{field}".encode()).hexdigest()[:24]
     return f"mainbranch://{digest}/{provider_id}/{field}"
@@ -976,6 +1005,22 @@ def _unverified_repair(provider: Provider) -> dict[str, str]:
     }
 
 
+def _google_grant_repair(*, gone: bool, readable: bool) -> dict[str, str]:
+    """Status's next step when the recorded Google sign-in grant cannot mint a token."""
+
+    from mb import google_connect
+
+    command = (
+        google_connect.REAUTH_COMMAND if readable else google_connect.REAUTH_WITH_CLIENT_COMMAND
+    )
+    what = "is missing from the credential store" if gone else "is unreadable or incomplete"
+    return {
+        "summary": f"The stored Google sign-in {what}; a person must sign in again.",
+        "repair": f"Run `{command}` in a terminal (a person, not an agent).",
+        "repair_command": command,
+    }
+
+
 def _repair(
     provider: Provider,
     state: str,
@@ -1006,14 +1051,14 @@ def _repair(
     grant_readable = not isinstance(raw_grant, dict) or (
         raw_grant.get("present") is True and raw_grant.get("readable") is True
     )
-    if _records_oauth_grant(provider, entry) and not grant_readable:
-        from mb import google_connect
-
-        if validation_repair_command == google_connect.REAUTH_COMMAND:
-            validation_repair_command = google_connect.REAUTH_WITH_CLIENT_COMMAND
-            validation_repair = validation_repair.replace(
-                google_connect.REAUTH_COMMAND, google_connect.REAUTH_WITH_CLIENT_COMMAND
-            )
+    if (
+        _records_oauth_grant(provider, entry)
+        and isinstance(raw_grant, dict)
+        and raw_grant.get("usable") is not True
+    ):
+        # A grant that is gone or cannot mint decides the next step before
+        # any recorded check, by the rule `mb connect test google` uses.
+        return _google_grant_repair(gone=raw_grant.get("present") is False, readable=grant_readable)
     validation_summary = str(validation.get("summary") or "")
     if validation_repair or validation_repair_command:
         return {
@@ -1849,12 +1894,25 @@ def _secret_statuses(
         if field == GOOGLE_OAUTH_GRANT_SLOT:
             from mb import google_connect
 
-            # Whether `--reauth` could read its OAuth client from this grant.
-            # Only the boolean leaves here, never the value.
-            secrets[field]["readable"] = bool(
-                probe.present and google_connect.client_from_grant(probe.value) is not None
+            if probe.backend_ok and not probe.present:
+                # A recorded sign-in grant that is gone. Presence only.
+                missing.append(field)
+            # The rule `mb connect test` and `--reauth` use: `readable` when
+            # `--reauth` can read its OAuth client from the grant, `usable` when
+            # the grant can mint an access token. Only booleans leave here.
+            grant_repair = google_connect.grant_repair_command(
+                probe.value if probe.present else None
             )
+            secrets[field]["readable"] = grant_repair != google_connect.REAUTH_WITH_CLIENT_COMMAND
+            secrets[field]["usable"] = not grant_repair
     return secrets, missing
+
+
+def _google_grant_unusable(secrets: dict[str, Any]) -> bool:
+    """Is a recorded Google sign-in grant present but unable to mint a token?"""
+
+    raw = secrets.get(GOOGLE_OAUTH_GRANT_SLOT)
+    return isinstance(raw, dict) and raw.get("present") is True and raw.get("usable") is False
 
 
 def _entry_records_slot(entry: Any, slot: str) -> bool:
@@ -2233,6 +2291,11 @@ def status_provider(
             # Recorded by a read that Google refused (`mb connect token`/`exec`);
             # status itself never calls Google.
             state = GOOGLE_REAUTH_REQUIRED_STATE
+            ok = False
+        elif _google_grant_unusable(secrets):
+            # The stored grant cannot mint an access token, so an earlier
+            # passing check no longer holds; `mb connect test` says the same.
+            state = "invalid"
             ok = False
         elif _provider_verified(validation):
             state = "ready"
@@ -3040,22 +3103,45 @@ def rotate_provider(
     if not provider.required_secrets:
         _refuse("rotate_no_secret", f"{provider.name} stores no secret to rotate.")
     entry, _where = _connected_entry(provider, target)
+    # Google connects with a sign-in, which has no source to re-read; only a
+    # legacy access-token entry keeps the --token-stdin and --source path.
+    google_sign_in = provider.id == "google" and not (
+        entry is not None
+        and _entry_records_slot(entry, "access_token")
+        and not _records_oauth_grant(provider, entry)
+    )
     if entry is None:
+        if google_sign_in:
+            _refuse(
+                "rotate_not_connected",
+                f"{provider.name} is not connected. Sign in with `{GOOGLE_SIGN_IN_COMMAND}`; "
+                "a sign-in has no source to re-read, so it is renewed rather than rotated. "
+                "Nothing was changed.",
+            )
         _refuse(
             "rotate_not_connected",
             f"{provider.name} is not connected. Connect it with a source first: "
             f"`{_connect_command(provider, token_stdin=True)} --source op://vault/item/field`.",
         )
     if _records_oauth_grant(provider, entry):
+        from mb import google_connect
+
         _refuse(
             "rotate_oauth_use_reauth",
             f"this {provider.name} connection uses a Google sign-in (OAuth), which has no "
-            "source to re-read. Renew it with `mb connect google --oauth --reauth` when status "
-            "says reauth_required. Nothing was changed.",
+            f"source to re-read. Renew it with `{google_connect.reauth_command(entry)}` when "
+            "status says reauth_required. Nothing was changed.",
         )
     raw_metadata = entry.get("metadata")
     metadata = raw_metadata if isinstance(raw_metadata, dict) else {}
     source = str(metadata.get("source") or "").strip()
+    if not source and google_sign_in:
+        _refuse(
+            "rotate_no_source",
+            f"{provider.name} has no stored credential to rotate. Sign in with "
+            f"`{GOOGLE_SIGN_IN_COMMAND}`; a sign-in has no source to re-read, so it is "
+            "renewed rather than rotated. Nothing was changed.",
+        )
     if not source:
         _refuse(
             "rotate_no_source",
