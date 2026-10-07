@@ -2756,3 +2756,48 @@ def test_doctor_json_with_an_issue_draft_keeps_paths_out_of_the_command_fields(
     assert "mb checkpoint --repo" not in body
     assert "mb migrate --repo" not in body
     assert '"repair_command": "mb migrate campaigns --plan"' in body
+
+
+def _validation_prose(plan: dict[str, Any]) -> list[str]:
+    section = next(s for s in plan["sections"] if s["id"] == "validation")
+    categories = section["checks"][0]["report"]["validation_categories"]
+    found = [categories["top_repair"], categories["top_operator_summary"]]
+    for entry in categories["by_category"].values():
+        found += [entry["repair"], entry["operator_summary"]]
+    return found
+
+
+def test_validation_repair_prose_names_the_repo_but_raw_validation_stays_verbatim(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, offline_doctor: None
+) -> None:
+    repo = _repo_with_foreign_hook_and_drift(tmp_path)
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+    monkeypatch.chdir(other)
+    flag = _flag(repo)
+
+    plan = doctor_mod.repair_plan(repo)
+
+    prose = _validation_prose(plan)
+    assert f"Run `mb doctor repair{flag} --plan --json` and review stale layout guidance." in prose
+    for text in prose:
+        for span in text.split("`")[1::2]:
+            if span.startswith("mb "):
+                assert flag in span, text
+    raw = json.dumps(plan["raw"])
+    assert flag not in raw
+    assert "Run `mb doctor repair --plan --json` and review stale layout guidance." in raw
+
+
+def test_validation_repair_prose_is_bare_inside_the_repo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, offline_doctor: None
+) -> None:
+    repo = _repo_with_foreign_hook_and_drift(tmp_path)
+    monkeypatch.chdir(repo)
+
+    plan = doctor_mod.repair_plan(repo)
+
+    assert "Run `mb doctor repair --plan --json` and review stale layout guidance." in (
+        _validation_prose(plan)
+    )
+    assert "--repo" not in json.dumps(_validation_prose(plan))

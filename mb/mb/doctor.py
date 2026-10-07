@@ -2147,6 +2147,7 @@ _REPO_POSITIONAL_COMMANDS = ("mb status", "mb graph")
 _COMMAND_KEYS = {"command", "repair_command", "update_check_command"}
 _COMMAND_LIST_KEYS = {"scope_choices", "apply_choices"}
 _RUN_TAIL = re.compile(r"(\bthen run )(mb .+)$")
+_BACKTICKED_MB = re.compile(r"`(mb [^`]+)`")
 _REDIRECT_WORD = re.compile(r"^\d*[<>]")
 
 
@@ -2307,6 +2308,31 @@ def _qualify_run_commands(checks: list[dict[str, Any]], update: dict[str, Any], 
     for key in ("command", "update_check_command"):
         if isinstance(update.get(key), str):
             update[key] = _qualify_field(update[key], repo)
+
+
+def _qualify_prose(text: str, repo: Path) -> str:
+    """Name the repo in each backticked `mb ...` command of a sentence; the rest is kept."""
+    return _BACKTICKED_MB.sub(lambda m: f"`{_qualify_command(m.group(1), repo)}`", text)
+
+
+def _qualify_validation_report(report: dict[str, Any], repo: Path) -> dict[str, Any]:
+    """A copy of the validation summary whose repair prose names the repo (#1083).
+
+    The report is shared with `raw.validation`, which stays verbatim, so this
+    never edits it in place.
+    """
+    qualified = copy.deepcopy(report)
+    categories = qualified.get("validation_categories")
+    if not isinstance(categories, dict):
+        return qualified
+    for key in ("top_repair", "top_operator_summary"):
+        if isinstance(categories.get(key), str):
+            categories[key] = _qualify_prose(categories[key], repo)
+    for entry in (categories.get("by_category") or {}).values():
+        for key in ("repair", "operator_summary"):
+            if isinstance(entry.get(key), str):
+                entry[key] = _qualify_prose(entry[key], repo)
+    return qualified
 
 
 def _qualify_report(node: Any, repo: Path, seen: set[int] | None = None) -> None:
@@ -3049,7 +3075,13 @@ def repair_plan(
             "Validation And Cross-Refs",
             validation["state"],
             validation["summary"],
-            checks=[{"name": "mb validate --cross-refs", **validation}],
+            checks=[
+                {
+                    "name": "mb validate --cross-refs",
+                    **validation,
+                    "report": _qualify_validation_report(validation.get("report", {}), target),
+                }
+            ],
         )
     )
 

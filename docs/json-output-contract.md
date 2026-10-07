@@ -215,7 +215,9 @@ elsewhere in the line keeps every byte, and a `--repo` with no value is left
 alone. The same rule names the repo in `plan_interpretation.summary`, in the
 `mb spine declare` and `mb onboard status` commands in section summaries and
 check details, in the manual step "review .git/hooks/commit-msg, then run
-`mb checkpoint --install-hook`", and in what `mb doctor` itself emits:
+`mb checkpoint --install-hook`", in the repair text of the validation section
+(`sections[validation].checks[].report.validation_categories`, a copy), and in what
+`mb doctor` itself emits:
 `checks[].repair_command` (the checkpoint hook), `checks[migration-drift].findings[].repair_command`
 and `update.command` / `update.update_check_command`. `raw.*` and
 `applied_actions[].result` are diagnostic copies and are never rewritten; the
