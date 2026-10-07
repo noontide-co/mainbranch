@@ -29,6 +29,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Google Ads setup guidance now checks Cloud project API access, the OAuth
+  identity's account role, and a verified read instead of requiring Basic
+  access or a developer token. The ads check points to Google's official
+  read-only MCP server when approved, with CSV exports as a fallback; Main
+  Branch still has no Google Ads adapter.
 - A symlinked `AGENTS.md` is never replaced by an unattended `mb update`,
   whether or not git tracks it or the link points anywhere. The replacement
   is listed as a step for you; at a terminal, the prompt names it and a yes

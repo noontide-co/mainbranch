@@ -179,10 +179,14 @@ Keep these human-approved:
 
 ## Future Surface
 
-The playbook should eventually enable deeper checks when those surfaces exist:
+The operator can use
+[Google's official read-only Google Ads MCP server](https://developers.google.com/google-ads/api/docs/developer-toolkit/mcp-server)
+for account and performance reads after setup and approval. It does not change
+campaigns. Main Branch does not ship a Google Ads integration. The playbook
+should eventually enable deeper checks when these Main Branch surfaces exist:
 
-- Google Ads read adapter or sidecar for campaigns, search terms, spend, and
-  conversions;
+- a Main Branch read integration for campaigns, search terms, spend, and
+  conversions, potentially using Google's MCP server;
 - daily paid-search metrics cache tied to bets/pushes;
 - deterministic playbook checks for Search Partners, Final URL Expansion,
   AI Max, primary conversion presence, and provider review gates;
