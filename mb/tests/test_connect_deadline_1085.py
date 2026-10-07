@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import platform
 import subprocess
 import time
 from pathlib import Path
@@ -17,8 +18,9 @@ from tests.test_google_connect import google_env, repo, runner  # noqa: F401
 
 
 @pytest.mark.parametrize("scope", ["repo", "user"])
+@pytest.mark.parametrize("system", ["Darwin", "Linux"])
 def test_slow_working_backend_keeps_connect_success(
-    repo: Path, monkeypatch: pytest.MonkeyPatch, scope: str
+    repo: Path, monkeypatch: pytest.MonkeyPatch, scope: str, system: str
 ) -> None:
     actions: list[str] = []
 
@@ -44,6 +46,7 @@ def test_slow_working_backend_keeps_connect_success(
         return 0, json.dumps(response)
 
     monkeypatch.setattr(credential_store, "_invoke_helper", invoke)
+    monkeypatch.setattr(platform, "system", lambda: system)
     monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "auto")
     token = "synthetic-credential-deadline"
     result = runner.invoke(
@@ -56,12 +59,14 @@ def test_slow_working_backend_keeps_connect_success(
     assert result.exit_code == 0
     assert payload["ok"] is True
     assert payload["status"]["state"] == "unvalidated"
+    assert payload["credential_backend"] == credential_store.select_secret_backend("auto")
     assert actions == (["get", "set", "get"] if scope == "user" else ["set", "get"])
     assert token in credential_store._read_local_secrets().values()
 
 
+@pytest.mark.parametrize("system", ["Darwin", "Linux"])
 def test_timed_out_user_preread_refuses_before_storing(
-    repo: Path, monkeypatch: pytest.MonkeyPatch
+    repo: Path, monkeypatch: pytest.MonkeyPatch, system: str
 ) -> None:
     actions: list[str] = []
 
@@ -70,6 +75,7 @@ def test_timed_out_user_preread_refuses_before_storing(
         raise subprocess.TimeoutExpired(args, timeout)
 
     monkeypatch.setattr(credential_store, "_invoke_helper", invoke)
+    monkeypatch.setattr(platform, "system", lambda: system)
     monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "auto")
     token = "synthetic-credential-timeout"
     before = credential_store._read_local_secrets()
