@@ -134,8 +134,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   and `mb init`, with their manual steps, including the one for an
   `AGENTS.md` Main Branch will not change) and the Codex `repair` hints in
   `mb status`, `mb start` and `mb doctor` checks name your business repo with
-  `--repo <path>` when you are not inside it. Doctor's own action commands
-  are unchanged for now (#1072).
+  `--repo <path>` when you are not inside it (#1072).
+- `mb update` and `mb doctor repair` commands name your business repo when you
+  are not inside it: `next_actions`, `operator_actions`, doctor's
+  `actions[].command`, `sections[].actions[].command`,
+  `sections[].checks[].repair_command`, `agent_surfaces` repair, scope and apply
+  commands and `post_apply`. Each command in a `&&` chain names it exactly
+  once (so `mb status --json --peek <path>` no longer gets the path twice),
+  `mb migrate --repo <path> campaigns --plan` acts on your repo rather than the
+  folder you are in, and a repo path containing ` --repo . ` or ` && ` is
+  quoted instead of split. Some prose (`plan_interpretation.summary`,
+  migration-drift text) still names no repo (#1072).
 
 ## [0.6.4] - 2026-10-06
 

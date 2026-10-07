@@ -204,10 +204,15 @@ gain the flag: `next_actions` (`mb update`, `mb update --check`, the plan
 command), the plugin-rail switch (`mb skill link --repo <path> --plugin`),
 the retry and package-upgrade prose in `warnings`, and doctor's
 `actions[].command`, `sections[].actions[].command`,
-`agent_surfaces.surfaces[].repair_command`, `agent_surfaces.scope_choices`
-and `agent_surfaces.apply_choices`. `mb status` and `mb graph` take the
-path as an argument, so their suggestions end with it (`mb status --json
---peek <path>`). The workflow inventory's `install_hint` describes no repo and
+`sections[].checks[].repair_command` (the legacy `campaigns/` migration is
+`mb migrate --repo <path> campaigns --plan`),
+`agent_surfaces.surfaces[].repair_command`, `agent_surfaces.scope_choices`,
+`agent_surfaces.apply_choices` and `post_apply`. Each command in a `&&` chain
+names the repo exactly once, and a path that looks like a command is quoted,
+not split. `mb status` and `mb graph` take the path as an argument, so their
+suggestions end with it (`mb status --json --peek <path>`). Prose such as
+`plan_interpretation.summary` and the migration-drift text is not rewritten
+yet. The workflow inventory's `install_hint` describes no repo and
 stays bare. The list is empty when there is nothing for a person to run.
 
 An `AGENTS.md` that is a folder is reported as a `codex-agents-md` entry whose
@@ -217,7 +222,8 @@ nothing is written and the rest of the run completes. A symlinked `AGENTS.md`,
 tracked or not, dangling or not, is listed like a tracked file: `mb update`
 without a terminal leaves the link and lists the Codex apply command, with
 `AGENTS.md` in `changes` and `consent: no_terminal`; an interactive yes may
-replace it, and the prompt names it (`AGENTS.md (replace link)`).
+replace it, and the prompt lists an untracked or dangling link as `AGENTS.md (replace link)`
+and a tracked one as plain `AGENTS.md`.
 `mb doctor repair --apply` never performs an operator action, and
 `mb doctor repair --only codex` lists only the Codex entries (it leaves the
 plugin switch out).

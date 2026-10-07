@@ -1293,7 +1293,7 @@ def test_doctor_repair_plan_exposes_legacy_campaigns_to_pushes_action(tmp_path: 
     item = actions["legacy_campaigns_to_pushes"]
     assert item["mode"] == "read"
     assert item["safe_to_apply"] is True
-    assert item["command"] == "mb migrate campaigns --plan"
+    assert item["command"] == f"mb migrate{_flag(repo)} campaigns --plan"
     repo_shape = next(section for section in payload["sections"] if section["id"] == "repo-shape")
     legacy_check = next(
         check for check in repo_shape["checks"] if check["name"] == "legacy-campaigns"
@@ -2382,11 +2382,136 @@ def test_doctor_repair_plan_names_the_repo_in_every_command_from_another_folder(
     for command in commands:
         for segment in command.split(" && "):
             if segment.startswith("mb "):
-                assert flag in segment or segment.startswith(("mb status", "mb graph")), command
+                _assert_each_mb_segment_names_the_repo_once([segment], repo)
     assert "--repo ." not in " ".join(commands)
     assert plan["post_apply"]["structural_verification"] == (
         f"mb doctor repair {flag} --plan --json"
     )
+
+
+def _all_command_strings(node: Any) -> list[str]:
+    """Every suggested-command string anywhere in a plan, shared objects included."""
+    found: list[str] = []
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key in {"command", "repair_command"} and isinstance(value, str):
+                found.append(value)
+            elif key in {"scope_choices", "apply_choices"} and isinstance(value, list):
+                found += [str(item) for item in value]
+            elif key not in {"raw", "result"}:
+                found += _all_command_strings(value)
+    elif isinstance(node, list):
+        for item in node:
+            found += _all_command_strings(item)
+    return found
+
+
+def _assert_each_mb_segment_names_the_repo_once(commands: list[str], repo: Path) -> None:
+    target = str(repo.resolve())
+    seen_mb = 0
+    for command in commands:
+        tokens = shlex.split(command)
+        segments: list[list[str]] = [[]]
+        for token in tokens:
+            if token == "&&":
+                segments.append([])
+            else:
+                segments[-1].append(token)
+        for segment in segments:
+            if segment[:1] != ["mb"]:
+                continue
+            seen_mb += 1
+            if segment[:2] in (["mb", "status"], ["mb", "graph"]):
+                assert segment.count(target) == 1, command
+                assert segment[-1] == target, command
+                assert "--repo" not in segment, command
+            else:
+                assert segment.count("--repo") == 1, command
+                assert segment[segment.index("--repo") + 1] == target, command
+                assert segment.count(target) == 1, command
+    assert seen_mb
+
+
+def _repo_with_topology_and_campaigns(tmp_path: Path, name: str = "biz") -> Path:
+    repo = tmp_path / name
+    init_run(path=str(repo), name="Acme")
+    (repo / ".vip").mkdir()
+    (repo / ".vip" / "local.yaml").write_text("current_offer: x\n", encoding="utf-8")
+    (repo / "campaigns").mkdir()
+    (repo / "campaigns" / "a.md").write_text("x\n", encoding="utf-8")
+    return repo
+
+
+def test_doctor_repair_plan_names_the_repo_once_per_command_with_topology_and_campaigns(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _repo_with_topology_and_campaigns(tmp_path)
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+    monkeypatch.chdir(other)
+
+    plan = doctor_mod.repair_plan(repo)
+
+    assert "offer-topology-review" in {action["id"] for action in plan["actions"]}
+    commands = _all_command_strings(plan)
+    assert any(c.startswith("mb status") for c in commands)
+    _assert_each_mb_segment_names_the_repo_once(commands, repo)
+    migrate = [c for c in commands if "migrate" in c and "campaigns" in c]
+    assert migrate
+    for command in migrate:
+        assert command.startswith(f"mb migrate{_flag(repo)} campaigns --plan"), command
+
+
+def test_a_migrate_campaigns_command_runs_from_another_folder_on_the_repo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _repo_with_topology_and_campaigns(tmp_path)
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+    monkeypatch.chdir(other)
+    plan = doctor_mod.repair_plan(repo)
+    command = next(c for c in _all_command_strings(plan) if "migrate" in c and "campaigns" in c)
+
+    out = runner.invoke(app, [*shlex.split(command)[1:], "--json"])
+
+    assert json.loads(out.stdout)["repo"] == str(repo.resolve())
+
+
+def test_qualifying_a_command_twice_changes_nothing(tmp_path: Path) -> None:
+    repo = tmp_path / "biz one"
+    repo.mkdir()
+    for command in (
+        "mb status --json --peek && mb validate --json",
+        "mb graph --json",
+        "mb doctor repair --apply --only codex",
+        "mb skill link --repo . --plugin",
+        "mb migrate campaigns --plan --json",
+    ):
+        once = doctor_mod._qualify_command(command, repo)
+        assert once != command
+        assert doctor_mod._qualify_command(once, repo) == once
+
+
+def test_a_repo_path_that_looks_like_a_command_is_quoted_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    name = "x --repo . mb status && y"
+    repo = tmp_path / name
+    init_run(path=str(repo), name="Acme")
+    (repo / ".vip").mkdir()
+    (repo / ".vip" / "local.yaml").write_text("current_offer: x\n", encoding="utf-8")
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+    monkeypatch.chdir(other)
+
+    plan = doctor_mod.repair_plan(repo)
+
+    commands = _all_command_strings(plan)
+    assert any(c.startswith("mb status") for c in commands)
+    _assert_each_mb_segment_names_the_repo_once(commands, repo)
+    command = plan["agent_surfaces"]["scope_choices"][1]
+    out = runner.invoke(app, [*shlex.split(command)[1:], "--json"])
+    assert json.loads(out.stdout)["repo"] == str(repo.resolve())
 
 
 def test_doctor_repair_plan_commands_stay_bare_inside_the_repo(

@@ -2131,34 +2131,63 @@ _REPO_FLAG_COMMANDS = (
 _REPO_POSITIONAL_COMMANDS = ("mb status", "mb graph")
 
 
+def _qualify_segment(tokens: list[str], repo_arg: list[str], repo_text: str) -> list[str]:
+    """One `mb ...` segment, as tokens, naming the repo exactly once (idempotent)."""
+    for index, token in enumerate(tokens):
+        if token == "--repo" and index + 1 < len(tokens):
+            if tokens[index + 1] != ".":
+                return tokens  # already names a repo
+            return [*tokens[:index], *repo_arg, *tokens[index + 2 :]]
+        if token.startswith("--repo="):
+            return tokens
+    if tokens[:2] in (["mb", "status"], ["mb", "graph"]):
+        if repo_arg and tokens[-1] != repo_text:
+            return [*tokens, repo_text]
+        return tokens
+    for prefix in _REPO_FLAG_COMMANDS:
+        words = prefix.split()
+        if tokens[: len(words)] == words:
+            return [*tokens[: len(words)], *repo_arg, *tokens[len(words) :]]
+    return tokens
+
+
 def _qualify_command(command: str, repo: Path) -> str:
     """Name the business repo in every `mb` command of a suggested command line (#1072).
 
-    `--repo .` becomes the shared rule's flag; a command with no repo gains it;
-    `mb status` and `mb graph` take the path as an argument. Commands that
-    already name a repo, and anything that is not an `mb` command, are kept.
+    Decided on tokens, never substrings, so a repo path that itself contains
+    ` --repo . `, ` && ` or `mb status` is quoted once and left alone. `--repo .`
+    becomes the shared rule's flag; a command with no repo gains it; `mb status`
+    and `mb graph` take the path as an argument. A command that already names a
+    repo (flag or trailing path) and anything that is not an `mb` command are
+    kept, so running this twice changes nothing.
     """
-    flag = engine_mod.repo_flag(repo)
-    segments = []
-    for segment in command.split(" && "):
-        if not segment.startswith("mb "):
-            segments.append(segment)
-        elif " --repo . " in f"{segment} ":
-            segments.append(f"{segment} ".replace(" --repo . ", f"{flag} ").rstrip())
-        elif " --repo " in segment:
-            segments.append(segment)
-        elif flag and segment.startswith(_REPO_POSITIONAL_COMMANDS):
-            segments.append(f"{segment} {shlex.quote(str(repo))}")
+    try:
+        tokens = shlex.split(command)
+    except ValueError:
+        return command
+    repo_arg = shlex.split(engine_mod.repo_flag(repo))
+    repo_text = str(Path(repo).expanduser().resolve())
+    segments: list[list[str]] = [[]]
+    for token in tokens:
+        if token == "&&":
+            segments.append([])
         else:
-            prefix = next((p for p in _REPO_FLAG_COMMANDS if segment.startswith(p)), "")
-            if prefix == "mb migrate" and not segment.startswith("mb migrate --"):
-                prefix = ""  # `mb migrate campaigns` takes no --repo
-            segments.append(f"{prefix}{flag}{segment[len(prefix) :]}" if prefix else segment)
-    return " && ".join(segments)
+            segments[-1].append(token)
+    rewritten = [
+        _qualify_segment(segment, repo_arg, repo_text) if segment[:1] == ["mb"] else segment
+        for segment in segments
+    ]
+    if rewritten == segments:
+        return command
+    return " && ".join(shlex.join(segment) for segment in rewritten)
 
 
-def _qualify_report(node: Any, repo: Path) -> None:
-    """Rewrite every suggested-command field of a repair report in place."""
+def _qualify_report(node: Any, repo: Path, seen: set[int] | None = None) -> None:
+    """Rewrite every suggested-command field of a repair report in place, once per object."""
+    seen = set() if seen is None else seen
+    if id(node) in seen:
+        return  # doctor shares one action dict between `actions[]` and `sections[]`
+    seen.add(id(node))
     if isinstance(node, dict):
         for key, value in node.items():
             if key in {"command", "repair_command"} and isinstance(value, str):
@@ -2166,10 +2195,10 @@ def _qualify_report(node: Any, repo: Path) -> None:
             elif key in {"scope_choices", "apply_choices"} and isinstance(value, list):
                 node[key] = [_qualify_command(str(item), repo) for item in value]
             elif key not in {"raw", "result"}:
-                _qualify_report(value, repo)
+                _qualify_report(value, repo, seen)
     elif isinstance(node, list):
         for item in node:
-            _qualify_report(item, repo)
+            _qualify_report(item, repo, seen)
 
 
 def repair_plan(
