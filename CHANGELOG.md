@@ -71,6 +71,15 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- The Codex cleanup (#1078): a global skill folder that is a link
+  (`~/.codex/skills/main-branch`) is kept and listed with the link reason,
+  and `SKILL.md` is never written through it. A link at the plugin's `skills/`
+  folder or the old plugin folder is now kept by the repair, as the plan says.
+  A folder where a global `SKILL.md` belongs is listed as kept, so the repair
+  no longer calls a no-op apply safe. A link that appears above the plugin
+  folder while a repair runs is noticed before each removal, and nothing
+  behind it is touched. `mb update` prints each kept-files note once. `--json`
+  is unchanged.
 - `mb doctor` now names your business folder in the rest of its suggested commands,
   so they work when you run them from another folder. This covers `mb spine declare`
   (which used to write `core/operations/spine.md` into the folder you were in),

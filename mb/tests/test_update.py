@@ -2685,7 +2685,9 @@ def _changed_tracked(repo: Path) -> list[str]:
     return sorted(line[3:] for line in status.splitlines())
 
 
-REVIEW_PROBES = ["legacy_link", "claude_alias", "codex_alias", "codex_cleanup"]
+# #1078: a linked global Codex skill folder is kept, never written through, so
+# `codex_alias` has its own test below: nothing tracked is at risk and no consent is asked.
+REVIEW_PROBES = ["legacy_link", "claude_alias", "codex_cleanup"]
 
 
 @pytest.mark.parametrize("kind", REVIEW_PROBES)
@@ -2703,6 +2705,21 @@ def test_review_probe_unattended_changes_no_tracked_file_and_plans_it(
     planned = result["surface_refresh"]["planned"]
     assert planned["consent"] == "no_terminal", planned
     assert at_risk in planned["tracked_files"], planned
+    assert result["ok"] is True, result["errors"]
+
+
+def test_a_linked_global_codex_skill_folder_is_left_alone_without_consent(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    at_risk = _probe_repo(business_repo, tmp_path, "codex_alias")
+
+    result = update_mod.run(repo=business_repo, interactive=False)
+
+    assert (business_repo / at_risk).read_text(encoding="utf-8") == "stale\n"
+    assert _git(business_repo, "status", "--porcelain") == ""
+    assert result["surface_refresh"]["planned"]["consent"] == "not_needed"
     assert result["ok"] is True, result["errors"]
 
 

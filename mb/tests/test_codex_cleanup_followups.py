@@ -482,3 +482,134 @@ def test_repair_prose_is_bare_in_the_repo_itself(
     assert codex_mod.repair_text(repo) == codex_mod.CODEX_REPAIR_TEXT
     assert codex_mod.instructions_status(repo)["repair"] == codex_mod.CODEX_REPAIR_TEXT
     assert codex_mod.repair_command(None) == codex_mod.CODEX_REPAIR_COMMAND
+
+
+# --- 7. Linked skill folder, link agreement, directory at SKILL.md (#1078) ----
+
+
+def test_a_linked_global_skill_folder_is_kept_and_never_written_through(
+    repo: Path, roots: tuple[Path, Path], tmp_path: Path
+) -> None:
+    _plugin_root, skills_root = roots
+    mine = tmp_path / "my-skill"
+    mine.mkdir()
+    (mine / "SKILL.md").write_text("# my own skill\n", encoding="utf-8")
+    link = skills_root / codex_mod.CODEX_GLOBAL_SKILL_NAME
+    skills_root.mkdir(parents=True)
+    link.symlink_to(mine, target_is_directory=True)
+
+    result = codex_mod.write_global_skill_source()
+    entry = _operator(_doctor(repo, "--plan", "--only", "codex"))["codex-global-kept"]
+
+    assert (mine / "SKILL.md").read_text(encoding="utf-8") == "# my own skill\n"
+    assert link.is_symlink()
+    assert str(link) in result["kept"]
+    assert str(link) in entry["changes"]
+    assert "is a link" in entry["reason"]
+
+
+@pytest.mark.parametrize(
+    "relative",
+    [
+        f"{codex_mod.CODEX_PLUGIN_DIR_RELATIVE_PATH}/skills",
+        codex_mod.CODEX_LEGACY_PLUGIN_DIR_RELATIVE_PATH,
+    ],
+    ids=["plugin-skills", "legacy-plugin"],
+)
+def test_a_link_the_plan_keeps_is_kept_by_the_apply(
+    roots: tuple[Path, Path], tmp_path: Path, relative: str
+) -> None:
+    plugin_root, _skills_root = roots
+    mine = tmp_path / "my-folder"
+    mine.mkdir()
+    (mine / "note.md").write_text("mine\n", encoding="utf-8")
+    link = plugin_root / relative
+    link.parent.mkdir(parents=True)
+    link.symlink_to(mine, target_is_directory=True)
+
+    planned = codex_mod.global_skill_cleanup()
+    result = codex_mod.write_global_plugin_source()
+
+    assert str(link) in planned["kept"]
+    assert link.is_symlink()
+    assert str(link) in result["kept"]
+    assert (mine / "note.md").is_file()
+
+
+def test_a_directory_where_the_global_skill_file_belongs_is_kept_and_not_safe_to_apply(
+    repo: Path, roots: tuple[Path, Path]
+) -> None:
+    _plugin_root, skills_root = roots
+    codex_mod.write_global_skill_source()
+    skill = skills_root / codex_mod.CODEX_GLOBAL_SKILL_NAME / "SKILL.md"
+    skill.unlink()
+    skill.mkdir()
+    (skill / "mine.md").write_text("mine\n", encoding="utf-8")
+
+    plan = _doctor(repo, "--plan", "--only", "codex")
+    entry = _operator(plan)["codex-global-kept"]
+    action = next(item for item in plan["actions"] if item["id"] == "codex-global-skill")
+    applied = codex_mod.write_global_skill_source()
+
+    assert codex_mod.global_skill_operations() == []
+    assert str(skill) in entry["changes"]
+    assert "folder" in entry["reason"]
+    assert action["safe_to_apply"] is False
+    assert str(skill) in applied["kept"]
+    assert (skill / "mine.md").is_file()
+
+
+def test_the_global_apply_keeps_files_when_a_link_appears_above_the_plugin_root(
+    roots: tuple[Path, Path], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("MAINBRANCH_CODEX_PLUGIN_ROOT")
+    data_home = tmp_path / "xdg"
+    monkeypatch.setenv("XDG_DATA_HOME", str(data_home))
+    plugin_root = codex_mod.global_plugin_source_root()
+    _place(plugin_root, _released_files("0.3.35", "plugin"))
+    planned = codex_mod.global_skill_operations()
+    assert any(item["op"] == "delete" for item in planned)
+    outside = tmp_path / "synced"
+    (data_home / "mainbranch").rename(outside)
+    (data_home / "mainbranch").symlink_to(outside, target_is_directory=True)
+    monkeypatch.setattr(codex_mod, "global_skill_operations", lambda: planned)
+
+    result = codex_mod.write_global_skill_source()
+
+    assert all(path.is_file() for path in outside.rglob("*") if not path.is_dir())
+    assert len([path for path in outside.rglob("*") if path.is_file()]) == 10
+    assert str(data_home / "mainbranch") in result["kept"]
+
+
+# --- 8. `mb update` prints each kept note once ---------------------------------
+
+
+def test_update_human_output_prints_the_kept_note_once(
+    repo: Path,
+    roots: tuple[Path, Path],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    plugin_root, _skills_root = roots
+    mine = plugin_root / codex_mod.CODEX_PLUGIN_COMMANDS_RELATIVE_PATH / "mb-team-policy.md"
+    mine.parent.mkdir(parents=True)
+    mine.write_text(POLICY, encoding="utf-8")
+    (repo / "AGENTS.md").write_text(
+        f"# Mine\n{codex_mod.AGENTS_MANAGED_BEGIN}\nguidance\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "wheel")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: None)
+
+    result = update_mod.run(repo=repo, check=True, refresh_surfaces=False, interactive=False)
+    update_mod.render_human(result)
+    printed = capsys.readouterr().out
+
+    notes = {
+        item["id"]: item["note"]
+        for item in result["operator_actions"]
+        if item.get("id") in {"codex-global-kept", "codex-agents-md"}
+    }
+    assert set(notes) == {"codex-global-kept", "codex-agents-md"}
+    assert notes["codex-global-kept"] in result["warnings"]  # JSON is unchanged
+    for note in notes.values():
+        assert printed.count(note) == 1
