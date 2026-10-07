@@ -370,7 +370,11 @@ def client_from_grant(value: str) -> OAuthClient | None:
     if raw is None:
         return None
     client_id = raw.get("client_id")
-    client_secret = raw.get("client_secret") or ""
+    # A client with no secret is stored with the key omitted; `null` and `""`
+    # read the same. Any other non-string value is a damaged grant.
+    client_secret = raw.get("client_secret")
+    if client_secret is None:
+        client_secret = ""
     if not isinstance(client_id, str) or not client_id or not isinstance(client_secret, str):
         return None
     return OAuthClient(client_id=client_id, client_secret=client_secret)

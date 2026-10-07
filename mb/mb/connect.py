@@ -588,6 +588,14 @@ def _reconnect_command(
     return GOOGLE_SIGN_IN_COMMAND
 
 
+def _reconnect_step(provider: Provider, google_sign_in: bool) -> str:
+    """The sentence tail for rotate's "reconnect" advice; Google's is a sign-in."""
+
+    if google_sign_in:
+        return f"sign in with `{GOOGLE_SIGN_IN_COMMAND}`"
+    return f"reconnect with `{_connect_command(provider, token_stdin=True)}`"
+
+
 def _safe_identity_metadata(metadata: dict[str, Any]) -> dict[str, str]:
     """Return custom-provider metadata safe enough for identity diagnostics.
 
@@ -892,11 +900,31 @@ def _read_user_scope() -> dict[str, Any]:
         version = int(raw.get("version") or 1)
     except (TypeError, ValueError):
         version = 1
-    return {"version": version, "repos": repos}
+    # Keys this module does not own come back as they were, so a rewrite keeps them.
+    data = dict(raw)
+    data["version"] = version
+    data["repos"] = repos
+    return data
 
 
 def _write_user_scope(data: dict[str, Any]) -> Path:
+    """Rewrite the user-scope file (YAML comments are not kept).
+
+    A file that is read-only by mode is left alone: it is neither made
+    writable nor replaced.
+    """
+
     path = _user_scope_path()
+    try:
+        read_only = path.exists() and not path.stat().st_mode & stat.S_IWUSR
+    except OSError:
+        read_only = False
+    if read_only:
+        raise PermissionError(
+            errno.EACCES,
+            f"Refusing to update connect user-scope metadata: {path} is read-only. "
+            "Make it writable or move it, then rerun the command.",
+        )
     path.parent.mkdir(parents=True, exist_ok=True)
     with suppress(OSError):
         path.parent.chmod(0o700)
@@ -3126,6 +3154,19 @@ def rotate_provider(
     if _records_oauth_grant(provider, entry):
         from mb import google_connect
 
+        grant_slot = entry.get("secrets", {}).get(GOOGLE_OAUTH_GRANT_SLOT)
+        if isinstance(grant_slot, dict) and grant_slot.get("ref"):
+            probe = _probe_secret_ref(
+                str(grant_slot.get("backend") or "local-file"), str(grant_slot["ref"])
+            )
+            if not probe.backend_ok:
+                detail = _backend_repair(probe.reason)
+                _refuse(
+                    "rotate_backend_unavailable",
+                    f"{provider.name} credentials cannot be read. {detail['summary']} "
+                    f"{detail['repair']} The renewal can run once the store unlocks. "
+                    "Nothing was changed.",
+                )
         _refuse(
             "rotate_oauth_use_reauth",
             f"this {provider.name} connection uses a Google sign-in (OAuth), which has no "
@@ -3154,7 +3195,7 @@ def rotate_provider(
         _refuse(
             "rotate_unsupported_source",
             "mb connect rotate reads only 1Password references (op://...). For any other "
-            f"source, reconnect with `{_connect_command(provider, token_stdin=True)}`.",
+            f"source, {_reconnect_step(provider, google_sign_in)}.",
         )
     secret = _read_onepassword_ref(source, which_func=which_func, command_runner=command_runner)
     raw_secrets = entry.get("secrets")

@@ -780,8 +780,16 @@ sign-in by one rule. It is usable when it holds its OAuth client and a
 refresh token. If it still holds the client but not the refresh token, the
 next step is `mb connect google --oauth --reauth`. If it is gone or its client
 can't be read, the next step is the `--client-file` form. A stored sign-in
-that is gone reads `missing_secret`. One that can't be used reads `invalid`.
-Neither reads `ready`, whatever an earlier check recorded. `--json` shows this
+that is gone reads `missing_secret`. One that can't be used reads `invalid`,
+unless an earlier check already recorded `reauth_required`, which it keeps
+reading. A locked or unavailable credential store reads `backend_unavailable`
+and names the store repair first, because the sign-in can't be read until the
+store unlocks. None of these reads `ready`, whatever an earlier check
+recorded. The OAuth client's `client_secret` in the stored sign-in is a
+string, or is left out. `null` and `""` read as left out (a client with no
+secret); any other value (a list, an object, a number, `true` or `false`)
+makes the stored sign-in unreadable, with the same next step on every path.
+`--json` shows this
 as two booleans under `secrets.oauth_grant`: `readable` (the client can be
 read) and `usable`. The stored values are never shown.
 
@@ -1028,6 +1036,11 @@ first sign-in the repo does not record it, so sign in again; on `--reauth`
 it may have replaced the old grant, so run `mb connect test google`.
 
 ## User Scope
+
+Writing the user-scope file keeps its other top-level keys as they were. It
+does not keep YAML comments: a rewrite drops them. A file that is read-only by
+mode is never changed or replaced; the command fails and names the file, so make
+it writable or move it and rerun.
 
 Use user scope when several worktrees for the same business repo should read
 the same credential metadata from local Main Branch state:
