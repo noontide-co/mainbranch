@@ -1185,6 +1185,7 @@ def _is_linked_worktree(target: Path) -> bool:
 def link_status(repo: str | Path) -> dict[str, Any]:
     """Return whether ``repo`` can discover Main Branch skills."""
     target = Path(repo).resolve()
+    flag = repo_flag(target)
     root = engine_root()
     settings_path = target / ".claude" / "settings.local.json"
     settings = _read_settings(settings_path)
@@ -1274,9 +1275,9 @@ def link_status(repo: str | Path) -> dict[str, Any]:
         "missing": missing,
         "summary": summary,
         "fallback_commands": [
-            "mb start --json",
-            "mb doctor repair --plan",
-            "mb doctor repair --apply",
+            f"mb start{flag} --json",
+            f"mb doctor repair{flag} --plan",
+            f"mb doctor repair{flag} --apply",
         ],
         "repair_command": "mb skill link --repo .",
     }

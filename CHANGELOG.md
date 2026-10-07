@@ -81,6 +81,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   If the file becomes read-only during Google sign-in, renewal advice says
   to make it writable before checking again. Sign-in retry commands keep the
   scope and business repo you selected (#1085).
+- The remaining update, status and doctor suggestions now name your business
+  folder when run from elsewhere. The post-update skill-link command links
+  skills in that business folder, and onboarding steps, version and campaign
+  notices, fallback commands and skipped-repair steps point there too.
+  Inside the business folder the output stays unchanged (#1083).
 - The Codex cleanup (#1078): a global skill folder that is a link
   (`~/.codex/skills/main-branch`) is kept and listed with the link reason,
   and `SKILL.md` is never written through it. A link at the plugin's `skills/`
