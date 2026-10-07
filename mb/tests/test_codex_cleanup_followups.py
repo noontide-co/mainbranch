@@ -613,3 +613,109 @@ def test_update_human_output_prints_the_kept_note_once(
     assert notes["codex-global-kept"] in result["warnings"]  # JSON is unchanged
     for note in notes.values():
         assert printed.count(note) == 1
+
+
+# --- #1087: links at SKILL.md and the last plugin removal loop ---------------
+
+
+@pytest.mark.parametrize("target_kind", ["folder", "dangling"])
+def test_a_global_skill_file_link_is_kept_in_both_plan_and_apply(
+    repo: Path, roots: tuple[Path, Path], tmp_path: Path, target_kind: str
+) -> None:
+    codex_mod.write_global_skill_source()
+    skill = codex_mod.global_skill_file_path("main-branch")
+    skill.unlink()
+    outside = tmp_path / "my-folder"
+    if target_kind == "folder":
+        outside.mkdir()
+        (outside / "note.md").write_text(POLICY, encoding="utf-8")
+    skill.symlink_to(outside, target_is_directory=True)
+
+    plan = _doctor(repo, "--plan", "--only", "codex")
+    applied = _doctor(repo, "--apply", "--only", "codex")
+    direct = codex_mod.write_global_skill_source()
+
+    assert skill.is_symlink()
+    assert skill.readlink() == outside
+    entry = _operator(plan)["codex-global-kept"]
+    assert entry["on_apply"] == {"writes": [], "removes": [], "keeps": [str(skill)]}
+    assert "is a link" in entry["reason"]
+    action = next(item for item in plan["actions"] if item["id"] == "codex-global-skill")
+    assert action["safe_to_apply"] is False
+    assert _operator(applied)["codex-global-kept"]["on_apply"] == entry["on_apply"]
+    assert applied["exit_code"] == 0
+    assert direct["changed_paths"] == []
+    assert direct["kept"] == [str(skill)]
+    if target_kind == "folder":
+        assert (outside / "note.md").read_text(encoding="utf-8") == POLICY
+    else:
+        assert not outside.exists()
+
+
+def test_plugin_commands_recheck_the_parent_link_before_each_removal(
+    roots: tuple[Path, Path], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("MAINBRANCH_CODEX_PLUGIN_ROOT")
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg"))
+    root = codex_mod.global_plugin_source_root()
+    codex_mod.write_global_plugin_source()
+    # Model two retired commands with real released content proof, not a mocked proof.
+    retired = {"mb-start", "mb-think"}
+    commands = codex_mod.render_codex_slash_commands()
+    monkeypatch.setattr(
+        codex_mod,
+        "render_codex_slash_commands",
+        lambda: {rel: text for rel, text in commands.items() if Path(rel).stem not in retired},
+    )
+    monkeypatch.setattr(
+        codex_mod,
+        "CODEX_SLASH_COMMAND_NAMES",
+        tuple(name for name in codex_mod.CODEX_SLASH_COMMAND_NAMES if name not in retired),
+    )
+    _place(root, _released_files("0.3.35", "plugin"))
+    first = root / codex_mod.CODEX_PLUGIN_COMMANDS_RELATIVE_PATH / "mb-start.md"
+    second = first.with_name("mb-think.md")
+    original = second.read_bytes()
+    assert codex_mod._is_mainbranch_transitional_file(first)
+    assert codex_mod._is_mainbranch_transitional_file(second)
+    real_unlink = codex_mod._unlink_if_proven
+    outside = tmp_path / "synced"
+
+    def remove_then_link(path: Path, base: Path | None = None) -> bool:
+        removed = real_unlink(path, base)
+        if path == first:
+            assert removed
+            root.parent.rename(outside)
+            root.parent.symlink_to(outside, target_is_directory=True)
+        return removed
+
+    monkeypatch.setattr(codex_mod, "_unlink_if_proven", remove_then_link)
+    result = codex_mod.write_global_plugin_source()
+
+    assert root.parent.is_symlink()
+    assert second.read_bytes() == original
+    assert str(first) in result["changed_paths"]
+    assert str(second) not in result["changed_paths"]
+    assert str(root.parent) in result["kept"]
+
+
+@pytest.mark.parametrize("with_removals", [False, True])
+def test_global_kept_manual_step_names_the_writes_in_the_apply(
+    repo: Path, roots: tuple[Path, Path], with_removals: bool
+) -> None:
+    plugin_root, _ = roots
+    codex_mod.write_global_skill_source()
+    missing = codex_mod.global_skill_file_path("mb-start")
+    missing.unlink()
+    mine = plugin_root / "notes.md"
+    mine.parent.mkdir(parents=True)
+    mine.write_text(POLICY, encoding="utf-8")
+    if with_removals:
+        _place(plugin_root, _released_files("0.3.35", "plugin"))
+    entry = _operator(_doctor(repo, "--plan", "--only", "codex"))["codex-global-kept"]
+
+    assert entry["on_apply"]["writes"] == [str(missing)]
+    assert f"writes these skill files: {missing}" in entry["manual_step"]
+    for path in entry["on_apply"]["removes"]:
+        assert path in entry["manual_step"]
+    assert "it keeps the files above" in entry["manual_step"]

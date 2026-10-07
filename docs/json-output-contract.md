@@ -223,7 +223,8 @@ check details, in the manual step "review .git/hooks/commit-msg, then run
 `mb doctor` itself emits:
 `checks[].repair_command` (the checkpoint hook), `checks[migration-drift].findings[].repair_command`
 and `update.command` / `update.update_check_command`. `raw.*` and
-`applied_actions[].result` are diagnostic copies and are never rewritten; the
+`actions[].result` (including the plan) and `applied_actions[].result` are
+diagnostic copies and are never rewritten; the
 same finding is offered named under `sections[]` and `actions[]`. The workflow inventory's `install_hint` describes no repo and
 stays bare. The list is empty when there is nothing for a person to run.
 
