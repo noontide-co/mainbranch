@@ -694,6 +694,10 @@ def bootstrap(
     elif existing.entry and not scope.strip():
         normalized_scope = str(existing.entry.get("scope") or "repo")
 
+    if normalized_scope == "user":
+        # Before the sign-in and the grant write: nothing is stored if refused.
+        connect_mod._ensure_user_scope_writable()
+
     tokens = _sign_in(
         client,
         paste=paste,
@@ -783,6 +787,13 @@ def bootstrap(
             writes.user_scope = True
         path = connect_mod._write_config(target, config)
         writes.metadata = True
+    except connect_mod.UserScopeReadOnlyError as exc:
+        # The file became read-only after the check above: say which file.
+        raise GoogleConnectError(
+            f"The user-scope connect file {exc.shown} is read-only. "
+            + _partial_message(writes, "metadata", retry="once that file is writable"),
+            state="metadata_write_failed",
+        ) from None
     except (OSError, ValueError):
         raise GoogleConnectError(
             "The repo metadata could not be written. " + _partial_message(writes, "metadata"),

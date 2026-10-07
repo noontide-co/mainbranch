@@ -76,14 +76,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   if a check already recorded it), and `backend_unavailable` when the credential store
   is locked (#1076).
 - Writing the user-scope connect file keeps its other top-level keys, and no longer
-  makes a read-only file writable or replaces it: the command fails and names the file.
-  YAML comments are still dropped on a rewrite, which `docs/connect.md` now says (#1076).
+  makes a read-only file writable or replaces it. `mb connect <provider> --scope user`,
+  `rotate` and `mb connect google --oauth --scope user` check the file before storing
+  anything and refuse with `user_scope_read_only` (exit 2), naming the file, so no
+  credential is stored without its metadata. `mb connect test` still runs its check and
+  reports `recorded: false`. YAML comments are still dropped on a rewrite, which
+  `docs/connect.md` now says (#1076).
 - `mb connect rotate google` with a locked credential store names the same store repair
   as `status`, and says the renewal can run once the store unlocks, instead of the
   `--client-file` sign-in (#1076).
 - `mb connect rotate google` for a connection with a recorded source that is not 1Password
   now names `mb connect google --oauth`, not `--token-stdin` (#1076).
-
 - `mb google ... --out` follow-ups. With `--json`, a file that could not be written
   now puts the failure (`out_write_failed`) on stdout as well, like the read
   failures. The message says "nothing was left behind" only when that is true; if

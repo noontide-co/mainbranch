@@ -584,8 +584,9 @@ def test_google(
         validation = _validation_record(overall, products, previous, checked_at)
         live["validation"] = validation
         live["last_checked_at"] = checked_at
-        connect_mod._record_validation(target, config, provider.id, live)
-        recorded = True
+        recorded = connect_mod._record_validation(target, config, provider.id, live)
+        if not recorded:
+            not_recorded_reason = "user_scope_read_only"
     else:
         validation = _validation_record(overall, products, {}, checked_at)
         # `read_minted_token` has already recorded this one for status.

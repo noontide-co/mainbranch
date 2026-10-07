@@ -13,6 +13,7 @@ config dirs only.
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,8 @@ from mb import google_connect as gc
 from mb.cli import app
 from tests.test_google_connect import (  # noqa: F401 (fixtures are used by name)
     _google_entry,
+    _oauth,
+    _signin_args,
     client_file,
     google,
     google_env,
@@ -130,7 +133,7 @@ def test_a_read_only_user_scope_file_is_not_replaced_or_changed(repo: Path) -> N
     before = path.read_bytes()
     inode = path.stat().st_ino
 
-    with pytest.raises(OSError) as caught:
+    with pytest.raises(connect_mod.UserScopeReadOnlyError) as caught:
         connect_mod._write_user_scope({"version": 1, "repos": {"x": {}}})
 
     assert str(path) in str(caught.value)
@@ -198,3 +201,187 @@ def test_rotate_over_a_google_entry_with_a_foreign_source_names_the_sign_in(repo
     assert payload["rule"] == "rotate_unsupported_source"
     assert f"`{connect_mod.GOOGLE_SIGN_IN_COMMAND}`" in payload["summary"]
     assert "--token-stdin" not in payload["summary"]
+
+
+# --- The CLI paths with a read-only user-scope file (review-1082) ------------------------
+
+
+def _store_snapshot() -> dict[str, bytes]:
+    """Every file under the config home except the user-scope file."""
+
+    home = connect_mod._home()
+    skip = connect_mod._user_scope_path()
+    return {
+        str(path): path.read_bytes()
+        for path in sorted(home.rglob("*"))
+        if path.is_file() and path != skip
+    }
+
+
+def _freeze_user_scope() -> tuple[Path, bytes, int, int]:
+    path = connect_mod._user_scope_path()
+    path.chmod(0o400)
+    stat = path.stat()
+    return path, path.read_bytes(), stat.st_ino, stat.st_mode & 0o777
+
+
+def _assert_untouched(frozen: tuple[Path, bytes, int, int]) -> None:
+    path, data, inode, mode = frozen
+    stat = path.stat()
+    assert path.read_bytes() == data
+    assert (stat.st_ino, stat.st_mode & 0o777) == (inode, mode)
+
+
+def _assert_refusal(result: Any, as_json: bool, path: Path) -> None:
+    assert result.exit_code == 2, result.output
+    assert "unexpected error" not in result.output
+    if as_json:
+        payload = json.loads(result.stdout)
+        assert payload["rule"] == "user_scope_read_only"
+        text = payload.get("summary", result.stdout)
+    else:
+        text = result.output
+    assert path.name in text
+    assert "read-only" in text
+    assert "writable" in text
+
+
+def _user_scope_cloudflare(repo: Path, *, source: str = "") -> None:
+    connect_mod.connect_provider(
+        "cloudflare",
+        repo=repo,
+        token="cf-old-token-1076",
+        scope="user",
+        source=source,
+        metadata_pairs=["zone_id=abc123"],
+    )
+
+
+@pytest.mark.parametrize("as_json", [False, True])
+def test_connect_user_scope_over_a_read_only_file_is_a_refusal_and_stores_nothing(
+    repo: Path, as_json: bool
+) -> None:
+    _user_scope_cloudflare(repo)
+    frozen = _freeze_user_scope()
+    before = _store_snapshot()
+    args = ["connect", "stripe", "--scope", "user", "--token-stdin", "--repo", str(repo)]
+
+    result = runner.invoke(
+        app, [*args, *(["--json"] if as_json else [])], input="sk_live_SYNTH1076abcdefghij\n"
+    )
+
+    _assert_refusal(result, as_json, frozen[0])
+    assert "sk_live_SYNTH1076" not in result.output
+    assert _store_snapshot() == before
+    _assert_untouched(frozen)
+
+
+@pytest.mark.parametrize("as_json", [False, True])
+def test_rotate_a_user_scope_entry_over_a_read_only_file_stores_nothing(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, as_json: bool
+) -> None:
+    _user_scope_cloudflare(repo, source="op://Business/Cloudflare/credential")
+    frozen = _freeze_user_scope()
+    before = _store_snapshot()
+
+    def run(args: Any, cwd: Any = None, timeout: float = 5.0, *, env: Any = None) -> Any:
+        return {"ok": True, "returncode": 0, "stdout": "cf-rotated-1076", "stderr": ""}
+
+    monkeypatch.setattr(connect_mod, "_run_command", run)
+    monkeypatch.setattr(shutil, "which", lambda name: f"/usr/bin/{name}")
+
+    result = runner.invoke(
+        app,
+        ["connect", "rotate", "cloudflare", "--repo", str(repo), *(["--json"] if as_json else [])],
+    )
+
+    _assert_refusal(result, as_json, frozen[0])
+    assert "cf-rotated-1076" not in result.output
+    assert _store_snapshot() == before
+    _assert_untouched(frozen)
+
+
+@pytest.mark.parametrize("as_json", [False, True])
+def test_test_a_user_scope_entry_over_a_read_only_file_still_checks(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, as_json: bool
+) -> None:
+    _user_scope_cloudflare(repo)
+    frozen = _freeze_user_scope()
+    before = _store_snapshot()
+
+    result = runner.invoke(
+        app,
+        ["connect", "test", "cloudflare", "--repo", str(repo), *(["--json"] if as_json else [])],
+    )
+
+    assert "unexpected error" not in result.output
+    assert "PermissionError" not in result.output
+    if as_json:
+        payload = json.loads(result.stdout)
+        assert payload["recorded"] is False
+        assert payload["not_recorded_reason"] == "user_scope_read_only"
+    assert _store_snapshot() == before
+    _assert_untouched(frozen)
+
+
+@pytest.mark.parametrize("as_json", [False, True])
+def test_google_sign_in_user_scope_over_a_read_only_file_stores_no_grant(
+    repo: Path, client_file: Path, google: Any, as_json: bool
+) -> None:
+    google()
+    _user_scope_cloudflare(repo)
+    frozen = _freeze_user_scope()
+    before = _store_snapshot()
+
+    result = _oauth(
+        repo, *_signin_args(client_file), "--scope", "user", *(["--json"] if as_json else [])
+    )
+
+    _assert_refusal(result, as_json, frozen[0])
+    assert "repo metadata" not in result.output
+    assert _store_snapshot() == before
+    _assert_untouched(frozen)
+
+
+def test_google_sign_in_names_the_user_scope_file_when_it_turns_read_only_mid_write(
+    repo: Path, client_file: Path, google: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    google()
+    path = connect_mod._user_scope_path()
+
+    def refuse(*args: Any, **kwargs: Any) -> Any:
+        raise connect_mod.UserScopeReadOnlyError(path)
+
+    monkeypatch.setattr(connect_mod, "_write_user_scope_provider", refuse)
+
+    result = _oauth(repo, *_signin_args(client_file), "--scope", "user", "--json")
+
+    payload = json.loads(result.stdout)
+    assert payload["state"] == "metadata_write_failed"
+    assert path.name in payload["summary"]
+    assert "read-only" in payload["summary"]
+    assert "once the store is healthy" not in payload["summary"]
+    assert "repo metadata could not be written" not in payload["summary"]
+
+
+def test_a_writable_user_scope_file_still_works_on_every_path(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _user_scope_cloudflare(repo, source="op://Business/Cloudflare/credential")
+
+    def run(args: Any, cwd: Any = None, timeout: float = 5.0, *, env: Any = None) -> Any:
+        return {"ok": True, "returncode": 0, "stdout": "cf-rotated-1076", "stderr": ""}
+
+    monkeypatch.setattr(connect_mod, "_run_command", run)
+    monkeypatch.setattr(shutil, "which", lambda name: f"/usr/bin/{name}")
+    stripe = runner.invoke(
+        app,
+        ["connect", "stripe", "--scope", "user", "--token-stdin", "--repo", str(repo), "--json"],
+        input="sk_live_SYNTH1076abcdefghij\n",
+    )
+    rotated = runner.invoke(app, ["connect", "rotate", "cloudflare", "--repo", str(repo), "--json"])
+    tested = runner.invoke(app, ["connect", "test", "cloudflare", "--repo", str(repo), "--json"])
+
+    assert stripe.exit_code == 0, stripe.output
+    assert "user_scope_read_only" not in rotated.output + tested.output
+    assert json.loads(tested.stdout).get("not_recorded_reason") != "user_scope_read_only"
