@@ -44,7 +44,7 @@ def test_slow_working_backend_keeps_connect_success(
         return 0, json.dumps(response)
 
     monkeypatch.setattr(credential_store, "_invoke_helper", invoke)
-    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "macos-keychain")
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "auto")
     token = "synthetic-credential-deadline"
     result = runner.invoke(
         app,
@@ -70,7 +70,7 @@ def test_timed_out_user_preread_refuses_before_storing(
         raise subprocess.TimeoutExpired(args, timeout)
 
     monkeypatch.setattr(credential_store, "_invoke_helper", invoke)
-    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "macos-keychain")
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "auto")
     token = "synthetic-credential-timeout"
     before = credential_store._read_local_secrets()
     result = runner.invoke(
