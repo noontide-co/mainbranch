@@ -16,7 +16,10 @@ from mb.freshness import (
 )
 
 
-def test_required_update_status_for_version_below_minimum(tmp_path: Path) -> None:
+def test_required_update_status_for_version_below_minimum(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
     update = package_update_status(
         tmp_path,
         installed_version="0.1.2",

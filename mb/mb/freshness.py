@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -11,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from mb import __version__, topology
-from mb.engine import install_mode
+from mb.engine import install_mode, repo_flag
 
 MINIMUM_SUPPORTED_VERSION = "0.2.0"
 # `mb update` first shipped in the same release as the current support floor.
@@ -141,8 +142,9 @@ def looks_like_business_repo(repo: Path) -> bool:
 
 
 def _post_update_commands(repo: str | Path | None) -> list[str]:
-    _ = repo
-    return ["mb skill link --repo .", "mb doctor"]
+    flag = repo_flag(repo)
+    path = f" {shlex.quote(str(Path(repo).expanduser().resolve()))}" if flag and repo else ""
+    return [f"mb skill link{flag or ' --repo .'}", f"mb doctor{path}"]
 
 
 def package_update_status(
