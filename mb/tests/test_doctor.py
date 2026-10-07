@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 import shutil
 from pathlib import Path
 from typing import Any
@@ -479,7 +480,9 @@ def test_doctor_repair_apply_restores_missing_claude_worktree_start_wiring(
         "mb doctor repair --plan",
         "mb doctor repair --apply",
     ]
-    assert actions["skill-link"]["command"] == "mb doctor repair --apply --only claude"
+    assert actions["skill-link"]["command"] == (
+        f"mb doctor repair{_flag(worktree)} --apply --only claude"
+    )
     assert "/mb-start" in actions["skill-link"]["reason"]
 
     applied = doctor_mod.repair_apply(repo=worktree, only="claude")
@@ -505,7 +508,9 @@ def test_doctor_repair_plan_reports_missing_codex_agents_md(tmp_path: Path) -> N
     assert agents_check["state"] == "warn"
     actions = {action["id"]: action for action in payload["actions"]}
     assert actions["codex-agents-md"]["safe_to_apply"] is True
-    assert actions["codex-agents-md"]["command"] == "mb doctor repair --apply --only codex"
+    assert actions["codex-agents-md"]["command"] == (
+        f"mb doctor repair{_flag(repo)} --apply --only codex"
+    )
     assert "AGENTS.md" in actions["codex-agents-md"]["writes"]
 
 
@@ -552,7 +557,9 @@ def test_doctor_repair_only_codex_filters_unrelated_related_links(
     payload = json.loads(apply_result.stdout)
     applied = {action["id"]: action for action in payload["applied_actions"]}
     assert set(applied) == {"codex-agents-md", "codex-global-skill"}
-    assert applied["codex-agents-md"]["command"] == "mb doctor repair --apply --only codex"
+    assert applied["codex-agents-md"]["command"] == (
+        f"mb doctor repair{_flag(repo)} --apply --only codex"
+    )
     assert "## Related links" not in decision.read_text(encoding="utf-8")
 
 
@@ -570,9 +577,9 @@ def test_doctor_repair_plan_lists_agent_surfaces_and_scope_choices(
     payload = json.loads(result.stdout)
     surfaces = {surface["id"]: surface for surface in payload["agent_surfaces"]["surfaces"]}
     assert payload["agent_surfaces"]["scope_choices"] == [
-        "mb doctor repair --plan --only claude",
-        "mb doctor repair --plan --only codex",
-        "mb doctor repair --plan --all-agents",
+        f"mb doctor repair{_flag(repo)} --plan --only claude",
+        f"mb doctor repair{_flag(repo)} --plan --only codex",
+        f"mb doctor repair{_flag(repo)} --plan --all-agents",
     ]
     assert surfaces["claude"]["label"] == "Claude Code project-local skills"
     assert surfaces["codex"]["label"] == "Codex global mb-* skills and repo AGENTS.md"
@@ -848,7 +855,9 @@ def test_doctor_repair_plan_installs_missing_codex_global_skills(
     actions = {action["id"]: action for action in payload["actions"]}
     assert "codex-global-skill" in actions
     assert actions["codex-global-skill"]["safe_to_apply"] is True
-    assert actions["codex-global-skill"]["command"] == "mb doctor repair --apply --only codex"
+    assert actions["codex-global-skill"]["command"] == (
+        f"mb doctor repair{_flag(repo)} --apply --only codex"
+    )
     section = next(section for section in payload["sections"] if section["id"] == "codex-wiring")
     skill_check = next(
         check for check in section["checks"] if check["name"] == "codex-global-skill"
@@ -909,7 +918,9 @@ def test_doctor_repair_apply_installs_missing_codex_global_skills(
     applied = {action["id"]: action for action in payload["applied_actions"]}
     assert "codex-global-skill" in applied
     assert applied["codex-global-skill"]["state"] == "ok"
-    assert applied["codex-global-skill"]["command"] == "mb doctor repair --apply --only codex"
+    assert applied["codex-global-skill"]["command"] == (
+        f"mb doctor repair{_flag(repo)} --apply --only codex"
+    )
     status = applied["codex-global-skill"]["result"]["status"]
     assert status["skills"]["mb-start"]["ok"] is True
     assert status["skills"]["mb-ads"]["ok"] is True
@@ -1282,7 +1293,7 @@ def test_doctor_repair_plan_exposes_legacy_campaigns_to_pushes_action(tmp_path: 
     item = actions["legacy_campaigns_to_pushes"]
     assert item["mode"] == "read"
     assert item["safe_to_apply"] is True
-    assert item["command"] == "mb migrate campaigns --plan"
+    assert item["command"] == f"mb migrate{_flag(repo)} campaigns --plan"
     repo_shape = next(section for section in payload["sections"] if section["id"] == "repo-shape")
     legacy_check = next(
         check for check in repo_shape["checks"] if check["name"] == "legacy-campaigns"
@@ -2246,7 +2257,7 @@ def test_doctor_repair_apply_never_switches_symlink_era_repo_to_plugin(tmp_path:
         assert engine_mod.plugin_wiring_status(repo)["wired"] is False
         assert not (repo / ".claude" / "settings.json").exists()
         assert [item["command"] for item in applied["operator_actions"]] == [
-            "mb skill link --repo . --plugin"
+            f"mb skill link{_flag(repo)} --plugin"
         ]
 
 
@@ -2291,7 +2302,7 @@ def test_doctor_repair_plan_lists_plugin_switch_for_a_person(
 
     plan = doctor_mod.repair_plan(repo, only="claude")
     assert not any("--plugin" in action["command"] for action in plan["actions"])
-    assert plan["operator_actions"] == [engine_mod.plugin_switch_operator_action()]
+    assert plan["operator_actions"] == [engine_mod.plugin_switch_operator_action(repo)]
     assert plan["operator_actions"][0]["changes"] == [".claude/settings.json"]
     assert "not an agent" in plan["operator_actions"][0]["note"]
 
@@ -2302,7 +2313,8 @@ def test_doctor_repair_plan_lists_plugin_switch_for_a_person(
     doctor_mod.render_repair(plan)
     out = capsys.readouterr().out
     assert "For you to run" in out
-    assert "mb skill link --repo . --plugin" in out
+    # The console wraps long paths, so compare without whitespace.
+    assert "".join(f"mb skill link{_flag(repo)} --plugin".split()) in "".join(out.split())
 
 
 def test_doctor_repair_plan_omits_plugin_wiring_when_already_wired(tmp_path: Path) -> None:
@@ -2323,3 +2335,210 @@ def test_doctor_repair_apply_already_wired_is_noop_for_plugin(tmp_path: Path) ->
 
     applied = doctor_mod.repair_apply(repo=repo, only="claude")
     assert "plugin-wiring" not in {action["id"] for action in applied["applied_actions"]}
+
+
+# --- #1072: every suggested command names the business repo -------------------
+
+
+def _flag(repo: Path) -> str:
+    return f" --repo {shlex.quote(str(repo.resolve()))}"
+
+
+def _suggested_commands(plan: dict[str, Any]) -> list[str]:
+    found: list[str] = []
+    found += [str(action["command"]) for action in plan["actions"]]
+    for section in plan["sections"]:
+        found += [str(action["command"]) for action in section.get("actions", [])]
+    surfaces = plan["agent_surfaces"]
+    found += [str(surface["repair_command"]) for surface in surfaces["surfaces"]]
+    found += [str(item) for item in surfaces["scope_choices"]]
+    found += [str(item) for item in surfaces["apply_choices"]]
+    found += [str(item["command"]) for item in plan["operator_actions"]]
+    return found
+
+
+def test_doctor_repair_plan_names_the_repo_in_every_command_from_another_folder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    (repo / ".claude" / "settings.json").unlink()
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+    monkeypatch.chdir(other)
+    flag = f"--repo {shlex.quote(str(repo.resolve()))}"
+
+    plan = doctor_mod.repair_plan(repo, all_agents=True)
+
+    commands = _suggested_commands(plan)
+    assert commands
+    surfaces = plan["agent_surfaces"]
+    assert surfaces["scope_choices"][1] == f"mb doctor repair {flag} --plan --only codex"
+    assert surfaces["apply_choices"][0] == f"mb doctor repair {flag} --apply --only claude"
+    assert (
+        surfaces["surfaces"][1]["repair_command"] == f"mb doctor repair {flag} --apply --only codex"
+    )
+    assert plan["operator_actions"][0]["command"] == f"mb skill link {flag} --plugin"
+    for command in commands:
+        for segment in command.split(" && "):
+            if segment.startswith("mb "):
+                _assert_each_mb_segment_names_the_repo_once([segment], repo)
+    assert "--repo ." not in " ".join(commands)
+    assert plan["post_apply"]["structural_verification"] == (
+        f"mb doctor repair {flag} --plan --json"
+    )
+
+
+def _all_command_strings(node: Any) -> list[str]:
+    """Every suggested-command string anywhere in a plan, shared objects included."""
+    found: list[str] = []
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key in {"command", "repair_command"} and isinstance(value, str):
+                found.append(value)
+            elif key in {"scope_choices", "apply_choices"} and isinstance(value, list):
+                found += [str(item) for item in value]
+            elif key not in {"raw", "result"}:
+                found += _all_command_strings(value)
+    elif isinstance(node, list):
+        for item in node:
+            found += _all_command_strings(item)
+    return found
+
+
+def _assert_each_mb_segment_names_the_repo_once(commands: list[str], repo: Path) -> None:
+    target = str(repo.resolve())
+    seen_mb = 0
+    for command in commands:
+        tokens = shlex.split(command)
+        segments: list[list[str]] = [[]]
+        for token in tokens:
+            if token == "&&":
+                segments.append([])
+            else:
+                segments[-1].append(token)
+        for segment in segments:
+            if segment[:1] != ["mb"]:
+                continue
+            seen_mb += 1
+            if segment[:2] in (["mb", "status"], ["mb", "graph"]):
+                assert segment.count(target) == 1, command
+                assert segment[-1] == target, command
+                assert "--repo" not in segment, command
+            else:
+                assert segment.count("--repo") == 1, command
+                assert segment[segment.index("--repo") + 1] == target, command
+                assert segment.count(target) == 1, command
+    assert seen_mb
+
+
+def _repo_with_topology_and_campaigns(tmp_path: Path, name: str = "biz") -> Path:
+    repo = tmp_path / name
+    init_run(path=str(repo), name="Acme")
+    (repo / ".vip").mkdir()
+    (repo / ".vip" / "local.yaml").write_text("current_offer: x\n", encoding="utf-8")
+    (repo / "campaigns").mkdir()
+    (repo / "campaigns" / "a.md").write_text("x\n", encoding="utf-8")
+    return repo
+
+
+def test_doctor_repair_plan_names_the_repo_once_per_command_with_topology_and_campaigns(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _repo_with_topology_and_campaigns(tmp_path)
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+    monkeypatch.chdir(other)
+
+    plan = doctor_mod.repair_plan(repo)
+
+    assert "offer-topology-review" in {action["id"] for action in plan["actions"]}
+    commands = _all_command_strings(plan)
+    assert any(c.startswith("mb status") for c in commands)
+    _assert_each_mb_segment_names_the_repo_once(commands, repo)
+    migrate = [c for c in commands if "migrate" in c and "campaigns" in c]
+    assert migrate
+    for command in migrate:
+        assert command.startswith(f"mb migrate{_flag(repo)} campaigns --plan"), command
+
+
+def test_a_migrate_campaigns_command_runs_from_another_folder_on_the_repo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _repo_with_topology_and_campaigns(tmp_path)
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+    monkeypatch.chdir(other)
+    plan = doctor_mod.repair_plan(repo)
+    command = next(c for c in _all_command_strings(plan) if "migrate" in c and "campaigns" in c)
+
+    out = runner.invoke(app, [*shlex.split(command)[1:], "--json"])
+
+    assert json.loads(out.stdout)["repo"] == str(repo.resolve())
+
+
+def test_qualifying_a_command_twice_changes_nothing(tmp_path: Path) -> None:
+    repo = tmp_path / "biz one"
+    repo.mkdir()
+    for command in (
+        "mb status --json --peek && mb validate --json",
+        "mb graph --json",
+        "mb doctor repair --apply --only codex",
+        "mb skill link --repo . --plugin",
+        "mb migrate campaigns --plan --json",
+    ):
+        once = doctor_mod._qualify_command(command, repo)
+        assert once != command
+        assert doctor_mod._qualify_command(once, repo) == once
+
+
+def test_a_repo_path_that_looks_like_a_command_is_quoted_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    name = "x --repo . mb status && y"
+    repo = tmp_path / name
+    init_run(path=str(repo), name="Acme")
+    (repo / ".vip").mkdir()
+    (repo / ".vip" / "local.yaml").write_text("current_offer: x\n", encoding="utf-8")
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+    monkeypatch.chdir(other)
+
+    plan = doctor_mod.repair_plan(repo)
+
+    commands = _all_command_strings(plan)
+    assert any(c.startswith("mb status") for c in commands)
+    _assert_each_mb_segment_names_the_repo_once(commands, repo)
+    command = plan["agent_surfaces"]["scope_choices"][1]
+    out = runner.invoke(app, [*shlex.split(command)[1:], "--json"])
+    assert json.loads(out.stdout)["repo"] == str(repo.resolve())
+
+
+def test_doctor_repair_plan_commands_stay_bare_inside_the_repo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    monkeypatch.chdir(repo)
+
+    plan = doctor_mod.repair_plan(repo, all_agents=True)
+
+    assert plan["agent_surfaces"]["scope_choices"][1] == "mb doctor repair --plan --only codex"
+    assert not any("--repo" in command for command in _suggested_commands(plan))
+
+
+def test_a_doctor_suggested_command_runs_from_another_folder_on_the_repo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+    monkeypatch.chdir(other)
+    plan = doctor_mod.repair_plan(repo, only="codex")
+    command = plan["agent_surfaces"]["scope_choices"][1]
+
+    out = runner.invoke(app, [*shlex.split(command)[1:], "--json"])
+
+    assert json.loads(out.stdout)["repo"] == str(repo.resolve())
+    assert sorted(path.name for path in other.iterdir()) == []
