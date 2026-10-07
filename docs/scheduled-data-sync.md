@@ -116,7 +116,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run sync script
         env:
-          GOOGLE_ADS_DEVELOPER_TOKEN: ${{ secrets.GOOGLE_ADS_DEVELOPER_TOKEN }}
           GOOGLE_ADS_REFRESH_TOKEN:   ${{ secrets.GOOGLE_ADS_REFRESH_TOKEN }}
           GOOGLE_ADS_CLIENT_ID:       ${{ secrets.GOOGLE_ADS_CLIENT_ID }}
           GOOGLE_ADS_CLIENT_SECRET:   ${{ secrets.GOOGLE_ADS_CLIENT_SECRET }}
@@ -131,6 +130,14 @@ jobs:
 
 Notes:
 
+- For a live Google Ads read, the Cloud project that owns the OAuth client must
+  have [Explorer, Basic, or Standard API access](https://developers.google.com/google-ads/api/docs/api-policy/access-levels).
+  The authorized identity also needs the right
+  [Google Ads account role](https://developers.google.com/google-ads/api/docs/oauth/access-model).
+  Confirm both with a read before scheduling the script. Google
+  [sunset developer tokens](https://developers.google.com/google-ads/api/docs/api-policy/developer-token)
+  for the Google Ads API; use a current client library if an older version
+  still requires a token setting locally.
 - Use a hosted runner only when the provider tolerates unattended
   credentials. Some providers require interactive OAuth refresh that
   a hosted runner cannot complete safely.

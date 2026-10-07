@@ -232,8 +232,9 @@ and checkpoint-hook repair in doctor, status and onboarding output. The shared
 freshness object's `post_update_commands` names the repo too. For compatibility,
 inside-repo output retains its existing spelling, including `--repo .` in the
 post-update and onboarding skill-link suggestions; with no known repo, the
-post-update instructions still say to run from the business folder. `raw.*` and
-`applied_actions[].result` are diagnostic copies and are never rewritten; the
+post-update instructions still say to run from the business folder. `raw.*`,
+`actions[].result` (including the plan) and `applied_actions[].result` are
+diagnostic copies and are never rewritten; the
 same finding is offered named under `sections[]` and `actions[]`. The workflow inventory's `install_hint` describes no repo and
 stays bare. The list is empty when there is nothing for a person to run.
 

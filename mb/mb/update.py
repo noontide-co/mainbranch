@@ -826,13 +826,18 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
                 f"Run `{plan_command}`, review it, then approve `{apply_command}`."
             )
             next_actions = [plan_command, apply_command]
+            if global_skill.get("kept") and not codex_mod.global_skill_operations():
+                # Only the manual kept-files step can help; an apply would do nothing.
+                message = ""
+                next_actions = []
         else:
             message = (
                 "Codex runtime readiness still needs attention. Run "
                 f"`{_status_command(repo)}` and repair the reported runtime issue."
             )
             next_actions = [_status_command(repo)]
-        result["warnings"].append(message)
+        if message:
+            result["warnings"].append(message)
         result["next_actions"].extend(next_actions)
     elif plugin_install.get("slash_commands_restart_required"):
         result["warnings"].append(

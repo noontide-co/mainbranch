@@ -44,11 +44,17 @@ private-safe record. Spend, publish, and upload each need their own approval —
 one does not blanket the next. Default to the conservative form: a draft
 container, a staged offline-conversion record, a campaign left paused.
 
-Provider-side automation that needs live Google API access (Ads conversion
-checks, GTM container reads, conversion upload) is operator-gated: it requires
-Google Ads Basic Access and live/sandbox auth, and Main Branch claims no
-provider automation before live smoke evidence exists. Until then the agent
-plans and hands off; the operator does the Google-UI steps.
+Before a live Google Ads API read, check that the Cloud project owning the
+OAuth credentials has [Explorer, Basic, or Standard access](https://developers.google.com/google-ads/api/docs/api-policy/access-levels),
+that the [authorized user or service account](https://developers.google.com/google-ads/api/docs/oauth/overview)
+has the right [Google Ads account role](https://developers.google.com/google-ads/api/docs/oauth/access-model),
+and that a read succeeds. Test access reaches test accounts only. Google Ads
+authorization does not grant access to a GTM container; check
+[GTM authorization](https://developers.google.com/tag-platform/tag-manager/api/v2/authorization)
+separately. Ads conversion checks, GTM container reads, and conversion uploads
+remain operator-gated. Main Branch claims no provider automation before live
+smoke evidence exists. Until then the agent plans and hands off; the operator
+does the Google UI steps.
 
 ## Default Stack
 
