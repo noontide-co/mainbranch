@@ -8,6 +8,7 @@ import json
 import math
 import os
 import re
+import shlex
 import shutil
 import stat
 import subprocess
@@ -196,6 +197,10 @@ class UserScopeReadOnlyError(ConnectRefusal):
 
 class ConfigBoundaryError(ValueError):
     """Raised when local connect metadata is outside the selected repo boundary."""
+
+
+class MetadataWriteError(RuntimeError):
+    """A credential was stored, but its metadata and rollback both failed."""
 
 
 class ConfigCorruptError(ValueError):
@@ -923,7 +928,7 @@ def _read_user_scope() -> dict[str, Any]:
 
 
 def _ensure_user_scope_writable() -> None:
-    """Refuse (``user_scope_read_only``) when the user-scope file is read-only by mode.
+    """Refuse when mode bits or the OS deny writing the user-scope file.
 
     Call it before storing a credential that a user-scope entry will record,
     so a refusal leaves the credential store unchanged.
@@ -931,26 +936,34 @@ def _ensure_user_scope_writable() -> None:
 
     path = _user_scope_path()
     try:
-        read_only = path.exists() and not path.stat().st_mode & stat.S_IWUSR
-    except OSError:
-        read_only = False
-    if read_only:
-        raise UserScopeReadOnlyError(path)
+        if not path.stat().st_mode & stat.S_IWUSR:
+            raise UserScopeReadOnlyError(path)
+        # No truncation or creation: ask the OS about ownership and ACLs too.
+        # Keep the mode check above even when a privileged process can write.
+        fd = os.open(path, os.O_WRONLY)
+        os.close(fd)
+    except FileNotFoundError:
+        return
+    except PermissionError:
+        raise UserScopeReadOnlyError(path) from None
 
 
 def _write_user_scope(data: dict[str, Any]) -> Path:
     """Rewrite the user-scope file (YAML comments are not kept).
 
-    A file that is read-only by mode is left alone: it is neither made
+    A read-only file is left alone: it is neither made
     writable nor replaced.
     """
 
     path = _user_scope_path()
     _ensure_user_scope_writable()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with suppress(OSError):
-        path.parent.chmod(0o700)
-    atomic_write_text(path, yaml.safe_dump(data, sort_keys=False))
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with suppress(OSError):
+            path.parent.chmod(0o700)
+        atomic_write_text(path, yaml.safe_dump(data, sort_keys=False))
+    except PermissionError:
+        raise UserScopeReadOnlyError(path) from None
     with suppress(OSError):
         path.chmod(0o600)
     return path
@@ -1782,6 +1795,7 @@ def connect_provider(
         _ensure_user_scope_writable()
 
     secrets: dict[str, dict[str, str]] = {}
+    previous_secret: SecretProbe | None = None
     required = list(provider.required_secrets)
     if required:
         primary = required[0]
@@ -1789,6 +1803,13 @@ def connect_provider(
             store = SecretStore(secret_backend)
             ref = _secret_ref(repo_id, provider.id, primary)
             try:
+                if normalized_scope == "user":
+                    # The rollback snapshot is a separate bounded read. The write
+                    # and final status read retain their original shared budget.
+                    previous_secret = store.probe(ref, deadline=new_credential_deadline())
+                    if not previous_secret.backend_ok:
+                        raise KeychainError(previous_secret.reason)
+                    credential_deadline = new_credential_deadline()
                 store.set(ref, token, deadline=credential_deadline)
             except KeychainError as exc:
                 # Fail before any metadata is written, so a backend outage
@@ -1862,14 +1883,51 @@ def connect_provider(
         providers[provider.id]["oauth"] = dict(raw_oauth)
     user_scope_path = ""
     if normalized_scope == "user":
-        user_scope_path = str(
-            _write_user_scope_provider(
-                repo_id,
-                repo_identity=config.get("repo_identity") or {},
-                provider_id=provider.id,
-                entry=providers[provider.id],
+        try:
+            user_scope_path = str(
+                _write_user_scope_provider(
+                    repo_id,
+                    repo_identity=config.get("repo_identity") or {},
+                    provider_id=provider.id,
+                    entry=providers[provider.id],
+                )
             )
-        )
+        except UserScopeReadOnlyError as exc:
+            if previous_secret is not None:
+                try:
+                    # Recovery gets its own bounded attempt even if the original
+                    # command has exhausted its credential deadline.
+                    if previous_secret.present:
+                        store.set(ref, previous_secret.value, deadline=new_credential_deadline())
+                    else:
+                        store.delete(ref)
+                except Exception:
+                    # Never expose backend exception text or credential values.
+                    command = [
+                        "mb",
+                        "connect",
+                        provider.id,
+                        "--token-stdin",
+                        "--scope",
+                        "user",
+                        "--repo",
+                        str(target),
+                    ]
+                    if provider.category == "custom":
+                        command.append("--custom")
+                    if account_label:
+                        command.extend(["--account", account_label])
+                    for key, value in metadata.items():
+                        command.extend(["--metadata", f"{key}={value}"])
+                    action = "replaced" if previous_secret.present else "stored"
+                    raise MetadataWriteError(
+                        f"The {provider.name} credential was {action} but not recorded: "
+                        f"the user-scope connect file {exc.shown} is read-only, and the "
+                        "previous credential state could not be restored. The repo metadata "
+                        "is unchanged. Make that file writable first, then rerun "
+                        f"`{shlex.join(command)}` with the credential again."
+                    ) from None
+            raise
     path = _write_config(target, config)
     status = status_provider(
         provider.id,
@@ -5205,8 +5263,15 @@ def render_test_result(result: dict[str, Any]) -> None:
         next_command = str(validation.get("repair_command") or "")
     else:
         next_command = str(status.get("repair_command") or "")
+    if result.get("not_recorded_reason") == "user_scope_read_only":
+        render_user_scope_not_recorded()
     if next_command:
         print(f"next: {next_command}")
+
+
+def render_user_scope_not_recorded() -> None:
+    shown = UserScopeReadOnlyError(_user_scope_path()).shown
+    print(f"recorded: no (the user-scope connect file {shown} is read-only)")
 
 
 def render_rotate_result(result: dict[str, Any]) -> None:

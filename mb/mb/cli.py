@@ -913,6 +913,8 @@ def _connect_runtime_exit(
         state = connect_mod.BACKEND_FAILURE_STATE
         backend_state = exc.reason
         repair, repair_command = detail["repair"], detail["repair_command"]
+    elif isinstance(exc, connect_mod.MetadataWriteError):
+        state, backend_state, repair, repair_command = "metadata_write_failed", "", "", ""
     else:
         state, backend_state, repair, repair_command = "connect_failed", "", "", ""
     try:

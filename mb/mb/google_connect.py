@@ -30,6 +30,7 @@ import http.client
 import json
 import os
 import re
+import shlex
 import sys
 import time
 import urllib.parse
@@ -504,6 +505,8 @@ class _Writes:
 
     fresh: bool  # no OAuth grant was recorded before this run
     replaced_access_token: bool  # an access-token-only entry is being upgraded
+    repo: Path | None = None
+    scope: str = "repo"
     grant_started: bool = False  # the grant write began; it may have landed
     grant: bool = False
     token: bool = False
@@ -519,11 +522,14 @@ class Progress:
     writes: _Writes | None = None
 
 
-_USER_SCOPE_RECORDED = (
-    "The new Google sign-in is stored and recorded in user scope, but this repo's "
-    ".mb/connect.yaml was not updated. Run `mb connect hydrate --repo .` to record it here "
-    "(no new sign-in needed), or renew it with `mb connect google --oauth --reauth`."
-)
+def _recovery_command(writes: _Writes, command: str, *, fresh: bool = False) -> str:
+    if fresh:
+        command += f" --scope {writes.scope}"
+        if writes.replaced_access_token:
+            command += " --replace-access-token"
+    if writes.repo is not None and writes.repo != Path.cwd().resolve():
+        command += f" --repo {shlex.quote(str(writes.repo))}"
+    return command
 
 
 _REPLACED_NOTE = (
@@ -533,16 +539,25 @@ _REPLACED_NOTE = (
 
 
 def _partial_message(
-    writes: _Writes, failed: str, *, retry: str = "once the store is healthy"
+    writes: _Writes,
+    failed: str,
+    *,
+    retry: str = "once the store is healthy",
+    repair_file_first: bool = False,
 ) -> str:
     if failed == "grant":
         return "Nothing was stored and the repo metadata is unchanged."
     if writes.user_scope:
         # Readers already follow the user-scope entry, and a second `--oauth`
         # would refuse (`oauth_use_reauth`), so point at commands that work.
-        if writes.replaced_access_token:
-            return _USER_SCOPE_RECORDED + _REPLACED_NOTE
-        return _USER_SCOPE_RECORDED
+        hydrate = _recovery_command(writes, "mb connect hydrate")
+        renew = _recovery_command(writes, "mb connect google --oauth --reauth")
+        message = (
+            "The new Google sign-in is stored and recorded in user scope, but this repo's "
+            f".mb/connect.yaml was not updated. Run `{hydrate}` to record it here "
+            f"(no new sign-in needed), or renew it with `{renew}`."
+        )
+        return message + (_REPLACED_NOTE if writes.replaced_access_token else "")
     if writes.fresh:
         lead = (
             "The Google grant was written to the credential store but this repo does not "
@@ -551,17 +566,24 @@ def _partial_message(
         )
         if writes.replaced_access_token and writes.token:
             lead += _REPLACED_NOTE
-        return lead + f" Re-run `mb connect google --oauth` {retry}."
+        command = _recovery_command(writes, "mb connect google --oauth", fresh=True)
+        return lead + f" Re-run `{command}` {retry}, with the same OAuth client and metadata."
+    test = _recovery_command(writes, "mb connect test google")
+    next_step = (
+        f"Make that file writable first, then run `{test}`."
+        if repair_file_first
+        else f"Run `{test}`."
+    )
     if failed == "token":
         return (
             "The new Google grant is stored and replaced the old one, but the access-token "
             "placeholder and the repo metadata were not updated. The connection uses the new "
-            "grant; run `mb connect test google`."
+            f"grant. {next_step}"
         )
     return (
         "The new Google grant and access token are stored and replaced the old ones, but the "
         "repo metadata was not updated, so the granted products and the site or property it "
-        "shows may be stale. Run `mb connect test google`."
+        f"shows may be stale. {next_step}"
     )
 
 
@@ -581,21 +603,22 @@ def cancelled_message(progress: Progress | None, lead: str = "Google sign-in can
     if not writes.grant:
         # Interrupted inside the grant write: it may or may not have landed.
         if writes.fresh:
+            command = _recovery_command(writes, "mb connect google --oauth", fresh=True)
             return (
                 f"{lead} while the new Google grant was being written, so it may have been "
                 "stored. This repo does not record it, so the connection is not set up; an "
                 "unrecorded item is unused and the next sign-in overwrites it. Re-run "
-                "`mb connect google --oauth` to finish it."
+                f"`{command}` to finish it, with the same OAuth client and metadata."
             )
         return (
             f"{lead} while the new Google grant was being written, so it may have been "
             "stored. If it was, it replaced the old grant and the connection uses it; run "
-            "`mb connect test google` to check."
+            f"`{_recovery_command(writes, 'mb connect test google')}` to check."
         )
     if writes.metadata:
         return (
             f"{lead} after it finished: the new sign-in is stored and recorded. See it with "
-            "`mb connect status google`."
+            f"`{_recovery_command(writes, 'mb connect status google')}`."
         )
     failed = "token" if not writes.token else "metadata"
     return f"{lead} part way. " + _partial_message(writes, failed, retry="to finish it")
@@ -737,6 +760,8 @@ def bootstrap(
     writes = _Writes(
         fresh=not existing.oauth,
         replaced_access_token=existing.has_access_token and not existing.oauth,
+        repo=target,
+        scope=normalized_scope,
     )
     if progress is not None:
         progress.writes = writes
@@ -791,7 +816,9 @@ def bootstrap(
         # The file became read-only after the check above: say which file.
         raise GoogleConnectError(
             f"The user-scope connect file {exc.shown} is read-only. "
-            + _partial_message(writes, "metadata", retry="once that file is writable"),
+            + _partial_message(
+                writes, "metadata", retry="once that file is writable", repair_file_first=True
+            ),
             state="metadata_write_failed",
         ) from None
     except (OSError, ValueError):

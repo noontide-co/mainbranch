@@ -1038,18 +1038,30 @@ it may have replaced the old grant, so run `mb connect test google`.
 ## User Scope
 
 Writing the user-scope file keeps its other top-level keys as they were. It
-does not keep YAML comments: a rewrite drops them. A file that is read-only by
-mode is never made writable or replaced. Every command that would write it
+does not keep YAML comments: a rewrite drops them. A read-only file, including
+one protected by ownership or an access-control list, is never made writable
+or replaced. Every command that would write it
 (`mb connect <provider> --scope user`, `rotate`, and `mb connect google --oauth
 --scope user`) checks first, before it stores any credential, and refuses with
 rule `user_scope_read_only` (exit 2, `--json` included). The message names the
 file and says to make it writable or move it and rerun; nothing is stored or
-changed. `mb connect test` only reads that file to run its check: the check still
+changed. If writing is denied after a token was stored by connect or rotate,
+Main Branch restores the previous credential (or removes the newly created
+one) before returning that refusal. If restoration also fails, it exits 1 with
+`metadata_write_failed`: the message says the credential was stored or replaced
+but not recorded, names the file, and gives a retry command that keeps user
+scope and the selected repo. Make the file writable first, then supply the
+credential again with that command.
+
+`mb connect test` only reads that file to run its check: the check still
 runs and the repo metadata is still recorded, and the result says
-`recorded: false` with `not_recorded_reason: user_scope_read_only`. If the file
+`recorded: false` with `not_recorded_reason: user_scope_read_only` in `--json`.
+Human output says `recorded: no` and names the read-only file. If the file
 turns read-only in the middle of a Google sign-in, after the check, the sign-in
-names the file and says what is stored. The check looks at the owner write bit
-only.
+names the file and says what is stored. Make the file writable before running
+the suggested check after a renewal. Fresh sign-in retries keep `--scope user`,
+the selected repo and any access-token replacement flag; use the same OAuth
+client and metadata again.
 
 Use user scope when several worktrees for the same business repo should read
 the same credential metadata from local Main Branch state:

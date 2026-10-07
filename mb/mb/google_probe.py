@@ -642,6 +642,8 @@ def render_test_result(result: dict[str, Any]) -> None:
             "recorded: no (.mb/connect.yaml is tracked by git, so checks are not written to "
             "it; `mb connect status google` shows the last check a person recorded)"
         )
+    elif result.get("not_recorded_reason") == "user_scope_read_only":
+        connect_mod.render_user_scope_not_recorded()
     elif not result["ok"] and not result.get("recorded"):
         print(
             "recorded: no (this says nothing about the sign-in itself; "
