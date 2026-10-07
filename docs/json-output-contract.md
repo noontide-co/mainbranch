@@ -208,7 +208,7 @@ the retry and package-upgrade prose in `warnings`, and doctor's
 `agent_surfaces.surfaces[].repair_command`, `agent_surfaces.scope_choices`,
 `agent_surfaces.apply_choices` and `post_apply`. Each command in a `&&` chain
 names the repo exactly once, and a path that looks like a command is quoted,
-not split. `mb status` and `mb graph` take the path as an argument, so their
+not split. `mb status`, `mb graph` and `mb doctor` take the path as an argument, so their
 suggestions end with it (`mb status --json --peek <path>`). Only the `mb`
 segment of a line is edited (#1083): a pipe, `;`, redirect, `$VAR`, glob or `~`
 elsewhere in the line keeps every byte, and a `--repo` with no value is left
@@ -222,7 +222,17 @@ check details, in the manual step "review .git/hooks/commit-msg, then run
 (`sections[validation].checks[].report.validation_categories`, a copy), and in what
 `mb doctor` itself emits:
 `checks[].repair_command` (the checkpoint hook), `checks[migration-drift].findings[].repair_command`
-and `update.command` / `update.update_check_command`. `raw.*` and
+and `update.command` / `update.update_check_command`. It also covers the
+backticked commands in `checks[mainbranch-version].detail` (matching
+`update.command`) and `checks[legacy-campaigns].detail`, and their repair-plan
+section summaries; the explicitly labelled commands in `receipt.skipped_surfaces`;
+and the shared skill-wiring `fallback_commands` (including the repair section).
+`onboarding.checklist[].next_action` names the repo for skill linking, starting,
+and checkpoint-hook repair in doctor, status and onboarding output. The shared
+freshness object's `post_update_commands` names the repo too. For compatibility,
+inside-repo output retains its existing spelling, including `--repo .` in the
+post-update and onboarding skill-link suggestions; with no known repo, the
+post-update instructions still say to run from the business folder. `raw.*`,
 `actions[].result` (including the plan) and `applied_actions[].result` are
 diagnostic copies and are never rewritten; the
 same finding is offered named under `sections[]` and `actions[]`. The workflow inventory's `install_hint` describes no repo and

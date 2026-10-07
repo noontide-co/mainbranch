@@ -2146,7 +2146,7 @@ _REPO_FLAG_COMMANDS = (
 _REPO_POSITIONAL_COMMANDS = ("mb status", "mb graph")
 _COMMAND_KEYS = {"command", "repair_command", "update_check_command"}
 _COMMAND_LIST_KEYS = {"scope_choices", "apply_choices"}
-_RUN_TAIL = re.compile(r"(\bthen run )(mb .+)$")
+_RUN_TAIL = re.compile(r"(\bthen run |^(?:claude|codex): run )(mb .+)$")
 _BACKTICKED_MB = re.compile(r"`(mb [^`]+)`")
 _REDIRECT_WORD = re.compile(r"^\d*[<>]")
 
@@ -2321,7 +2321,7 @@ def _qualify_command(command: str, repo: Path) -> str:
 
 
 def _qualify_field(value: str, repo: Path) -> str:
-    """A command field, or the manual step "review ..., then run mb ..." (#1083)."""
+    """A command field, manual run tail, or explicitly labelled skipped-surface step."""
     qualified = _qualify_command(value, repo)
     if qualified != value:
         return qualified
@@ -2334,11 +2334,13 @@ def _qualify_field(value: str, repo: Path) -> str:
 def _qualify_run_commands(checks: list[dict[str, Any]], update: dict[str, Any], repo: Path) -> None:
     """Name the repo in the command fields `mb doctor` itself emits (#1083).
 
-    Only the fields doctor owns: a check's `repair_command` and its migration
-    `findings[]`, and the update object's own commands. The nested `status`
-    blocks describe the skill contract and keep their text.
+    Only the fields doctor owns: repair commands, migration findings, version
+    and campaign prose, and the update object's own commands. Nested status
+    blocks keep the text their source provides.
     """
     for check in checks:
+        if check.get("name") in {"mainbranch-version", "legacy-campaigns"}:
+            check["detail"] = _qualify_prose(check["detail"], repo)
         if isinstance(check.get("repair_command"), str):
             check["repair_command"] = _qualify_field(check["repair_command"], repo)
         for finding in check.get("findings") or []:
@@ -2389,6 +2391,8 @@ def _qualify_report(node: Any, repo: Path, seen: set[int] | None = None) -> None
                 node[key] = _qualify_field(value, repo)
             elif key in _COMMAND_LIST_KEYS and isinstance(value, list):
                 node[key] = [_qualify_command(str(item), repo) for item in value]
+            elif key == "skipped_surfaces" and isinstance(value, list):
+                node[key] = [_qualify_field(str(item), repo) for item in value]
             elif key not in {"raw", "result"}:
                 _qualify_report(value, repo, seen)
     elif isinstance(node, list):
@@ -2423,7 +2427,7 @@ def repair_plan(
         {
             "name": check["name"],
             "state": _state_from_check(check),
-            "summary": check["detail"],
+            "summary": _qualify_prose(check["detail"], target),
         }
         for check in doctor_report["checks"]
         if check["name"]
@@ -2466,7 +2470,7 @@ def repair_plan(
         {
             "name": check["name"],
             "state": _state_from_check(check),
-            "summary": check["detail"],
+            "summary": _qualify_prose(check["detail"], target),
         }
         for check in doctor_report["checks"]
         if check["name"] in {"repo-layout", "schema-version", "legacy-campaigns"}

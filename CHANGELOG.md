@@ -71,13 +71,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- The remaining update, status and doctor suggestions now name your business
+  folder when run from elsewhere. The post-update skill-link command links
+  skills in that business folder, and onboarding steps, version and campaign
+  notices, fallback commands and skipped-repair steps point there too.
+  Inside the business folder the output stays unchanged (#1083).
 - Codex keeps and reports a `SKILL.md` link to a folder or a missing target;
   the repair plan and apply agree, and neither replaces the link. When only
   kept entries remain, `mb update` no longer suggests an apply that changes
   nothing. The kept-files step names any skill files the apply will write.
   Plugin command cleanup checks for a link above its folder before each
   removal (#1087).
-
 - The Codex cleanup (#1078): a global skill folder that is a link
   (`~/.codex/skills/main-branch`) is kept and listed with the link reason,
   and `SKILL.md` is never written through it. A link at the plugin's `skills/`
