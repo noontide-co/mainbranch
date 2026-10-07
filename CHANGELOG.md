@@ -91,7 +91,7 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `~` or a glob) now keeps that line exactly as written; only the `mb` part gets
   the folder, and a `--repo` with no value is left alone instead of getting a second one.
   Lines with command or parameter substitution, heredocs, herestrings, process
-  substitution or comments are left exactly as written.
+  substitution, comments or a backslash line continuation are left exactly as written.
 - A stored Google sign-in whose `client_secret` is not text (a list, an object,
   a number, `true` or `false`) now reads as unusable everywhere, with the same
   next step in `status`, `test`, `token`, `exec` and `--reauth`. `null` and an

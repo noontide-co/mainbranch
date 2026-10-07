@@ -2622,6 +2622,23 @@ def test_the_rewriter_refuses_unsupported_shell_constructs(tmp_path: Path, comma
 
 
 @pytest.mark.parametrize(
+    "command",
+    [
+        "cat <\\\n<'EOF'\nmb update\nEOF\n",
+        "echo $\\\n(printf seed; mb status --json)",
+        "mb status <\\\n(printf seed)",
+        "mb update $\\\n{MODE}",
+        'echo "seed\\\nmore" && mb update',
+    ],
+)
+def test_the_rewriter_refuses_backslash_line_continuations(tmp_path: Path, command: str) -> None:
+    repo = tmp_path / "biz one"
+    repo.mkdir()
+
+    assert doctor_mod._qualify_command(command, repo) == command
+
+
+@pytest.mark.parametrize(
     "literal",
     [
         "a#b",

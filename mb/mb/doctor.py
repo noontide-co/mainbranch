@@ -2186,6 +2186,8 @@ def _shell_words(text: str) -> list[tuple[int, int, str]] | None:
 
 def _unsupported_shell_syntax(command: str) -> bool:
     """Refuse constructs the command lexer cannot safely split or rewrite."""
+    if "\\\n" in command:
+        return True
     quote = ""
     escaped = False
     word_start = True
@@ -2298,7 +2300,8 @@ def _qualify_command(command: str, repo: Path) -> str:
     kept, so running this twice changes nothing. Only the `mb` segments are
     edited (#1083): pipes, `;`, redirects, `$VAR`, globs and `~` in the rest of
     the line keep every byte, and a dangling `--repo` is left alone. Lines with
-    substitutions, heredocs, herestrings or comments are left exactly as written.
+    substitutions, heredocs, herestrings, comments or a backslash line continuation
+    are left exactly as written.
     """
     if _unsupported_shell_syntax(command):
         return command
