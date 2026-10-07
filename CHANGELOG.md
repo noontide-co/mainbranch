@@ -67,6 +67,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- `mb google ... --out` follow-ups. With `--json`, a file that could not be written
+  now puts the failure (`out_write_failed`) on stdout as well, like the read
+  failures. The message says "nothing was left behind" only when that is true; if
+  `mb` could not remove its own temporary file, it names `.<name>.mb-out.tmp` and
+  tells you to remove it. If `GIT_DIR` or `GIT_WORK_TREE` is set in your shell,
+  the path is also judged with them, and refused unless both answers allow it.
+  A folder `mb` cannot place in the checkout (`BIZ/` for `Biz/` on a
+  case-insensitive disk) is refused with wording that says so. The hints now
+  state the path-exact rule: git must ignore the file and `.<name>.mb-out.tmp`.
+  The summary shows a path under your home folder as `~/...` instead of your
+  username. Refs #1080.
 - A tracked `.mb/connect.yaml` is no longer rewritten when git can't answer.
   Before, git missing from `PATH`, a `safe.directory` refusal or a timeout let
   a Google read or check write the file. Inside a git checkout such a file is
