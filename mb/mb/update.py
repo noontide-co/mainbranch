@@ -1469,8 +1469,15 @@ def render_human(result: dict[str, Any]) -> None:
         for error in result["errors"]:
             print(f"error: {error}")
     if result.get("warnings"):
+        # #1078: a note printed under "for you to run" is not printed again here.
+        printed_notes = {
+            str(item["note"])
+            for item in result.get("operator_actions", [])
+            if isinstance(item, dict) and item.get("command") and item.get("note")
+        }
         for warning in result["warnings"]:
-            print(f"warning: {warning}")
+            if warning not in printed_notes:
+                print(f"warning: {warning}")
     if not result.get("check") and not result.get("ok"):
         for action in result.get("next_actions", []):
             print(f"next: {action}")
