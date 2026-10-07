@@ -923,7 +923,7 @@ def _read_user_scope() -> dict[str, Any]:
 
 
 def _ensure_user_scope_writable() -> None:
-    """Refuse (``user_scope_read_only``) when the user-scope file is read-only by mode.
+    """Refuse when mode bits or the OS deny writing the user-scope file.
 
     Call it before storing a credential that a user-scope entry will record,
     so a refusal leaves the credential store unchanged.
@@ -931,26 +931,34 @@ def _ensure_user_scope_writable() -> None:
 
     path = _user_scope_path()
     try:
-        read_only = path.exists() and not path.stat().st_mode & stat.S_IWUSR
-    except OSError:
-        read_only = False
-    if read_only:
-        raise UserScopeReadOnlyError(path)
+        if not path.stat().st_mode & stat.S_IWUSR:
+            raise UserScopeReadOnlyError(path)
+        # No truncation or creation: ask the OS about ownership and ACLs too.
+        # Keep the mode check above even when a privileged process can write.
+        fd = os.open(path, os.O_WRONLY)
+        os.close(fd)
+    except FileNotFoundError:
+        return
+    except PermissionError:
+        raise UserScopeReadOnlyError(path) from None
 
 
 def _write_user_scope(data: dict[str, Any]) -> Path:
     """Rewrite the user-scope file (YAML comments are not kept).
 
-    A file that is read-only by mode is left alone: it is neither made
+    A read-only file is left alone: it is neither made
     writable nor replaced.
     """
 
     path = _user_scope_path()
     _ensure_user_scope_writable()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with suppress(OSError):
-        path.parent.chmod(0o700)
-    atomic_write_text(path, yaml.safe_dump(data, sort_keys=False))
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with suppress(OSError):
+            path.parent.chmod(0o700)
+        atomic_write_text(path, yaml.safe_dump(data, sort_keys=False))
+    except PermissionError:
+        raise UserScopeReadOnlyError(path) from None
     with suppress(OSError):
         path.chmod(0o600)
     return path
@@ -5205,8 +5213,15 @@ def render_test_result(result: dict[str, Any]) -> None:
         next_command = str(validation.get("repair_command") or "")
     else:
         next_command = str(status.get("repair_command") or "")
+    if result.get("not_recorded_reason") == "user_scope_read_only":
+        render_user_scope_not_recorded()
     if next_command:
         print(f"next: {next_command}")
+
+
+def render_user_scope_not_recorded() -> None:
+    shown = UserScopeReadOnlyError(_user_scope_path()).shown
+    print(f"recorded: no (the user-scope connect file {shown} is read-only)")
 
 
 def render_rotate_result(result: dict[str, Any]) -> None:

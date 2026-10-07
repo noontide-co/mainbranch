@@ -71,6 +71,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- `mb connect` now names the user-scope file and refuses before storing a
+  credential when ownership or an access-control list prevents writing it,
+  just as it does for a read-only file mode. `mb connect test` still checks
+  the connection and now tells you when it could not save the result there.
+  If the file becomes read-only during Google sign-in, renewal advice says
+  to make it writable before checking again. Sign-in retry commands keep the
+  scope and business repo you selected (#1085).
 - The Codex cleanup (#1078): a global skill folder that is a link
   (`~/.codex/skills/main-branch`) is kept and listed with the link reason,
   and `SKILL.md` is never written through it. A link at the plugin's `skills/`

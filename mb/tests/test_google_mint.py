@@ -703,7 +703,8 @@ def test_ctrl_c_during_the_grant_write_says_it_may_have_been_stored(
     assert "Nothing was stored" not in summary
     assert "may have been stored" in summary
     assert "the connection is not set up" in summary
-    assert "Re-run `mb connect google --oauth` to finish it." in summary
+    assert "Re-run `mb connect google --oauth --scope repo" in summary
+    assert f"--repo {repo}` to finish it, with the same OAuth client and metadata." in summary
     assert_no_sentinel(result.output)
 
 
@@ -720,7 +721,7 @@ def test_ctrl_c_during_the_grant_write_on_reauth(
     summary = json.loads(result.stdout)["summary"]
     assert "may have been stored" in summary
     assert "replaced the old grant" in summary
-    assert "`mb connect test google`" in summary
+    assert f"`mb connect test google --repo {repo}`" in summary
     assert_no_sentinel(result.output)
 
 
@@ -739,7 +740,8 @@ def test_ctrl_c_after_grant_write_on_first_sign_in(
     assert "Nothing was stored" not in summary
     assert "cancelled part way" in summary
     assert "the connection is not set up" in summary
-    assert "Re-run `mb connect google --oauth` to finish it." in summary
+    assert "Re-run `mb connect google --oauth --scope repo" in summary
+    assert f"--repo {repo}` to finish it, with the same OAuth client and metadata." in summary
     assert_no_sentinel(result.output)
 
 
@@ -839,7 +841,7 @@ def test_user_scope_metadata_failure_points_at_commands_that_work(
     assert failed.exit_code == 1
     summary = json.loads(failed.stdout)["summary"]
     assert "recorded in user scope" in summary
-    assert "mb connect hydrate --repo ." in summary
+    assert f"mb connect hydrate --repo {repo}" in summary
     assert "mb connect google --oauth --reauth" in summary
     assert "Re-run `mb connect google --oauth`" not in summary
     assert_no_sentinel(failed.output)
