@@ -19,7 +19,7 @@ from mb import codex as codex_mod
 from mb import connect as connect_mod
 from mb import init as init_mod
 from mb import topology as topology_mod
-from mb.engine import link_skills, link_status, write_plugin_wiring
+from mb.engine import link_skills, link_status, repo_flag, write_plugin_wiring
 
 LEVELS = {"beginner", "intermediate", "power"}
 MODES = {"new", "connect", "auto"}
@@ -1026,6 +1026,7 @@ def _step(
 
 
 def _checklist(repo: Path, state: dict[str, Any], markers: dict[str, bool]) -> list[dict[str, Any]]:
+    flag = repo_flag(repo)
     profile = dict(state.get("profile") or {})
     money_path = dict(state.get("money_path") or {})
     core_inputs = _core_inputs(repo)
@@ -1087,7 +1088,9 @@ def _checklist(repo: Path, state: dict[str, Any], markers: dict[str, bool]) -> l
             title="Runtime handoff",
             complete=bool(wiring["ok"]),
             missing_inputs=[] if wiring["ok"] else ["Claude Code skill wiring"],
-            next_action="Run `mb skill link --repo .`, then `mb start --json`.",
+            next_action=(
+                f"Run `mb skill link{flag or ' --repo .'}`, then `mb start{flag} --json`."
+            ),
             owner="mb",
         ),
         _step(
@@ -1097,7 +1100,9 @@ def _checklist(repo: Path, state: dict[str, Any], markers: dict[str, bool]) -> l
             missing_inputs=[]
             if checkpoint_hook["ok"]
             else ["business-readable checkpoint commit hook"],
-            next_action=("Run `mb doctor repair --plan`, then `mb doctor repair --apply`."),
+            next_action=(
+                f"Run `mb doctor repair{flag} --plan`, then `mb doctor repair{flag} --apply`."
+            ),
             owner="mb",
             required=False,
         ),

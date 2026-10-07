@@ -476,9 +476,9 @@ def test_doctor_repair_apply_restores_missing_claude_worktree_start_wiring(
     assert "mb skill link --repo ." in start_check["summary"]
     assert "project-local /mb-start bridge" in start_check["summary"]
     assert start_check["fallback_commands"] == [
-        "mb start --json",
-        "mb doctor repair --plan",
-        "mb doctor repair --apply",
+        f"mb start{_flag(worktree)} --json",
+        f"mb doctor repair{_flag(worktree)} --plan",
+        f"mb doctor repair{_flag(worktree)} --apply",
     ]
     assert actions["skill-link"]["command"] == (
         f"mb doctor repair{_flag(worktree)} --apply --only claude"
@@ -788,8 +788,8 @@ def test_doctor_repair_apply_default_does_not_silently_write_agent_surfaces(
     assert "codex-global-skill" not in applied_ids
     assert not (tmp_path / "codex-skills" / "mb-start" / "SKILL.md").exists()
     assert payload["receipt"]["skipped_surfaces"] == [
-        "claude: run mb doctor repair --apply --only claude",
-        "codex: run mb doctor repair --apply --only codex",
+        f"claude: run mb doctor repair{_flag(repo)} --apply --only claude",
+        f"codex: run mb doctor repair{_flag(repo)} --apply --only codex",
     ]
 
 
@@ -1235,7 +1235,7 @@ def test_doctor_warns_on_legacy_campaigns_records(tmp_path: Path) -> None:
     assert legacy_check["ok"] is False
     assert legacy_check["severity"] == "warn"
     assert "1 legacy campaign record" in legacy_check["detail"]
-    assert "mb migrate campaigns --plan" in legacy_check["detail"]
+    assert f"mb migrate{_flag(repo)} campaigns --plan" in legacy_check["detail"]
     assert legacy_check["legacy_records"] == ["campaigns/2026-04-spring-launch/campaign.md"]
 
 
