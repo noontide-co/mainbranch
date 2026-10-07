@@ -3826,11 +3826,54 @@ def skill_repair_cmd(
 
 
 def _google_read_exit(
-    command: str, schema_name: str, result: dict[str, Any], code: int, json_out: bool
+    command: str,
+    schema_name: str,
+    result: dict[str, Any],
+    code: int,
+    json_out: bool,
+    out: Any = None,
 ) -> NoReturn:
-    """Print one `mb google` result and exit. Failures also go to stderr."""
+    """Print one `mb google` result and exit. Failures also go to stderr.
+
+    With ``out`` (a checked ``--out`` target) a successful result goes to that
+    private file and only a short summary is printed.
+    """
+    from mb import google_out as google_out_mod
     from mb import google_reads as google_reads_mod
 
+    if out is not None and not code:
+        try:
+            google_out_mod.write_out(
+                out, _json_payload(result, command=command, schema_name=schema_name) + "\n"
+            )
+        except google_out_mod.OutWriteError as exc:
+            if exc.existing_temp:
+                detail = (
+                    f"{exc.existing_temp} is already there (an earlier or concurrent run); "
+                    "it was left as it is. Remove it and run again."
+                )
+            elif exc.leftover_temp:
+                detail = (
+                    f"the temporary file {exc.leftover_temp} could not be removed and is still "
+                    "there; remove it yourself."
+                )
+            else:
+                detail = "nothing was left behind."
+            reason = f"the answer was read but the --out file could not be written; {detail}"
+            if json_out:
+                failed, _ = google_reads_mod.failure_result(
+                    google_reads_mod.ReadFailure("out_write_failed", reason)
+                )
+                typer.echo(_json_payload(failed, command=command, schema_name=schema_name))
+            typer.echo(f"{command}: {reason} (out_write_failed)", err=True)
+            raise typer.Exit(1) from None
+        info = google_out_mod.summary(command, out, result)
+        if json_out:
+            typer.echo(_json_payload(info, command=command, schema_name=google_out_mod.SCHEMA_OUT))
+        else:
+            for line in google_out_mod.render_summary(info):
+                typer.echo(line)
+        raise typer.Exit(0)
     if json_out:
         typer.echo(_json_payload(result, command=command, schema_name=schema_name))
     if code:
@@ -3845,6 +3888,39 @@ def _google_read_exit(
         for line in renderers[schema_name](result):
             typer.echo(line)
     raise typer.Exit(code)
+
+
+def _google_out_target(
+    command: str, schema_name: str, out: str | None, force: bool, json_out: bool
+) -> Any:
+    """Judge ``--out`` before any read; exit 2 with a stable rule when it is refused."""
+    from mb import google_out as google_out_mod
+    from mb import google_reads as google_reads_mod
+
+    try:
+        if out is None:
+            if force:
+                raise google_reads_mod.ReadRefusal(
+                    "out_force_without_out", "--force only goes with --out; nothing was read."
+                )
+            return None
+        return google_out_mod.check_out(out, force=force)
+    except google_reads_mod.ReadRefusal as exc:
+        result, code = google_reads_mod.failure_result(exc)
+        _google_read_exit(command, schema_name, result, code, json_out)
+
+
+GOOGLE_OUT_OPTION = typer.Option(
+    None,
+    "--out",
+    help=(
+        "Write the JSON result to this new private file (mode 0600) and print a short "
+        "summary. Refused inside a git checkout unless git ignores both the file and its "
+        "temporary file (.NAME.mb-out.tmp). Safe places: a folder outside the repo, or "
+        ".mb/private/pulls/."
+    ),
+)
+GOOGLE_FORCE_OPTION = typer.Option(False, "--force", help="With --out: replace an existing file.")
 
 
 GOOGLE_SC_DIMENSIONS_OPTION = typer.Option(
@@ -3882,10 +3958,15 @@ def google_sc_query_cmd(
     ),
     repo: str = typer.Option(".", "--repo", help="Business repo with the Google sign-in."),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+    out: str | None = GOOGLE_OUT_OPTION,
+    force: bool = GOOGLE_FORCE_OPTION,
 ) -> None:
     """Search performance for the recorded site (searchAnalytics.query, read-only)."""
     from mb import google_reads as google_reads_mod
 
+    target = _google_out_target(
+        google_reads_mod.SC_QUERY_COMMAND, google_reads_mod.SCHEMA_SC_QUERY, out, force, json_out
+    )
     result, code = google_reads_mod.sc_query(
         repo,
         start=start,
@@ -3898,7 +3979,12 @@ def google_sc_query_cmd(
         fresh=fresh,
     )
     _google_read_exit(
-        google_reads_mod.SC_QUERY_COMMAND, google_reads_mod.SCHEMA_SC_QUERY, result, code, json_out
+        google_reads_mod.SC_QUERY_COMMAND,
+        google_reads_mod.SCHEMA_SC_QUERY,
+        result,
+        code,
+        json_out,
+        target,
     )
 
 
@@ -3910,10 +3996,19 @@ def google_sc_sitemaps_list_cmd(
     ),
     repo: str = typer.Option(".", "--repo", help="Business repo with the Google sign-in."),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+    out: str | None = GOOGLE_OUT_OPTION,
+    force: bool = GOOGLE_FORCE_OPTION,
 ) -> None:
     """Sitemaps submitted for the recorded site (sitemaps.list, read-only)."""
     from mb import google_reads as google_reads_mod
 
+    target = _google_out_target(
+        google_reads_mod.SC_SITEMAPS_COMMAND,
+        google_reads_mod.SCHEMA_SC_SITEMAPS,
+        out,
+        force,
+        json_out,
+    )
     result, code = google_reads_mod.sc_sitemaps_list(repo, sitemap_index=sitemap_index)
     _google_read_exit(
         google_reads_mod.SC_SITEMAPS_COMMAND,
@@ -3921,6 +4016,7 @@ def google_sc_sitemaps_list_cmd(
         result,
         code,
         json_out,
+        target,
     )
 
 
@@ -3932,6 +4028,8 @@ def google_sc_inspect_cmd(
     ),
     repo: str = typer.Option(".", "--repo", help="Business repo with the Google sign-in."),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+    out: str | None = GOOGLE_OUT_OPTION,
+    force: bool = GOOGLE_FORCE_OPTION,
 ) -> None:
     """Index status of one URL of the recorded site (urlInspection.index.inspect, read-only).
 
@@ -3940,6 +4038,13 @@ def google_sc_inspect_cmd(
     """
     from mb import google_reads as google_reads_mod
 
+    target = _google_out_target(
+        google_reads_mod.SC_INSPECT_COMMAND,
+        google_reads_mod.SCHEMA_SC_INSPECT,
+        out,
+        force,
+        json_out,
+    )
     result, code = google_reads_mod.sc_inspect(repo, url=url)
     _google_read_exit(
         google_reads_mod.SC_INSPECT_COMMAND,
@@ -3947,6 +4052,7 @@ def google_sc_inspect_cmd(
         result,
         code,
         json_out,
+        target,
     )
 
 
@@ -3964,10 +4070,19 @@ def google_ga4_report_cmd(
     ),
     repo: str = typer.Option(".", "--repo", help="Business repo with the Google sign-in."),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+    out: str | None = GOOGLE_OUT_OPTION,
+    force: bool = GOOGLE_FORCE_OPTION,
 ) -> None:
     """A GA4 report for the recorded property (runReport, read-only)."""
     from mb import google_reads as google_reads_mod
 
+    target = _google_out_target(
+        google_reads_mod.GA4_REPORT_COMMAND,
+        google_reads_mod.SCHEMA_GA4_REPORT,
+        out,
+        force,
+        json_out,
+    )
     result, code = google_reads_mod.ga4_report(
         repo,
         start=start,
@@ -3984,6 +4099,7 @@ def google_ga4_report_cmd(
         result,
         code,
         json_out,
+        target,
     )
 
 

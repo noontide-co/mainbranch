@@ -43,9 +43,6 @@ CODEX_EXEMPT = {
     # `mb think` is a redirect stub pointing the operator INTO Claude Code;
     # Codex has its own Think workflow section in generated AGENTS.md.
     "think",
-    # Typed Google reads (#1004 PR6) are documented in docs/google.md; the
-    # skill and Codex routing land with the skill-wiring step (#1004 PR8).
-    "google",
 }
 
 MAX_EXEMPTIONS = 6

@@ -11,6 +11,22 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Added
+
+- `mb google` reads take `--out PATH`: a large Search Console or GA4 pull goes
+  to a private file (mode 0600, created in one step) and the terminal shows only
+  the path, row count and `may_have_more`. The path is refused, before anything
+  is read, inside a git checkout unless git ignores both the file and its temporary
+  file `.<name>.mb-out.tmp`, for example under `.mb/private/pulls/` (so a pull
+  cannot be committed by accident), when it already exists (unless `--force`), when its
+  folder is missing, or when it is a link. `docs/google.md` has the rules and
+  the recommended places.
+- The `mb-site` and `mb-ads` skills use the typed reads for real numbers (which
+  queries and pages bring clicks, whether a page is indexed, sitemap status,
+  GA4 sessions and conversions), and the generated Codex `AGENTS.md` routes to
+  them. When the repo is not signed in they tell you to run
+  `mb connect google --oauth` and offer a manual export.
+
 ### Changed
 
 - A symlinked `AGENTS.md` is never replaced by an unattended `mb update`,
@@ -63,7 +79,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - `mb update` and `mb doctor repair --only codex` no longer stop with an error
   when `AGENTS.md` is a folder. They report it as a step for you (move or
   rename it), change nothing, and finish the rest of the run.
-
+- `mb google ... --out` follow-ups. With `--json`, a file that could not be written
+  now puts the failure (`out_write_failed`) on stdout as well, like the read
+  failures. The message says "nothing was left behind" only when that is true; if
+  `mb` could not remove its own temporary file, it names `.<name>.mb-out.tmp` and
+  tells you to remove it. If `GIT_DIR` or `GIT_WORK_TREE` is set in your shell,
+  the path is also judged with them, and refused unless both answers allow it.
+  A folder `mb` cannot place in the checkout (`BIZ/` for `Biz/` on a
+  case-insensitive disk) is refused with wording that says so. The hints now
+  state the path-exact rule: git must ignore the file and `.<name>.mb-out.tmp`.
+  The summary shows a path under your home folder as `~/...` instead of your
+  username. Refs #1080.
 - A tracked `.mb/connect.yaml` is no longer rewritten when git can't answer.
   Before, git missing from `PATH`, a `safe.directory` refusal or a timeout let
   a Google read or check write the file. Inside a git checkout such a file is

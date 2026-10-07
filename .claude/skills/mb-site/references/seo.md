@@ -149,5 +149,9 @@ The repeatable monthly shape, once the grid is scored:
 5. **Directory pass** — work the 5-10/mo backlink budget: directories first,
    then community referrals.
 
+Read the real numbers with `mb google sc query`, `mb google sc inspect` and
+`mb google sc sitemaps list` (see [search-data.md](search-data.md)); do not
+guess rankings or indexing.
+
 Report progress in measurable units: "N silo pages live, ranking #X for Y."
 Set the 6-12 month expectation at every report until rankings move.
