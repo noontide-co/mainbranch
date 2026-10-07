@@ -179,6 +179,21 @@ KeychainError = CredentialStoreError
 _select_secret_backend = select_secret_backend
 
 
+class UserScopeReadOnlyError(ConnectRefusal):
+    """The user-scope file is read-only, so it was left as it is (rule ``user_scope_read_only``)."""
+
+    def __init__(self, path: Path) -> None:
+        shown = str(path)
+        with suppress(ValueError, RuntimeError):
+            shown = f"~/{path.relative_to(Path.home())}"
+        self.shown = shown
+        super().__init__(
+            "user_scope_read_only",
+            f"the user-scope connect file {shown} is read-only, so it was not changed. "
+            "Make it writable or move it, then rerun the command. Nothing else was changed.",
+        )
+
+
 class ConfigBoundaryError(ValueError):
     """Raised when local connect metadata is outside the selected repo boundary."""
 
@@ -588,6 +603,14 @@ def _reconnect_command(
     return GOOGLE_SIGN_IN_COMMAND
 
 
+def _reconnect_step(provider: Provider, google_sign_in: bool) -> str:
+    """The sentence tail for rotate's "reconnect" advice; Google's is a sign-in."""
+
+    if google_sign_in:
+        return f"sign in with `{GOOGLE_SIGN_IN_COMMAND}`"
+    return f"reconnect with `{_connect_command(provider, token_stdin=True)}`"
+
+
 def _safe_identity_metadata(metadata: dict[str, Any]) -> dict[str, str]:
     """Return custom-provider metadata safe enough for identity diagnostics.
 
@@ -892,11 +915,38 @@ def _read_user_scope() -> dict[str, Any]:
         version = int(raw.get("version") or 1)
     except (TypeError, ValueError):
         version = 1
-    return {"version": version, "repos": repos}
+    # Keys this module does not own come back as they were, so a rewrite keeps them.
+    data = dict(raw)
+    data["version"] = version
+    data["repos"] = repos
+    return data
+
+
+def _ensure_user_scope_writable() -> None:
+    """Refuse (``user_scope_read_only``) when the user-scope file is read-only by mode.
+
+    Call it before storing a credential that a user-scope entry will record,
+    so a refusal leaves the credential store unchanged.
+    """
+
+    path = _user_scope_path()
+    try:
+        read_only = path.exists() and not path.stat().st_mode & stat.S_IWUSR
+    except OSError:
+        read_only = False
+    if read_only:
+        raise UserScopeReadOnlyError(path)
 
 
 def _write_user_scope(data: dict[str, Any]) -> Path:
+    """Rewrite the user-scope file (YAML comments are not kept).
+
+    A file that is read-only by mode is left alone: it is neither made
+    writable nor replaced.
+    """
+
     path = _user_scope_path()
+    _ensure_user_scope_writable()
     path.parent.mkdir(parents=True, exist_ok=True)
     with suppress(OSError):
         path.parent.chmod(0o700)
@@ -962,7 +1012,7 @@ def _drop_user_scope_metadata_only(repo_id: str, provider_id: str) -> bool:
     del providers[provider_id]
     try:
         _write_user_scope(data)
-    except OSError:
+    except (OSError, UserScopeReadOnlyError):
         return False
     return True
 
@@ -1727,6 +1777,9 @@ def connect_provider(
                 metadata = {str(key): str(value) for key, value in raw_existing_metadata.items()}
         metadata["source"] = source
     _validate_key_shape(provider, token, metadata)
+    if normalized_scope == "user":
+        # Before any credential is stored, so a refusal leaves the store unchanged.
+        _ensure_user_scope_writable()
 
     secrets: dict[str, dict[str, str]] = {}
     required = list(provider.required_secrets)
@@ -3126,6 +3179,19 @@ def rotate_provider(
     if _records_oauth_grant(provider, entry):
         from mb import google_connect
 
+        grant_slot = entry.get("secrets", {}).get(GOOGLE_OAUTH_GRANT_SLOT)
+        if isinstance(grant_slot, dict) and grant_slot.get("ref"):
+            probe = _probe_secret_ref(
+                str(grant_slot.get("backend") or "local-file"), str(grant_slot["ref"])
+            )
+            if not probe.backend_ok:
+                detail = _backend_repair(probe.reason)
+                _refuse(
+                    "rotate_backend_unavailable",
+                    f"{provider.name} credentials cannot be read. {detail['summary']} "
+                    f"{detail['repair']} The renewal can run once the store unlocks. "
+                    "Nothing was changed.",
+                )
         _refuse(
             "rotate_oauth_use_reauth",
             f"this {provider.name} connection uses a Google sign-in (OAuth), which has no "
@@ -3154,7 +3220,7 @@ def rotate_provider(
         _refuse(
             "rotate_unsupported_source",
             "mb connect rotate reads only 1Password references (op://...). For any other "
-            f"source, reconnect with `{_connect_command(provider, token_stdin=True)}`.",
+            f"source, {_reconnect_step(provider, google_sign_in)}.",
         )
     secret = _read_onepassword_ref(source, which_func=which_func, command_runner=command_runner)
     raw_secrets = entry.get("secrets")
@@ -3925,8 +3991,13 @@ def _record_validation(
     config: dict[str, Any],
     provider_id: str,
     entry: dict[str, Any],
-) -> None:
-    """Write a tested entry back: repo metadata, and user scope for a user-scope entry."""
+) -> bool:
+    """Write a tested entry back: repo metadata, and user scope for a user-scope entry.
+
+    A check only needs to read the user-scope file. When it is read-only the
+    repo metadata is still written, the file is left as it is, and this
+    returns False (the check was not recorded in user scope).
+    """
 
     config["providers"][provider_id] = entry
     _write_config(target, config)
@@ -3936,12 +4007,16 @@ def _record_validation(
             "basis_sha256": str(config.get("repo_identity", {}).get("basis_sha256") or ""),
             "repo_id_source": str(config.get("repo_identity", {}).get("repo_id_source") or ""),
         }
-        _write_user_scope_provider(
-            str(config.get("repo_id") or _repo_identity(target)["repo_id"]),
-            repo_identity=identity,
-            provider_id=provider_id,
-            entry=entry,
-        )
+        try:
+            _write_user_scope_provider(
+                str(config.get("repo_id") or _repo_identity(target)["repo_id"]),
+                repo_identity=identity,
+                provider_id=provider_id,
+                entry=entry,
+            )
+        except UserScopeReadOnlyError:
+            return False
+    return True
 
 
 def test_provider(
@@ -4067,8 +4142,9 @@ def test_provider(
     entry["last_checked_at"] = validation["checked_at"]
     # Recording writes .mb/connect.yaml; a tracked one is left as it is.
     tracked = not record_in_tracked_config and config_tracked_by_git(target)
+    user_scope_read_only = False
     if not tracked:
-        _record_validation(target, config, provider.id, entry)
+        user_scope_read_only = not _record_validation(target, config, provider.id, entry)
     status = status_provider(
         provider.id,
         target,
@@ -4087,6 +4163,9 @@ def test_provider(
         "status": status,
         "safe_to_share": True,
     }
+    if user_scope_read_only:
+        result["recorded"] = False
+        result["not_recorded_reason"] = "user_scope_read_only"
     if tracked:
         result["recorded"] = False
         result["not_recorded_reason"] = "connect_yaml_tracked"
