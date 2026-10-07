@@ -2542,3 +2542,329 @@ def test_a_doctor_suggested_command_runs_from_another_folder_on_the_repo(
 
     assert json.loads(out.stdout)["repo"] == str(repo.resolve())
     assert sorted(path.name for path in other.iterdir()) == []
+
+
+# --- #1083: shell-safe rewriting, spine declare and doctor-run fields -------------------
+
+
+@pytest.fixture
+def offline_doctor(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Doctor's run reaches for PyPI and the network; keep it local and give it an update."""
+    from mb import freshness
+
+    monkeypatch.setattr(doctor_mod, "_net", lambda: (True, "stubbed"))
+    monkeypatch.setattr(
+        doctor_mod,
+        "package_update_status",
+        lambda repo=None: freshness.package_update_status(
+            repo, latest_version="99.0.0", mode="pipx"
+        ),
+    )
+
+
+@pytest.mark.parametrize(
+    ("command", "expected"),
+    [
+        ("echo $HOME && mb update", "echo $HOME && mb update {flag}"),
+        ("mb status --json --peek | jq .", "mb status --json --peek {path} | jq ."),
+        ("mb validate --json 2>/dev/null", "mb validate {flag} --json 2>/dev/null"),
+        ("mb status --json 2>/dev/null", "mb status --json {path} 2>/dev/null"),
+        ("cd ~/biz && mb validate", "cd ~/biz && mb validate {flag}"),
+        ("a ; mb update", "a ; mb update {flag}"),
+        ("ls *.md || mb update", "ls *.md || mb update {flag}"),
+        ("echo 'a && mb x' && mb update", "echo 'a && mb x' && mb update {flag}"),
+        ("mb validate --repo", "mb validate --repo"),
+        ("mb validate --repo && mb update", "mb validate --repo && mb update {flag}"),
+    ],
+)
+def test_the_rewriter_keeps_shell_syntax_outside_the_mb_segment(
+    tmp_path: Path, command: str, expected: str
+) -> None:
+    repo = tmp_path / "biz one"
+    repo.mkdir()
+    flag = f"--repo {shlex.quote(str(repo.resolve()))}"
+    path = shlex.quote(str(repo.resolve()))
+
+    rewritten = doctor_mod._qualify_command(command, repo)
+
+    assert rewritten == expected.format(flag=flag, path=path)
+    assert doctor_mod._qualify_command(rewritten, repo) == rewritten
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "echo `printf seed; mb status --json`",
+        "echo $(printf seed; mb status --json)",
+        "cat <<'EOF'\nmb update\nEOF",
+        "mb status --json # note",
+        "mb update ${MODE}",
+        'mb update <<<"seed"',
+        "mb status <(printf seed)",
+        "mb status >(cat)",
+        "mb update $((1 + 2))",
+        'mb update "$(printf seed)"',
+        'mb update "`printf seed`"',
+        'mb update "${MODE}"',
+        "cat <<EOF\nmb update\nEOF",
+        "cat <<-EOF\n\tmb update\nEOF",
+        "mb update;# note",
+        "mb update && # note\nmb status",
+        "# note\nmb update",
+        "mb update ''#literal # note",
+    ],
+)
+def test_the_rewriter_refuses_unsupported_shell_constructs(tmp_path: Path, command: str) -> None:
+    repo = tmp_path / "biz one"
+    repo.mkdir()
+
+    assert doctor_mod._qualify_command(command, repo) == command
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "cat <\\\n<'EOF'\nmb update\nEOF\n",
+        "echo $\\\n(printf seed; mb status --json)",
+        "mb status <\\\n(printf seed)",
+        "mb update $\\\n{MODE}",
+        'echo "seed\\\nmore" && mb update',
+    ],
+)
+def test_the_rewriter_refuses_backslash_line_continuations(tmp_path: Path, command: str) -> None:
+    repo = tmp_path / "biz one"
+    repo.mkdir()
+
+    assert doctor_mod._qualify_command(command, repo) == command
+
+
+@pytest.mark.parametrize(
+    "literal",
+    [
+        "a#b",
+        "''#literal",
+        r"\#literal",
+        "'` $( ${ << <<< <( >( # literal'",
+        '"<< <<< <( >( # literal"',
+    ],
+)
+def test_the_rewriter_qualifies_commands_with_shell_literals(tmp_path: Path, literal: str) -> None:
+    repo = tmp_path / "biz one"
+    repo.mkdir()
+    command = f"echo {literal} && mb update"
+    expected = f"{command} --repo {shlex.quote(str(repo.resolve()))}"
+
+    assert doctor_mod._qualify_command(command, repo) == expected
+    assert doctor_mod._qualify_command(expected, repo) == expected
+
+
+def test_the_rewriter_leaves_shell_lines_alone_inside_the_repo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    monkeypatch.chdir(repo)
+    for command in (
+        "echo $HOME && mb update",
+        "mb status --json --peek | jq .",
+        "mb validate --json 2>/dev/null",
+        "cd ~/biz && mb validate",
+        "a ; mb update",
+    ):
+        assert doctor_mod._qualify_command(command, repo) == command
+    assert doctor_mod._qualify_command("mb validate --repo . --json | jq .", repo) == (
+        "mb validate --json | jq ."
+    )
+
+
+def _business_repo_without_spine(tmp_path: Path) -> Path:
+    repo = tmp_path / "biz"
+    init_run(path=str(repo), name="Acme")
+    return repo
+
+
+def test_spine_declare_in_the_doctor_summary_writes_into_the_repo_from_another_folder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _business_repo_without_spine(tmp_path)
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+    monkeypatch.chdir(other)
+
+    plan = doctor_mod.repair_plan(repo)
+
+    section = next(s for s in plan["sections"] if s["id"] == "contact-event-spine")
+    command = section["summary"].split("`")[1]
+    assert command.startswith(f"mb spine declare{_flag(repo)} --store")
+    out = runner.invoke(
+        app, [*shlex.split(command.replace("<provider>", "none --intentional"))[1:], "--json"]
+    )
+    assert out.exit_code == 0, out.output
+    assert (repo / "core" / "operations" / "spine.md").is_file()
+    assert sorted(path.name for path in other.iterdir()) == []
+
+
+def test_spine_declare_in_the_doctor_summary_is_bare_inside_the_repo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _business_repo_without_spine(tmp_path)
+    monkeypatch.chdir(repo)
+
+    plan = doctor_mod.repair_plan(repo)
+
+    section = next(s for s in plan["sections"] if s["id"] == "contact-event-spine")
+    assert "`mb spine declare --store <provider>`" in section["summary"]
+
+
+def _repo_with_foreign_hook_and_drift(tmp_path: Path) -> Path:
+    repo = _repo_with_topology_and_campaigns(tmp_path)
+    (repo / ".git" / "hooks").mkdir(parents=True, exist_ok=True)
+    (repo / ".git" / "hooks" / "commit-msg").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    return repo
+
+
+def test_doctor_run_checks_and_prose_name_the_repo_from_another_folder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, offline_doctor: None
+) -> None:
+    repo = _repo_with_foreign_hook_and_drift(tmp_path)
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+    monkeypatch.chdir(other)
+    flag = _flag(repo)
+
+    report = run(str(repo))
+
+    checks = {check["name"]: check for check in report["checks"]}
+    hook = checks["checkpoint-hook"]
+    assert hook["state"] == "blocked_existing_hook"
+    assert hook["repair_command"] == (
+        f"review .git/hooks/commit-msg, then run mb checkpoint{flag} --install-hook"
+    )
+    assert f"`mb onboard status{flag}`" in checks["onboarding-progress"]["detail"]
+    findings = checks["migration-drift"]["findings"]
+    assert findings
+    for finding in findings:
+        assert flag in finding["repair_command"], finding
+    assert report["update"]["update_check_command"] == f"mb update{flag} --check --json"
+    assert report["update"]["command"] == f"mb update{flag}"
+
+
+def test_doctor_run_checks_and_prose_stay_bare_inside_the_repo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, offline_doctor: None
+) -> None:
+    repo = _repo_with_foreign_hook_and_drift(tmp_path)
+    monkeypatch.chdir(repo)
+
+    report = run(str(repo))
+
+    checks = {check["name"]: check for check in report["checks"]}
+    assert checks["checkpoint-hook"]["repair_command"] == (
+        "review .git/hooks/commit-msg, then run mb checkpoint --install-hook"
+    )
+    assert "`mb onboard status`" in checks["onboarding-progress"]["detail"]
+    assert report["update"]["update_check_command"] == "mb update --check --json"
+    assert checks["migration-drift"]["findings"]
+    assert "--repo" not in json.dumps(checks["migration-drift"])
+    assert report["update"]["command"] == "mb update"
+
+
+def test_doctor_repair_plan_prose_and_manual_step_name_the_repo_but_raw_stays_verbatim(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, offline_doctor: None
+) -> None:
+    repo = _repo_with_foreign_hook_and_drift(tmp_path)
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+    monkeypatch.chdir(other)
+    flag = _flag(repo)
+
+    plan = doctor_mod.repair_plan(repo)
+
+    assert plan["plan_interpretation"]["summary"].startswith(f"`mb doctor repair{flag} --plan`")
+    manual = next(a for a in plan["actions"] if a["id"] == "checkpoint-hook-existing")
+    assert manual["command"] == (
+        f"review .git/hooks/commit-msg, then run mb checkpoint{flag} --install-hook"
+    )
+    section = next(s for s in plan["sections"] if s["id"] == "checkpoint-hook")
+    assert section["checks"][0]["repair_command"] == manual["command"]
+    drift = next(s for s in plan["sections"] if s["id"] == "migration-drift")
+    assert drift["checks"]
+    assert all(flag in check["repair_command"] for check in drift["checks"])
+    raw = plan["raw"]["migration_drift"]["findings"]
+    assert raw
+    assert all("--repo" not in finding["repair_command"] for finding in raw)
+
+
+def test_doctor_repair_plan_inside_the_repo_never_names_the_repo_in_prose(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, offline_doctor: None
+) -> None:
+    repo = _repo_with_foreign_hook_and_drift(tmp_path)
+    monkeypatch.chdir(repo)
+
+    plan = doctor_mod.repair_plan(repo)
+
+    assert plan["plan_interpretation"]["summary"].startswith("`mb doctor repair --plan`")
+    assert "--repo" not in json.dumps(
+        {k: v for k, v in plan.items() if k not in {"repo", "agent_surfaces"}}
+    )
+
+
+def test_doctor_json_with_an_issue_draft_keeps_paths_out_of_the_command_fields(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, offline_doctor: None
+) -> None:
+    from mb import issue
+
+    repo = _repo_with_foreign_hook_and_drift(tmp_path)
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+    monkeypatch.chdir(other)
+
+    body, _ = issue._safe_doctor_json(repo)
+
+    assert "mb checkpoint --repo" not in body
+    assert "mb migrate --repo" not in body
+    assert '"repair_command": "mb migrate campaigns --plan"' in body
+
+
+def _validation_prose(plan: dict[str, Any]) -> list[str]:
+    section = next(s for s in plan["sections"] if s["id"] == "validation")
+    categories = section["checks"][0]["report"]["validation_categories"]
+    found = [categories["top_repair"], categories["top_operator_summary"]]
+    for entry in categories["by_category"].values():
+        found += [entry["repair"], entry["operator_summary"]]
+    return found
+
+
+def test_validation_repair_prose_names_the_repo_but_raw_validation_stays_verbatim(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, offline_doctor: None
+) -> None:
+    repo = _repo_with_foreign_hook_and_drift(tmp_path)
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+    monkeypatch.chdir(other)
+    flag = _flag(repo)
+
+    plan = doctor_mod.repair_plan(repo)
+
+    prose = _validation_prose(plan)
+    assert f"Run `mb doctor repair{flag} --plan --json` and review stale layout guidance." in prose
+    for text in prose:
+        for span in text.split("`")[1::2]:
+            if span.startswith("mb "):
+                assert flag in span, text
+    raw = json.dumps(plan["raw"])
+    assert flag not in raw
+    assert "Run `mb doctor repair --plan --json` and review stale layout guidance." in raw
+
+
+def test_validation_repair_prose_is_bare_inside_the_repo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, offline_doctor: None
+) -> None:
+    repo = _repo_with_foreign_hook_and_drift(tmp_path)
+    monkeypatch.chdir(repo)
+
+    plan = doctor_mod.repair_plan(repo)
+
+    assert "Run `mb doctor repair --plan --json` and review stale layout guidance." in (
+        _validation_prose(plan)
+    )
+    assert "--repo" not in json.dumps(_validation_prose(plan))

@@ -80,6 +80,18 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   folder while a repair runs is noticed before each removal, and nothing
   behind it is touched. `mb update` prints each kept-files note once. `--json`
   is unchanged.
+- `mb doctor` now names your business folder in the rest of its suggested commands,
+  so they work when you run them from another folder. This covers `mb spine declare`
+  (which used to write `core/operations/spine.md` into the folder you were in),
+  `mb onboard status`, the checkpoint-hook step, the migration-drift repairs, the
+  update check, and the summary line of `mb doctor repair --plan`. Inside the
+  business folder nothing changes. The `raw` copies and `applied_actions[].result`
+  stay exactly as the tools reported them.
+- A suggested command that sits in a longer line (a pipe, `;`, a redirect, `$HOME`,
+  `~` or a glob) now keeps that line exactly as written; only the `mb` part gets
+  the folder, and a `--repo` with no value is left alone instead of getting a second one.
+  Lines with command or parameter substitution, heredocs, herestrings, process
+  substitution, comments or a backslash line continuation are left exactly as written.
 - A stored Google sign-in whose `client_secret` is not text (a list, an object,
   a number, `true` or `false`) now reads as unusable everywhere, with the same
   next step in `status`, `test`, `token`, `exec` and `--reauth`. `null` and an
