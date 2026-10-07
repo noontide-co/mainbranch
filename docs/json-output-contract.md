@@ -198,9 +198,8 @@ to the Codex `operator_actions` entries of `mb doctor repair` and `mb init`
 (`codex-agents-md`, `codex-global-kept`, including their `manual_step`), and
 to the `repair` and `repair_command` strings in the Codex status blocks
 (`codex_cli` in `mb status` and `mb start`, the Codex checks in `mb doctor`)
-(#1072). Every other command `mb update` and `mb doctor repair` suggest
-follows the same rule, and JSON keys are unchanged; only the command values
-gain the flag: `next_actions` (`mb update`, `mb update --check`, the plan
+(#1072). The command fields below follow the same rule, and JSON keys are
+unchanged; only the command values gain the flag: `next_actions` (`mb update`, `mb update --check`, the plan
 command), the plugin-rail switch (`mb skill link --repo <path> --plugin`),
 the retry and package-upgrade prose in `warnings`, and doctor's
 `actions[].command`, `sections[].actions[].command`,
@@ -212,7 +211,8 @@ names the repo exactly once, and a path that looks like a command is quoted,
 not split. `mb status` and `mb graph` take the path as an argument, so their
 suggestions end with it (`mb status --json --peek <path>`). Prose such as
 `plan_interpretation.summary` and the migration-drift text is not rewritten
-yet. The workflow inventory's `install_hint` describes no repo and
+yet, and the diagnostic copies (`raw`, `applied_actions[].result`) are
+not rewritten. The workflow inventory's `install_hint` describes no repo and
 stays bare. The list is empty when there is nothing for a person to run.
 
 An `AGENTS.md` that is a folder is reported as a `codex-agents-md` entry whose

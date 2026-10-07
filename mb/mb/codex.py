@@ -3009,6 +3009,22 @@ def _owned_tree_cleanup(
     return operations, kept
 
 
+def _plugin_link_above(path: Path) -> Path | None:
+    """The link at the plugin root or its `mainbranch` folder, if it exists right now,
+    for a planned plugin `path` (#1078). Checked again just before each removal.
+
+    A path under the skills root is not a plugin path. The plan's own paths cannot be
+    compared with the plugin root here: once the link exists, the root resolves
+    through it.
+    """
+
+    link = global_plugin_root_link()
+    if link is None:
+        return None
+    skills_root = global_skill_source_root()
+    return None if path == skills_root or skills_root in path.parents else link
+
+
 def _link_on_the_way(base: Path, path: Path) -> bool:
     """Whether `base`, or a folder between it and `path`, is now a link (#1067)."""
 
@@ -3070,6 +3086,20 @@ def _is_retired_skill_file(name: str) -> Callable[[Path], bool]:
     return owned
 
 
+def _held_global_skill_entries() -> list[Path]:
+    """Live global skill paths Main Branch must not write: a linked skill folder, or
+    a folder where `SKILL.md` belongs (#1078). Each stays and is reported as kept."""
+
+    held: list[Path] = []
+    for name in CODEX_GLOBAL_SKILL_NAMES:
+        path = global_skill_file_path(name)
+        if path.parent.is_symlink():
+            held.append(path.parent)
+        elif path.is_dir() and not path.is_symlink():
+            held.append(path)
+    return held
+
+
 def global_skill_cleanup() -> dict[str, Any]:
     """Old global Codex surfaces to remove, per file, and what stays (#1056).
 
@@ -3110,6 +3140,7 @@ def global_skill_cleanup() -> dict[str, Any]:
     ]
     removals: dict[str, list[dict[str, Any]]] = {}
     kept: list[str] = [str(plugin_link)] if plugin_link and plugin_root.exists() else []
+    kept.extend(str(path) for path in _held_global_skill_entries())
     for label, path, is_owned, main_branch_named, remove_link in surfaces:
         operations, others = _owned_tree_cleanup(path, is_owned, remove_link=remove_link)
         if operations:
@@ -3131,6 +3162,20 @@ def _link_note(paths: list[Path]) -> str:
         + ", ".join(links)
         + (" is a link" if len(links) == 1 else " are links")
         + "; Main Branch does not follow links, so nothing a link leads to is touched."
+    )
+
+
+def _directory_note(paths: list[Path]) -> str:
+    """A sentence naming the kept entries that are folders where a skill file belongs (#1078)."""
+
+    folders = [str(path) for path in paths if path.name == "SKILL.md" and path.is_dir()]
+    if not folders:
+        return ""
+    return (
+        " "
+        + ", ".join(folders)
+        + (" is a folder" if len(folders) == 1 else " are folders")
+        + " where a skill file belongs; Main Branch does not write there."
     )
 
 
@@ -3156,6 +3201,7 @@ def global_skill_operator_action(
         + ", ".join(kept)
         + ". The repair leaves them where they are."
         + _link_note([Path(item) for item in kept])
+        + _directory_note([Path(item) for item in kept])
     )
     manual_step = (
         "Open each file. Move anything you want to keep somewhere of your own, "
@@ -3197,6 +3243,9 @@ def global_skill_operations() -> list[dict[str, Any]]:
     operations: list[dict[str, Any]] = []
     for name in CODEX_GLOBAL_SKILL_NAMES:
         path = global_skill_file_path(name)
+        # #1078: a linked skill folder is a person's; never write through it.
+        if path.parent.is_symlink():
+            continue
         expected = render_codex_global_skill_md(name)
         existing = _read_text_or_none(path)
         # #1067: an unreadable file is not proven to be Main Branch's; it stays.
@@ -3220,13 +3269,19 @@ def write_global_skill_source() -> dict[str, Any]:
     for item in global_skill_operations():
         path = Path(item["path"])
         if item["op"] == "write":
+            if path.parent.is_symlink():
+                kept.append(str(path.parent))  # #1078: became a link since the plan
+                continue
             # Replace the directory entry: a hard-linked file keeps its content.
             atomic_write_text(path, item["content"])
             changed_paths.append(str(path))
+        elif (link := _plugin_link_above(path)) is not None:
+            kept.append(str(link))  # #1078: a link appeared above the plugin root
         elif _remove_owned_entry(item):
             changed_paths.append(str(path))
         elif path.exists() or path.is_symlink():
             kept.append(str(path))  # #1067: changed since the plan, so it stays
+    kept = list(dict.fromkeys(kept))
 
     return {
         "ok": True,
@@ -3382,10 +3437,15 @@ def write_global_plugin_source() -> dict[str, Any]:
         root / CODEX_PLUGIN_DIR_RELATIVE_PATH / "skills",
         root / CODEX_LEGACY_PLUGIN_DIR_RELATIVE_PATH,
     ):
-        operations, others = _owned_tree_cleanup(old, _is_mainbranch_transitional_file, base=root)
+        # #1078: a link at `old` stays, as the plan says; keeping is the safe way.
+        operations, others = _owned_tree_cleanup(
+            old, _is_mainbranch_transitional_file, remove_link=False, base=root
+        )
         kept.extend(others)
         for item in operations:
-            if _remove_owned_entry(item):
+            if (above := _plugin_link_above(Path(item["path"]))) is not None:
+                kept.append(str(above))  # #1078: a link appeared above the plugin root
+            elif _remove_owned_entry(item):
                 changed_paths.append(item["path"])
             elif Path(item["path"]).exists():
                 kept.append(item["path"])  # #1067: changed since the plan
