@@ -2184,6 +2184,39 @@ def _shell_words(text: str) -> list[tuple[int, int, str]] | None:
     return words
 
 
+def _unsupported_shell_syntax(command: str) -> bool:
+    """Refuse constructs the command lexer cannot safely split or rewrite."""
+    quote = ""
+    escaped = False
+    word_start = True
+    for index, char in enumerate(command):
+        if quote == "'":
+            if char == quote:
+                quote = ""
+            continue
+        pair = command[index : index + 2]
+        if char == "`" or pair in {"$(", "${"}:
+            return True
+        if escaped:
+            escaped = False
+            if char != "\n":
+                word_start = False
+            continue
+        if char == "\\":
+            escaped = True
+        elif quote:
+            if char == quote:
+                quote = ""
+        elif char in "'\"":
+            quote = char
+            word_start = False
+        elif pair in {"<<", "<(", ">("} or (char == "#" and word_start):
+            return True
+        else:
+            word_start = char.isspace() or char in ";|&<>()"
+    return False
+
+
 def _command_segments(command: str) -> list[tuple[int, int]] | None:
     """Spans of a command line between unquoted `&&`, `||`, `|`, `;`, `&` and newlines."""
     spans: list[tuple[int, int]] = []
@@ -2264,8 +2297,11 @@ def _qualify_command(command: str, repo: Path) -> str:
     repo (flag or trailing path) and anything that is not an `mb` command are
     kept, so running this twice changes nothing. Only the `mb` segments are
     edited (#1083): pipes, `;`, redirects, `$VAR`, globs and `~` in the rest of
-    the line keep every byte, and a dangling `--repo` is left alone.
+    the line keep every byte, and a dangling `--repo` is left alone. Lines with
+    substitutions, heredocs, herestrings or comments are left exactly as written.
     """
+    if _unsupported_shell_syntax(command):
+        return command
     spans = _command_segments(command)
     if spans is None or not command.strip():
         return command

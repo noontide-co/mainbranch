@@ -2591,6 +2591,56 @@ def test_the_rewriter_keeps_shell_syntax_outside_the_mb_segment(
     assert doctor_mod._qualify_command(rewritten, repo) == rewritten
 
 
+@pytest.mark.parametrize(
+    "command",
+    [
+        "echo `printf seed; mb status --json`",
+        "echo $(printf seed; mb status --json)",
+        "cat <<'EOF'\nmb update\nEOF",
+        "mb status --json # note",
+        "mb update ${MODE}",
+        'mb update <<<"seed"',
+        "mb status <(printf seed)",
+        "mb status >(cat)",
+        "mb update $((1 + 2))",
+        'mb update "$(printf seed)"',
+        'mb update "`printf seed`"',
+        'mb update "${MODE}"',
+        "cat <<EOF\nmb update\nEOF",
+        "cat <<-EOF\n\tmb update\nEOF",
+        "mb update;# note",
+        "mb update && # note\nmb status",
+        "# note\nmb update",
+        "mb update ''#literal # note",
+    ],
+)
+def test_the_rewriter_refuses_unsupported_shell_constructs(tmp_path: Path, command: str) -> None:
+    repo = tmp_path / "biz one"
+    repo.mkdir()
+
+    assert doctor_mod._qualify_command(command, repo) == command
+
+
+@pytest.mark.parametrize(
+    "literal",
+    [
+        "a#b",
+        "''#literal",
+        r"\#literal",
+        "'` $( ${ << <<< <( >( # literal'",
+        '"<< <<< <( >( # literal"',
+    ],
+)
+def test_the_rewriter_qualifies_commands_with_shell_literals(tmp_path: Path, literal: str) -> None:
+    repo = tmp_path / "biz one"
+    repo.mkdir()
+    command = f"echo {literal} && mb update"
+    expected = f"{command} --repo {shlex.quote(str(repo.resolve()))}"
+
+    assert doctor_mod._qualify_command(command, repo) == expected
+    assert doctor_mod._qualify_command(expected, repo) == expected
+
+
 def test_the_rewriter_leaves_shell_lines_alone_inside_the_repo(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

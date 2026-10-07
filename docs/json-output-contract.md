@@ -212,7 +212,9 @@ not split. `mb status` and `mb graph` take the path as an argument, so their
 suggestions end with it (`mb status --json --peek <path>`). Only the `mb`
 segment of a line is edited (#1083): a pipe, `;`, redirect, `$VAR`, glob or `~`
 elsewhere in the line keeps every byte, and a `--repo` with no value is left
-alone. The same rule names the repo in `plan_interpretation.summary`, in the
+alone. Lines with command or parameter substitution, heredocs, herestrings,
+process substitution or comments are left exactly as written. The same rule
+names the repo in `plan_interpretation.summary`, in the
 `mb spine declare` and `mb onboard status` commands in section summaries and
 check details, in the manual step "review .git/hooks/commit-msg, then run
 `mb checkpoint --install-hook`", in the repair text of the validation section
