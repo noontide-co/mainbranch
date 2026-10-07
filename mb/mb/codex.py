@@ -3086,18 +3086,14 @@ def _is_retired_skill_file(name: str) -> Callable[[Path], bool]:
     return owned
 
 
-def _held_global_skill_entries() -> list[Path]:
-    """Live global skill paths Main Branch must not write: a linked skill folder, or
-    a folder where `SKILL.md` belongs (#1078). Each stays and is reported as kept."""
+def _held_global_skill_entry(path: Path) -> Path | None:
+    """Keep a linked skill folder, a folder at SKILL.md, or a broken SKILL.md link."""
 
-    held: list[Path] = []
-    for name in CODEX_GLOBAL_SKILL_NAMES:
-        path = global_skill_file_path(name)
-        if path.parent.is_symlink():
-            held.append(path.parent)
-        elif path.is_dir() and not path.is_symlink():
-            held.append(path)
-    return held
+    if path.parent.is_symlink():
+        return path.parent
+    if path.is_dir() or (path.is_symlink() and not path.exists()):
+        return path
+    return None
 
 
 def global_skill_cleanup() -> dict[str, Any]:
@@ -3140,7 +3136,11 @@ def global_skill_cleanup() -> dict[str, Any]:
     ]
     removals: dict[str, list[dict[str, Any]]] = {}
     kept: list[str] = [str(plugin_link)] if plugin_link and plugin_root.exists() else []
-    kept.extend(str(path) for path in _held_global_skill_entries())
+    kept.extend(
+        str(held)
+        for name in CODEX_GLOBAL_SKILL_NAMES
+        if (held := _held_global_skill_entry(global_skill_file_path(name))) is not None
+    )
     for label, path, is_owned, main_branch_named, remove_link in surfaces:
         operations, others = _owned_tree_cleanup(path, is_owned, remove_link=remove_link)
         if operations:
@@ -3212,6 +3212,7 @@ def global_skill_operator_action(
             if effect["removes"]
             else "deletes no files there"
         )
+        + ("; writes these skill files: " + ", ".join(effect["writes"]) if effect["writes"] else "")
         + "; it keeps the files above."
     )
     action = engine_mod.operator_action(command, kept, f"{reason} {manual_step}")
@@ -3243,8 +3244,7 @@ def global_skill_operations() -> list[dict[str, Any]]:
     operations: list[dict[str, Any]] = []
     for name in CODEX_GLOBAL_SKILL_NAMES:
         path = global_skill_file_path(name)
-        # #1078: a linked skill folder is a person's; never write through it.
-        if path.parent.is_symlink():
+        if _held_global_skill_entry(path) is not None:
             continue
         expected = render_codex_global_skill_md(name)
         existing = _read_text_or_none(path)
@@ -3269,8 +3269,8 @@ def write_global_skill_source() -> dict[str, Any]:
     for item in global_skill_operations():
         path = Path(item["path"])
         if item["op"] == "write":
-            if path.parent.is_symlink():
-                kept.append(str(path.parent))  # #1078: became a link since the plan
+            if (held := _held_global_skill_entry(path)) is not None:
+                kept.append(str(held))
                 continue
             # Replace the directory entry: a hard-linked file keeps its content.
             atomic_write_text(path, item["content"])
@@ -3456,7 +3456,9 @@ def write_global_plugin_source() -> dict[str, Any]:
         for path in sorted(commands_dir.iterdir()):
             if path.name in expected_names:
                 continue
-            if _unlink_if_proven(path, root):
+            if (above := _plugin_link_above(path)) is not None:
+                kept.append(str(above))
+            elif _unlink_if_proven(path, root):
                 changed_paths.append(str(path))
             else:
                 kept.append(str(path))

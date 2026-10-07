@@ -2660,14 +2660,25 @@ def _probe_repo(repo: Path, tmp_path: Path, kind: str) -> str:
         (shared / "settings.local.json").write_text("{}\n", encoding="utf-8")
         (repo / ".claude").symlink_to(shared, target_is_directory=True)
         at_risk = "shared-claude/settings.local.json"
-    elif kind == "codex_alias":
+    elif kind in {"codex_alias", "codex_skill_alias"}:
         codex_mod.write_agents_md(repo)
         shared = repo / "shared-codex" / "mb-start"
         shared.mkdir(parents=True)
         (shared / "SKILL.md").write_text("stale\n", encoding="utf-8")
         global_root = codex_mod.global_skill_source_root()
-        global_root.mkdir(parents=True, exist_ok=True)
-        (global_root / "mb-start").symlink_to(shared, target_is_directory=True)
+        if kind == "codex_alias":
+            for name in codex_mod.CODEX_GLOBAL_SKILL_NAMES:
+                current = shared.parent / name / "SKILL.md"
+                current.parent.mkdir(parents=True, exist_ok=True)
+                if name != "mb-start":
+                    current.write_text(
+                        codex_mod.render_codex_global_skill_md(name), encoding="utf-8"
+                    )
+            global_root.parent.mkdir(parents=True, exist_ok=True)
+            global_root.symlink_to(shared.parent, target_is_directory=True)
+        else:
+            global_root.mkdir(parents=True, exist_ok=True)
+            (global_root / "mb-start").symlink_to(shared, target_is_directory=True)
         at_risk = "shared-codex/mb-start/SKILL.md"
     elif kind == "codex_cleanup":
         legacy = repo / ".agents" / "skills" / "main-branch" / "SKILL.md"
@@ -2685,9 +2696,9 @@ def _changed_tracked(repo: Path) -> list[str]:
     return sorted(line[3:] for line in status.splitlines())
 
 
-# #1078: a linked global Codex skill folder is kept, never written through, so
-# `codex_alias` has its own test below: nothing tracked is at risk and no consent is asked.
-REVIEW_PROBES = ["legacy_link", "claude_alias", "codex_cleanup"]
+# A linked skills root still needs consent for writes into the tracked repo.
+# A linked individual skill folder is kept instead (the separate test below).
+REVIEW_PROBES = ["legacy_link", "claude_alias", "codex_alias", "codex_cleanup"]
 
 
 @pytest.mark.parametrize("kind", REVIEW_PROBES)
@@ -2713,7 +2724,7 @@ def test_a_linked_global_codex_skill_folder_is_left_alone_without_consent(
 ) -> None:
     calls: list[list[str]] = []
     _wheel_update_env(monkeypatch, calls)
-    at_risk = _probe_repo(business_repo, tmp_path, "codex_alias")
+    at_risk = _probe_repo(business_repo, tmp_path, "codex_skill_alias")
 
     result = update_mod.run(repo=business_repo, interactive=False)
 
@@ -2743,6 +2754,11 @@ def test_review_probe_yes_changes_only_listed_files(
     assert at_risk in listed
     changed = _changed_tracked(business_repo)
     assert changed, "the approved plan should have changed something"
+    if kind == "codex_alias":
+        assert listed == changed == [at_risk]
+        assert (business_repo / at_risk).read_text(encoding="utf-8") == (
+            codex_mod.render_codex_global_skill_md("mb-start")
+        )
     for path in changed:
         assert any(path == item or path.startswith(item.rstrip("/") + "/") for item in listed), (
             path,
@@ -3504,3 +3520,67 @@ def test_an_interactive_yes_may_replace_a_symlinked_agents_md_it_listed(
     assert any(item.startswith("AGENTS.md") for item in asked[0])
     assert not (business_repo / "AGENTS.md").is_symlink()
     assert outside.read_text(encoding="utf-8") == "# My own guidance\n"
+
+
+@pytest.mark.parametrize("mode", ["run", "check", "no-refresh"])
+@pytest.mark.parametrize("held", ["folder", "skill-link", "folder-link", "dangling-link"])
+def test_update_does_not_suggest_an_apply_when_only_kept_global_entries_remain(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path, mode: str, held: str
+) -> None:
+    _wheel_update_env(monkeypatch, [])
+    codex_mod.write_agents_md(business_repo)
+    codex_mod.write_global_skill_source()
+    skill = codex_mod.global_skill_file_path("main-branch")
+    skill.unlink()
+    if held == "folder":
+        skill.mkdir()
+    elif held == "skill-link":
+        skill.parent.rmdir()
+        outside = tmp_path / "my-skill"
+        outside.mkdir()
+        (outside / "SKILL.md").write_text("mine\n", encoding="utf-8")
+        skill.parent.symlink_to(outside, target_is_directory=True)
+    else:
+        outside = tmp_path / "my-folder"
+        if held == "folder-link":
+            outside.mkdir()
+        skill.symlink_to(outside, target_is_directory=True)
+    _commit_all(business_repo, "Current guidance")
+
+    result = update_mod.run(
+        repo=business_repo,
+        check=mode == "check",
+        refresh_surfaces=mode != "no-refresh",
+        interactive=False,
+    )
+
+    assert result["ok"] is True, result["errors"]
+    assert not any("skills are not ready" in warning for warning in result["warnings"])
+    assert not any("--apply --only codex" in command for command in result["next_actions"])
+    entries = [a for a in result["operator_actions"] if a.get("id") == "codex-global-kept"]
+    assert len(entries) == 1
+    assert entries[0]["on_apply"]["writes"] == entries[0]["on_apply"]["removes"] == []
+    assert entries[0]["on_apply"]["keeps"]
+
+
+@pytest.mark.parametrize("work", ["write", "remove"])
+def test_update_keeps_the_apply_suggestion_when_global_kept_entries_also_have_work(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, work: str
+) -> None:
+    _wheel_update_env(monkeypatch, [])
+    codex_mod.write_agents_md(business_repo)
+    codex_mod.write_global_skill_source()
+    held = codex_mod.global_skill_file_path("main-branch")
+    held.unlink()
+    held.mkdir()
+    if work == "write":
+        codex_mod.global_skill_file_path("mb-start").unlink()
+    else:
+        codex_mod.write_global_plugin_source()
+
+    result = update_mod.run(repo=business_repo, check=True, interactive=False)
+
+    assert result["ok"] is True, result["errors"]
+    assert any("--apply --only codex" in command for command in result["next_actions"])
+    entry = next(a for a in result["operator_actions"] if a.get("id") == "codex-global-kept")
+    assert entry["on_apply"]["writes" if work == "write" else "removes"]
