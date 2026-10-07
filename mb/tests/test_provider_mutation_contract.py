@@ -63,8 +63,13 @@ def test_google_rubric_ties_to_the_mutation_contract() -> None:
     assert "provider mutations" in lowered
     for surface in ("gtm container", "conversion action", "offline conversion"):
         assert surface in lowered
-    # Honest gating: no automation claim before live smoke evidence.
-    assert "basic access" in lowered
+    # API reads need project access and account authorization; writes still
+    # need live smoke evidence before Main Branch claims automation.
+    assert "explorer, basic, or standard access" in lowered
+    assert "google ads account role" in lowered
+    assert "read succeeds" in lowered
+    assert "gtm authorization" in lowered
+    assert "google ads basic access" not in lowered
     assert "no provider automation before live smoke evidence" in lowered
     # Bidirectional link from the contract to the worked instance.
     assert "google-ads-gtm-conversion-rubric.md" in _read("docs/provider-mutation-contract.md")
