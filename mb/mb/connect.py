@@ -1804,9 +1804,12 @@ def connect_provider(
             ref = _secret_ref(repo_id, provider.id, primary)
             try:
                 if normalized_scope == "user":
-                    previous_secret = store.probe(ref, deadline=credential_deadline)
+                    # The rollback snapshot is a separate bounded read. The write
+                    # and final status read retain their original shared budget.
+                    previous_secret = store.probe(ref, deadline=new_credential_deadline())
                     if not previous_secret.backend_ok:
                         raise KeychainError(previous_secret.reason)
+                    credential_deadline = new_credential_deadline()
                 store.set(ref, token, deadline=credential_deadline)
             except KeychainError as exc:
                 # Fail before any metadata is written, so a backend outage
