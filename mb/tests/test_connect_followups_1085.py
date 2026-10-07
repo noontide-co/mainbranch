@@ -268,3 +268,146 @@ def test_google_mid_write_recovery_keeps_destination_and_repairs_file_first(
         assert command[:4] == ["mb", "connect", "google", "--oauth"]
         assert command[command.index("--scope") + 1] == "user"
     assert_no_sentinel(result.output)
+
+
+def _deny_late_user_write(path: Path, cause: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    real_replace = os.replace
+    real_open = os.open
+    opens = 0
+
+    def replace(src: Any, dst: Any, *args: Any, **kwargs: Any) -> None:
+        if Path(dst) == path:
+            raise PermissionError("synthetic replacement denial")
+        real_replace(src, dst, *args, **kwargs)
+
+    def opened(file: Any, flags: int, *args: Any, **kwargs: Any) -> int:
+        nonlocal opens
+        if Path(file) == path and flags & (os.O_WRONLY | os.O_RDWR):
+            opens += 1
+            if opens > 1:
+                raise PermissionError("synthetic late open denial")
+        return real_open(file, flags, *args, **kwargs)
+
+    if cause == "atomic":
+        monkeypatch.setattr(os, "replace", replace)
+    else:
+        monkeypatch.setattr(os, "open", opened)
+
+
+def _late_write_args(operation: str) -> list[str]:
+    if operation == "rotate":
+        return ["rotate", "cloudflare"]
+    provider = "cloudflare" if operation == "reconnect" else "stripe"
+    return [provider, "--scope", "user", "--token-stdin"]
+
+
+@pytest.mark.parametrize("cause", ["atomic", "late_open"])
+@pytest.mark.parametrize("as_json", [False, True])
+@pytest.mark.parametrize("operation", ["connect", "reconnect", "rotate"])
+def test_late_user_scope_denial_restores_credential(
+    repo: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    cause: str,
+    as_json: bool,
+    operation: str,
+) -> None:
+    _user_scope_cloudflare(repo, source="op://Business/Cloudflare/credential")
+    monkeypatch.setattr(shutil, "which", lambda name: f"/usr/bin/{name}")
+    path = connect_mod._user_scope_path()
+    frozen = (path, path.read_bytes(), path.stat().st_ino, path.stat().st_mode & 0o777)
+    before = _store_snapshot()
+    config_before = (repo / ".mb/connect.yaml").read_bytes()
+    _deny_late_user_write(path, cause, monkeypatch)
+    result = runner.invoke(
+        app,
+        [
+            "connect",
+            *_late_write_args(operation),
+            "--repo",
+            str(repo),
+            *(["--json"] if as_json else []),
+        ],
+        input="sk_live_" + "X" * 28 + "\n",
+    )
+    assert "X" * 28 not in result.output
+    assert "fake-renewal" not in result.output
+    _assert_refusal(result, as_json, path)
+    assert "Nothing else was changed." in result.output
+    # Compare booleans so a failing assertion never prints credential bytes.
+    assert bool(_store_snapshot() == before)
+    assert (repo / ".mb/connect.yaml").read_bytes() == config_before
+    _assert_untouched(frozen)
+
+
+@pytest.mark.parametrize("as_json", [False, True])
+@pytest.mark.parametrize("operation", ["connect", "rotate"])
+def test_failed_credential_rollback_reports_partial_write_and_replayable_recovery(
+    repo: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    as_json: bool,
+    operation: str,
+) -> None:
+    from mb.credential_store import SecretStore
+
+    repo = repo.rename(repo.with_name("business space ' quote"))
+    _user_scope_cloudflare(repo, source="op://Business/Cloudflare/credential")
+    monkeypatch.setattr(shutil, "which", lambda name: f"/usr/bin/{name}")
+    path = connect_mod._user_scope_path()
+    frozen = (path, path.read_bytes(), path.stat().st_ino, path.stat().st_mode & 0o777)
+    before = _store_snapshot()
+    config_before = (repo / ".mb/connect.yaml").read_bytes()
+    real_set = SecretStore.set
+    writes = 0
+
+    def set_(self: SecretStore, *args: Any, **kwargs: Any) -> None:
+        nonlocal writes
+        writes += 1
+        if writes > 1:
+            raise OSError("synthetic-rollback-sensitive-detail")
+        real_set(self, *args, **kwargs)
+
+    def delete(self: SecretStore, ref: str) -> None:
+        raise OSError("synthetic-rollback-sensitive-detail")
+
+    with monkeypatch.context() as patch:
+        _deny_late_user_write(path, "atomic", patch)
+        patch.setattr(SecretStore, "set", set_)
+        patch.setattr(SecretStore, "delete", delete)
+        result = runner.invoke(
+            app,
+            [
+                "connect",
+                *_late_write_args(operation),
+                "--repo",
+                str(repo),
+                *(["--json"] if as_json else []),
+            ],
+            input="sk_live_" + "X" * 28 + "\n",
+        )
+    assert result.exit_code == 1
+    assert "Nothing else was changed." not in result.output
+    assert "synthetic-rollback-sensitive-detail" not in result.output
+    assert "X" * 28 not in result.output
+    assert "fake-renewal" not in result.output
+    summary = result.output
+    if as_json:
+        payload = json.loads(result.stdout)
+        assert payload["state"] == "metadata_write_failed"
+        assert payload["ok"] is False
+        assert payload["safe_to_share"] is True
+        summary = payload["summary"]
+    assert path.name in summary
+    assert "not recorded" in summary
+    assert "writable" in summary
+    assert bool(_store_snapshot() != before)
+    assert (repo / ".mb/connect.yaml").read_bytes() == config_before
+    _assert_untouched(frozen)
+    command = next(
+        shlex.split(part) for part in summary.split("`")[1::2] if part.startswith("mb connect")
+    )
+    assert command[command.index("--scope") + 1] == "user"
+    assert command[command.index("--repo") + 1] == str(repo)
+    assert summary.index("writable") < summary.index("`mb connect")
+    retried = runner.invoke(app, [*command[1:], "--json"], input="sk_live_" + "X" * 28 + "\n")
+    assert retried.exit_code == 0
+    assert json.loads(retried.stdout)["scope"] == "user"

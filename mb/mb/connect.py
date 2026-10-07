@@ -8,6 +8,7 @@ import json
 import math
 import os
 import re
+import shlex
 import shutil
 import stat
 import subprocess
@@ -196,6 +197,10 @@ class UserScopeReadOnlyError(ConnectRefusal):
 
 class ConfigBoundaryError(ValueError):
     """Raised when local connect metadata is outside the selected repo boundary."""
+
+
+class MetadataWriteError(RuntimeError):
+    """A credential was stored, but its metadata and rollback both failed."""
 
 
 class ConfigCorruptError(ValueError):
@@ -1790,6 +1795,7 @@ def connect_provider(
         _ensure_user_scope_writable()
 
     secrets: dict[str, dict[str, str]] = {}
+    previous_secret: SecretProbe | None = None
     required = list(provider.required_secrets)
     if required:
         primary = required[0]
@@ -1797,6 +1803,10 @@ def connect_provider(
             store = SecretStore(secret_backend)
             ref = _secret_ref(repo_id, provider.id, primary)
             try:
+                if normalized_scope == "user":
+                    previous_secret = store.probe(ref, deadline=credential_deadline)
+                    if not previous_secret.backend_ok:
+                        raise KeychainError(previous_secret.reason)
                 store.set(ref, token, deadline=credential_deadline)
             except KeychainError as exc:
                 # Fail before any metadata is written, so a backend outage
@@ -1870,14 +1880,51 @@ def connect_provider(
         providers[provider.id]["oauth"] = dict(raw_oauth)
     user_scope_path = ""
     if normalized_scope == "user":
-        user_scope_path = str(
-            _write_user_scope_provider(
-                repo_id,
-                repo_identity=config.get("repo_identity") or {},
-                provider_id=provider.id,
-                entry=providers[provider.id],
+        try:
+            user_scope_path = str(
+                _write_user_scope_provider(
+                    repo_id,
+                    repo_identity=config.get("repo_identity") or {},
+                    provider_id=provider.id,
+                    entry=providers[provider.id],
+                )
             )
-        )
+        except UserScopeReadOnlyError as exc:
+            if previous_secret is not None:
+                try:
+                    # Recovery gets its own bounded attempt even if the original
+                    # command has exhausted its credential deadline.
+                    if previous_secret.present:
+                        store.set(ref, previous_secret.value, deadline=new_credential_deadline())
+                    else:
+                        store.delete(ref)
+                except Exception:
+                    # Never expose backend exception text or credential values.
+                    command = [
+                        "mb",
+                        "connect",
+                        provider.id,
+                        "--token-stdin",
+                        "--scope",
+                        "user",
+                        "--repo",
+                        str(target),
+                    ]
+                    if provider.category == "custom":
+                        command.append("--custom")
+                    if account_label:
+                        command.extend(["--account", account_label])
+                    for key, value in metadata.items():
+                        command.extend(["--metadata", f"{key}={value}"])
+                    action = "replaced" if previous_secret.present else "stored"
+                    raise MetadataWriteError(
+                        f"The {provider.name} credential was {action} but not recorded: "
+                        f"the user-scope connect file {exc.shown} is read-only, and the "
+                        "previous credential state could not be restored. The repo metadata "
+                        "is unchanged. Make that file writable first, then rerun "
+                        f"`{shlex.join(command)}` with the credential again."
+                    ) from None
+            raise
     path = _write_config(target, config)
     status = status_provider(
         provider.id,

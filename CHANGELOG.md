@@ -73,7 +73,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 - `mb connect` now names the user-scope file and refuses before storing a
   credential when ownership or an access-control list prevents writing it,
-  just as it does for a read-only file mode. `mb connect test` still checks
+  just as it does for a read-only file mode. If writing is denied after connect
+  or rotate stores a credential, it restores the previous credential before
+  refusing. If restoration also fails, it reports what was stored and gives a
+  retry command with the selected scope and repo. `mb connect test` still checks
   the connection and now tells you when it could not save the result there.
   If the file becomes read-only during Google sign-in, renewal advice says
   to make it writable before checking again. Sign-in retry commands keep the

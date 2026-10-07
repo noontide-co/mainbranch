@@ -1045,7 +1045,15 @@ or replaced. Every command that would write it
 --scope user`) checks first, before it stores any credential, and refuses with
 rule `user_scope_read_only` (exit 2, `--json` included). The message names the
 file and says to make it writable or move it and rerun; nothing is stored or
-changed. `mb connect test` only reads that file to run its check: the check still
+changed. If writing is denied after a token was stored by connect or rotate,
+Main Branch restores the previous credential (or removes the newly created
+one) before returning that refusal. If restoration also fails, it exits 1 with
+`metadata_write_failed`: the message says the credential was stored or replaced
+but not recorded, names the file, and gives a retry command that keeps user
+scope and the selected repo. Make the file writable first, then supply the
+credential again with that command.
+
+`mb connect test` only reads that file to run its check: the check still
 runs and the repo metadata is still recorded, and the result says
 `recorded: false` with `not_recorded_reason: user_scope_read_only` in `--json`.
 Human output says `recorded: no` and names the read-only file. If the file
