@@ -198,9 +198,8 @@ to the Codex `operator_actions` entries of `mb doctor repair` and `mb init`
 (`codex-agents-md`, `codex-global-kept`, including their `manual_step`), and
 to the `repair` and `repair_command` strings in the Codex status blocks
 (`codex_cli` in `mb status` and `mb start`, the Codex checks in `mb doctor`)
-(#1072). Every other command `mb update` and `mb doctor repair` suggest
-follows the same rule, and JSON keys are unchanged; only the command values
-gain the flag: `next_actions` (`mb update`, `mb update --check`, the plan
+(#1072). The command fields below follow the same rule, and JSON keys are
+unchanged; only the command values gain the flag: `next_actions` (`mb update`, `mb update --check`, the plan
 command), the plugin-rail switch (`mb skill link --repo <path> --plugin`),
 the retry and package-upgrade prose in `warnings`, and doctor's
 `actions[].command`, `sections[].actions[].command`,
@@ -210,9 +209,17 @@ the retry and package-upgrade prose in `warnings`, and doctor's
 `agent_surfaces.apply_choices` and `post_apply`. Each command in a `&&` chain
 names the repo exactly once, and a path that looks like a command is quoted,
 not split. `mb status` and `mb graph` take the path as an argument, so their
-suggestions end with it (`mb status --json --peek <path>`). Prose such as
-`plan_interpretation.summary` and the migration-drift text is not rewritten
-yet. The workflow inventory's `install_hint` describes no repo and
+suggestions end with it (`mb status --json --peek <path>`). Only the `mb`
+segment of a line is edited (#1083): a pipe, `;`, redirect, `$VAR`, glob or `~`
+elsewhere in the line keeps every byte, and a `--repo` with no value is left
+alone. The same rule names the repo in `plan_interpretation.summary`, in the
+`mb spine declare` and `mb onboard status` commands in section summaries and
+check details, in the manual step "review .git/hooks/commit-msg, then run
+`mb checkpoint --install-hook`", and in what `mb doctor` itself emits:
+`checks[].repair_command` (the checkpoint hook), `checks[migration-drift].findings[].repair_command`
+and `update.command` / `update.update_check_command`. `raw.*` and
+`applied_actions[].result` are diagnostic copies and are never rewritten; the
+same finding is offered named under `sections[]` and `actions[]`. The workflow inventory's `install_hint` describes no repo and
 stays bare. The list is empty when there is nothing for a person to run.
 
 An `AGENTS.md` that is a folder is reported as a `codex-agents-md` entry whose

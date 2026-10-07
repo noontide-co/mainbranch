@@ -9,6 +9,7 @@ triage per the master decision: prints a banner and offers
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 import re
@@ -401,7 +402,8 @@ def _spine_section(repo: Path) -> dict[str, Any]:
             "Contact+Event Spine",
             "info",
             (
-                "no spine declaration — run `mb spine declare --store <provider>` "
+                "no spine declaration — run "
+                f"`mb spine declare{engine_mod.repo_flag(repo)} --store <provider>` "
                 "(or `--store none --intentional`) so agents read the position "
                 "from facts instead of guessing"
             ),
@@ -1768,8 +1770,13 @@ def _graph_summary(repo: Path) -> dict[str, Any]:
     }
 
 
-def run(path: str) -> dict[str, Any]:
-    """Run all checks, return a structured report dict."""
+def run(path: str, *, qualify: bool = True) -> dict[str, Any]:
+    """Run all checks, return a structured report dict.
+
+    With `qualify`, every suggested command names the repo when it is not the
+    current folder (#1083). `repair_plan` passes False: its `raw` blocks stay
+    verbatim copies and its own report pass qualifies the command fields.
+    """
     repo = Path(path).resolve()
     checks: list[dict[str, Any]] = []
     update = package_update_status(repo)
@@ -1985,7 +1992,7 @@ def run(path: str) -> dict[str, Any]:
                 else (
                     f"{onboarding_summary['completed_required']}/"
                     f"{onboarding_summary['total_required']} required steps complete; "
-                    "run `mb onboard status`."
+                    f"run `mb onboard status{engine_mod.repo_flag(repo)}`."
                 )
             ),
             "severity": "warn",
@@ -2022,6 +2029,10 @@ def run(path: str) -> dict[str, Any]:
     # ``ok`` overall: every check must pass UNLESS its severity is warn/info.
     overall = all(c["ok"] or c.get("severity") in {"warn", "info"} for c in checks)
     hard_fail = any(not c["ok"] and c.get("severity") not in {"warn", "info"} for c in checks)
+
+    if qualify:
+        update = copy.deepcopy(update)  # the update object is shared with `mb update`
+        _qualify_run_commands(checks, update, repo)
 
     return {
         "ok": overall and not hard_fail,
@@ -2127,72 +2138,191 @@ _REPO_FLAG_COMMANDS = (
     "mb skill link",
     "mb skill repair",
     "mb migrate",
+    "mb onboard status",
+    "mb spine declare",
+    "mb spine show",
+    "mb spine init",
 )
 _REPO_POSITIONAL_COMMANDS = ("mb status", "mb graph")
+_COMMAND_KEYS = {"command", "repair_command", "update_check_command"}
+_COMMAND_LIST_KEYS = {"scope_choices", "apply_choices"}
+_RUN_TAIL = re.compile(r"(\bthen run )(mb .+)$")
+_REDIRECT_WORD = re.compile(r"^\d*[<>]")
 
 
-def _qualify_segment(tokens: list[str], repo_arg: list[str], repo_text: str) -> list[str]:
-    """One `mb ...` segment, as tokens, naming the repo exactly once (idempotent)."""
-    for index, token in enumerate(tokens):
-        if token == "--repo" and index + 1 < len(tokens):
-            if tokens[index + 1] != ".":
-                return tokens  # already names a repo
-            return [*tokens[:index], *repo_arg, *tokens[index + 2 :]]
-        if token.startswith("--repo="):
-            return tokens
-    if tokens[:2] in (["mb", "status"], ["mb", "graph"]):
-        if repo_arg and tokens[-1] != repo_text:
-            return [*tokens, repo_text]
-        return tokens
+def _shell_words(text: str) -> list[tuple[int, int, str]] | None:
+    """Split one command segment into (start, end, value) words, or None if unbalanced."""
+    words: list[tuple[int, int, str]] = []
+    index, size = 0, len(text)
+    while index < size:
+        if text[index].isspace():
+            index += 1
+            continue
+        start, value, quote = index, "", ""
+        while index < size and (quote or not text[index].isspace()):
+            char = text[index]
+            if quote:
+                if char == quote:
+                    quote = ""
+                elif char == "\\" and quote == '"' and index + 1 < size:
+                    index += 1
+                    value += text[index]
+                else:
+                    value += char
+            elif char in "'\"":
+                quote = char
+            elif char == "\\" and index + 1 < size:
+                index += 1
+                value += text[index]
+            else:
+                value += char
+            index += 1
+        if quote:
+            return None
+        words.append((start, index, value))
+    return words
+
+
+def _command_segments(command: str) -> list[tuple[int, int]] | None:
+    """Spans of a command line between unquoted `&&`, `||`, `|`, `;`, `&` and newlines."""
+    spans: list[tuple[int, int]] = []
+    begin, index, size, quote = 0, 0, len(command), ""
+    while index < size:
+        char = command[index]
+        if quote:
+            if char == "\\" and quote == '"':
+                index += 1
+            elif char == quote:
+                quote = ""
+        elif char == "\\":
+            index += 1
+        elif char in "'\"":
+            quote = char
+        elif char in ";\n|" or (
+            char == "&"
+            and command[index - 1 : index] not in {">", "<"}
+            and command[index + 1 : index + 2] != ">"
+        ):
+            spans.append((begin, index))
+            while index + 1 < size and command[index + 1] in "&|":
+                index += 1
+            begin = index + 1
+        index += 1
+    if quote:
+        return None
+    spans.append((begin, size))
+    return spans
+
+
+def _qualify_segment(text: str, repo_arg: str, repo_text: str) -> str:
+    """One `mb ...` segment, naming the repo exactly once (idempotent).
+
+    Only the repo flag or path is spliced in; every other byte is kept.
+    """
+    words = _shell_words(text)
+    if not words or words[0][2] != "mb":
+        return text
+    values = [value for _, _, value in words]
+    for index, value in enumerate(values):
+        if value == "--repo":
+            if index + 1 >= len(values):
+                return text  # dangling: never a second --repo
+            if values[index + 1] != ".":
+                return text  # already names a repo
+            start = words[index - 1][1]
+            end = words[index + 1][1]
+            return text[:start] + (f" {repo_arg}" if repo_arg else "") + text[end:]
+        if value.startswith("--repo="):
+            return text
+    if values[:2] in (["mb", "status"], ["mb", "graph"]):
+        if not repo_arg or repo_text in values:
+            return text
+        quoted = shlex.quote(repo_text)
+        for position, (_, _, value) in enumerate(words):
+            if _REDIRECT_WORD.match(value):
+                return (
+                    text[: words[position - 1][1]] + f" {quoted}" + text[words[position - 1][1] :]
+                )
+        return text[: words[-1][1]] + f" {quoted}" + text[words[-1][1] :]
     for prefix in _REPO_FLAG_COMMANDS:
-        words = prefix.split()
-        if tokens[: len(words)] == words:
-            return [*tokens[: len(words)], *repo_arg, *tokens[len(words) :]]
-    return tokens
+        count = len(prefix.split())
+        if values[:count] == prefix.split():
+            if not repo_arg:
+                return text
+            return text[: words[count - 1][1]] + f" {repo_arg}" + text[words[count - 1][1] :]
+    return text
 
 
 def _qualify_command(command: str, repo: Path) -> str:
     """Name the business repo in every `mb` command of a suggested command line (#1072).
 
-    Decided on tokens, never substrings, so a repo path that itself contains
+    Decided on words, never substrings, so a repo path that itself contains
     ` --repo . `, ` && ` or `mb status` is quoted once and left alone. `--repo .`
     becomes the shared rule's flag; a command with no repo gains it; `mb status`
     and `mb graph` take the path as an argument. A command that already names a
     repo (flag or trailing path) and anything that is not an `mb` command are
-    kept, so running this twice changes nothing.
+    kept, so running this twice changes nothing. Only the `mb` segments are
+    edited (#1083): pipes, `;`, redirects, `$VAR`, globs and `~` in the rest of
+    the line keep every byte, and a dangling `--repo` is left alone.
     """
-    try:
-        tokens = shlex.split(command)
-    except ValueError:
+    spans = _command_segments(command)
+    if spans is None or not command.strip():
         return command
-    repo_arg = shlex.split(engine_mod.repo_flag(repo))
+    repo_arg = engine_mod.repo_flag(repo).strip()
     repo_text = str(Path(repo).expanduser().resolve())
-    segments: list[list[str]] = [[]]
-    for token in tokens:
-        if token == "&&":
-            segments.append([])
-        else:
-            segments[-1].append(token)
-    rewritten = [
-        _qualify_segment(segment, repo_arg, repo_text) if segment[:1] == ["mb"] else segment
-        for segment in segments
-    ]
-    if rewritten == segments:
-        return command
-    return " && ".join(shlex.join(segment) for segment in rewritten)
+    pieces: list[str] = []
+    cursor = 0
+    for start, end in spans:
+        pieces.append(command[cursor:start])
+        pieces.append(_qualify_segment(command[start:end], repo_arg, repo_text))
+        cursor = end
+    pieces.append(command[cursor:])
+    return "".join(pieces)
+
+
+def _qualify_field(value: str, repo: Path) -> str:
+    """A command field, or the manual step "review ..., then run mb ..." (#1083)."""
+    qualified = _qualify_command(value, repo)
+    if qualified != value:
+        return qualified
+    match = _RUN_TAIL.search(value)
+    if match is None:
+        return value
+    return value[: match.start(2)] + _qualify_command(match.group(2), repo)
+
+
+def _qualify_run_commands(checks: list[dict[str, Any]], update: dict[str, Any], repo: Path) -> None:
+    """Name the repo in the command fields `mb doctor` itself emits (#1083).
+
+    Only the fields doctor owns: a check's `repair_command` and its migration
+    `findings[]`, and the update object's own commands. The nested `status`
+    blocks describe the skill contract and keep their text.
+    """
+    for check in checks:
+        if isinstance(check.get("repair_command"), str):
+            check["repair_command"] = _qualify_field(check["repair_command"], repo)
+        for finding in check.get("findings") or []:
+            if isinstance(finding.get("repair_command"), str):
+                finding["repair_command"] = _qualify_field(finding["repair_command"], repo)
+    for key in ("command", "update_check_command"):
+        if isinstance(update.get(key), str):
+            update[key] = _qualify_field(update[key], repo)
 
 
 def _qualify_report(node: Any, repo: Path, seen: set[int] | None = None) -> None:
-    """Rewrite every suggested-command field of a repair report in place, once per object."""
+    """Rewrite every suggested-command field of a report in place, once per object.
+
+    `raw` and `result` are verbatim diagnostic copies and are never rewritten.
+    """
     seen = set() if seen is None else seen
     if id(node) in seen:
         return  # doctor shares one action dict between `actions[]` and `sections[]`
     seen.add(id(node))
     if isinstance(node, dict):
         for key, value in node.items():
-            if key in {"command", "repair_command"} and isinstance(value, str):
-                node[key] = _qualify_command(value, repo)
-            elif key in {"scope_choices", "apply_choices"} and isinstance(value, list):
+            if key in _COMMAND_KEYS and isinstance(value, str):
+                node[key] = _qualify_field(value, repo)
+            elif key in _COMMAND_LIST_KEYS and isinstance(value, list):
                 node[key] = [_qualify_command(str(item), repo) for item in value]
             elif key not in {"raw", "result"}:
                 _qualify_report(value, repo, seen)
@@ -2218,7 +2348,7 @@ def repair_plan(
     guard = _not_business_folder_guard(target, mode=mode)
     if guard is not None:
         return guard
-    doctor_report = run(str(target))
+    doctor_report = run(str(target), qualify=False)
     actions: list[dict[str, Any]] = []
     operator_actions: list[dict[str, Any]] = []
     sections: list[dict[str, Any]] = []
@@ -3018,25 +3148,26 @@ def repair_plan(
             1 for action in actions if action["mode"] == "write" and action["safe_to_apply"]
         ),
     }
+    flag = engine_mod.repo_flag(target)
     if mode == "plan":
         if summary["error"]:
             plan_state = "plan_produced_with_blockers"
             plan_summary = (
-                "`mb doctor repair --plan` produced a read-only plan with blockers. "
+                f"`mb doctor repair{flag} --plan` produced a read-only plan with blockers. "
                 "Treat the nonzero exit as findings to review, not as an opaque command failure."
             )
         elif actions:
             plan_state = "plan_produced_with_findings"
             plan_summary = (
-                "`mb doctor repair --plan` produced a read-only plan with findings. "
+                f"`mb doctor repair{flag} --plan` produced a read-only plan with findings. "
                 "Review the actions before approving any apply command."
             )
         else:
             plan_state = "clear"
-            plan_summary = "`mb doctor repair --plan` found no repair actions."
+            plan_summary = f"`mb doctor repair{flag} --plan` found no repair actions."
     else:
         plan_state = "apply_summary"
-        plan_summary = "`mb doctor repair --apply` returned an apply summary."
+        plan_summary = f"`mb doctor repair{flag} --apply` returned an apply summary."
     report: dict[str, Any] = {
         "schema": REPAIR_SCHEMA,
         "schema_version": REPAIR_SCHEMA_VERSION,

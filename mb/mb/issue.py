@@ -183,7 +183,7 @@ def _scrub_field(value: str) -> tuple[str, dict[str, int]]:
 
 def _safe_doctor_json(repo: Path) -> tuple[str, dict[str, int]]:
     try:
-        report = doctor_mod.run(path=str(repo))
+        report = doctor_mod.run(path=str(repo), qualify=False)
     except Exception as exc:
         scrubbed = scrub_text(str(exc))
         return (
