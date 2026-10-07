@@ -1984,7 +1984,7 @@ def test_update_run_with_unknown_latest_runs_no_installer(
 
     result = update_mod.run(repo=tmp_path / "biz", interactive=True, confirm=never_prompt)
 
-    _assert_latest_unknown(result, retry="mb update")
+    _assert_latest_unknown(result, retry=update_mod._update_command(tmp_path / "biz"))
     assert _installer_calls(calls) == []
     assert result["skills_relinked_count"] == 1
 
@@ -2008,7 +2008,9 @@ def test_update_cli_json_with_unknown_latest_exits_zero(
     cli = runner.invoke(app, ["update", "--repo", str(tmp_path / "biz"), "--json"])
 
     assert cli.exit_code == 0
-    _assert_latest_unknown(json.loads(cli.stdout), retry="mb update")
+    _assert_latest_unknown(
+        json.loads(cli.stdout), retry=update_mod._update_command(tmp_path / "biz")
+    )
     assert _installer_calls(calls) == []
 
 
@@ -2025,7 +2027,7 @@ def test_update_check_with_unknown_latest_lists_no_install_command(
 
     assert cli.exit_code == 0
     payload = json.loads(cli.stdout)
-    _assert_latest_unknown(payload, retry="mb update --check")
+    _assert_latest_unknown(payload, retry=update_mod._update_command(tmp_path / "biz", check=True))
     assert payload["release"]["source"] == "not_newer"
     assert human.exit_code == 0
     assert "version: 0.6.3 (PyPI's latest version could not be checked)" in human.stdout
@@ -2106,14 +2108,15 @@ def test_update_surfaces_plugin_migration_for_symlink_era_repo(
     # #1023: the switch writes a tracked file, so it is a step for a person,
     # never an unattended next action an agent might run.
     assert not any("--plugin" in action for action in result["next_actions"])
+    quoted = shlex.quote(str((tmp_path / "biz").resolve()))
     assert [item["command"] for item in result["operator_actions"]] == [
-        "mb skill link --repo . --plugin"
+        f"mb skill link --repo {quoted} --plugin"
     ]
     assert result["operator_actions"][0]["changes"] == [".claude/settings.json"]
 
     update_mod.render_human(result)
     out = capsys.readouterr().out
-    assert "for you to run: mb skill link --repo . --plugin" in out
+    assert f"for you to run: mb skill link --repo {quoted} --plugin" in out
     assert "not an agent" in out
     assert "next: mb skill link" not in out
 
@@ -2608,7 +2611,8 @@ def test_emitted_commands_quote_a_repo_path_with_spaces_and_parens(
         for line in out
         if line.startswith("next: mb ") and "--repo" in line
     ]
-    assert len(printed) == 1
+    # The plan command, and the retry `mb update` hands out (#1072).
+    assert len(printed) == 2
     for_you = [
         line.removeprefix("for you to run: ")
         for line in out
@@ -3059,11 +3063,16 @@ def test_operator_actions_doc_example_matches_real_entries(
         for item in example["operator_actions"]
         if placeholder in item["command"]
     }
+    plugin = f"mb skill link --repo {shlex.quote(str(business_repo))} --plugin"
     assert set(shown) == {
         f"mb skill link --repo {shlex.quote(str(business_repo))}",
+        plugin,
         f"mb doctor repair --repo {shlex.quote(str(business_repo))} --apply --only codex",
     }
+    assert set(shown[plugin]) == set(engine_mod.plugin_switch_operator_action(business_repo))
     for command, item in shown.items():
+        if command == plugin:
+            continue
         assert set(item) == set(real[command]), command
         assert item["changes"] == real[command]["changes"], command
 
@@ -3190,3 +3199,291 @@ def test_update_lists_kept_global_files_without_hiding_the_agents_md_entry(
     else:
         assert any("AGENTS.md" in item["changes"] for item in agents_entries)
     assert mine.read_text(encoding="utf-8") == "# Team policy\nA person wrote this.\n"
+
+
+# --- #1072: every suggested command names the business repo -------------------
+
+
+def _elsewhere(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+    monkeypatch.chdir(other)
+    return other
+
+
+def test_repo_flag_follows_one_rule_everywhere(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path
+) -> None:
+    quoted = shlex.quote(str(business_repo.resolve()))
+    _elsewhere(monkeypatch, tmp_path)
+    assert engine_mod.repo_flag(business_repo) == f" --repo {quoted}"
+    assert update_mod._repo_flag(business_repo) == f" --repo {quoted}"
+    assert codex_mod._repo_flag(business_repo) == f" --repo {quoted}"
+    monkeypatch.chdir(business_repo)
+    assert engine_mod.repo_flag(business_repo) == ""
+    assert update_mod._repo_flag(business_repo) == ""
+    assert codex_mod._repo_flag(business_repo) == ""
+
+
+def test_update_next_actions_name_the_repo_from_another_folder(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
+    _elsewhere(monkeypatch, tmp_path)
+    quoted = shlex.quote(str(business_repo.resolve()))
+
+    checked = update_mod.run(repo=business_repo, check=True, interactive=False)
+    live = update_mod.run(repo=business_repo, interactive=False, refresh_surfaces=False)
+
+    assert f"mb update --repo {quoted} --check" in checked["next_actions"]
+    assert f"mb update --repo {quoted}" in live["next_actions"]
+    assert "mb update --check" not in checked["next_actions"]
+    assert "mb update" not in live["next_actions"]
+    assert any(f"`mb update --repo {quoted}` again" in w for w in live["warnings"])
+
+
+def test_update_next_actions_stay_bare_inside_the_repo(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
+    monkeypatch.chdir(business_repo)
+
+    live = update_mod.run(repo=business_repo, interactive=False, refresh_surfaces=False)
+
+    assert "mb update" in live["next_actions"]
+
+
+def test_update_manual_message_names_the_repo_command(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "uv")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: "99.0.0")
+    monkeypatch.setattr("mb.update.shutil.which", lambda name: f"/usr/bin/{name}")
+    _elsewhere(monkeypatch, tmp_path)
+    quoted = shlex.quote(str(business_repo.resolve()))
+
+    result = update_mod.run(repo=business_repo, interactive=False, refresh_surfaces=False)
+
+    assert any(f"`mb update --repo {quoted}`" in w for w in result["warnings"])
+    assert not any("`mb update` from a terminal" in w for w in result["warnings"])
+
+
+def test_plugin_switch_operator_action_names_the_repo(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        update_mod,
+        "plugin_wiring_status",
+        lambda repo: {"wired": False, "marketplace_known": False, "plugin_enabled": False},
+    )
+    _elsewhere(monkeypatch, tmp_path)
+    quoted = shlex.quote(str(business_repo.resolve()))
+    result: dict[str, Any] = {"warnings": [], "next_actions": [], "operator_actions": []}
+
+    update_mod._add_plugin_follow_up(result, business_repo.resolve())
+
+    commands = [item["command"] for item in result["operator_actions"]]
+    assert commands == [f"mb skill link --repo {quoted} --plugin"]
+    monkeypatch.chdir(business_repo)
+    result = {"warnings": [], "next_actions": [], "operator_actions": []}
+    update_mod._add_plugin_follow_up(result, business_repo.resolve())
+    assert [item["command"] for item in result["operator_actions"]] == ["mb skill link --plugin"]
+
+
+def test_codex_runtime_follow_up_status_command_names_the_repo(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        codex_mod,
+        "readiness",
+        lambda repo=None, **_: {
+            "ok": False,
+            "status": "runtime",
+            "instructions": {"ok": True},
+            "global_skill_ok": True,
+            "global_skill": {},
+            "plugin_install": {},
+        },
+    )
+    _elsewhere(monkeypatch, tmp_path)
+    quoted = shlex.quote(str(business_repo.resolve()))
+    result: dict[str, Any] = {"warnings": [], "next_actions": [], "operator_actions": []}
+
+    update_mod._add_codex_follow_up(result, business_repo.resolve())
+
+    assert result["next_actions"] == [f"mb status --json --peek {quoted}"]
+    assert f"`mb status --json --peek {quoted}`" in result["warnings"][0]
+
+
+def test_codex_follow_up_prose_names_the_repo(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        codex_mod,
+        "readiness",
+        lambda repo=None, **_: {
+            "ok": False,
+            "status": "global",
+            "instructions": {"ok": True},
+            "global_skill_ok": False,
+            "global_skill": {},
+            "plugin_install": {},
+        },
+    )
+    _elsewhere(monkeypatch, tmp_path)
+    flag = f"--repo {shlex.quote(str(business_repo.resolve()))}"
+    result: dict[str, Any] = {"warnings": [], "next_actions": [], "operator_actions": []}
+
+    update_mod._add_codex_follow_up(result, business_repo.resolve())
+
+    assert f"mb doctor repair {flag} --plan --only codex" in result["warnings"][0]
+    assert f"mb doctor repair {flag} --apply --only codex" in result["warnings"][0]
+
+
+def test_a_suggested_command_runs_from_another_folder_on_the_repo(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "pipx")
+    other = _elsewhere(monkeypatch, tmp_path)
+    live = update_mod.run(repo=business_repo, interactive=False, refresh_surfaces=False)
+    retry = next(item for item in live["next_actions"] if item.startswith("mb update"))
+    status = update_mod._status_command(business_repo)
+    before = sorted(path.name for path in other.iterdir())
+
+    args = [*shlex.split(retry)[1:], "--check", "--json"]
+    out = runner.invoke(app, args)
+    peek = runner.invoke(app, [*shlex.split(status)[1:]])
+
+    assert out.exit_code == 0, out.output
+    assert json.loads(out.stdout)["repo"] == str(business_repo.resolve())
+    assert peek.exit_code == 0, peek.output
+    assert json.loads(peek.stdout)["repo"]["path"] == str(business_repo.resolve())
+    assert sorted(path.name for path in other.iterdir()) == before
+
+
+# --- #1072: AGENTS.md as a folder or a link --------------------------------
+
+
+def _agents_as_directory(repo: Path) -> None:
+    (repo / "AGENTS.md").unlink()
+    (repo / "AGENTS.md").mkdir()
+    (repo / "AGENTS.md" / "notes.md").write_text("mine\n", encoding="utf-8")
+    _git(repo, "add", "-A")
+    _git(repo, "-c", "user.name=T", "-c", "user.email=t@example.invalid", "commit", "-qm", "dir")
+
+
+@pytest.mark.parametrize("interactive", [False, True])
+def test_update_reports_an_agents_md_folder_instead_of_crashing(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, interactive: bool
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    _with_current_gitignore(business_repo)
+    _agents_as_directory(business_repo)
+    asked: list[list[str]] = []
+
+    def say_yes(repo: Path, files: list[str]) -> bool:
+        asked.append(files)
+        return True
+
+    result = update_mod.run(repo=business_repo, interactive=interactive, confirm_surfaces=say_yes)
+
+    assert (business_repo / "AGENTS.md" / "notes.md").read_text(encoding="utf-8") == "mine\n"
+    assert _git(business_repo, "status", "--porcelain") == ""
+    assert all("AGENTS.md" not in files for files in asked)
+    entries = [item for item in result["operator_actions"] if item.get("id") == "codex-agents-md"]
+    assert len(entries) == 1
+    assert "is a folder" in entries[0]["reason"]
+    assert "Move or rename" in entries[0]["manual_step"]
+    assert result["surface_refresh"]["codex"]["blocked"] is True
+    assert result["ok"] is True, result["errors"]
+
+
+def test_doctor_repair_codex_reports_an_agents_md_folder_instead_of_crashing(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path
+) -> None:
+    from mb import doctor as doctor_mod
+
+    _agents_as_directory(business_repo)
+
+    plan = doctor_mod.repair_plan(business_repo, only="codex")
+    applied = doctor_mod.repair_apply(business_repo, only="codex")
+
+    for report in (plan, applied):
+        assert [item["id"] for item in report["operator_actions"]] == ["codex-agents-md"]
+    assert (business_repo / "AGENTS.md" / "notes.md").is_file()
+
+
+def _agents_as_link(repo: Path, kind: str, tmp_path: Path) -> Path:
+    outside = tmp_path / "outside" / "AGENTS.md"
+    outside.parent.mkdir()
+    # The fixture tracks a regular AGENTS.md; only the "tracked" kind keeps a
+    # tracked path, the others start from a repo that does not track one.
+    _git(repo, "rm", "-q", "AGENTS.md")
+    _git(repo, "-c", "user.name=T", "-c", "user.email=t@example.invalid", "commit", "-qm", "rm")
+    if kind == "dangling":
+        outside = tmp_path / "outside" / "missing.md"
+    else:
+        outside.write_text("# My own guidance\n", encoding="utf-8")
+    (repo / "AGENTS.md").symlink_to(outside)
+    if kind == "tracked":
+        _git(repo, "add", "-A")
+        _git(repo, "-c", "user.name=T", "-c", "user.email=t@example.invalid", "commit", "-qm", "l")
+    return outside
+
+
+@pytest.mark.parametrize("kind", ["untracked", "dangling", "tracked"])
+def test_unattended_update_never_replaces_a_symlinked_agents_md(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path, kind: str
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    _with_current_gitignore(business_repo)
+    outside = _agents_as_link(business_repo, kind, tmp_path)
+    target = os.readlink(business_repo / "AGENTS.md")
+
+    result = update_mod.run(repo=business_repo, interactive=False)
+
+    assert (business_repo / "AGENTS.md").is_symlink()
+    assert os.readlink(business_repo / "AGENTS.md") == target
+    assert not outside.exists() or outside.read_text(encoding="utf-8") == "# My own guidance\n"
+    planned = result["surface_refresh"]["planned"]
+    assert planned["consent"] == "no_terminal"
+    assert "AGENTS.md" in planned["tracked_files"]
+    assert result["surface_refresh"]["codex"]["applied"] is False
+    entries = [
+        item
+        for item in result["operator_actions"]
+        if item["command"].endswith("--apply --only codex")
+    ]
+    assert [item["changes"] for item in entries] == [["AGENTS.md"]]
+    assert result["ok"] is True, result["errors"]
+
+
+def test_an_interactive_yes_may_replace_a_symlinked_agents_md_it_listed(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    _with_current_gitignore(business_repo)
+    outside = _agents_as_link(business_repo, "untracked", tmp_path)
+    asked: list[list[str]] = []
+
+    def say_yes(repo: Path, files: list[str]) -> bool:
+        asked.append(files)
+        return True
+
+    update_mod.run(repo=business_repo, interactive=True, confirm_surfaces=say_yes)
+
+    assert len(asked) == 1
+    assert any(item.startswith("AGENTS.md") for item in asked[0])
+    assert not (business_repo / "AGENTS.md").is_symlink()
+    assert outside.read_text(encoding="utf-8") == "# My own guidance\n"

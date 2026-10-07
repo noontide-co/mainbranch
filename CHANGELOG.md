@@ -29,6 +29,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- A symlinked `AGENTS.md` is never replaced by an unattended `mb update`,
+  whether or not git tracks it or the link points anywhere. The replacement
+  is listed as a step for you; at a terminal, the prompt names it and a yes
+  may replace it.
 - `mb connect test <provider>` no longer writes its outcome into a
   `.mb/connect.yaml` that git tracks, for every provider and not only Google.
   It prints `recorded: no (.mb/connect.yaml is tracked by git ...)`, and
@@ -67,6 +71,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- Every command `mb update` and `mb doctor repair` suggest now names your
+  business repo (`--repo <path>`), so it works from any folder: the retry
+  and next-step commands, the plugin switch (it said `--repo .`), the
+  `mb status` check, and doctor's own action, surface and apply-choice
+  commands. The flag is left out only when you are already in that repo.
+- `mb update` and `mb doctor repair --only codex` no longer stop with an error
+  when `AGENTS.md` is a folder. They report it as a step for you (move or
+  rename it), change nothing, and finish the rest of the run.
 - `mb google ... --out` follow-ups. With `--json`, a file that could not be written
   now puts the failure (`out_write_failed`) on stdout as well, like the read
   failures. The message says "nothing was left behind" only when that is true; if
@@ -148,8 +160,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   and `mb init`, with their manual steps, including the one for an
   `AGENTS.md` Main Branch will not change) and the Codex `repair` hints in
   `mb status`, `mb start` and `mb doctor` checks name your business repo with
-  `--repo <path>` when you are not inside it. Doctor's own action commands
-  are unchanged for now (#1072).
+  `--repo <path>` when you are not inside it (#1072).
+- `mb update` and `mb doctor repair` commands name your business repo when you
+  are not inside it: `next_actions`, `operator_actions`, doctor's
+  `actions[].command`, `sections[].actions[].command`,
+  `sections[].checks[].repair_command`, `agent_surfaces` repair, scope and apply
+  commands and `post_apply`. Each command in a `&&` chain names it exactly
+  once (so `mb status --json --peek <path>` no longer gets the path twice),
+  `mb migrate --repo <path> campaigns --plan` acts on your repo rather than the
+  folder you are in, and a repo path containing ` --repo . ` or ` && ` is
+  quoted instead of split. Some prose (`plan_interpretation.summary`,
+  migration-drift text) still names no repo (#1072).
 
 ## [0.6.4] - 2026-10-06
 

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -1565,7 +1566,7 @@ def claude_mainbranch_plugin_status(
 # The plugin-rail switch writes a tracked file, so `mb update` and
 # `mb doctor repair` list it in `operator_actions` for a person, never as a
 # step an agent runs (#1023, #1042).
-PLUGIN_SWITCH_COMMAND = "mb skill link --repo . --plugin"
+PLUGIN_SWITCH_COMMAND = "mb skill link --repo . --plugin"  # the in-repo form
 PLUGIN_SWITCH_NOTE = (
     "For a person to run at a terminal, not an agent: switches this repo to the "
     "Main Branch plugin rail by writing the tracked `.claude/settings.json`. "
@@ -1573,14 +1574,35 @@ PLUGIN_SWITCH_NOTE = (
 )
 
 
+def repo_flag(repo: str | Path | None) -> str:
+    """` --repo <path>` for a command a person may paste, shell-quoted (#1072).
+
+    The one rule every suggested command follows: the absolute repo path,
+    omitted only when the repo is the current directory (or none is known).
+    """
+    if repo is None:
+        return ""
+    target = Path(repo).expanduser().resolve()
+    try:
+        here: Path | None = Path.cwd().resolve()
+    except OSError:
+        here = None
+    return "" if target == here else f" --repo {shlex.quote(str(target))}"
+
+
 def operator_action(command: str, changes: list[str], note: str) -> dict[str, Any]:
     """One `operator_actions` entry: a tracked-file write for a person to run."""
     return {"command": command, "changes": list(changes), "note": note}
 
 
-def plugin_switch_operator_action() -> dict[str, Any]:
-    """The `operator_actions` entry for a repo still on symlink-only wiring."""
-    return operator_action(PLUGIN_SWITCH_COMMAND, [".claude/settings.json"], PLUGIN_SWITCH_NOTE)
+def plugin_switch_operator_action(repo: str | Path | None = None) -> dict[str, Any]:
+    """The `operator_actions` entry for a repo still on symlink-only wiring.
+
+    The command names the business repo (#1072), so it acts on that repo from
+    any folder; it keeps `--repo .` only when no repo is known.
+    """
+    command = PLUGIN_SWITCH_COMMAND if repo is None else f"mb skill link{repo_flag(repo)} --plugin"
+    return operator_action(command, [".claude/settings.json"], PLUGIN_SWITCH_NOTE)
 
 
 def write_plugin_wiring(repo: str | Path) -> dict[str, Any]:

@@ -29,6 +29,7 @@ from mb.engine import (
     operator_action,
     plugin_switch_operator_action,
     plugin_wiring_status,
+    repo_flag,
 )
 
 # Re-exported: callers and tests read these from `mb.update`.
@@ -68,7 +69,7 @@ UV_UPDATE_COMMAND = [
 UV_MANUAL_MESSAGE = (
     "Main Branch was installed as a uv tool. Upgrading replaces the installed "
     "command, so it only runs after an explicit yes at an interactive prompt. "
-    "The command below is yours to run, or run `mb update` from a terminal to "
+    "The command below is yours to run, or run `{update}` from a terminal to "
     "be asked."
 )
 UV_DECLINED_MESSAGE = (
@@ -315,7 +316,9 @@ def _note_manual_update(
         return
     result["new_version"] = latest or result["old_version"]
     result["manual_update_command"] = command
-    result["warnings"].append(message)
+    result["warnings"].append(
+        message.replace("{update}", _update_command(str(result.get("repo") or ".")))
+    )
     if command not in result["next_actions"]:
         result["next_actions"].append(command)
 
@@ -598,9 +601,10 @@ def _codex_new_repo_files(
 
     `tracked_changes` names only files git already tracks, so a missing
     AGENTS.md is not in it. A new AGENTS.md still shows in `git status`, so it
-    needs the same yes as a tracked write. A dangling, untracked AGENTS.md link
-    counts too: the apply replaces the link itself (`replace_link`), so the
-    inside-repo check resolves the parent folder, never the link.
+    needs the same yes as a tracked write. An untracked AGENTS.md link counts
+    too, dangling or not (#1072): the apply replaces the link itself
+    (`replace_link`), so the inside-repo check resolves the parent folder,
+    never the link.
     """
     repo_real = os.path.realpath(repo)
     seen = {item["path"] for item in known}
@@ -612,7 +616,9 @@ def _codex_new_repo_files(
             if not isinstance(operation, dict) or operation.get("op") != "write":
                 continue
             path = str(operation.get("path") or "")
-            if not path or os.path.exists(path):
+            # #1072: a link the person made is held like a tracked file, whether
+            # or not it points anywhere; only a regular file is refreshed freely.
+            if not path or (os.path.exists(path) and not os.path.islink(path)):
                 continue
             real = os.path.join(os.path.realpath(os.path.dirname(path)), os.path.basename(path))
             if not real.startswith(repo_real + os.sep):
@@ -692,8 +698,21 @@ def _unapproved_tracked_changes(
 
 
 def _repo_flag(repo: Path) -> str:
-    """` --repo <path>` for a command the operator may paste, shell-quoted."""
-    return "" if repo == Path.cwd().resolve() else f" --repo {shlex.quote(str(repo))}"
+    """` --repo <path>` for a command the operator may paste (#1072)."""
+    return repo_flag(repo)
+
+
+def _update_command(repo: Path | str, *, check: bool = False) -> str:
+    """The `mb update` command that acts on this business repo from any folder."""
+    return f"mb update{repo_flag(Path(repo))}{' --check' if check else ''}"
+
+
+def _status_command(repo: Path | str) -> str:
+    """The read-only status command for this repo; `mb status` takes the path."""
+    target = Path(repo).resolve()
+    flag = repo_flag(target)
+    path = f" {shlex.quote(str(target))}" if flag else ""
+    return f"mb status --json --peek{path}"
 
 
 def _base_result(
@@ -777,8 +796,7 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
         if not instructions.get("ok", False):
             message = (
                 "Codex AGENTS.md guidance still needs repo repair. Run "
-                "`mb doctor repair --plan --only codex`, review it, then approve "
-                "`mb doctor repair --apply --only codex`."
+                f"`{plan_command}`, review it, then approve `{apply_command}`."
             )
             next_actions = [plan_command]
             # #1049: the apply rewrites the tracked AGENTS.md, so it is a step
@@ -805,16 +823,15 @@ def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
             message = (
                 "The global Main Branch Codex skills are not ready, so `mb-*` "
                 "routes may be missing or stale. "
-                "Run `mb doctor repair --plan --only codex`, review it, then approve "
-                "`mb doctor repair --apply --only codex`."
+                f"Run `{plan_command}`, review it, then approve `{apply_command}`."
             )
             next_actions = [plan_command, apply_command]
         else:
             message = (
                 "Codex runtime readiness still needs attention. Run "
-                "`mb status --json --peek` and repair the reported runtime issue."
+                f"`{_status_command(repo)}` and repair the reported runtime issue."
             )
-            next_actions = ["mb status --json --peek"]
+            next_actions = [_status_command(repo)]
         result["warnings"].append(message)
         result["next_actions"].extend(next_actions)
     elif plugin_install.get("slash_commands_restart_required"):
@@ -863,7 +880,7 @@ def _add_plugin_follow_up(result: dict[str, Any], repo: Path) -> None:
         )
         # #1023: the switch writes tracked `.claude/settings.json`, so it is a
         # step for a person at a terminal, never an unattended next action.
-        result["operator_actions"].append(plugin_switch_operator_action())
+        result["operator_actions"].append(plugin_switch_operator_action(repo))
 
     install_state = str(install.get("state") or "")
     if install_state in {"stale", "installed_not_enabled", "disabled", "not_installed"}:
@@ -937,7 +954,7 @@ def _refresh_surfaces(
         result["errors"].append(
             "the installed `mb` did not report which tracked files the surface refresh "
             "would change, so nothing was refreshed. Upgrade Main Branch, then run "
-            "`mb update` again."
+            f"`{_update_command(target_repo)}` again."
         )
         return
     # #1052: a Codex AGENTS.md repair that would refuse, or leave a person's
@@ -1155,7 +1172,7 @@ def run(
             result["actions"] = [
                 "would leave this install alone; PyPI's latest version could not be checked",
             ]
-            _note_latest_unknown(result, retry="mb update --check")
+            _note_latest_unknown(result, retry=_update_command(target_repo, check=True))
         elif mode in {"uv", "wheel"} and _note_already_current(result, latest):
             result["actions"] = [
                 "would leave this install alone; it already runs PyPI's latest release",
@@ -1258,7 +1275,7 @@ def run(
         result["actions"].append(
             "left this install alone; PyPI's latest version could not be checked"
         )
-        _note_latest_unknown(result, retry="mb update")
+        _note_latest_unknown(result, retry=_update_command(target_repo))
     elif mode in {"pipx", "uv"} and _note_ahead_of_pypi(result, latest):
         result["actions"].append("left this install alone; it is newer than PyPI's latest")
     elif mode in {"uv", "wheel"} and _note_already_current(result, latest):

@@ -285,7 +285,7 @@ def test_surface_apply_commands_are_documented_as_operator_actions() -> None:
     root = Path(__file__).resolve().parents[2]
     doc = (root / "docs" / "json-output-contract.md").read_text()
     section = doc.split("### Operator Actions", 1)[1].split("\n### ", 1)[0]
-    assert "mb skill link --repo ." in section
+    assert "mb skill link --repo /Users/me/my-business" in section
     assert "--apply --only codex" in section
     assert "apply_commands" in section
     skill = (root / ".claude" / "skills" / "mb-update" / "SKILL.md").read_text()
