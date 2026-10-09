@@ -81,6 +81,20 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- `mb google ... --out` refusals now show a path under your home folder as
+  `~/...`, like the summary, whether it was typed absolute or relative and
+  with any `.`, `..`, link or case spelling. A last check hides any remaining
+  folder named like your home folder, so neither a refusal nor the summary,
+  both marked safe to share, prints it. With `GIT_DIR` or `GIT_WORK_TREE` exported, a refusal that
+  comes from that repository says so; a work tree `mb` cannot examine is refused
+  instead of counted as outside it; a `GIT_WORK_TREE` spelled with another case
+  or through a firmlink is matched to the real folder, so its ignored folders
+  are allowed; and an empty `GIT_DIR=""` or `GIT_WORK_TREE=""` counts as set,
+  as git refuses to run with it. A checkout with `core.ignorecase` false or unset
+  on a disk that does not tell case apart refuses a folder name spelled unlike
+  the one on disk, because git's ignore rules may not cover where the file
+  lands. If the file is written but its temporary copy cannot be removed, the
+  summary now says so and names it (#1080).
 - In a business repo with no `.gitignore`, `mb update` run by an agent, a
   schedule or with `--json` no longer leaves a new, uncommitted `.gitignore`
   behind. It changes nothing in the repo and lists

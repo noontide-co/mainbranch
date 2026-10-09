@@ -22,6 +22,7 @@ import pytest
 
 from mb import google_out as go_out
 from mb.cli import app
+from mb.google_reads import terminal_safe
 from tests.test_google_connect import (  # noqa: F401 (fixtures are used by name)
     client_file,
     google,
@@ -158,7 +159,9 @@ def test_every_read_takes_out(
     )
     assert document["ok"] is True
     assert _mode(target) == 0o600
-    assert f"wrote {target.resolve()}" in result.stdout
+    # As printed: a long temp root is cut to the display cap.
+    shown = terminal_safe(go_out.display_path(target), 200)
+    assert f"wrote {shown}" in result.stdout
 
 
 def test_summary_counts_rows_sitemaps_and_paging(
@@ -1035,3 +1038,563 @@ def test_the_module_uses_no_grant_or_token_names() -> None:
     # `--out` only handles the already-shaped result; it never touches a credential.
     source = Path(go_out.__file__).read_text(encoding="utf-8")
     assert not re.search(r"access_token|refresh_token|client_secret|oauth_grant|read_token", source)
+
+
+# --- follow-ups from the #1081 reviews (#1080) -------------------------------------------
+
+
+def test_a_refusal_under_home_shows_a_tilde(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    home = tmp_path / "homefolder"
+    (home / "pulls").mkdir(parents=True)
+    (home / "pulls" / "link.json").symlink_to(home / "pulls" / "gone.json")
+    monkeypatch.setenv("HOME", str(home))
+
+    _checkout_with(home / "checkout", TEMPLATE_GITIGNORE.read_text(encoding="utf-8"))
+
+    # (shell folder, --out as typed, shown, rule); relative paths that lead under home too.
+    for cwd, out, shown, rule in (
+        (tmp_path, str(home / "nope" / "x.json"), "~/nope/x.json", "out_parent_missing"),
+        (tmp_path, str(home / "pulls" / "link.json"), "~/pulls/link.json", "out_path_link"),
+        (tmp_path, "homefolder/nope/x.json", "~/nope/x.json", "out_parent_missing"),
+        (home / "pulls", "../../homefolder/nope/x.json", "~/nope/x.json", "out_parent_missing"),
+        (tmp_path, "homefolder/checkout/docs/x.json", "~/checkout/docs/x.json", "out_path_in_repo"),
+        (home, "nope/x.json", "~/nope/x.json", "out_parent_missing"),
+    ):
+        monkeypatch.chdir(cwd)
+        human = _out(repo, SC_ARGS, out)
+        as_json = _out(repo, SC_ARGS, out, "--json")
+
+        _refused(human, rule)
+        assert f"--out {shown}" in human.stderr
+        payload = json.loads(as_json.stdout)
+        assert payload["safe_to_share"] is True and shown in payload["summary"]
+        for text in (human.stdout + human.stderr, as_json.stdout + as_json.stderr):
+            assert str(home) not in text and home.name not in text
+
+    # A relative path that does not lead under home is shown as typed.
+    monkeypatch.chdir(tmp_path)
+    assert "--out elsewhere/x.json:" in _out(repo, SC_ARGS, "elsewhere/x.json").stderr
+
+
+def test_home_is_found_by_spelling_when_identity_cannot_be_compared(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    home = tmp_path / "homefolder"
+    (home / "pulls").mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(home))
+
+    def unreadable(*_: Any) -> bool:
+        raise PermissionError("cannot look (synthetic)")
+
+    monkeypatch.setattr(os.path, "samefile", unreadable)
+
+    refused = _out(repo, SC_ARGS, home / "nope" / "x.json", "--json")
+    written = _out(repo, SC_ARGS, home.resolve() / "pulls" / "q.json", "--json")
+
+    assert "~/nope/x.json" in json.loads(refused.stdout)["summary"]
+    assert written.exit_code == 0 and json.loads(written.stdout)["out"] == "~/pulls/q.json"
+    for text in (refused.stdout + refused.stderr, written.stdout + written.stderr):
+        assert home.name not in text
+
+
+def _env_text(text: str) -> None:
+    assert "GIT_DIR or GIT_WORK_TREE in this shell" in text
+    assert "nothing was read or written" in text
+
+
+def test_a_work_tree_mb_cannot_examine_is_refused_not_counted_as_outside(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from mb.google_reads import ReadRefusal
+
+    _separate_git_dir(tmp_path, monkeypatch)
+    outside = tmp_path / "elsewhere" / "x.json"
+    assert go_out.check_out(str(outside)).path.name == "x.json"
+
+    def unreadable(*_: Any) -> bool:
+        raise PermissionError("cannot look (synthetic)")
+
+    with monkeypatch.context() as patched:
+        patched.setattr(os.path, "samefile", unreadable)
+        with pytest.raises(ReadRefusal) as refused:
+            go_out.check_out(str(outside))
+    assert refused.value.rule == "out_path_git_unknown"
+    assert "could not examine that work tree" in str(refused.value)
+    assert "synthetic" not in str(refused.value)
+
+    # A work tree that is not there cannot be examined either.
+    monkeypatch.setenv("GIT_WORK_TREE", str(tmp_path / "missing"))
+    with pytest.raises(ReadRefusal) as missing:
+        go_out.check_out(str(outside))
+    assert missing.value.rule == "out_path_git_unknown"
+    assert "GIT_DIR or GIT_WORK_TREE" in str(missing.value)
+
+
+def test_refusals_from_the_exported_repository_say_so(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, checkout: Path
+) -> None:
+    from mb.google_reads import ReadRefusal
+
+    work = _separate_git_dir(tmp_path, monkeypatch)
+    exclude = tmp_path / "sep.git" / "info" / "exclude"
+    exclude.write_text("ignored/\nreport.json\n", encoding="utf-8")
+
+    for path, rule in (
+        (work / "open" / "x.json", "out_path_in_repo"),
+        (work / "report.json", "out_temp_not_ignored"),
+    ):
+        with pytest.raises(ReadRefusal) as refused:
+            go_out.check_out(str(path))
+        assert refused.value.rule == rule
+        _env_text(str(refused.value))
+    if _case_insensitive(tmp_path):
+        with pytest.raises(ReadRefusal) as unplaced:
+            go_out.check_out(str(tmp_path / "WORK" / "open" / "x.json"))
+        assert unplaced.value.rule == "out_path_git_unknown"
+        assert "could not place" in str(unplaced.value)
+        _env_text(str(unplaced.value))
+
+    # Without the variables the text is as before.
+    monkeypatch.delenv("GIT_DIR")
+    monkeypatch.delenv("GIT_WORK_TREE")
+    with pytest.raises(ReadRefusal) as plain:
+        go_out.check_out(str(checkout / "docs" / "x.json"))
+    assert " is inside a git checkout and git does not ignore it, so the data" in str(plain.value)
+    assert "GIT_DIR" not in str(plain.value)
+
+
+def _ignored_by_git(tmp_path: Path, work: Path, file: Path) -> bool:
+    env = {
+        "HOME": str(tmp_path),
+        "PATH": os.environ["PATH"],
+        "GIT_DIR": str(tmp_path / "sep.git"),
+        "GIT_WORK_TREE": str(work),
+    }
+    done = subprocess.run(
+        ["git", "status", "--porcelain", "--ignored", "-uall"],
+        cwd=work,
+        env=env,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    relative = file.relative_to(work).as_posix()
+    return f"!! {relative}" in done.stdout.splitlines()
+
+
+@pytest.mark.parametrize("spelling", ["case", "firmlink"])
+def test_a_work_tree_exported_in_another_spelling_allows_its_ignored_folders(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spelling: str
+) -> None:
+    from mb.google_reads import ReadRefusal
+
+    work = _separate_git_dir(tmp_path, monkeypatch, name="Biz")
+    if spelling == "case":
+        if not _case_insensitive(tmp_path):
+            pytest.skip("this disk tells apart folder names that differ only in case")
+        exported = str(tmp_path / "BIZ")
+    else:
+        data = Path("/System/Volumes/Data")
+        real = work.resolve()
+        if not data.is_dir() or not (data / str(real).lstrip("/")).is_dir():
+            pytest.skip("no firmlinked data volume on this machine")
+        exported = str(data) + str(real)
+    monkeypatch.setenv("GIT_WORK_TREE", exported)
+
+    target = go_out.check_out(str(work / "ignored" / "x.json"))
+    target.path.write_text("{}", encoding="utf-8")
+    assert _ignored_by_git(tmp_path, work, work / "ignored" / "x.json")
+    with pytest.raises(ReadRefusal) as refused:
+        go_out.check_out(str(work / "open" / "x.json"))
+    assert refused.value.rule == "out_path_in_repo"
+    assert go_out.check_out(str(tmp_path / "elsewhere" / "x.json")).path.name == "x.json"
+
+
+def _checkout_ignoring_open(tmp_path: Path, ignorecase: str) -> Path:
+    root = tmp_path / "cased"
+    root.mkdir()
+    _git(root, "init", "-q")
+    _git(root, "config", "core.ignorecase", ignorecase)
+    (root / "open").mkdir()
+    (root / ".git" / "info" / "exclude").write_text("OPEN/\n", encoding="utf-8")
+    return root
+
+
+@pytest.mark.parametrize("env", [False, True])
+def test_ignorecase_false_refuses_a_folder_spelled_unlike_the_disk(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    env: bool,
+) -> None:
+    if not _case_insensitive(tmp_path):
+        pytest.skip("this disk tells apart folder names that differ only in case")
+    api = _signed(repo, client_file, google, monkeypatch)
+    root = _checkout_ignoring_open(tmp_path, "false")
+    if env:
+        monkeypatch.chdir(root)
+        monkeypatch.setenv("GIT_DIR", ".git")
+
+    result = _out(repo, SC_ARGS, root / "OPEN" / "x.json")
+
+    _refused(result, "out_path_git_unknown")
+    assert "core.ignorecase" in result.stderr and "spelled differently" in result.stderr
+    assert api.calls == [] and list((root / "open").iterdir()) == []
+
+
+@pytest.mark.parametrize(
+    ("ignorecase", "seen"),
+    [
+        ("false", "sets core.ignorecase to false"),
+        ("true", ""),
+        ("unset", "does not set core.ignorecase (git then treats it as false)"),
+        ("broken", "did not let mb read core.ignorecase"),
+    ],
+)
+def test_a_spelling_unlike_the_disk_is_judged_by_core_ignorecase(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, ignorecase: str, seen: str
+) -> None:
+    # Runs on any disk: the disk is made to report another spelling.
+    from mb.google_reads import ReadRefusal
+
+    root = _checkout_ignoring_open(tmp_path, "false" if ignorecase == "broken" else ignorecase)
+    if ignorecase == "unset":
+        _git(root, "config", "--unset", "core.ignorecase")
+    (root / "OPEN").mkdir(exist_ok=True)
+    monkeypatch.setattr(go_out, "_spelled_as_on_disk", lambda *_: False)
+    if ignorecase == "broken":
+        real = go_out._git
+
+        def no_config(args: list[str], cwd: Path, **kwargs: Any) -> Any:
+            if args[0] == "config":
+                return subprocess.CompletedProcess(args, 128, b"", b"fatal")
+            return real(args, cwd, **kwargs)
+
+        monkeypatch.setattr(go_out, "_git", no_config)
+
+    if ignorecase == "true":
+        assert go_out.check_out(str(root / "OPEN" / "x.json")).path.name == "x.json"
+        return
+    with pytest.raises(ReadRefusal) as refused:
+        go_out.check_out(str(root / "OPEN" / "x.json"))
+    assert refused.value.rule == "out_path_git_unknown"
+    assert seen in str(refused.value) and "nothing was read or written" in str(refused.value)
+    if ignorecase != "false":
+        assert "sets core.ignorecase to false" not in str(refused.value)
+
+
+@pytest.mark.parametrize("var", ["GIT_DIR", "GIT_WORK_TREE"])
+def test_an_empty_git_variable_counts_as_set_as_it_does_for_git(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    outdir: Path,
+    var: str,
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    shell = tmp_path / "shellfolder"
+    shell.mkdir()
+    monkeypatch.chdir(shell)
+    monkeypatch.setenv(var, "")
+    git_env = {"HOME": str(tmp_path), "PATH": os.environ["PATH"], var: ""}
+    plain = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"], cwd=shell, env=git_env, capture_output=True
+    )
+    assert plain.returncode != 0  # git itself will not run with it
+
+    _unusable_text(_out(repo, SC_ARGS, outdir / "q.json"))
+
+    assert api.calls == [] and list(outdir.iterdir()) == []
+
+
+def test_a_temp_left_after_a_successful_write_is_named(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    outdir: Path,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    real_unlink = os.unlink
+
+    def stuck(path: Any, *args: Any, **kwargs: Any) -> None:
+        if str(path).endswith(".mb-out.tmp"):
+            raise OSError("cannot remove (synthetic)")
+        real_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(os, "unlink", stuck)
+
+    human = _out(repo, SC_ARGS, outdir / "x.json")
+    assert human.exit_code == 0 and (outdir / "x.json").is_file()
+    assert "warning:" in human.stdout and ".x.json.mb-out.tmp" in human.stdout
+    assert "remove it yourself" in human.stdout
+    real_unlink(outdir / ".x.json.mb-out.tmp")
+
+    as_json = _out(repo, SC_ARGS, outdir / "y.json", "--json")
+    assert as_json.exit_code == 0
+    info = json.loads(as_json.stdout)
+    assert info["ok"] is True and info["safe_to_share"] is True
+    assert len(info["warnings"]) == 1 and ".y.json.mb-out.tmp" in info["warnings"][0]
+    assert "synthetic" not in human.stdout + human.stderr + as_json.stdout
+    assert (outdir / ".y.json.mb-out.tmp").is_file()
+
+
+def _stuck_unlink(monkeypatch: pytest.MonkeyPatch, error: type[OSError]) -> None:
+    real_unlink = os.unlink
+
+    def stuck(path: Any, *args: Any, **kwargs: Any) -> None:
+        if str(path).endswith(".mb-out.tmp"):
+            if error is FileNotFoundError:
+                real_unlink(path, *args, **kwargs)  # someone else removed it first
+            raise error("cannot remove (synthetic)")
+        real_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(os, "unlink", stuck)
+
+
+def test_a_leftover_temp_name_is_printed_without_terminal_escapes(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    outdir: Path,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    _stuck_unlink(monkeypatch, PermissionError)
+    name = "x\x1b[31m.json"
+
+    written = _out(repo, SC_ARGS, outdir / name)
+    as_json = _out(repo, SC_ARGS, outdir / ("y" + name), "--json")
+    _failing_link(monkeypatch)
+    failed = _out(repo, SC_ARGS, outdir / ("z" + name))
+
+    assert written.exit_code == 0 and "warning:" in written.stdout
+    assert as_json.exit_code == 0
+    assert failed.exit_code == 1 and "remove it yourself" in failed.stderr
+    for text in (written.stdout, failed.stderr, json.loads(as_json.stdout)["warnings"][0]):
+        assert "\x1b" not in text and ".mb-out.tmp" in text
+
+
+def test_a_temp_already_gone_is_not_reported_as_left_behind(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    outdir: Path,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    _stuck_unlink(monkeypatch, FileNotFoundError)
+
+    written = _out(repo, SC_ARGS, outdir / "x.json", "--json")
+    _failing_link(monkeypatch)
+    failed = _out(repo, SC_ARGS, outdir / "y.json")
+
+    assert written.exit_code == 0 and json.loads(written.stdout)["warnings"] == []
+    assert failed.exit_code == 1 and "nothing was left behind" in failed.stderr
+    assert "still there" not in written.stdout + failed.stderr
+    assert sorted(p.name for p in outdir.iterdir()) == ["x.json"]
+
+
+# --- the home folder's name never printed: a fixed corpus (#1080) -------------------------
+
+
+def test_the_last_guard_hides_any_part_named_like_home(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = tmp_path / "Homefolder"
+    home.mkdir()
+    (tmp_path / "homelink").symlink_to(home)
+    monkeypatch.setenv("HOME", str(tmp_path / "homelink"))
+
+    guard = go_out.hide_home_name
+    assert guard("~/pulls/x.json", "x.json") == "~/pulls/x.json"
+    assert guard("elsewhere/x.json", "x.json") == "elsewhere/x.json"
+    # The link's name, its target's name, in any case and through terminal escapes.
+    assert guard("/T/homelink/nope/x.json", "x.json") == "…/x.json"
+    assert guard("/T/HOMEFOLDER/x.json", "x.json") == "…/x.json"
+    assert guard("~/nope/../../homefolder/x.json", "x.json") == "~/…/x.json"
+    assert guard("homefo\x1b[1mlder/x.json", "x.json") == "…/x.json"
+    assert guard("/T/homefolder", "homefolder") == "…"
+    # A name that only contains it is not the home folder.
+    assert guard("/T/homefolder2/x.json", "x.json") == "/T/homefolder2/x.json"
+
+
+# Ways to name the home folder: (shell folder, prefix) with `H` home as given, `R` its
+# real path, `T` the temp root; `HOMEFOLDER` spellings run only on a case-insensitive disk.
+CORPUS_PREFIXES = {
+    "abs": ("T", "{H}/"),
+    "abs-real": ("T", "{R}/"),
+    "abs-upper": ("T", "{T}/HOMEFOLDER/"),
+    "abs-link": ("T", "{T}/homelink/"),
+    "abs-firmlink": ("T", "/System/Volumes/Data{R}/"),
+    "abs-double-slash": ("T", "{H}//"),
+    "tilde": ("T", "~/"),
+    "rel-from-parent": ("T", "homefolder/"),
+    "rel-upper-from-parent": ("T", "HOMEFOLDER/"),
+    "rel-link-from-parent": ("T", "homelink/"),
+    "rel-trailing-slashes": ("T", "homefolder//"),
+    "rel-inside": ("H", ""),
+    "rel-dot-inside": ("H", "./"),
+    "rel-up-from-pulls": ("H/pulls", "../"),
+    "rel-up-up-from-pulls": ("H/pulls", "../../homefolder/"),
+    "rel-three-up-from-pulls": ("H/pulls", "../../../{Tname}/homefolder/"),
+    "rel-from-root": ("/", "{Rrel}/"),
+    "cwd-link": ("T/homelink", ""),
+    "cwd-upper": ("T/HOMEFOLDER", ""),
+    "dotdot-existing-abs": ("T", "{H}/pulls/../"),
+    "dotdot-existing-rel": ("H", "pulls/../"),
+    "dotdot-missing-abs": ("T", "{H}/nope/../"),
+    "dotdot-missing-back-abs": ("T", "{H}/nope/../../homefolder/"),
+    "dotdot-missing-rel": ("H", "nope/../../homefolder/"),
+    "dotdot-missing-two-rel": ("H", "nope/nope2/../../../homefolder/"),
+    "dotdot-missing-from-parent": ("T", "homefolder/nope/../../homefolder/"),
+}
+# What the path names below home: (suffix, expected exit code).
+CORPUS_TARGETS = {
+    "missing-parent": ("nope/x.json", 2),
+    "link": ("pulls/link.json", 2),
+    "in-checkout": ("checkout/docs/x.json", 2),
+    "exists": ("pulls/exists.json", 2),
+    "folder": ("pulls", 2),
+    "git-folder": ("checkout/.git/x.json", 2),
+    "tracked": ("checkout/tracked.json", 2),
+    "allowed": ("pulls/new-{n}.json", 0),
+}
+CORPUS_HOMES = ["as-is", "trailing-slash", "link", "upper", "real"]
+
+
+@pytest.mark.parametrize("home_kind", CORPUS_HOMES)
+@pytest.mark.parametrize("prefix", list(CORPUS_PREFIXES))
+def test_the_home_folder_name_is_never_printed(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    home_kind: str,
+    prefix: str,
+) -> None:
+    upper_case = "upper" in prefix or home_kind == "upper"
+    if upper_case and not _case_insensitive(tmp_path):
+        pytest.skip("this disk tells apart folder names that differ only in case")
+    _signed(repo, client_file, google, monkeypatch)
+    home = tmp_path / "homefolder"
+    (home / "pulls").mkdir(parents=True)
+    (home / "pulls" / "exists.json").write_text("{}", encoding="utf-8")
+    (home / "pulls" / "link.json").symlink_to(home / "pulls" / "gone.json")
+    _checkout_with(home / "checkout", TEMPLATE_GITIGNORE.read_text(encoding="utf-8"))
+    (tmp_path / "homelink").symlink_to(home)
+    real = home.resolve()
+    if prefix == "abs-firmlink" and not Path(f"/System/Volumes/Data{real}").is_dir():
+        pytest.skip("no firmlinked data volume on this machine")
+    monkeypatch.setenv(
+        "HOME",
+        {
+            "as-is": str(home),
+            "trailing-slash": f"{home}/",
+            "link": str(tmp_path / "homelink"),
+            "upper": str(tmp_path / "HOMEFOLDER"),
+            "real": str(real),
+        }[home_kind],
+    )
+    cwd, spelled = CORPUS_PREFIXES[prefix]
+    folders = {"T": tmp_path, "H": home, "/": Path("/")}
+    head, _, rest = cwd.partition("/")
+    monkeypatch.chdir(folders[head] / rest if head in folders else Path(cwd))
+    spelled = spelled.format(
+        H=home, R=real, T=tmp_path, Tname=tmp_path.name, Rrel=str(real).lstrip("/")
+    )
+
+    for target, (suffix, code) in CORPUS_TARGETS.items():
+        for n, extra in enumerate(((), ("--json",))):
+            out = spelled + suffix.format(n=n)
+            result = _out(repo, SC_ARGS, out, *extra)
+            text = (result.stdout + result.stderr).lower()
+
+            # A `..` through a missing folder leaves no folder to write in.
+            expected = 2 if prefix.startswith("dotdot-missing") else code
+            assert result.exit_code == expected, (target, out, result.stdout + result.stderr)
+            assert "homefolder" not in text and "homelink" not in text, (target, out, text)
+            if extra:
+                assert json.loads(result.stdout)["safe_to_share"] is True
+
+
+# Cells only the last guard can pass, through the CLI: (shell folder, --out, exit, shown).
+GUARD_CELLS = {
+    # A folder elsewhere named like home (a backup volume's copy, say).
+    "elsewhere-named-like-home": ("T", "other/homefolder/x.json", 0, "…/x.json"),
+    "elsewhere-named-like-home-missing": ("T", "other/gone/homefolder/x.json", 2, "…/x.json"),
+    # The home-named part ends at character 119, where the display is cut.
+    "cut-at-the-display-width": ("T", "q" * 105 + "/../homefolder/../away/x.json", 2, "…/x.json"),
+}
+
+
+@pytest.mark.parametrize("cell", list(GUARD_CELLS))
+def test_the_guard_is_reached_through_the_cli(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    cell: str,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    home = tmp_path / "homefolder"
+    home.mkdir()
+    (tmp_path / "other" / "homefolder").mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.chdir(tmp_path)
+    _, out, code, shown = GUARD_CELLS[cell]
+    if cell == "cut-at-the-display-width":
+        assert out.index("homefolder") + len("homefolder") == 119
+
+    for n, extra in enumerate(((), ("--json",))):
+        result = _out(repo, SC_ARGS, out.replace("x.json", f"x{n}.json"), *extra)
+        text = result.stdout + result.stderr
+
+        assert result.exit_code == code, text
+        assert "homefolder" not in text.lower(), text
+        expected = shown.replace("x.json", f"x{n}.json")
+        if extra:
+            payload = json.loads(result.stdout)
+            assert payload["safe_to_share"] is True
+            assert expected in (payload.get("out") or payload["summary"])
+        else:
+            assert expected in text
+
+
+def test_a_dotdot_after_a_link_is_not_shown_as_a_path_under_home(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    home = tmp_path / "homefolder"
+    home.mkdir()
+    (tmp_path / "away" / "deep").mkdir(parents=True)
+    (tmp_path / "away" / "x.json").write_text("{}", encoding="utf-8")
+    (home / "linkout").symlink_to(tmp_path / "away" / "deep")
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.chdir(home)
+
+    # `linkout/..` is `away/`, not home: the file that exists is away/x.json.
+    for extra in ((), ("--json",)):
+        result = _out(repo, SC_ARGS, "linkout/../x.json", *extra)
+
+        _refused(result, "out_path_exists")
+        assert "~/x.json" not in result.stdout + result.stderr
+        assert "--out linkout/../x.json already exists" in result.stderr
+    assert not (home / "x.json").exists()

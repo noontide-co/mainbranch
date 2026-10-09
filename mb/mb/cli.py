@@ -3845,7 +3845,7 @@ def _google_read_exit(
 
     if out is not None and not code:
         try:
-            google_out_mod.write_out(
+            leftover = google_out_mod.write_out(
                 out, _json_payload(result, command=command, schema_name=schema_name) + "\n"
             )
         except google_out_mod.OutWriteError as exc:
@@ -3856,8 +3856,8 @@ def _google_read_exit(
                 )
             elif exc.leftover_temp:
                 detail = (
-                    f"the temporary file {exc.leftover_temp} could not be removed and is still "
-                    "there; remove it yourself."
+                    f"the temporary file {google_reads_mod.terminal_safe(exc.leftover_temp, 300)} "
+                    "could not be removed and is still there; remove it yourself."
                 )
             else:
                 detail = "nothing was left behind."
@@ -3869,7 +3869,7 @@ def _google_read_exit(
                 typer.echo(_json_payload(failed, command=command, schema_name=schema_name))
             typer.echo(f"{command}: {reason} (out_write_failed)", err=True)
             raise typer.Exit(1) from None
-        info = google_out_mod.summary(command, out, result)
+        info = google_out_mod.summary(command, out, result, leftover)
         if json_out:
             typer.echo(_json_payload(info, command=command, schema_name=google_out_mod.SCHEMA_OUT))
         else:

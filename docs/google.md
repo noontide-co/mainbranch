@@ -191,7 +191,7 @@ Every read takes `--out PATH`. It writes the same JSON that `--json` prints
 step, and prints only a short summary: the path, the row count and
 `may_have_more`. With `--json` the summary is JSON (`mb.google.out`). A path
 under your home folder is shown as `~/...`, so the summary never prints your
-username, and `safe_to_share: true` holds; there is no absolute-path field, so
+home folder's name, and `safe_to_share: true` holds; there is no absolute-path field, so
 an agent opens the file by the path it passed to `--out` (expand `~` to the
 home folder). Add
 `--force` to replace an existing file.
@@ -206,9 +206,9 @@ read from Google (a refused path costs no quota) and refuses with exit 2:
 
 | `rule` | When |
 | --- | --- |
-| `out_path_in_repo` | PATH is inside a git checkout, the business repo included, and git does not report it ignored (a tracked file, or one `git add` would pick up). `--force` never lifts this. When `GIT_DIR` or `GIT_WORK_TREE` is exported, the path is judged a second time with them, and refused unless both answers allow it. |
+| `out_path_in_repo` | PATH is inside a git checkout, the business repo included, and git does not report it ignored (a tracked file, or one `git add` would pick up). `--force` never lifts this. When `GIT_DIR` or `GIT_WORK_TREE` is exported (even as an empty value, which git also counts as set and refuses to run with), the path is judged a second time with them, and refused unless both answers allow it; a refusal from that second judgment says it comes from the checkout those variables name. |
 | `out_temp_not_ignored` | PATH is in a git checkout and git ignores the file, but not its temporary file `.<name>.mb-out.tmp` in the same folder (for example `.gitignore` lists only `report.json` or `*.json`, or `dir/*` followed by `!dir/*.tmp`). The report is written to that temporary file first, so git must ignore both paths; a negation that re-includes the temporary file is refused. |
-| `out_path_git_unknown` | PATH is inside a checkout and git could not answer, or `mb` could not place the path in the checkout (for example `BIZ/` for `Biz/` on a case-insensitive disk), so it cannot check the ignore rule. The path is refused and nothing is read; the message says which. |
+| `out_path_git_unknown` | PATH is inside a checkout and git could not answer, or `mb` could not place the path in the checkout (for example `BIZ/` for `Biz/` on a case-insensitive disk), so it cannot check the ignore rule. Also when an exported `GIT_DIR` or `GIT_WORK_TREE` names a repository git cannot use, or a work tree `mb` cannot examine (it is never counted as outside), and when the checkout sets `core.ignorecase` to false on a disk that does not tell case apart and a folder in PATH is spelled differently from the one on disk (git's rules would be matched against one spelling while the file lands in the other). The path is refused and nothing is read; the message says which. |
 | `out_path_exists` | The file exists and `--force` was not given. |
 | `out_path_not_file` | PATH exists and is not a plain file (a folder, for example). |
 | `out_parent_missing` | The folder does not exist. `mb` never creates folders. |
@@ -218,10 +218,24 @@ read from Google (a refused path costs no quota) and refuses with exit 2:
 
 Folders above the file may be links (macOS keeps `/tmp` behind one): the
 folder is resolved first and the checks run on where it really is, so a link
-into a repo is refused by the git rule. A relative PATH is relative to the
+into a repo is refused by the git rule. An exported `GIT_WORK_TREE` spelled
+with another case, or through a link or firmlink, is matched to the real
+folder by file identity, so its ignored folders are allowed when PATH spells
+its folders as they are on disk.
+
+A refusal shows PATH as you gave it, except that a PATH leading under your
+home folder is shown as `~/...`. A relative PATH is judged by where it leads
+from the folder you run the command in, with links followed first and then
+`.` and `..` collapsed, as the system does (with home `/Users/alex`, `alex/pulls/x.json` typed in `/Users`
+shows as `~/pulls/x.json`); anywhere else PATH is shown as typed. As a last
+check, on the whole text before it is cut to fit the terminal, if a folder
+named like your home folder (in any case, or the name of a link to it) would
+still be printed, only `…/` and the file name are shown. So
+a refusal or summary (marked `safe_to_share: true` with `--json`) never prints
+your home folder's name. A relative PATH is relative to the
 folder you run the command from, not `--repo`. A failed read writes nothing. If
 the read worked but the file cannot be written, the command exits 1 with
-`out_write_failed` (with `--json`, the failure envelope is also on stdout, like the read failures). If `mb` cannot remove its own temporary file after a failed write, the message names it and says to remove it; "nothing was left behind" is only printed when that is true. The report goes through `.<name>.mb-out.tmp` beside the
+`out_write_failed` (with `--json`, the failure envelope is also on stdout, like the read failures). If `mb` cannot remove its own temporary file after a failed write, the message names it and says to remove it; "nothing was left behind" is only printed when that is true. If the file was written but the temporary copy could not be removed, the command still exits 0 and the summary adds a `warning:` line (with `--json`, an entry in `warnings`) naming `.<name>.mb-out.tmp`, a second copy of the report to remove yourself. The report goes through `.<name>.mb-out.tmp` beside the
 file, created exclusively: if that name already exists (a run killed mid-write,
 or two runs at once) nothing is written, the existing file is left as it is and
 the message names it so you can remove it.

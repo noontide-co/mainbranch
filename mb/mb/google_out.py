@@ -11,6 +11,8 @@ quota. A path is refused when:
   (``.<name>.mb-out.tmp``; a rule for the file name alone, or a negation that
   re-includes the temporary file, would not cover it);
 - git cannot answer inside a checkout (fail closed);
+- the checkout sets ``core.ignorecase`` to false and a folder name is spelled
+  differently from the one on disk (a disk that does not tell case apart);
 - it already exists and ``--force`` was not given, or it exists and is not a
   plain file;
 - its folder does not exist (no folder is created);
@@ -29,6 +31,7 @@ from __future__ import annotations
 import os
 import stat
 import subprocess
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -86,11 +89,12 @@ def _check_git(parent: Path, name: str, shown: str) -> None:
 
     The path is judged with the repository variables dropped (what a plain ``git``
     in that folder sees). When the caller exported ``GIT_DIR`` or ``GIT_WORK_TREE``,
-    it is judged again with them, and both answers must allow it.
+    it is judged again with them, and both answers must allow it. An empty value
+    counts as exported, as it does for git, which refuses to run with it.
     """
 
     _judge_git(parent, name, shown, inherit_env=False)
-    if any(os.environ.get(var) for var in _GIT_ENV_INHERITED):
+    if any(var in os.environ for var in _GIT_ENV_INHERITED):
         _judge_git(parent, name, shown, inherit_env=True)
 
 
@@ -100,18 +104,32 @@ def _judge_git(parent: Path, name: str, shown: str, *, inherit_env: bool) -> Non
         return _git(args, cwd, inherit_env=True) if inherit_env else _git(args, cwd)
 
     unknown = _git_env_unusable if inherit_env else _git_unknown
+    # Refusals that come from the exported repository say so; without it the text is unchanged.
+    which = _ENV_CHECKOUT if inherit_env else ""
     # With only GIT_DIR exported, git's work tree is the shell's own folder.
     start = _shell_folder() if inherit_env else parent
     top = run(["rev-parse", "--show-toplevel"], start) if start is not None else None
     if top is not None and top.returncode == 0:
         root = Path(top.stdout.decode("utf-8", "replace").strip() or ".")
         try:
-            relative = parent.resolve().relative_to(root.resolve()) / name
+            base = root.resolve()
+            relative = parent.resolve().relative_to(base) / name
         except (OSError, RuntimeError, ValueError):
-            if inherit_env and not _is_inside(parent, root):
+            if not inherit_env:
+                raise _git_unplaced(shown) from None
+            try:
+                found = _identity_ancestor(parent, root, strict=True)
+            except OSError:
+                # Never count a folder as outside the work tree when it could not be compared.
+                raise _work_tree_unexamined(shown) from None
+            if found is None:
                 # The exported work tree does not hold this folder: it says nothing about it.
                 return
-            raise _git_unplaced(shown) from None
+            if _spelled_as_on_disk(parent, Path(parent.anchor)) is not True:
+                raise _git_unplaced(shown, which) from None
+            # GIT_WORK_TREE names the same folder in another spelling (case, firmlink).
+            base = found
+            relative = parent.relative_to(found) / name
         if ".git" in relative.parts:
             raise unknown(shown)
         verdict = run(["check-ignore", "-q", "--", relative.as_posix()], root)
@@ -120,8 +138,8 @@ def _judge_git(parent: Path, name: str, shown: str, *, inherit_env: bool) -> Non
         if verdict.returncode == 1:
             raise ReadRefusal(
                 "out_path_in_repo",
-                f"--out {shown} is inside a git checkout and git does not ignore it, so the "
-                f"data could be committed; nothing was read or written. {OUT_HINT}.",
+                f"--out {shown} is inside a git checkout{which} and git does not ignore it, so "
+                f"the data could be committed; nothing was read or written. {OUT_HINT}.",
             )
         # The report is first written to a fixed temporary name beside the target, so
         # git must ignore that exact path too (a negation can re-include it).
@@ -130,7 +148,8 @@ def _judge_git(parent: Path, name: str, shown: str, *, inherit_env: bool) -> Non
         if temp_verdict is None or temp_verdict.returncode not in {0, 1}:
             raise unknown(shown)
         if temp_verdict.returncode == 1:
-            raise _temp_refusal(shown, temp_name(name))
+            raise _temp_refusal(shown, temp_name(name), which)
+        _check_spelling(base, relative, root, shown, which, run)
         return
     if inherit_env:
         # The exported variables name a repository git cannot use from here.
@@ -147,34 +166,91 @@ def _shell_folder() -> Path | None:
         return None
 
 
-def _is_inside(folder: Path, root: Path) -> bool:
-    """Whether ``folder`` is ``root`` or below it, by file identity and not by spelling."""
+def _identity_ancestor(path: Path, target: Path, *, strict: bool = False) -> Path | None:
+    """The folder among ``path`` and its parents that is the same file as ``target``.
 
-    try:
-        real = folder.resolve()
-    except (OSError, RuntimeError):
-        return False
-    return _identity_ancestor(real, root) is not None
-
-
-def _identity_ancestor(path: Path, target: Path) -> Path | None:
-    """The folder among ``path`` and its parents that is the same file as ``target``."""
+    With ``strict``, an ``OSError`` while comparing is raised instead of skipped.
+    """
 
     for candidate in (path, *path.parents):
         try:
             if os.path.samefile(candidate, target):
                 return candidate
         except OSError:
-            continue
+            if strict:
+                raise
     return None
 
 
-def _temp_refusal(shown: str, temp: str) -> ReadRefusal:
+def _spelled_as_on_disk(path: Path, base: Path) -> bool | None:
+    """Whether every name in ``path`` below ``base`` is spelled as the disk lists it.
+
+    ``None`` when a folder could not be listed. On a disk that tells case apart a
+    name that exists is always listed as given.
+    """
+
+    folder = base
+    for part in path.relative_to(base).parts:
+        try:
+            if part not in os.listdir(folder):
+                return False
+        except OSError:
+            return None
+        folder = folder / part
+    return True
+
+
+def _check_spelling(
+    base: Path,
+    relative: Path,
+    root: Path,
+    shown: str,
+    which: str,
+    run: Any,
+) -> None:
+    """Refuse a folder spelled unlike the disk when git matches ignore rules by exact case.
+
+    ``base`` is the work tree as found on disk and ``relative`` the path git judged.
+    With ``core.ignorecase`` false, git matched the rules against the spelling given,
+    but the file lands in the folder the disk has, which those rules may not cover.
+    """
+
+    folders = relative.parent
+    target = base / relative
+    names = folders / relative.name if os.path.lexists(target) else folders
+    spelled = _spelled_as_on_disk(base / names, base)
+    if spelled is True:
+        return
+    setting = run(["config", "--bool", "core.ignorecase"], root)
+    if setting is not None and setting.returncode == 0 and setting.stdout.strip() == b"true":
+        return
+    if spelled is None:
+        raise _git_unplaced(shown, which)
+    if setting is not None and setting.returncode == 0:
+        seen = "sets core.ignorecase to false"
+    elif setting is not None and setting.returncode == 1 and not setting.stdout.strip():
+        seen = "does not set core.ignorecase (git then treats it as false)"
+    else:
+        seen = "did not let mb read core.ignorecase"
+    raise ReadRefusal(
+        "out_path_git_unknown",
+        f"--out {shown}: this checkout{which} {seen}, and the path is spelled differently "
+        "from the folder on disk (in case or accents) while the disk treats both spellings as "
+        "one folder, so git's ignore rules may not cover where the file would land; nothing "
+        "was read or written. Spell the folders as they are on disk, or set core.ignorecase "
+        "to true (what git init sets on such a disk).",
+    )
+
+
+_ENV_CHECKOUT = " (the one GIT_DIR or GIT_WORK_TREE in this shell names)"
+
+
+def _temp_refusal(shown: str, temp: str, which: str = "") -> ReadRefusal:
     return ReadRefusal(
         "out_temp_not_ignored",
-        f"--out {shown}: inside a git checkout git must ignore both the file and its temporary "
-        f"file {temp}, which holds the whole report while it is written; a rule for the file "
-        "name alone, or a negation that re-includes the temporary file, would let it be "
+        f"--out {shown}: inside a git checkout{which} git must ignore both the file and its "
+        f"temporary file {temp}, which holds the whole report while it is written; a rule for "
+        "the file name alone, or a negation that re-includes the temporary file, would let it be "
         f"committed; nothing was read or written. {OUT_HINT}.",
     )
 
@@ -197,12 +273,23 @@ def _git_env_unusable(shown: str) -> ReadRefusal:
     )
 
 
-def _git_unplaced(shown: str) -> ReadRefusal:
+def _work_tree_unexamined(shown: str) -> ReadRefusal:
+    # Same rule as `_git_unknown`: the exported work tree could not be compared with the folder.
+    return ReadRefusal(
+        "out_path_git_unknown",
+        f"--out {shown}: GIT_DIR or GIT_WORK_TREE is set in this shell, but mb could not "
+        "examine that work tree to tell whether the file would be inside it, so it cannot "
+        "check that git ignores the file; nothing was read or written. Unset them (or fix "
+        "them) and run again.",
+    )
+
+
+def _git_unplaced(shown: str, which: str = "") -> ReadRefusal:
     # Same rule as `_git_unknown`: the folder is refused, but the cause is on mb's side
     # (for example `BIZ/` for `Biz/` on a case-insensitive disk), not git's.
     return ReadRefusal(
         "out_path_git_unknown",
-        f"--out {shown} is inside a git checkout, but mb could not place the path in that "
+        f"--out {shown} is inside a git checkout{which}, but mb could not place the path in that "
         "checkout (a differently spelled folder name, for example), so it cannot check "
         f"that git ignores it; nothing was read or written. {OUT_HINT}.",
     )
@@ -269,7 +356,100 @@ def check_out(raw: str, *, force: bool = False) -> OutTarget:
 
 
 def _shown(raw: str) -> str:
-    return terminal_safe(raw, 120) or "PATH"
+    """``raw`` as printed in a refusal: ``~/...`` when it leads under home."""
+
+    # The guard sees the whole text; only then is it cut to the display width, so a
+    # home-named part cannot hide behind the cut (`homefolder…`).
+    placed = _home_relative(raw)
+    full = terminal_safe(placed, len(placed) + 1) or "PATH"
+    return terminal_safe(hide_home_name(full, Path(raw).name) if raw else full, 120)
+
+
+def _home_relative(raw: str) -> str:
+    """``~/...`` when ``raw`` leads under home, even as a relative path; otherwise ``raw``."""
+
+    if not raw or "\x00" in raw:
+        return raw
+    try:
+        given = Path(raw).expanduser()
+        if not given.is_absolute():
+            given = Path.cwd() / given
+        under = _under_home(given)
+    except (OSError, RuntimeError, ValueError):
+        return raw
+    return raw if under is None else under
+
+
+def _under_home(path: Path) -> str | None:
+    """``path`` as ``~/...`` when it is under the home folder, else ``None``.
+
+    The spelling given is tried first, then where it really is (a link, a case
+    variant), by file identity; if identity cannot be compared, by spelling alone.
+    """
+
+    home = Path.home()
+    # Where the path really leads comes first (links followed, then `..`, also through
+    # a missing folder). The spelling with `.` and `..` collapsed is used only when it
+    # leads to the same place: after a link, `link/..` is not the link's own folder.
+    real = _folders_resolved(path)
+    lexical = Path(os.path.normpath(path))
+    candidates = (real, lexical) if _folders_resolved(lexical) == real else (real,)
+    for candidate in candidates:
+        found = _identity_ancestor(candidate, home)
+        if found is not None and ".." not in candidate.relative_to(found).parts:
+            return "~/" + candidate.relative_to(found).as_posix()
+    for candidate in candidates:
+        try:
+            rest = candidate.relative_to(home)
+        except ValueError:
+            continue
+        if ".." not in rest.parts:
+            return "~/" + rest.as_posix()
+    return None
+
+
+def _folders_resolved(path: Path) -> Path:
+    """``path`` with its folders resolved; the last part is kept, even when it is a link."""
+
+    if path.name in {"", ".", ".."}:
+        return path.resolve()
+    return path.parent.resolve() / path.name
+
+
+def _fold(name: str) -> str:
+    return unicodedata.normalize("NFC", name).casefold()
+
+
+def _home_names() -> set[str]:
+    """Every spelling of the home folder's own name mb can see, folded for comparison."""
+
+    names: set[str] = set()
+    try:
+        home = Path.home()
+        names.add(home.name)
+        if home.is_symlink():
+            names.add(Path(os.readlink(home)).name)
+        names.add(home.resolve().name)
+    except (OSError, RuntimeError, ValueError):
+        pass
+    return {_fold(name) for name in names if name}
+
+
+def hide_home_name(shown: str, file_name: str) -> str:
+    """Last guard before a path is printed: never a part named like the home folder.
+
+    If one is there anyway, only ``~/…/`` or ``…/`` and the file name are shown.
+    """
+
+    names = _home_names()
+    parts = terminal_safe(shown, len(shown) + 1).split("/")
+    if not any(_fold(part) in names for part in parts if part not in {"", "~"}):
+        return shown
+    prefix = "~/…" if shown.startswith("~/") else "…"
+    name = terminal_safe(file_name, 120)
+    if not name or _fold(name) in names:
+        return prefix
+    return f"{prefix}/{name}"
 
 
 class OutWriteError(OSError):
@@ -286,17 +466,20 @@ class OutWriteError(OSError):
         self.leftover_temp = leftover_temp
 
 
-def write_out(target: OutTarget, text: str) -> None:
+def write_out(target: OutTarget, text: str) -> str:
     """Create the file with mode 0600, atomically. Without ``--force`` it never replaces one.
 
     The report goes through ``.<name>.mb-out.tmp`` in the same folder, created
     exclusively (an existing one is never reused or removed), after
-    ``check_out`` saw that git ignores that exact path.
+    ``check_out`` saw that git ignores that exact path. Returns that temporary
+    file's name when the file was written but the temporary copy could not be
+    removed, otherwise ``""``.
     """
 
     tmp = target.path.with_name(temp_name(target.path.name))
     created = False
     failure: OutWriteError | None = None
+    leftover = ""
     try:
         try:
             fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, OUT_MODE)
@@ -321,11 +504,16 @@ def write_out(target: OutTarget, text: str) -> None:
         if created:
             try:
                 os.unlink(tmp)
+            except FileNotFoundError:
+                pass  # Already gone: nothing is left behind.
             except OSError:
                 if failure is not None:
                     failure.leftover_temp = tmp.name
+                else:
+                    leftover = tmp.name
     if failure is not None:
         raise failure
+    return leftover
 
 
 SCHEMA_OUT = "mb.google.out"
@@ -338,13 +526,24 @@ def display_path(path: Path) -> str:
         real = path.resolve()
         home = _identity_ancestor(real, Path.home())
         if home is not None:
-            return "~/" + real.relative_to(home).as_posix()
+            return hide_home_name("~/" + real.relative_to(home).as_posix(), path.name)
+        # Identity could not be compared: fall back to the spelling.
+        return hide_home_name("~/" + real.relative_to(Path.home()).as_posix(), path.name)
     except (OSError, RuntimeError, ValueError):
         pass
-    return str(path)
+    return hide_home_name(str(path), path.name)
 
 
-def summary(command: str, target: OutTarget, result: dict[str, Any]) -> dict[str, Any]:
+def leftover_warning(temp: str) -> str:
+    return (
+        f"the temporary file {terminal_safe(temp, 300)} could not be removed and is still "
+        "there, a second copy of the report beside the file; remove it yourself."
+    )
+
+
+def summary(
+    command: str, target: OutTarget, result: dict[str, Any], leftover: str = ""
+) -> dict[str, Any]:
     """What is printed after a write: the path and the size of the answer, never the data."""
 
     if "row_count" in result:
@@ -353,7 +552,7 @@ def summary(command: str, target: OutTarget, result: dict[str, Any]) -> dict[str
         count = result["sitemap_count"]
     else:
         count = 1 if result.get("inspection_result") else 0
-    return {
+    info: dict[str, Any] = {
         "ok": True,
         "out": display_path(target.path),
         "mode": "0600",
@@ -362,10 +561,15 @@ def summary(command: str, target: OutTarget, result: dict[str, Any]) -> dict[str
         "may_have_more": bool(result.get("may_have_more", False)),
         "safe_to_share": True,
     }
+    if leftover:
+        info["warnings"] = [leftover_warning(leftover)]
+    return info
 
 
 def render_summary(info: dict[str, Any]) -> list[str]:
-    return [
+    lines = [
         f"{info['source_command']}: wrote {terminal_safe(info['out'], 200)} (mode {info['mode']})",
         f"rows: {info['row_count']}, may_have_more: {str(info['may_have_more']).lower()}",
     ]
+    lines.extend(f"warning: {warning}" for warning in info.get("warnings", []))
+    return lines

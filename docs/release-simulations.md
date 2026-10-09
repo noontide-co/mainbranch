@@ -234,8 +234,10 @@ that make the operator decode git first. Warnings include "working tree clean",
 "working tree: clean", "repo is clean", "clean on main", "branch main",
 "branch: main", "origin remote", "No origin remote", "Connected GitHub backup:
 none surfaced", and "Git is clean" unless the answer has already translated the
-matching business meaning. Checkpoint examples should name the saved business
-artifact specifically, such as
+matching business meaning. Maintainer framing such as "release evidence" or
+"testing the release" is a warning whatever precedes it: an operator never
+says it, so simulation prompts and fixture files avoid it too. Checkpoint
+examples should name the saved business artifact specifically, such as
 `[updated] offer and founder-call research`, instead of broad buckets like
 `[updated] core and research`, `[drafted] files`, or `[ran] changes`.
 

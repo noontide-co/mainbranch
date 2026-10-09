@@ -1058,3 +1058,16 @@ def test_run_harness_exit_code_follows_credential_safety(
     summary = json.loads((tmp_path / "root" / "evidence" / "summary.json").read_text())
     has_credential_failure = any("credential safety" in item for item in summary["failures"])
     assert has_credential_failure is (expected_exit == 1)
+
+
+def test_public_safe_refusal_fixture_has_no_release_framing(tmp_path: Path) -> None:
+    harness._apply_fixture_profile(tmp_path, "public_safe_refusal_fixture")
+    text = (
+        (tmp_path / "documents" / "sanitized-private-boundary-fixture.md")
+        .read_text(encoding="utf-8")
+        .lower()
+    )
+
+    assert "synthetic" in text
+    assert "release evidence" not in text
+    assert "release-simulation" not in text
