@@ -9,6 +9,7 @@ Every secret is a synthetic sentinel so leak checks can search for it.
 
 from __future__ import annotations
 
+import errno
 import http.client
 import io
 import json
@@ -387,14 +388,33 @@ def test_oauth_no_browser_prints_url_and_never_opens(
     )
 
 
-def test_oauth_fixed_port(repo: Path, client_file: Path, google: Any) -> None:
+def test_oauth_fixed_port(
+    repo: Path, client_file: Path, google: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
     browser, _ = google()
-    with socket.socket() as probe:
-        probe.bind(("127.0.0.1", 0))
-        port = probe.getsockname()[1]
+    bind_refusals: list[int] = []
 
-    result = _oauth(repo, *_signin_args(client_file), "--port", str(port), "--json")
+    class _RecordingReceiver(go.LoopbackReceiver):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            try:
+                super().__init__(*args, **kwargs)
+            except OSError as exc:
+                bind_refusals.append(exc.errno or 0)
+                raise
 
+    monkeypatch.setattr(go, "LoopbackReceiver", _RecordingReceiver)
+    # The free port is probed, then rebound by the receiver. Another process
+    # can take it in between, so only that bind refusal retries a new port.
+    for _attempt in range(5):
+        with socket.socket() as probe:
+            probe.bind(("127.0.0.1", 0))
+            port = probe.getsockname()[1]
+        bind_refusals.clear()
+        result = _oauth(repo, *_signin_args(client_file), "--port", str(port), "--json")
+        if bind_refusals != [errno.EADDRINUSE]:
+            break
+
+    assert bind_refusals == []
     assert result.exit_code == 0, result.output
     assert browser.params()["redirect_uri"] == f"http://127.0.0.1:{port}"
 

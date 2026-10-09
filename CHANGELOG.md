@@ -81,6 +81,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- Running the test suite no longer writes into your real home folder. Every
+  test gets its own temporary `HOME`, so doctor repair tests stop installing
+  Codex skills under `~/.codex/skills`, and the doctor worktree test no longer
+  needs `mb` on `PATH`.
 - `mb connect` now names the user-scope file and refuses before storing a
   credential when ownership or an access-control list prevents writing it,
   just as it does for a read-only file mode. If writing is denied after connect

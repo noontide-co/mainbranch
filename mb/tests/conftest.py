@@ -29,6 +29,25 @@ def isolated_state_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None
 
 
 @pytest.fixture(autouse=True)
+def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep every test out of the contributor's real home folder.
+
+    Doctor repairs, `mb update` and the Codex adapter resolve global roots
+    such as ``~/.codex/skills``, ``~/.claude/skills`` and the XDG data and
+    config folders from ``HOME``. Without this a test that does not set
+    ``MAINBRANCH_CODEX_SKILLS_ROOT`` or ``MAINBRANCH_CODEX_PLUGIN_ROOT``
+    would write into the real ones. Tests that set their own ``HOME`` or
+    roots still win, because their ``monkeypatch`` calls run after this.
+    """
+
+    home = tmp_path / "isolated-home"
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    for name in ("XDG_DATA_HOME", "XDG_CONFIG_HOME", "CODEX_HOME", "LOCALAPPDATA"):
+        monkeypatch.delenv(name, raising=False)
+
+
+@pytest.fixture(autouse=True)
 def isolated_credential_backend(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep every test away from the operator's own credential store.
 
