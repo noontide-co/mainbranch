@@ -34,7 +34,7 @@ def test_launch_check_reports_astro_cloudflare_resend_readiness(
             "---\n"
             "gtm_container_id: GTM-ABC1234\n"
             "ga4_measurement_id: G-ABC123DEF\n"
-            "google_ads_customer_id: '0000000000'\n"
+            "google_ads_customer_id: '5550100000'\n"
             "consent_posture: standard_tag_consent_reviewed\n"
             "privacy_policy_url: https://example.com/privacy\n"
             "---\n\n"

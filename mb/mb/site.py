@@ -40,7 +40,7 @@ REUSABLE_SOURCE_DIRS = {
     "src",
     "templates",
 }
-PLACEHOLDER_GTM_IDS = {"GTM-XXXXXXX", "GTM-XXXXXX", "GTM-PLACEHOLDER"}
+PLACEHOLDER_ID_WORDS = {"PLACEHOLDER", "TODO", "TBD"}
 GTM_ID_RE = re.compile(r"\bGTM-[A-Z0-9]{5,}\b")
 GA4_ID_RE = re.compile(r"\bG-[A-Z0-9]{6,}\b")
 META_PIXEL_RE = re.compile(r"\b\d{10,20}\b")
@@ -381,8 +381,26 @@ def _metadata_sources(
     }
 
 
+def _is_placeholder_id_body(body: str) -> bool:
+    """Return True for an id body that is a stand-in: empty, all X, or a word like TODO."""
+
+    body = body.strip().upper()
+    return not body or body in PLACEHOLDER_ID_WORDS or bool(re.fullmatch(r"X+", body))
+
+
 def _is_placeholder_gtm(value: str) -> bool:
-    return value.upper() in PLACEHOLDER_GTM_IDS or bool(re.fullmatch(r"GTM-X+", value.upper()))
+    upper = value.strip().upper()
+    return upper.startswith("GTM-") and _is_placeholder_id_body(upper[len("GTM-") :])
+
+
+def _is_placeholder_google_ads_customer(value: str) -> bool:
+    digits = re.sub(r"[\s-]", "", value)
+    return _is_placeholder_id_body(digits) or bool(re.fullmatch(r"0+", digits))
+
+
+def _google_ads_customer_declared(facts: dict[str, Any]) -> bool:
+    customer_id = str(facts["google_ads_customer_id"])
+    return bool(customer_id) and not _is_placeholder_google_ads_customer(customer_id)
 
 
 def _html_files(site_repo: Path) -> list[Path]:
@@ -773,10 +791,30 @@ def _google_ads_evidence(facts: dict[str, Any]) -> list[dict[str, Any]]:
     A declared customer and conversion plan is repo metadata only. Main Branch
     has no Google Ads read, and ``mb site check`` cannot see a tag fire or a
     conversion Google Ads attributes, so neither is ever implied from the plan.
-    The connection and conversion items appear only once a customer is declared.
+    The connection and conversion items appear only once a customer is declared;
+    a placeholder customer ID (all zeros, all X, TODO) is not a declaration.
     """
 
-    customer_declared = bool(facts["google_ads_customer_id"])
+    customer_declared = _google_ads_customer_declared(facts)
+    if facts["google_ads_customer_id"] and not customer_declared:
+        also_missing = (
+            "" if facts["primary_conversions"] else " The primary conversion plan is also missing."
+        )
+        return [
+            {
+                "kind": "google_ads_plan",
+                "state": "manual",
+                "status": "placeholder",
+                "summary": (
+                    "Not declared: the Google Ads customer ID is a placeholder, "
+                    f"so no Google Ads customer is recorded.{also_missing}"
+                ),
+                "next": (
+                    "Replace it with the 10-digit customer ID shown at the top of "
+                    "the Google Ads account, then run mb site check again."
+                ),
+            }
+        ]
     ads_missing = []
     if not customer_declared:
         ads_missing.append("Google Ads customer ID")
@@ -850,7 +888,7 @@ def _state(evidence: list[dict[str, Any]], facts: dict[str, Any]) -> str:
         return "blocked"
     if not facts["gtm_container_id"] and not facts["conversion_kind"]:
         return "missing"
-    ads_ready = bool(facts["google_ads_customer_id"] and facts["primary_conversions"])
+    ads_ready = bool(_google_ads_customer_declared(facts) and facts["primary_conversions"])
     approvals = facts["operator_approvals"]
     required_approval_keys = [
         "gtm_container_reviewed",

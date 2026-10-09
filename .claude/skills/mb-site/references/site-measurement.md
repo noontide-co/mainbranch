@@ -48,6 +48,15 @@ evidence items. Never collapse them into "Google Ads is set up":
   firing in GTM Preview or Tag Assistant and a conversion Google Ads attributes
   are separate proofs; `mb site check` sees neither.
 
+A placeholder customer ID (all zeros, all `X`, `TODO`, `TBD`) reads as
+`google_ads_plan` with `status: placeholder`: no customer is declared, so tell
+the operator to record the real 10-digit ID from the top of the Google Ads
+account.
+
+`mb status` shows the same statuses in `measurement.google_ads` (and a
+`Google Ads:` line under Measurement); the manual ones are why
+`measurement.manual_count` includes Google Ads.
+
 `ready` does not mean the account is reachable or conversions are proven.
 
 ## Instrumentation Facts

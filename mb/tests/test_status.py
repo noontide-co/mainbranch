@@ -4156,3 +4156,80 @@ def test_status_runtime_claude_repair_empty_when_present(tmp_path: Path, monkeyp
     claude_code = report["runtime"]["claude_code"]
     assert claude_code["found"] is True
     assert claude_code["repair"] == ""
+
+
+def _measured_repo(tmp_path: Path, *, customer_id: str = "") -> Path:
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    customer_line = f"google_ads_customer_id: '{customer_id}'\n" if customer_id else ""
+    (repo / "core" / "offer.md").write_text(
+        f"---\ngtm_container_id: GTM-ABC1234\n{customer_line}---\n\n# Offer\n",
+        encoding="utf-8",
+    )
+    (repo / ".mainbranch").mkdir(exist_ok=True)
+    (repo / ".mainbranch" / "conversion.json").write_text(
+        json.dumps(
+            {
+                "kind": "lead_form",
+                "url": "https://tally.so/r/example",
+                "primary_conversions": ["mb_lead_submit"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return repo
+
+
+def test_status_measurement_names_the_google_ads_statuses(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    repo = _measured_repo(tmp_path, customer_id="5550100000")
+
+    measurement = status_mod.run(path=str(repo), update_marker=False)["measurement"]
+
+    assert measurement["google_ads"] == {
+        "google_ads_plan": "declared",
+        "google_ads_connection": "not_checked",
+        "google_ads_conversion_evidence": "no_evidence_recorded",
+    }
+    assert measurement["manual_count"] >= 2
+
+    result = runner.invoke(app, ["status", str(repo)])
+
+    assert result.exit_code == 0
+    assert (
+        "Google Ads: customer and conversion plan declared; account connection not "
+        "checked; no conversion evidence recorded"
+    ) in " ".join(result.stdout.split())
+
+
+def test_status_measurement_names_a_placeholder_google_ads_customer(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    repo = _measured_repo(tmp_path, customer_id="000-000-0000")
+
+    measurement = status_mod.run(path=str(repo), update_marker=False)["measurement"]
+
+    assert measurement["google_ads"] == {"google_ads_plan": "placeholder"}
+    result = runner.invoke(app, ["status", str(repo)])
+    assert "Google Ads: customer ID is a placeholder" in result.stdout
+
+
+def test_status_measurement_without_google_ads_customer_has_no_google_ads_field(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    repo = _measured_repo(tmp_path)
+
+    measurement = status_mod.run(path=str(repo), update_marker=False)["measurement"]
+
+    assert measurement["available"] is True
+    assert "google_ads" not in measurement
+    result = runner.invoke(app, ["status", str(repo)])
+    assert "Google Ads:" not in result.stdout
