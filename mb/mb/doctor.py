@@ -579,8 +579,9 @@ def _agent_surfaces(
         repair_command: str,
     ) -> dict[str, Any]:
         section = by_section.get(section_id, {})
+        # Sorted: a frozenset's order follows the hash seed (#1100).
         surface_actions = [
-            by_action[action_id] for action_id in action_ids if action_id in by_action
+            by_action[action_id] for action_id in sorted(action_ids) if action_id in by_action
         ]
         return {
             "id": key,

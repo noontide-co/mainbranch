@@ -3639,3 +3639,140 @@ def test_terminal_yes_creates_a_missing_gitignore(
     entries, _ = engine_mod._link_gitignore_entries()
     lines = (business_repo / ".gitignore").read_text(encoding="utf-8").splitlines()
     assert all(entry in lines for entry in entries)
+
+
+# --- #1100: `--check` predicts the consent stop ------------------------------
+
+
+def _tree_snapshot(*roots: Path) -> dict[str, str]:
+    """Every entry under the roots (outside `.git`), with its bytes or link text."""
+    snapshot: dict[str, str] = {}
+    for root in roots:
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames[:] = sorted(name for name in dirnames if name != ".git")
+            for name in [*dirnames, *filenames]:
+                path = Path(dirpath) / name
+                if path.is_symlink():
+                    snapshot[str(path)] = "link:" + os.readlink(path)
+                elif path.is_dir():
+                    snapshot[str(path)] = "dir"
+                else:
+                    snapshot[str(path)] = path.read_bytes().hex()
+    return snapshot
+
+
+def _gitignore_state(repo: Path, tmp_path: Path, state: str) -> None:
+    """Put `.gitignore` (and `AGENTS.md`) in one of the #1100 consent states."""
+    codex_mod.write_agents_md(repo)
+    if state == "tracked_needs_lines":
+        _commit_all(repo, "Current AGENTS.md")
+        return
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    (repo / ".gitignore").unlink()
+    if state == "untracked_link":
+        (elsewhere / "gitignore").write_text("node_modules/\n", encoding="utf-8")
+        _commit_all(repo, "No .gitignore")
+        (repo / ".gitignore").symlink_to(elsewhere / "gitignore")
+    elif state == "dangling_link":
+        _commit_all(repo, "No .gitignore")
+        (repo / ".gitignore").symlink_to(elsewhere / "missing")
+    elif state == "missing_with_agents_md":
+        (repo / "AGENTS.md").unlink()
+        _commit_all(repo, "No .gitignore, no AGENTS.md")
+    else:
+        assert state == "missing"
+        _commit_all(repo, "No .gitignore")
+
+
+@pytest.mark.parametrize(
+    "state",
+    ["missing", "untracked_link", "dangling_link", "tracked_needs_lines", "missing_with_agents_md"],
+)
+def test_check_predicts_the_consent_stop_of_an_unattended_run(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path, state: str
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    _gitignore_state(business_repo, tmp_path, state)
+    status_before = _git(business_repo, "status", "--porcelain", "--ignored")
+    tree_before = _tree_snapshot(business_repo, tmp_path / "home", tmp_path / "elsewhere")
+
+    checked = update_mod.run(repo=business_repo, check=True, interactive=False)
+
+    assert _git(business_repo, "status", "--porcelain", "--ignored") == status_before
+    assert _tree_snapshot(business_repo, tmp_path / "home", tmp_path / "elsewhere") == (tree_before)
+    assert calls == []
+    assert checked["ok"] is True, checked["errors"]
+
+    ran = update_mod.run(repo=business_repo, interactive=False)
+
+    predicted = checked["surface_refresh"]["planned"]
+    actual = ran["surface_refresh"]["planned"]
+    assert actual["consent"] == "no_terminal"
+    for key in ("consent", "tracked_files", "tracked_changes", "apply_commands"):
+        assert predicted[key] == actual[key], key
+    assert ".gitignore" in predicted["tracked_files"]
+
+
+def test_check_json_and_human_name_the_consent_stop(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    _gitignore_state(business_repo, tmp_path, "dangling_link")
+    monkeypatch.chdir(tmp_path)
+
+    as_json = runner.invoke(app, ["update", "--check", "--json", "--repo", str(business_repo)])
+    human = runner.invoke(app, ["update", "--check", "--repo", str(business_repo)])
+
+    planned = json.loads(as_json.stdout)["surface_refresh"]["planned"]
+    assert planned["consent"] == "no_terminal"
+    assert planned["tracked_changes"] == [{"path": ".gitignore", "op": "replace_link"}]
+    assert "would ask once before changing repo files: .gitignore (replace link)" in human.stdout
+    assert f"  mb skill link --repo {shlex.quote(str(business_repo))}" in human.stdout
+    assert os.path.islink(business_repo / ".gitignore")
+    assert not (tmp_path / "elsewhere" / "missing").exists()
+
+
+def test_check_output_is_unchanged_when_the_run_needs_no_consent(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    codex_mod.write_agents_md(business_repo)
+    entries, _ = engine_mod._link_gitignore_entries()
+    (business_repo / ".gitignore").write_text("\n".join(entries) + "\n", encoding="utf-8")
+    _commit_all(business_repo, "Current")
+
+    checked = update_mod.run(repo=business_repo, check=True, interactive=False)
+
+    assert checked["surface_refresh"]["planned"] == {
+        "consent": "not_needed",
+        "tracked_files": [],
+        "apply_commands": [],
+    }
+    assert update_mod.run(repo=business_repo, interactive=False)["surface_refresh"]["planned"][
+        "consent"
+    ] == ("not_needed")
+
+
+def test_skill_link_apply_note_says_repo_files() -> None:
+    # A new .gitignore is not tracked yet, so "tracked files" was not true for it.
+    assert "repo files listed in `changes`" in update_mod.SURFACE_LINK_APPLY_NOTE
+    assert "tracked files" not in update_mod.SURFACE_LINK_APPLY_NOTE
+
+
+def test_check_matches_the_run_for_a_folder_that_is_not_a_business_repo(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    monkeypatch.setattr(codex_mod, "readiness", _REAL_CODEX_READINESS)
+    folder = tmp_path / "not-a-business"
+
+    checked = update_mod.run(repo=folder, check=True, interactive=False)
+    ran = update_mod.run(repo=folder, interactive=False)
+
+    assert checked["surface_refresh"]["planned"] == ran["surface_refresh"]["planned"]
+    assert not folder.exists()

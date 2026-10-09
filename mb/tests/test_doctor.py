@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -2876,3 +2878,32 @@ def test_validation_repair_prose_is_bare_inside_the_repo(
         _validation_prose(plan)
     )
     assert "--repo" not in json.dumps(_validation_prose(plan))
+
+
+def test_agent_surface_planned_actions_order_does_not_follow_the_hash_seed() -> None:
+    # #1100: the order came from a frozenset, so it changed between processes.
+    script = (
+        "import json\n"
+        "from mb import doctor\n"
+        "ids = sorted(doctor.AGENT_ACTION_IDS)\n"
+        "report = doctor._agent_surfaces([], [{'id': i, 'writes': [i]} for i in ids])\n"
+        "print(json.dumps(report['surfaces']))\n"
+    )
+    package_root = str(Path(doctor_mod.__file__).resolve().parents[1])
+    outputs = set()
+    for seed in range(8):
+        env = {**os.environ, "PYTHONHASHSEED": str(seed), "PYTHONPATH": package_root}
+        proc = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True,
+            text=True,
+            check=True,
+            env=env,
+            stdin=subprocess.DEVNULL,
+        )
+        outputs.add(proc.stdout)
+    assert len(outputs) == 1
+    surfaces = json.loads(outputs.pop())
+    for surface in surfaces:
+        assert surface["planned_actions"] == sorted(surface["planned_actions"])
+        assert surface["touched_files"] == surface["planned_actions"]
