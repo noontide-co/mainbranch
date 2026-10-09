@@ -278,6 +278,12 @@ def _section(
 
 DOSSIER_RELATIVE_PATH = Path("core") / "operations" / "agent-access-dossier.md"
 _DOSSIER_VERIFY_RE = re.compile(r"^mb connect test ([a-z0-9][a-z0-9-]{1,30})$")
+# Why `mb connect test` did not record its check, by `not_recorded_reason`.
+# Any other reason gets a plain " (not recorded)", never a guessed cause.
+_NOT_RECORDED_TAILS = {
+    "connect_yaml_tracked": " (not recorded: .mb/connect.yaml is tracked by git)",
+    "user_scope_read_only": " (not recorded: the user-scope connect file is read-only)",
+}
 
 
 def _dossier_provider_rows(path: Path) -> list[tuple[str, str]]:
@@ -351,14 +357,15 @@ def _dossier_verify_section(repo: Path) -> dict[str, Any]:
             raw_status = result.get("status")
             status: dict[str, Any] = raw_status if isinstance(raw_status, dict) else {}
             summary_tail = ""
-            if result.get("not_recorded_reason"):
-                # The check was not written to a tracked .mb/connect.yaml, so
-                # the stored status is stale: show what the check itself found.
+            not_recorded_reason = str(result.get("not_recorded_reason") or "")
+            if not_recorded_reason:
+                # The check was not recorded, so the stored status is stale:
+                # show what the check itself found, and why it was not recorded.
                 raw_validation = result.get("validation")
                 validation = raw_validation if isinstance(raw_validation, dict) else {}
                 checked = str(result.get("state") or validation.get("state") or "")
                 state_text = connect_mod.state_label(checked or ("ready" if ok else "failed"))
-                summary_tail = " (not recorded: .mb/connect.yaml is tracked by git)"
+                summary_tail = _NOT_RECORDED_TAILS.get(not_recorded_reason, " (not recorded)")
             else:
                 state_text = connect_mod.state_label(
                     str(status.get("state") or ("ready" if ok else "failed"))

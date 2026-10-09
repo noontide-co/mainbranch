@@ -928,7 +928,9 @@ person runs to change the connection (`mb connect google --oauth`,
 recorded with it.
 In such a repo, the Agent Access Dossier row in `mb doctor` shows what the
 check found, followed by `(not recorded: .mb/connect.yaml is tracked by git)`,
-not the stale recorded status.
+not the stale recorded status. When the check was not recorded because the
+user-scope connect file is read-only, the row says
+`(not recorded: the user-scope connect file is read-only)` instead.
 
 The probe is conditional. A sign-in (OAuth) connection has one, so
 `stored, unverified` or `unvalidated` on it exits 1 and points at
@@ -1052,6 +1054,15 @@ one) before returning that refusal. If restoration also fails, it exits 1 with
 but not recorded, names the file, and gives a retry command that keeps user
 scope and the selected repo. Make the file writable first, then supply the
 credential again with that command.
+
+Any other failure to write that file after a token was stored (a full disk,
+an I/O error, a failed rename, or a file that no longer parses) gets the same
+restore. Connect and rotate then exit 1 with `metadata_write_failed`: the
+message names the file and what went wrong, says the previous credential was
+restored (or the new one removed), and that the repo metadata is unchanged. If
+the restore also fails, the message is the stored-but-not-recorded one above
+with that cause and its fix in place of the read-only file. No backend error
+text or credential value is shown.
 
 `mb connect test` only reads that file to run its check: the check still
 runs and the repo metadata is still recorded, and the result says

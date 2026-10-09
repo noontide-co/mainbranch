@@ -180,13 +180,35 @@ KeychainError = CredentialStoreError
 _select_secret_backend = select_secret_backend
 
 
+def _shown_user_scope_path(path: Path) -> str:
+    """The user-scope file as an operator sees it: ``~/...`` under the home folder."""
+
+    with suppress(ValueError, RuntimeError):
+        return f"~/{path.relative_to(Path.home())}"
+    return str(path)
+
+
+def _user_scope_write_failure(exc: OSError) -> tuple[str, str]:
+    """What went wrong writing the user-scope file, and what to fix first.
+
+    Built from the error number only, so no path, backend text or value
+    from the exception reaches the operator.
+    """
+
+    if exc.errno in {errno.ENOSPC, errno.EDQUOT}:
+        return "the disk is full", "Free some disk space"
+    if exc.errno == errno.EROFS:
+        return "its file system is read-only", "Make that file system writable"
+    code = errno.errorcode.get(exc.errno or 0, "")
+    cause = f"the file system reported an error ({code})" if code else "a file system error"
+    return cause, "Check that disk and folder"
+
+
 class UserScopeReadOnlyError(ConnectRefusal):
     """The user-scope file is read-only, so it was left as it is (rule ``user_scope_read_only``)."""
 
     def __init__(self, path: Path) -> None:
-        shown = str(path)
-        with suppress(ValueError, RuntimeError):
-            shown = f"~/{path.relative_to(Path.home())}"
+        shown = _shown_user_scope_path(path)
         self.shown = shown
         super().__init__(
             "user_scope_read_only",
@@ -1892,7 +1914,20 @@ def connect_provider(
                     entry=providers[provider.id],
                 )
             )
-        except UserScopeReadOnlyError as exc:
+        except (UserScopeReadOnlyError, ConfigCorruptError, OSError) as exc:
+            # A read-only file is the expected case; any other failure to write
+            # the record (a full disk, an I/O error, a failed rename, a file
+            # that no longer parses) gets the same restore of the credential.
+            if isinstance(exc, UserScopeReadOnlyError):
+                shown = exc.shown
+                cause, fix = "is read-only", "Make that file writable"
+            elif isinstance(exc, ConfigCorruptError):
+                shown = _shown_user_scope_path(_user_scope_path())
+                cause, fix = "is unreadable or invalid YAML", "Fix or move that file"
+            else:
+                shown = _shown_user_scope_path(_user_scope_path())
+                reason, fix = _user_scope_write_failure(exc)
+                cause = f"could not be written: {reason}"
             if previous_secret is not None:
                 try:
                     # Recovery gets its own bounded attempt even if the original
@@ -1922,11 +1957,23 @@ def connect_provider(
                     action = "replaced" if previous_secret.present else "stored"
                     raise MetadataWriteError(
                         f"The {provider.name} credential was {action} but not recorded: "
-                        f"the user-scope connect file {exc.shown} is read-only, and the "
+                        f"the user-scope connect file {shown} {cause}, and the "
                         "previous credential state could not be restored. The repo metadata "
-                        "is unchanged. Make that file writable first, then rerun "
+                        f"is unchanged. {fix} first, then rerun "
                         f"`{shlex.join(command)}` with the credential again."
                     ) from None
+            if isinstance(exc, OSError):
+                if previous_secret is None:
+                    undone = "No credential was changed."
+                elif previous_secret.present:
+                    undone = "The previous credential was restored."
+                else:
+                    undone = "The new credential was removed, so nothing was stored."
+                raise MetadataWriteError(
+                    f"The {provider.name} connection was not recorded: the user-scope "
+                    f"connect file {shown} {cause}. {undone} The repo metadata is "
+                    f"unchanged. {fix}, then rerun the command."
+                ) from None
             raise
     path = _write_config(target, config)
     status = status_provider(
