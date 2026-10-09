@@ -474,6 +474,13 @@ fires a Google Ads conversion and that Google Ads attributes it immediately.
 Static, browser, Tag Assistant, and delayed provider diagnostics are separate
 evidence types.
 
+`mb site check` covers Level 0 and Level 1 only. Once a Google Ads customer is
+declared it reports `google_ads_plan` (declared), `google_ads_connection`
+(not checked, because Main Branch has no Google Ads read) and
+`google_ads_conversion_evidence` (no tag-firing or attributed-conversion
+evidence recorded) as separate items, so a declared plan never reads as a
+reachable account or a proven conversion.
+
 ## Future `mb connect` Readiness Shape
 
 Future Google/GTM readiness should follow the existing provider-readiness

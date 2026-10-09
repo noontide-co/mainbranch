@@ -767,6 +767,84 @@ def _instrumentation_evidence(instrumentation: dict[str, Any]) -> list[dict[str,
     return evidence
 
 
+def _google_ads_evidence(facts: dict[str, Any]) -> list[dict[str, Any]]:
+    """Report Google Ads declared, connected and conversion evidence separately.
+
+    A declared customer and conversion plan is repo metadata only. Main Branch
+    has no Google Ads read, and ``mb site check`` cannot see a tag fire or a
+    conversion Google Ads attributes, so neither is ever implied from the plan.
+    The connection and conversion items appear only once a customer is declared.
+    """
+
+    customer_declared = bool(facts["google_ads_customer_id"])
+    ads_missing = []
+    if not customer_declared:
+        ads_missing.append("Google Ads customer ID")
+    if not facts["primary_conversions"]:
+        ads_missing.append("primary conversion plan")
+    if not customer_declared:
+        return [
+            {
+                "kind": "google_ads_plan",
+                "state": "manual",
+                "summary": f"Missing {', '.join(ads_missing)} before launch review.",
+            }
+        ]
+    if ads_missing:
+        plan: dict[str, Any] = {
+            "kind": "google_ads_plan",
+            "state": "manual",
+            "status": "partly_declared",
+            "summary": f"Missing {', '.join(ads_missing)} before launch review.",
+        }
+    else:
+        plan = {
+            "kind": "google_ads_plan",
+            "state": "passed",
+            "status": "declared",
+            "summary": (
+                "Declared: the repo records a Google Ads customer and primary "
+                "conversion plan. This is not a connection or conversion check."
+            ),
+        }
+    return [
+        plan,
+        {
+            "kind": "google_ads_connection",
+            "state": "manual",
+            "status": "not_checked",
+            "summary": (
+                "Not checked: Main Branch cannot read Google Ads accounts, so a "
+                "declared customer does not show the account is reachable. A "
+                "Google sign-in for Analytics or Search Console does not cover "
+                "Google Ads."
+            ),
+            "next": (
+                "Read the account through Google's read-only Google Ads MCP "
+                "server if it is installed and approved, or from a Google Ads "
+                "CSV export."
+            ),
+        },
+        {
+            "kind": "google_ads_conversion_evidence",
+            "state": "manual",
+            "status": "no_evidence_recorded",
+            "tag_fired": "no_evidence_recorded",
+            "attributed_conversion": "no_evidence_recorded",
+            "summary": (
+                "No conversion evidence recorded: a tag firing in the browser "
+                "and a conversion Google Ads attributes are separate proofs, "
+                "and mb site check cannot observe either."
+            ),
+            "next": (
+                "Confirm the tag fires in GTM Preview or Tag Assistant, then "
+                "confirm Google Ads attributes a test conversion after its "
+                "normal reporting delay."
+            ),
+        },
+    ]
+
+
 def _state(evidence: list[dict[str, Any]], facts: dict[str, Any]) -> str:
     if any(item["state"] == "blocked" for item in evidence):
         return "blocked"
@@ -1022,27 +1100,7 @@ def check(
             }
         )
 
-    ads_missing = []
-    if not facts["google_ads_customer_id"]:
-        ads_missing.append("Google Ads customer ID")
-    if not facts["primary_conversions"]:
-        ads_missing.append("primary conversion plan")
-    if ads_missing:
-        evidence.append(
-            {
-                "kind": "google_ads_plan",
-                "state": "manual",
-                "summary": f"Missing {', '.join(ads_missing)} before launch review.",
-            }
-        )
-    else:
-        evidence.append(
-            {
-                "kind": "google_ads_plan",
-                "state": "passed",
-                "summary": "Google Ads customer and primary conversion plan are declared.",
-            }
-        )
+    evidence.extend(_google_ads_evidence(facts))
 
     approval_keys = [
         "gtm_container_reviewed",
@@ -1159,6 +1217,8 @@ def render_check(result: dict[str, Any]) -> None:
     print("evidence:")
     for item in result["evidence"]:
         print(f"  {item['state']:<8} {item['kind']}: {item['summary']}")
+        if item.get("next"):
+            print(f"  {'':<8} next: {item['next']}")
     if result.get("repair"):
         print("")
         print(f"next: {result['repair']}")

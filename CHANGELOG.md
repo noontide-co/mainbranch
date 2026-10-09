@@ -81,6 +81,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- `mb site check` no longer lets a declared Google Ads customer read as more
+  than it is. Once the repo declares a Google Ads customer, the check reports
+  three things apart: `google_ads_plan` says only that the customer and
+  primary conversion plan are declared; `google_ads_connection` says the
+  account was not checked, because Main Branch cannot read Google Ads, and
+  names the read paths (Google's read-only Google Ads MCP server if approved,
+  or a CSV export); `google_ads_conversion_evidence` says no evidence is
+  recorded that the tag fires or that Google Ads attributes a conversion, and
+  names the next step. Both new items are manual steps; the readiness state is
+  unchanged, and a repo with no Google Ads customer sees the same output as
+  before.
 - `mb google ... --out` refusals now show a path under your home folder as
   `~/...`, like the summary, whether it was typed absolute or relative and
   with any `.`, `..`, link or case spelling. A last check hides any remaining
