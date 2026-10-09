@@ -95,6 +95,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   the one on disk, because git's ignore rules may not cover where the file
   lands. If the file is written but its temporary copy cannot be removed, the
   summary now says so and names it (#1080).
+- Running the test suite no longer writes into your real home folder. Every
+  test gets its own temporary `HOME`, so doctor repair tests stop installing
+  Codex skills under `~/.codex/skills`, and the doctor worktree test no longer
+  needs `mb` on `PATH`.
 - `mb connect` now names the user-scope file and refuses before storing a
   credential when ownership or an access-control list prevents writing it,
   just as it does for a read-only file mode. If writing is denied after connect

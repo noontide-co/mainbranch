@@ -33,6 +33,7 @@ updates:
           - "mypy"
           - "pytest"
           - "pytest-cov"
+          - "pytest-xdist"
           - "types-*"
         update-types:
           - "minor"

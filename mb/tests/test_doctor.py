@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import shlex
 import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -96,6 +97,13 @@ def _codex_plugin_list_result(repo: Path, *, installed: bool = True) -> dict[str
 def _prepare_codex_global_plugin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MAINBRANCH_CODEX_PLUGIN_ROOT", str(tmp_path / "codex-global"))
     codex_mod.write_global_plugin_source()
+
+
+def _setup_git(repo: Path, *args: str) -> None:
+    result = subprocess.run(
+        ["git", "-C", str(repo), *args], capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def _prepare_codex_global_skill_roots(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -452,14 +460,14 @@ def test_doctor_repair_apply_restores_missing_claude_worktree_start_wiring(
 ) -> None:
     repo = tmp_path / "biz"
     init_run(path=str(repo), name="Acme")
-    doctor_mod._run_git(repo, ["config", "user.email", "test@example.com"])
-    doctor_mod._run_git(repo, ["config", "user.name", "Test User"])
-    doctor_mod._run_git(repo, ["add", "AGENTS.md", "CLAUDE.md", "README.md", "core"])
-    commit = doctor_mod._run_git(repo, ["commit", "-m", "[updated] setup -- baseline"])
-    assert commit["ok"], commit["stderr"]
+    # Plain git for setup: the product helper has a short timeout and its
+    # commit runs the checkpoint hook, which needs `mb` on PATH.
+    _setup_git(repo, "config", "user.email", "test@example.com")
+    _setup_git(repo, "config", "user.name", "Test User")
+    _setup_git(repo, "add", "AGENTS.md", "CLAUDE.md", "README.md", "core")
+    _setup_git(repo, "commit", "--no-verify", "-m", "[updated] setup -- baseline")
     worktree = repo / ".claude" / "worktrees" / "repair-start"
-    added = doctor_mod._run_git(repo, ["worktree", "add", "-b", "repair-start", str(worktree)])
-    assert added["ok"], added["stderr"]
+    _setup_git(repo, "worktree", "add", "-b", "repair-start", str(worktree))
 
     assert not (worktree / ".claude" / "skills" / "mb-start" / "SKILL.md").exists()
 
