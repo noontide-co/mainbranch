@@ -18,17 +18,21 @@ from typing import Any
 
 from mb import __version__
 from mb import codex as codex_mod
+from mb.doctor import _not_business_folder_guard
 from mb.engine import (
     PACKAGE_NAME,
     PLUGIN_INSTALL_COMMAND,
     bundled_skills,
     claude_mainbranch_plugin_status,
+    consent_destinations,
     engine_root,
     install_mode,
     looks_like_uv_tool_install,
     operator_action,
+    plan_link_skills,
     plugin_switch_operator_action,
     plugin_wiring_status,
+    public_operations,
     repo_flag,
 )
 
@@ -93,8 +97,15 @@ SURFACE_PLAN_DECLINED_MESSAGE = (
 )
 SURFACE_LINK_APPLY_NOTE = (
     "For a person to run at a terminal, not an agent: refreshes this repo's "
-    "Claude Code skill links, which writes the tracked files listed in `changes`."
+    "Claude Code skill links, which writes the repo files listed in `changes`."
 )
+CHECK_PLAN_UNREADABLE_MESSAGE = (
+    "Could not read {target}, so this check cannot plan the {part} refresh or "
+    "say which repo files it would change ({error}). A real `mb update` stops "
+    "there too, with an error. {fix}, then run the check again."
+)
+# The files the skill-link plan decodes as UTF-8 text.
+LINK_PLAN_TEXT_FILES = (".gitignore", ".claude/settings.local.json")
 SURFACE_CODEX_APPLY_NOTE = (
     "For a person to run at a terminal, not an agent: refreshes this repo's "
     "Codex guidance, which writes or deletes the tracked files listed in "
@@ -653,6 +664,157 @@ def _link_new_repo_files(
     return [item for item in found if item["path"] == ".gitignore"]
 
 
+def _surface_consent(
+    link_plan: dict[str, Any], codex_plan: dict[str, Any], repo: Path
+) -> dict[str, Any] | None:
+    """The repo files the surface refresh would change, or None if unknown.
+
+    Shared by the run and `--check` (#1100), so the check names the same
+    files, and the same consent stop, that an unattended run hits.
+    """
+    link_changes = _changes_from(link_plan.get("tracked_changes"))
+    codex_changes = _codex_tracked_changes(codex_plan)
+    if link_changes is None or codex_changes is None:
+        return None
+    # #1087 item 10: creating a missing .gitignore needs the same yes.
+    link_changes.extend(_link_new_repo_files(link_plan, repo, link_changes))
+    # #1052: a Codex AGENTS.md repair that would refuse, or leave a person's
+    # files behind, needs a manual step first. No consent prompt, no write.
+    codex_blocked = _codex_blocked_actions(codex_plan)
+    if codex_blocked:
+        codex_changes = []
+    else:
+        # #1053: creating a missing AGENTS.md needs the same yes.
+        codex_changes.extend(_codex_new_repo_files(codex_plan, repo, codex_changes))
+    link_writes = list(dict.fromkeys(item["path"] for item in link_changes))
+    codex_writes = list(dict.fromkeys(item["path"] for item in codex_changes))
+    return {
+        "codex_blocked": codex_blocked,
+        "link_writes": link_writes,
+        "codex_writes": codex_writes,
+        "tracked_changes": list(
+            {(c["path"], c["op"]): c for c in [*link_changes, *codex_changes]}.values()
+        ),
+        "tracked_files": list(dict.fromkeys([*link_writes, *codex_writes])),
+    }
+
+
+def _check_codex_plan(repo: Path, codex: dict[str, Any]) -> dict[str, Any]:
+    """The Codex part of `mb doctor repair --plan --only codex`, read-only.
+
+    Only the fields `_surface_consent` reads, built the way doctor builds its
+    `codex-agents-md` and `codex-global-skill` actions, without doctor's
+    network and version checks. `codex` is the readiness `--check` already
+    read, so it is read once.
+    """
+    if _not_business_folder_guard(repo) is not None:
+        # Doctor plans nothing outside a business folder.
+        return {"actions": [], "operator_actions": []}
+    actions: list[dict[str, Any]] = []
+    operator_actions: list[dict[str, Any]] = []
+    if not codex.get("instructions", {}).get("ok", False):
+        agents_plan = codex_mod.agents_md_plan(repo)
+        operations = agents_plan["operations"]
+        actions.append(
+            {
+                "id": "codex-agents-md",
+                "operations": public_operations(operations),
+                "tracked_changes": consent_destinations(repo, operations),
+            }
+        )
+        blocked = codex_mod.agents_md_operator_action(agents_plan, repo=repo)
+        if blocked is not None:
+            operator_actions.append(blocked)
+    if not codex.get("global_skill", {}).get("ok", True):
+        operations = codex_mod.global_skill_operations()
+        actions.append(
+            {
+                "id": "codex-global-skill",
+                "operations": public_operations(operations),
+                "tracked_changes": consent_destinations(repo, operations),
+            }
+        )
+    return {"actions": actions, "operator_actions": operator_actions}
+
+
+def _failing_path(repo: Path, exc: Exception) -> str:
+    """The file or folder a plan could not read, relative to the repo if inside."""
+    raw = ""
+    if isinstance(exc, OSError) and exc.filename:
+        raw = os.fsdecode(exc.filename)
+    elif isinstance(exc, RuntimeError):
+        found = re.match(r"Symlink loop from '(.+)'$", str(exc))
+        raw = found.group(1) if found else ""
+    elif isinstance(exc, UnicodeDecodeError):
+        # The exception names no file; find the one that does not decode.
+        for rel in LINK_PLAN_TEXT_FILES:
+            try:
+                (repo / rel).read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                return rel
+            except (OSError, ValueError):
+                continue
+    if not raw:
+        return ""
+    repo_real = os.path.realpath(repo)
+    for base in (str(repo), repo_real):
+        if raw.startswith(base + os.sep):
+            return os.path.relpath(raw, base).replace(os.sep, "/")
+    return raw
+
+
+def _unreadable_plan_warning(repo: Path, part: str, exc: Exception) -> str:
+    path = _failing_path(repo, exc)
+    if path == ".gitignore":
+        fix = "Check `.gitignore` (for example, save it as UTF-8 text you can read)"
+    elif path:
+        fix = "Check that file or folder"
+    else:
+        fix = "Check the files in the error"
+    return CHECK_PLAN_UNREADABLE_MESSAGE.format(
+        target=f"`{path}`" if path else "a file it needs",
+        part=part,
+        error=exc,
+        fix=fix,
+    )
+
+
+def _predict_surface_consent(result: dict[str, Any], repo: Path, codex: dict[str, Any]) -> None:
+    """`--check`: report the consent stop an unattended run would hit (#1100).
+
+    Read-only: the same plans the run makes, in this process, with this
+    install's templates. Only a repo whose refresh would change repo files
+    gains the planned fields, so every other check result stays as it was. A
+    plan that cannot be made predicts nothing; a file it cannot read (not
+    UTF-8, no permission, a folder, a looping link) is named in a warning,
+    because the run stops with an error at the same place.
+    """
+    # RuntimeError: pathlib's symlink loop on Python 3.10 to 3.12.
+    try:
+        link_plan = plan_link_skills(repo)
+    except (OSError, ValueError, RuntimeError) as exc:
+        result["warnings"].append(_unreadable_plan_warning(repo, "skill link", exc))
+        return
+    if link_plan.get("ok") is not True:
+        return
+    try:
+        codex_plan = _check_codex_plan(repo, codex)
+    except (OSError, ValueError, RuntimeError) as exc:
+        result["warnings"].append(_unreadable_plan_warning(repo, "Codex guidance", exc))
+        return
+    consent = _surface_consent(link_plan, codex_plan, repo)
+    if consent is None or not consent["tracked_files"]:
+        return
+    planned = result["surface_refresh"]["planned"]
+    planned["consent"] = "no_terminal"
+    planned["tracked_files"] = consent["tracked_files"]
+    planned["tracked_changes"] = consent["tracked_changes"]
+    if consent["link_writes"]:
+        planned["apply_commands"].append(f"mb skill link{_repo_flag(repo)}")
+    if consent["codex_writes"]:
+        planned["apply_commands"].append(f"mb doctor repair{_repo_flag(repo)} --apply --only codex")
+
+
 def _codex_blocked_actions(plan: dict[str, Any]) -> list[dict[str, Any]]:
     """The plan's Codex AGENTS.md steps that need a person first (#1052)."""
 
@@ -785,8 +947,11 @@ def _base_result(
     }
 
 
-def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
-    codex = codex_mod.readiness(repo)
+def _add_codex_follow_up(
+    result: dict[str, Any], repo: Path, codex: dict[str, Any] | None = None
+) -> None:
+    if codex is None:
+        codex = codex_mod.readiness(repo)
     instructions = codex.get("instructions", {})
     global_skill = codex.get("global_skill", {})
     plugin_install = codex.get("plugin_install", {})
@@ -974,9 +1139,8 @@ def _refresh_surfaces(
     link_plan = link_plan or {}
     codex_plan = codex_plan or {}
 
-    link_changes = _changes_from(link_plan.get("tracked_changes"))
-    codex_changes = _codex_tracked_changes(codex_plan)
-    if link_changes is None or codex_changes is None:
+    consent = _surface_consent(link_plan, codex_plan, target_repo)
+    if consent is None:
         result["ok"] = False
         result["errors"].append(
             "the installed `mb` did not report which tracked files the surface refresh "
@@ -984,22 +1148,11 @@ def _refresh_surfaces(
             f"`{_update_command(target_repo)}` again."
         )
         return
-    # #1087 item 10: creating a missing .gitignore needs the same yes.
-    link_changes.extend(_link_new_repo_files(link_plan, target_repo, link_changes))
-    # #1052: a Codex AGENTS.md repair that would refuse, or leave a person's
-    # files behind, needs a manual step first. No consent prompt, no write.
-    codex_blocked = _codex_blocked_actions(codex_plan)
-    if codex_blocked:
-        codex_changes = []
-    else:
-        # #1053: creating a missing AGENTS.md needs the same yes.
-        codex_changes.extend(_codex_new_repo_files(codex_plan, target_repo, codex_changes))
-    link_writes = list(dict.fromkeys(item["path"] for item in link_changes))
-    codex_writes = list(dict.fromkeys(item["path"] for item in codex_changes))
-    tracked_changes = list(
-        {(c["path"], c["op"]): c for c in [*link_changes, *codex_changes]}.values()
-    )
-    tracked_files = list(dict.fromkeys([*link_writes, *codex_writes]))
+    codex_blocked = consent["codex_blocked"]
+    link_writes = consent["link_writes"]
+    codex_writes = consent["codex_writes"]
+    tracked_changes = consent["tracked_changes"]
+    tracked_files = consent["tracked_files"]
     planned["tracked_files"] = tracked_files
     planned["tracked_changes"] = tracked_changes
 
@@ -1255,6 +1408,7 @@ def run(
             )
         if result["installed_ahead_of_latest"]:
             result["actions"] = ["would leave this install alone; it is newer than PyPI's latest"]
+        codex_status: dict[str, Any] | None = None
         if refresh_surfaces:
             surface_commands = [
                 f"mb skill link --repo {shlex.quote(str(target_repo))} --json",
@@ -1279,6 +1433,8 @@ def run(
                 "planned": True,
                 "command": surface_commands[1],
             }
+            codex_status = codex_mod.readiness(target_repo)
+            _predict_surface_consent(result, target_repo, codex_status)
         else:
             result["actions"].append("would skip agent surface refresh")
         new_version = str(result.get("new_version") or "")
@@ -1296,7 +1452,7 @@ def run(
                 "available": False,
                 "source": "not_newer",
             }
-        _add_codex_follow_up(result, target_repo)
+        _add_codex_follow_up(result, target_repo, codex_status)
         _add_plugin_follow_up(result, target_repo)
         return result
 
@@ -1402,6 +1558,24 @@ def _render_surface_plan(result: dict[str, Any]) -> None:
     print(f"left repo files unchanged: {files}")
 
 
+def _render_predicted_consent(result: dict[str, Any]) -> None:
+    surface = result.get("surface_refresh")
+    planned = surface.get("planned") if isinstance(surface, dict) else None
+    if not isinstance(planned, dict) or planned.get("consent") != "no_terminal":
+        return
+    changes = planned.get("tracked_changes") or []
+    labels = [
+        _change_label(item)
+        for item in changes
+        if isinstance(item, dict) and "path" in item and "op" in item
+    ]
+    files = ", ".join(labels or [str(path) for path in planned.get("tracked_files", [])])
+    print(f"would ask once before changing repo files: {files}")
+    print("without a terminal, would leave them unchanged and list the commands for you:")
+    for command in planned.get("apply_commands", []):
+        print(f"  {command}")
+
+
 def _render_operator_actions(result: dict[str, Any]) -> None:
     for item in result.get("operator_actions", []):
         if isinstance(item, dict) and item.get("command"):
@@ -1460,6 +1634,7 @@ def render_human(result: dict[str, Any]) -> None:
             print(f"next: {action}")
         if count:
             print(f"would refresh {count} skill link(s)")
+        _render_predicted_consent(result)
         if not refresh_surfaces:
             print("would skip agent surface refresh")
     elif result.get("ok") and result.get("manual_update_command"):

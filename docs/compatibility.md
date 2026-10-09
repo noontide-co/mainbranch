@@ -350,7 +350,8 @@ refresh would change, delete or replace a tracked file:
 `surface_refresh.planned` has `consent` (`not_needed`, `no_terminal`,
 `declined` or `approved`), `tracked_files` (the repo files that would change),
 `tracked_changes` (each with its `op`: `write`, `delete`, `delete_tree`,
-`create_link`, `replace_link`, or `create` for a missing `AGENTS.md`; an untracked dangling `AGENTS.md` link is
+`create_link`, `replace_link`, or `create` for a missing `AGENTS.md` or
+`.gitignore`; an untracked or dangling `AGENTS.md` or `.gitignore` link is
 `replace_link`) and `apply_commands` (what is left to run).
 After applying, `mb update` compares the business repo's `git status` with what
 it saw before. This check is a backstop for a case the plan missed, not part
@@ -367,7 +368,13 @@ terminal. Each entry has `command`, `changes` and `note`.
 
 Use `--no-refresh-surfaces` to update the package without touching any
 surface, and `mb update --check` when you want the facts and no writes at all:
-`--check` never runs an installer and never refreshes a surface.
+`--check` never runs an installer and never refreshes a surface. Its
+`surface_refresh.planned` reports, with the installed version's templates,
+the repo files a run without a terminal would leave for you, and
+`consent: no_terminal`, or `not_needed` when the refresh changes none (#1100).
+When a newer release is available, it may also stop for `AGENTS.md`. A file
+the plan cannot read (not UTF-8, no permission, a folder, a link that loops)
+is named in `warnings` instead.
 
 Inside Claude Code, `/mb-update` calls `mb update` for this mechanical step and keeps
 ownership of the human-readable "what's new" summary. Codex users should open a

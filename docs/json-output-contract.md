@@ -111,11 +111,21 @@ Entries today:
   plugin copies). Each entry's `changes` comes from that surface's tracked
   writes, plus a missing `AGENTS.md` the Codex refresh would create (#1053)
   or a missing `.gitignore` the skill-link refresh would create (#1087; listed
-  in `surface_refresh.planned.tracked_changes` with `op: "create"`). The
+  in `surface_refresh.planned.tracked_changes` with `op: "create"`). A
+  `.gitignore` that is an untracked or dangling link is held the same way and
+  listed with `op: "replace_link"`; the terminal prompt names it
+  `.gitignore (replace link)`. The
   same commands stay in `surface_refresh.planned.apply_commands`; they are not
   in `next_actions`. The read-only
   `mb doctor repair --repo <path> --plan --only codex` stays in `next_actions`,
-  once, so an agent can show the plan first;
+  once, so an agent can show the plan first. `mb update --check` writes
+  nothing and lists no apply command here, but its `surface_refresh.planned`
+  (`consent`, `tracked_files`, `tracked_changes`, `apply_commands`) predicts,
+  with the installed version's templates, what a run without a terminal would
+  report (#1100). When a newer release is available, that release may also
+  stop for `AGENTS.md`. If a file the plan reads cannot be read (not UTF-8, no
+  permission, a folder, a link that loops), `--check` predicts nothing and
+  names it in `warnings`; the run stops there with an error;
 - from `mb update`, including `--check` and `--no-refresh-surfaces`, the Codex
   `AGENTS.md` repair when Codex guidance is still not ready after the refresh
   (or the refresh did not run): the same

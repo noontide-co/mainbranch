@@ -111,10 +111,26 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   behind. It changes nothing in the repo and lists
   `mb skill link --repo <path>` (changes `.gitignore`) as a step for you, the
   same way it treats a missing `AGENTS.md`. At a terminal, the prompt now
-  names `.gitignore (create)` and a yes writes it.
+  names `.gitignore (create)` and a yes writes it. A `.gitignore` that is a
+  link git does not track, or a link that points nowhere, is kept the same
+  way; the prompt names it `.gitignore (replace link)`.
+- `mb update --check` now says when the real update would stop to ask you
+  about your repo's files: a missing `.gitignore` or `AGENTS.md`, a
+  `.gitignore` link, or a `.gitignore` that needs lines. It lists those files
+  and the commands an unattended run would leave for you, and still changes
+  nothing. It judges with the installed version's templates, so when a newer
+  release is available, that release may also stop for `AGENTS.md`. Before,
+  it said nothing needed your consent. If it cannot read a file it needs, such
+  as a `.gitignore` that is not UTF-8 or a skill link that loops back on
+  itself, it names it in a warning instead of predicting.
+- The `mb skill link` step that `mb update` leaves for you now says it writes
+  the "repo files" listed, which is also true of a new `.gitignore`.
+- `mb doctor repair --plan --json` lists each agent surface's
+  `planned_actions` in the same order every time.
 - A global Codex skill folder that is a link to a folder of your own, and
   already holds the current Main Branch skill, no longer asks you to delete
-  files. Doctor, `mb status` and `mb update` show a short note instead: there
+  files. Doctor and `mb update` show a short note instead, and
+  `mb status --json` carries it: there
   is nothing to do, and Main Branch still never writes through the link. If
   the skill file there is out of date or yours, you still get the step to
   sort it out yourself.
