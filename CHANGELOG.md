@@ -11,6 +11,15 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Fixed
+
+- A new business repo's `CLAUDE.md` no longer gives one `status:` list for
+  every file type. It lists the values `mb validate` accepts for bets,
+  decisions, offers and pushes, taken from the same sets `mb validate`
+  checks, so an agent no longer tells you a bet can be `running` (#1119).
+  `mb update` does not rewrite `CLAUDE.md`, so an existing repo keeps its old
+  line until you edit it; `mb validate` still names the allowed values.
+
 ## [0.6.5] - 2026-10-09
 
 `mb google ... --out PATH` writes a Search Console or GA4 read to a private
