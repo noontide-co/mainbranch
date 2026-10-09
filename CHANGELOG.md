@@ -125,6 +125,23 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   names `.gitignore (create)` and a yes writes it. A `.gitignore` that is a
   link git does not track, or a link that points nowhere, is kept the same
   way; the prompt names it `.gitignore (replace link)`.
+- `mb update`, `mb update --check` and `mb doctor` no longer stop with a
+  Python traceback when they cannot read an `AGENTS.md` that is not UTF-8, a
+  repo `.claude` folder you have no permission to open, or your Codex folder
+  (`CODEX_HOME`). `--check` names the file in a warning and still exits 0; the
+  update, `mb doctor` and `mb doctor repair --plan` stop with one error that
+  names it (code `unreadable_file` in `--json`). Nothing is written.
+- When `mb update --check` cannot read a file, the warning now names it the way
+  you would type it: relative to your repo, or `~/...` in your home folder,
+  even when the path holds a quote or a backslash. When a whole folder is
+  closed to you, it names that folder rather than a file inside it; when both
+  `.claude/settings.local.json` and `.gitignore` are not UTF-8, it names the
+  one the update reads first, settings. The suggested fix now fits that file
+  (save it as UTF-8, give yourself read access, move a folder aside, or remove a
+  looping link), and an unexpected program error is no longer reported as a
+  file problem.
+- `mb update --check` and `mb doctor repair --plan` now build the Codex repair
+  plan with the same code, so the check cannot drift from what doctor plans.
 - `mb update --check` now says when the real update would stop to ask you
   about your repo's files: a missing `.gitignore` or `AGENTS.md`, a
   `.gitignore` link, or a `.gitignore` that needs lines. It lists those files

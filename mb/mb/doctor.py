@@ -2401,6 +2401,87 @@ def _qualify_report(node: Any, repo: Path, seen: set[int] | None = None) -> None
             _qualify_report(item, repo, seen)
 
 
+def codex_repair_actions(
+    target: Path, codex_status: dict[str, Any]
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """The Codex repair actions and operator actions for `repair_plan`, in order.
+
+    Shared with `mb update --check` (#1106), so the check plans exactly what
+    `mb doctor repair --plan --only codex` would. `codex_status` is a
+    `codex.readiness` report already read for `target`.
+    """
+    codex_instruction_status = codex_status.get("instructions") or {}
+    codex_global_skill = codex_status.get("global_skill") or {}
+    codex_actions: list[dict[str, Any]] = []
+    codex_operator_actions: list[dict[str, Any]] = []
+    if not codex_instruction_status.get("ok", False):
+        agents_plan = codex_mod.agents_md_plan(target)
+        agents_operations = agents_plan["operations"]
+        # #1052: a repair that refuses, or leaves a person's files behind, is a
+        # step for a person with a manual repair, never an agent repair.
+        agents_operator_action = codex_mod.agents_md_operator_action(agents_plan, repo=target)
+        reason = (
+            "AGENTS.md is the repo-local Codex entrypoint; repair writes current "
+            "fact grounding, lifecycle routing, and approval boundaries, and removes "
+            "transitional repo-local plugin copies"
+        )
+        if agents_operator_action is not None:
+            reason = f"{reason}. {agents_operator_action['reason']}"
+        action = _action(
+            id="codex-agents-md",
+            title="Refresh Codex AGENTS.md instructions",
+            state="warn",
+            mode="write",
+            command="mb doctor repair --apply --only codex",
+            safe_to_apply=agents_operator_action is None,
+            reason=reason,
+            writes=(
+                []
+                if agents_plan["refused"]
+                else [
+                    "AGENTS.md",
+                    *[str(item["rel"]) for item in agents_operations if item["op"] != "write"],
+                ]
+            ),
+        )
+        action["refused"] = agents_plan["refused"]
+        action["kept"] = agents_plan["kept"]
+        # #1056: an explicit apply does exactly this, even while safe_to_apply is false.
+        action["on_apply"] = codex_mod.agents_md_apply_effect(agents_plan)
+        _attach_operations(action, target, agents_operations)
+        codex_actions.append(action)
+        if agents_operator_action is not None:
+            codex_operator_actions.append(agents_operator_action)
+    # A file in an old global folder that is not proven to be Main Branch's
+    # stays; a person decides what to do with it.
+    global_operator_action = codex_mod.global_skill_operator_action(codex_global_skill, repo=target)
+    if global_operator_action is not None:
+        codex_operator_actions.append(global_operator_action)
+    if not codex_global_skill.get("ok", True):
+        action = _action(
+            id="codex-global-skill",
+            title="Install the global Main Branch Codex skill bundle",
+            state="warn",
+            mode="write",
+            command="mb doctor repair --apply --only codex",
+            safe_to_apply=global_operator_action is None,
+            reason=(
+                "Codex uses a global Main Branch skill bundle for supported and "
+                "discoverable mb-* routes"
+            ),
+            writes=[
+                str(codex_mod.global_skill_source_root()),
+            ],
+            result=codex_global_skill,
+        )
+        # #1056, #1062: files not proven to be Main Branch's in old global folders stay.
+        action["kept"] = list(codex_global_skill.get("kept", []))
+        action["on_apply"] = codex_mod.global_skill_apply_effect(codex_global_skill)
+        _attach_operations(action, target, codex_mod.global_skill_operations())
+        codex_actions.append(action)
+    return codex_actions, codex_operator_actions
+
+
 def repair_plan(
     repo: str | Path = ".",
     *,
@@ -2968,77 +3049,9 @@ def repair_plan(
             },
         },
     ]
-    codex_actions: list[dict[str, Any]] = []
-    codex_operator_actions: list[dict[str, Any]] = []
-    if not codex_instruction_status["ok"]:
-        agents_plan = codex_mod.agents_md_plan(target)
-        agents_operations = agents_plan["operations"]
-        # #1052: a repair that refuses, or leaves a person's files behind, is a
-        # step for a person with a manual repair, never an agent repair.
-        agents_operator_action = codex_mod.agents_md_operator_action(agents_plan, repo=target)
-        reason = (
-            "AGENTS.md is the repo-local Codex entrypoint; repair writes current "
-            "fact grounding, lifecycle routing, and approval boundaries, and removes "
-            "transitional repo-local plugin copies"
-        )
-        if agents_operator_action is not None:
-            reason = f"{reason}. {agents_operator_action['reason']}"
-        action = _action(
-            id="codex-agents-md",
-            title="Refresh Codex AGENTS.md instructions",
-            state="warn",
-            mode="write",
-            command="mb doctor repair --apply --only codex",
-            safe_to_apply=agents_operator_action is None,
-            reason=reason,
-            writes=(
-                []
-                if agents_plan["refused"]
-                else [
-                    "AGENTS.md",
-                    *[str(item["rel"]) for item in agents_operations if item["op"] != "write"],
-                ]
-            ),
-        )
-        action["refused"] = agents_plan["refused"]
-        action["kept"] = agents_plan["kept"]
-        # #1056: an explicit apply does exactly this, even while safe_to_apply is false.
-        action["on_apply"] = codex_mod.agents_md_apply_effect(agents_plan)
-        _attach_operations(action, target, agents_operations)
-        actions.append(action)
-        codex_actions.append(action)
-        if agents_operator_action is not None:
-            codex_operator_actions.append(agents_operator_action)
-            operator_actions.append(agents_operator_action)
-    # A file in an old global folder that is not proven to be Main Branch's
-    # stays; a person decides what to do with it.
-    global_operator_action = codex_mod.global_skill_operator_action(codex_global_skill, repo=target)
-    if global_operator_action is not None:
-        codex_operator_actions.append(global_operator_action)
-        operator_actions.append(global_operator_action)
-    if not codex_global_skill["ok"]:
-        action = _action(
-            id="codex-global-skill",
-            title="Install the global Main Branch Codex skill bundle",
-            state="warn",
-            mode="write",
-            command="mb doctor repair --apply --only codex",
-            safe_to_apply=global_operator_action is None,
-            reason=(
-                "Codex uses a global Main Branch skill bundle for supported and "
-                "discoverable mb-* routes"
-            ),
-            writes=[
-                str(codex_mod.global_skill_source_root()),
-            ],
-            result=codex_global_skill,
-        )
-        # #1056, #1062: files not proven to be Main Branch's in old global folders stay.
-        action["kept"] = list(codex_global_skill.get("kept", []))
-        action["on_apply"] = codex_mod.global_skill_apply_effect(codex_global_skill)
-        _attach_operations(action, target, codex_mod.global_skill_operations())
-        actions.append(action)
-        codex_actions.append(action)
+    codex_actions, codex_operator_actions = codex_repair_actions(target, codex_status)
+    actions.extend(codex_actions)
+    operator_actions.extend(codex_operator_actions)
     sections.append(
         _section(
             "codex-wiring",

@@ -3795,6 +3795,22 @@ def _unreadable_gitignore(repo: Path, kind: str) -> None:
         skills.mkdir(parents=True, exist_ok=True)
         (skills / "mb-start").symlink_to("mb-start")
         return
+    if kind in {"skills_closed", "personal_skills_closed"}:
+        # #1106 item 3: a skills folder that cannot be entered is named itself.
+        _commit_all(repo, "Current AGENTS.md")
+        skills = _closed_folder(repo, kind)
+        skills.mkdir(parents=True, exist_ok=True)
+        (skills / "notes").write_text("x\n", encoding="utf-8")
+        skills.chmod(0)
+        return
+    if kind == "both_not_utf8":
+        # #1106 item 2: the plan reads settings first, so settings is named.
+        settings = repo / ".claude" / "settings.local.json"
+        settings.parent.mkdir(parents=True, exist_ok=True)
+        settings.write_bytes('{"note": "café"}\n'.encode("latin-1"))
+        gitignore.write_bytes("node_modules/\n# café notes\n".encode("latin-1"))
+        _commit_all(repo, "Neither file is UTF-8")
+        return
     if kind == "folder":
         gitignore.unlink()
         _commit_all(repo, "No .gitignore")
@@ -3812,21 +3828,58 @@ def _unreadable_gitignore(repo: Path, kind: str) -> None:
         gitignore.chmod(0)
 
 
+def _closed_folder(repo: Path, kind: str) -> Path:
+    if kind == "skills_closed":
+        return repo / ".claude" / "skills"
+    return engine_mod._personal_skills_dir()
+
+
+MODE_000_KINDS = {"unreadable", "skills_closed", "personal_skills_closed"}
+
+
 @pytest.mark.parametrize(
-    ("kind", "named"),
+    ("kind", "named", "fix"),
     [
-        ("latin1", "`.gitignore`"),
-        ("utf16", "`.gitignore`"),
-        ("unreadable", "`.gitignore`"),
-        ("folder", "`.gitignore`"),
-        ("skill_loop", "`.claude/skills/"),
-        ("personal_skill_loop", "home/.claude/skills/"),
+        ("latin1", "`.gitignore`", "Save `.gitignore` as UTF-8 text"),
+        ("utf16", "`.gitignore`", "Save `.gitignore` as UTF-8 text"),
+        ("unreadable", "`.gitignore`", "Give your user read access to `.gitignore`"),
+        ("folder", "`.gitignore`", "Move the `.gitignore` folder aside"),
+        (
+            "skill_loop",
+            "`.claude/skills/mb-start`",
+            "Remove the link `.claude/skills/mb-start`",
+        ),
+        (
+            "personal_skill_loop",
+            "`~/.claude/skills/mb-start`",
+            "Remove the link `~/.claude/skills/mb-start`",
+        ),
+        (
+            "both_not_utf8",
+            "`.claude/settings.local.json`",
+            "Save `.claude/settings.local.json` as UTF-8 text",
+        ),
+        (
+            "skills_closed",
+            "`.claude/skills` (",
+            "Give your user read access to `.claude/skills`,",
+        ),
+        (
+            "personal_skills_closed",
+            "`~/.claude/skills` (",
+            "Give your user read access to `~/.claude/skills`,",
+        ),
     ],
 )
 def test_check_does_not_crash_on_a_gitignore_it_cannot_read(
-    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path, kind: str, named: str
+    monkeypatch: pytest.MonkeyPatch,
+    business_repo: Path,
+    tmp_path: Path,
+    kind: str,
+    named: str,
+    fix: str,
 ) -> None:
-    if kind == "unreadable" and hasattr(os, "geteuid") and os.geteuid() == 0:
+    if kind in MODE_000_KINDS and hasattr(os, "geteuid") and os.geteuid() == 0:
         pytest.skip("root can read a mode 000 file")
     calls: list[list[str]] = []
     _wheel_update_env(monkeypatch, calls)
@@ -3842,6 +3895,8 @@ def test_check_does_not_crash_on_a_gitignore_it_cannot_read(
     finally:
         if kind == "unreadable":
             (business_repo / ".gitignore").chmod(0o644)
+        if kind in {"skills_closed", "personal_skills_closed"}:
+            _closed_folder(business_repo, kind).chmod(0o755)
 
     assert as_json.exception is None, as_json.exception
     assert as_json.exit_code == 0, as_json.stdout
@@ -3857,7 +3912,8 @@ def test_check_does_not_crash_on_a_gitignore_it_cannot_read(
     assert named in warnings[0]
     assert "cannot plan the skill link refresh" in warnings[0]
     assert "real `mb update` stops" in warnings[0]
-    assert ("save it as UTF-8" in warnings[0]) == (named == "`.gitignore`")
+    assert fix in warnings[0]
+    assert str(tmp_path) not in warnings[0]
     assert human.exception is None, human.exception
     assert human.exit_code == 0
     assert f"warning: {warnings[0]}" in human.stdout
@@ -3882,3 +3938,178 @@ def test_check_reads_codex_readiness_once(
     assert result["ok"] is True, result["errors"]
     assert result["surface_refresh"]["planned"]["consent"] == "no_terminal"
     assert len(reads) == 1
+
+
+# --- #1106: name the file, never a traceback --------------------------------
+
+
+def test_check_names_a_looping_link_whose_path_has_quotes_and_a_backslash(
+    tmp_path: Path,
+) -> None:
+    # Item 1: the path is read back as written, not in its escaped form.
+    repo = tmp_path / 'it\'s a "biz" \\ folder'
+    link = repo / ".claude" / "skills" / "mb-start"
+    exc = RuntimeError(f"Symlink loop from {str(link)!r}")
+
+    warning = update_mod._unreadable_plan_warning(repo, "skill link", exc)
+
+    assert warning.startswith("Could not read `.claude/skills/mb-start` (")
+    assert str(tmp_path) not in warning
+
+
+def test_check_keeps_a_programming_error_loud(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path
+) -> None:
+    # Item 4: only pathlib's symlink loop is a file the plan cannot read.
+    _wheel_update_env(monkeypatch, [])
+
+    def broken(repo: Path) -> dict[str, Any]:
+        raise NotImplementedError("not built yet")
+
+    monkeypatch.setattr(update_mod, "plan_link_skills", broken)
+
+    with pytest.raises(NotImplementedError):
+        update_mod.run(repo=business_repo, check=True, interactive=False)
+
+
+def _codex_unreadable(repo: Path, kind: str) -> Path:
+    """Item 2: a state `codex.readiness` used to crash on; returns what to reopen."""
+    codex_mod.write_agents_md(repo)
+    if kind == "agents_latin1":
+        (repo / "AGENTS.md").write_bytes("# Guidance\n\nCafé notes\n".encode("latin-1"))
+        _commit_all(repo, "Latin-1 AGENTS.md")
+        return repo / "AGENTS.md"
+    _commit_all(repo, "Current AGENTS.md")
+    if kind == "claude_closed":
+        closed = repo / ".claude"
+        closed.mkdir()
+        (closed / "settings.json").write_text("{}\n", encoding="utf-8")
+    else:
+        assert kind == "codex_home_closed"
+        closed = Path(os.environ["CODEX_HOME"])
+        (closed / "skills").mkdir(parents=True)
+    closed.chmod(0)
+    return closed
+
+
+CODEX_UNREADABLE = [
+    ("agents_latin1", "`AGENTS.md`", "Save `AGENTS.md` as UTF-8 text"),
+    ("claude_closed", "`.claude`", "Give your user read access to `.claude`"),
+    ("codex_home_closed", "`~/.codex`", "Give your user read access to `~/.codex`"),
+]
+
+
+@pytest.mark.parametrize(("kind", "named", "fix"), CODEX_UNREADABLE)
+def test_update_and_doctor_name_a_codex_file_they_cannot_read(
+    monkeypatch: pytest.MonkeyPatch,
+    business_repo: Path,
+    tmp_path: Path,
+    kind: str,
+    named: str,
+    fix: str,
+) -> None:
+    if kind != "agents_latin1" and hasattr(os, "geteuid") and os.geteuid() == 0:
+        pytest.skip("root can read a mode 000 folder")
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    closed = _codex_unreadable(business_repo, kind)
+    monkeypatch.chdir(tmp_path)
+    repo = str(business_repo)
+    tree_before = _tree_snapshot(business_repo, tmp_path / "home")
+    try:
+        check_json = runner.invoke(app, ["update", "--check", "--json", "--repo", repo])
+        check_human = runner.invoke(app, ["update", "--check", "--repo", repo])
+        run_json = runner.invoke(app, ["update", "--json", "--repo", repo])
+        doctor_json = runner.invoke(app, ["doctor", "--json", repo])
+        doctor_human = runner.invoke(app, ["doctor", repo])
+        plan_json = runner.invoke(
+            app, ["doctor", "repair", "--plan", "--only", "codex", "--json", "--repo", repo]
+        )
+        assert _tree_snapshot(business_repo, tmp_path / "home") == tree_before
+        assert _git(business_repo, "status", "--porcelain") == ""
+    finally:
+        closed.chmod(0o755)
+
+    invoked = [check_json, check_human, run_json, doctor_json, doctor_human, plan_json]
+    for item in invoked:
+        assert item.exception is None or isinstance(item.exception, SystemExit), item.exception
+
+    checked = json.loads(check_json.stdout)
+    assert check_json.exit_code == 0
+    assert checked["ok"] is True
+    warnings = [item for item in checked["warnings"] if item.startswith("Could not read ")]
+    assert len(warnings) == 1, checked["warnings"]
+    assert warnings[0].startswith(f"Could not read {named} (")
+    assert fix in warnings[0]
+    assert str(tmp_path) not in warnings[0]
+    assert check_human.exit_code == 0
+    assert f"warning: {warnings[0]}" in check_human.stdout
+
+    ran = json.loads(run_json.stdout)
+    assert run_json.exit_code == 1
+    assert ran["ok"] is False
+    named_errors = [item for item in ran["errors"] if named in item]
+    assert len(named_errors) == 1, ran["errors"]
+    assert fix in named_errors[0]
+    # Nothing past the plan ran: no link refresh, no Codex apply.
+    assert not any("--apply" in arg for args in calls for arg in args)
+    assert ["mb", "skill", "link", "--repo", repo, "--json"] not in calls
+
+    for invoked_json in (doctor_json, plan_json):
+        envelope = json.loads(invoked_json.stdout)
+        assert invoked_json.exit_code == 1
+        assert envelope["ok"] is False
+        assert [item["code"] for item in envelope["errors"]] == ["unreadable_file"]
+        assert named in envelope["errors"][0]["message"]
+        assert fix in envelope["errors"][0]["message"]
+    assert doctor_human.exit_code == 1
+    assert named in doctor_human.output
+
+
+# --- #1106 item 3: one Codex action builder ---------------------------------
+
+
+def _codex_plan_state(repo: Path, state: str) -> None:
+    if state in {"baseline", "global_pending"}:
+        codex_mod.write_agents_md(repo)
+    if state == "missing_agents":
+        (repo / "AGENTS.md").unlink()
+    if state in {"baseline", "stale_agents", "missing_agents"}:
+        codex_mod.write_global_skill_source()
+    if _git(repo, "status", "--porcelain"):
+        _commit_all(repo, state)
+
+
+@pytest.mark.parametrize(
+    "state", ["baseline", "stale_agents", "missing_agents", "global_pending", "both"]
+)
+def test_check_codex_plan_is_doctors_codex_plan(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, state: str
+) -> None:
+    from mb import doctor as doctor_mod
+
+    _codex_plan_state(business_repo, state)
+    monkeypatch.setattr(doctor_mod, "_net", lambda: (False, "offline in tests"))
+
+    checked = update_mod._check_codex_plan(business_repo, codex_mod.readiness(business_repo))
+    planned = doctor_mod.repair_plan(repo=business_repo, only="codex")
+
+    codex_ids = {"codex-agents-md", "codex-global-skill"}
+    doctor_actions = [item for item in planned["actions"] if item["id"] in codex_ids]
+    keys = ("id", "operations", "tracked_changes", "safe_to_apply", "writes", "on_apply")
+    assert [{key: item.get(key) for key in keys} for item in checked["actions"]] == [
+        {key: item.get(key) for key in keys} for item in doctor_actions
+    ]
+    assert [item.get("id") for item in checked["operator_actions"]] == [
+        item.get("id")
+        for item in planned["operator_actions"]
+        if item.get("id") in {"codex-agents-md", "codex-global-kept"}
+    ]
+    expected = {
+        "baseline": [],
+        "stale_agents": ["codex-agents-md"],
+        "missing_agents": ["codex-agents-md"],
+        "global_pending": ["codex-global-skill"],
+        "both": ["codex-agents-md", "codex-global-skill"],
+    }[state]
+    assert [item["id"] for item in checked["actions"]] == expected

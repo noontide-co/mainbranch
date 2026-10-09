@@ -53,6 +53,7 @@ from mb import start as start_mod
 from mb import status as status_mod
 from mb import suggest as suggest_mod
 from mb import think as think_mod
+from mb import unreadable as unreadable_mod
 from mb import update as update_mod
 from mb import validate as validate_mod
 from mb.freshness import format_update_alert, looks_like_business_repo, package_update_status
@@ -783,6 +784,39 @@ def _json_payload(payload: dict[str, Any], *, command: str, schema_name: str) ->
         indent=2,
         default=json_default,
     )
+
+
+def _unreadable_guard(
+    repo: str,
+    *,
+    command: str,
+    schema_name: str,
+    json_out: bool,
+    read: Callable[[], dict[str, Any]],
+) -> dict[str, Any]:
+    """Run a read-only report; a file it cannot read is named, not a traceback (#1106).
+
+    The JSON envelope carries one `unreadable_file` error naming the path and
+    its fix; the human form prints the same sentence. Both exit 1.
+    """
+    try:
+        return read()
+    except (OSError, ValueError, RuntimeError) as exc:
+        if not unreadable_mod.is_unreadable_error(exc):
+            raise
+        message = unreadable_mod.message(exc, Path(repo).expanduser().resolve())
+    if json_out:
+        typer.echo(
+            _json_error_payload(
+                command=command,
+                schema_name=schema_name,
+                code=unreadable_mod.JSON_ERROR_CODE,
+                message=message,
+            )
+        )
+    else:
+        typer.echo(f"{command}: {message}", err=True)
+    raise typer.Exit(1)
 
 
 def _json_error_payload(
@@ -1600,24 +1634,30 @@ def _doctor_repair_from_args(args: list[str], *, json_out: bool) -> None:
         )
         raise typer.Exit(2)
 
-    if apply_changes:
-        if only or all_agents:
-            report = doctor_mod.repair_apply(
-                repo=repo,
-                include_migration=include_migration,
-                only=only,
-                all_agents=all_agents,
-            )
-        else:
-            report = doctor_mod.repair_apply(
-                repo=repo,
-                include_migration=include_migration,
-            )
+    if not apply_changes:
+        # #1106: a file the plan cannot read is named, not a traceback.
+        report = _unreadable_guard(
+            repo,
+            command="mb doctor repair",
+            schema_name="mainbranch.doctor.repair.result",
+            json_out=local_json,
+            read=lambda: (
+                doctor_mod.repair_plan(repo=repo, only=only, all_agents=all_agents)
+                if only or all_agents
+                else doctor_mod.repair_plan(repo=repo)
+            ),
+        )
+    elif only or all_agents:
+        report = doctor_mod.repair_apply(
+            repo=repo,
+            include_migration=include_migration,
+            only=only,
+            all_agents=all_agents,
+        )
     else:
-        report = (
-            doctor_mod.repair_plan(repo=repo, only=only, all_agents=all_agents)
-            if only or all_agents
-            else doctor_mod.repair_plan(repo=repo)
+        report = doctor_mod.repair_apply(
+            repo=repo,
+            include_migration=include_migration,
         )
 
     if local_json:
@@ -1676,7 +1716,13 @@ def doctor_cmd(
     if ctx.args:
         typer.echo(f"mb doctor: unknown option(s): {' '.join(ctx.args)}", err=True)
         raise typer.Exit(2)
-    report = doctor_mod.run(path=path)
+    report = _unreadable_guard(
+        path,
+        command="mb doctor",
+        schema_name="mainbranch.doctor.result",
+        json_out=json_out,
+        read=lambda: doctor_mod.run(path=path),
+    )
     if json_out:
         typer.echo(
             _json_payload(report, command="mb doctor", schema_name="mainbranch.doctor.result")
@@ -3736,7 +3782,13 @@ def skill_link_cmd(
         if plugin:
             typer.echo("mb skill link: --plan cannot be combined with --plugin", err=True)
             raise typer.Exit(2)
-        planned = plan_link_skills(repo)
+        planned = _unreadable_guard(
+            repo,
+            command="mb skill link",
+            schema_name="mainbranch.skill.link.result",
+            json_out=json_out,
+            read=lambda: plan_link_skills(repo),
+        )
         if json_out:
             typer.echo(json.dumps(planned, indent=2))
         else:
