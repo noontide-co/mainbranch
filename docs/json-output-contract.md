@@ -109,7 +109,9 @@ Entries today:
   the Codex refresh (`mb doctor repair --repo <path> --apply --only codex`,
   which writes or creates `AGENTS.md` and can delete tracked transitional
   plugin copies). Each entry's `changes` comes from that surface's tracked
-  writes, plus a missing `AGENTS.md` the refresh would create (#1053). The
+  writes, plus a missing `AGENTS.md` the Codex refresh would create (#1053)
+  or a missing `.gitignore` the skill-link refresh would create (#1087; listed
+  in `surface_refresh.planned.tracked_changes` with `op: "create"`). The
   same commands stay in `surface_refresh.planned.apply_commands`; they are not
   in `next_actions`. The read-only
   `mb doctor repair --repo <path> --plan --only codex` stays in `next_actions`,
@@ -167,7 +169,17 @@ Entries today:
   and leaves these. `mb update`, including `--check` and
   `--no-refresh-surfaces`, lists the same entry once, with doctor's fields and
   its `note` also in `warnings`, so an operator who runs only `mb update` is
-  told.
+  told. A linked global skill folder (`<skills root>/<name>` is a link) is
+  listed here only while the skill file it leads to is not the current one.
+  When it already holds the current skill file there is nothing for a person
+  to do, so it is not in `kept` and gets no `codex-global-kept` entry (#1087).
+  Instead the global skill status (`codex_cli.global_skill` in `mb status`,
+  `codex_adapter.global_skill` in `mb update`, the `codex-global-skill` check
+  in `mb doctor` and `mb doctor repair`) and the result of the global skill
+  apply carry two additive keys, `linked` (those folders) and `note` (an
+  informational sentence, also appended to the status `summary`); `mb update`
+  prints it as a `note:` line, not a warning. Neither key is present when no
+  such folder exists. Nothing is ever written through the link.
 
 ```json
 {

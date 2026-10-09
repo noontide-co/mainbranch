@@ -81,6 +81,22 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- In a business repo with no `.gitignore`, `mb update` run by an agent, a
+  schedule or with `--json` no longer leaves a new, uncommitted `.gitignore`
+  behind. It changes nothing in the repo and lists
+  `mb skill link --repo <path>` (changes `.gitignore`) as a step for you, the
+  same way it treats a missing `AGENTS.md`. At a terminal, the prompt now
+  names `.gitignore (create)` and a yes writes it.
+- A global Codex skill folder that is a link to a folder of your own, and
+  already holds the current Main Branch skill, no longer asks you to delete
+  files. Doctor, `mb status` and `mb update` show a short note instead: there
+  is nothing to do, and Main Branch still never writes through the link. If
+  the skill file there is out of date or yours, you still get the step to
+  sort it out yourself.
+- If a link appears at the Main Branch data folder while the global Codex
+  plugin files are being refreshed, the refresh stops writing there and
+  reports the link, instead of writing the rest of the files into the folder
+  the link leads to.
 - Running the test suite no longer writes into your real home folder. Every
   test gets its own temporary `HOME`, so doctor repair tests stop installing
   Codex skills under `~/.codex/skills`, and the doctor worktree test no longer
