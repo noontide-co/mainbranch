@@ -97,7 +97,7 @@ human approval over clever automation.
   The job runs on Linux, so the Linux-only `SecretStorage` floor is installed
   and covered too.
 - The dev extras (`ruff`, `mypy`, `pytest`, `pytest-cov`,
-  `types-PyYAML`) are pinned by compatibility-friendly ranges
+  `pytest-xdist`, `types-PyYAML`) are pinned by compatibility-friendly ranges
   (`~=`, `>=,<`).
 - Optional extras (e.g. `ogrender`) follow the same floor-only rule.
 - The base install footprint stays small on purpose. Adding a runtime

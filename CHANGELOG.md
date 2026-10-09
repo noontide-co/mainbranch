@@ -29,6 +29,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- The test suite now runs in parallel. `pytest-xdist` joins the dev extras,
+  and CI and `scripts/check.sh` run pytest with `-n auto`, so the Python
+  checks finish well inside their time limit on every supported version. If
+  your dev environment predates this, run `pip install -e ".[dev]"` again;
+  until then `scripts/check.sh` runs the tests one at a time, as before.
 - Google Ads setup guidance now checks Cloud project API access, the OAuth
   identity's account role, and a verified read instead of requiring Basic
   access or a developer token. The ads check points to Google's official

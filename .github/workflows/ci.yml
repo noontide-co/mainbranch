@@ -52,7 +52,13 @@ jobs:
         run: mypy mb tests
 
       - name: Pytest with coverage
-        run: pytest tests/ -v --cov=mb --cov-report=term-missing --cov-fail-under=79
+        # -n auto spreads the suite over the runner's cores (#1094). Serially
+        # it took 13-16 min on a fast runner and 22-26 min on a slow one, so
+        # a full matrix often hit the cap. --durations keeps the slowest tests
+        # visible in the log for the next timing question.
+        run: >-
+          pytest tests/ -n auto -v --durations=30
+          --cov=mb --cov-report=term-missing --cov-fail-under=79
 
   macos-keychain:
     # Opt-in macOS keychain integration tests (#1008). Each test creates a

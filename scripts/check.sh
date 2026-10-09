@@ -16,7 +16,15 @@ fi
 "$PYTHON" -m ruff format --check .
 "$PYTHON" -m ruff check .
 "$PYTHON" -m mypy mb tests
-"$PYTHON" -m pytest tests/ -v --cov=mb --cov-report=term-missing --cov-fail-under=79
+# Same pytest as CI, which runs it in parallel with pytest-xdist (a dev extra).
+# A dev venv installed before that extra existed runs the suite serially.
+if "$PYTHON" -c "import xdist" >/dev/null 2>&1; then
+  parallel=(-n auto)
+else
+  echo "pytest-xdist not installed; running tests serially (pip install -e \".[dev]\" to run them in parallel)." >&2
+  parallel=()
+fi
+"$PYTHON" -m pytest tests/ "${parallel[@]+"${parallel[@]}"}" -v --cov=mb --cov-report=term-missing --cov-fail-under=79
 "$PYTHON" -m mb skill validate --all --json
 fail=0
 while IFS= read -r f; do
