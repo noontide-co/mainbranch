@@ -110,8 +110,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   nothing. It judges with the installed version's templates, so when a newer
   release is available, that release may also stop for `AGENTS.md`. Before,
   it said nothing needed your consent. If it cannot read a file it needs, such
-  as a `.gitignore` that is not UTF-8, it says so in a warning instead of
-  predicting.
+  as a `.gitignore` that is not UTF-8 or a skill link that loops back on
+  itself, it names it in a warning instead of predicting.
 - The `mb skill link` step that `mb update` leaves for you now says it writes
   the "repo files" listed, which is also true of a new `.gitignore`.
 - `mb doctor repair --plan --json` lists each agent surface's

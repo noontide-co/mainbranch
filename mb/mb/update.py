@@ -100,11 +100,12 @@ SURFACE_LINK_APPLY_NOTE = (
     "Claude Code skill links, which writes the repo files listed in `changes`."
 )
 CHECK_PLAN_UNREADABLE_MESSAGE = (
-    "Could not plan the {part} refresh, so this check cannot say which repo "
-    "files it would change: {error}. A real `mb update` stops there too, with "
-    "an error. Check that file (for example, save `.gitignore` as UTF-8 text "
-    "you can read), then run the check again."
+    "Could not read {target}, so this check cannot plan the {part} refresh or "
+    "say which repo files it would change ({error}). A real `mb update` stops "
+    "there too, with an error. {fix}, then run the check again."
 )
+# The files the skill-link plan decodes as UTF-8 text.
+LINK_PLAN_TEXT_FILES = (".gitignore", ".claude/settings.local.json")
 SURFACE_CODEX_APPLY_NOTE = (
     "For a person to run at a terminal, not an agent: refreshes this repo's "
     "Codex guidance, which writes or deletes the tracked files listed in "
@@ -736,6 +737,48 @@ def _check_codex_plan(repo: Path, codex: dict[str, Any]) -> dict[str, Any]:
     return {"actions": actions, "operator_actions": operator_actions}
 
 
+def _failing_path(repo: Path, exc: Exception) -> str:
+    """The file or folder a plan could not read, relative to the repo if inside."""
+    raw = ""
+    if isinstance(exc, OSError) and exc.filename:
+        raw = os.fsdecode(exc.filename)
+    elif isinstance(exc, RuntimeError):
+        found = re.match(r"Symlink loop from '(.+)'$", str(exc))
+        raw = found.group(1) if found else ""
+    elif isinstance(exc, UnicodeDecodeError):
+        # The exception names no file; find the one that does not decode.
+        for rel in LINK_PLAN_TEXT_FILES:
+            try:
+                (repo / rel).read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                return rel
+            except (OSError, ValueError):
+                continue
+    if not raw:
+        return ""
+    repo_real = os.path.realpath(repo)
+    for base in (str(repo), repo_real):
+        if raw.startswith(base + os.sep):
+            return os.path.relpath(raw, base).replace(os.sep, "/")
+    return raw
+
+
+def _unreadable_plan_warning(repo: Path, part: str, exc: Exception) -> str:
+    path = _failing_path(repo, exc)
+    if path == ".gitignore":
+        fix = "Check `.gitignore` (for example, save it as UTF-8 text you can read)"
+    elif path:
+        fix = "Check that file or folder"
+    else:
+        fix = "Check the files in the error"
+    return CHECK_PLAN_UNREADABLE_MESSAGE.format(
+        target=f"`{path}`" if path else "a file it needs",
+        part=part,
+        error=exc,
+        fix=fix,
+    )
+
+
 def _predict_surface_consent(result: dict[str, Any], repo: Path, codex: dict[str, Any]) -> None:
     """`--check`: report the consent stop an unattended run would hit (#1100).
 
@@ -743,24 +786,21 @@ def _predict_surface_consent(result: dict[str, Any], repo: Path, codex: dict[str
     install's templates. Only a repo whose refresh would change repo files
     gains the planned fields, so every other check result stays as it was. A
     plan that cannot be made predicts nothing; a file it cannot read (not
-    UTF-8, no permission, a folder) is named in a warning, because the run
-    stops with an error at the same place.
+    UTF-8, no permission, a folder, a looping link) is named in a warning,
+    because the run stops with an error at the same place.
     """
+    # RuntimeError: pathlib's symlink loop on Python 3.10 to 3.12.
     try:
         link_plan = plan_link_skills(repo)
-    except (OSError, ValueError) as exc:
-        result["warnings"].append(
-            CHECK_PLAN_UNREADABLE_MESSAGE.format(part="skill link", error=exc)
-        )
+    except (OSError, ValueError, RuntimeError) as exc:
+        result["warnings"].append(_unreadable_plan_warning(repo, "skill link", exc))
         return
     if link_plan.get("ok") is not True:
         return
     try:
         codex_plan = _check_codex_plan(repo, codex)
-    except (OSError, ValueError) as exc:
-        result["warnings"].append(
-            CHECK_PLAN_UNREADABLE_MESSAGE.format(part="Codex guidance", error=exc)
-        )
+    except (OSError, ValueError, RuntimeError) as exc:
+        result["warnings"].append(_unreadable_plan_warning(repo, "Codex guidance", exc))
         return
     consent = _surface_consent(link_plan, codex_plan, repo)
     if consent is None or not consent["tracked_files"]:

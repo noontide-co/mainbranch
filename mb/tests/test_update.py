@@ -3785,6 +3785,16 @@ def _unreadable_gitignore(repo: Path, kind: str) -> None:
     """A tracked `.gitignore` the skill-link plan cannot read (#1101 review)."""
     codex_mod.write_agents_md(repo)
     gitignore = repo / ".gitignore"
+    if kind in {"skill_loop", "personal_skill_loop"}:
+        # A bundled skill's link that points at itself (#1101 re-review).
+        _commit_all(repo, "Current AGENTS.md")
+        if kind == "skill_loop":
+            skills = repo / ".claude" / "skills"
+        else:
+            skills = engine_mod._personal_skills_dir()
+        skills.mkdir(parents=True, exist_ok=True)
+        (skills / "mb-start").symlink_to("mb-start")
+        return
     if kind == "folder":
         gitignore.unlink()
         _commit_all(repo, "No .gitignore")
@@ -3802,9 +3812,19 @@ def _unreadable_gitignore(repo: Path, kind: str) -> None:
         gitignore.chmod(0)
 
 
-@pytest.mark.parametrize("kind", ["latin1", "utf16", "unreadable", "folder"])
+@pytest.mark.parametrize(
+    ("kind", "named"),
+    [
+        ("latin1", "`.gitignore`"),
+        ("utf16", "`.gitignore`"),
+        ("unreadable", "`.gitignore`"),
+        ("folder", "`.gitignore`"),
+        ("skill_loop", "`.claude/skills/"),
+        ("personal_skill_loop", "home/.claude/skills/"),
+    ],
+)
 def test_check_does_not_crash_on_a_gitignore_it_cannot_read(
-    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path, kind: str
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path, kind: str, named: str
 ) -> None:
     if kind == "unreadable" and hasattr(os, "geteuid") and os.geteuid() == 0:
         pytest.skip("root can read a mode 000 file")
@@ -3832,13 +3852,15 @@ def test_check_does_not_crash_on_a_gitignore_it_cannot_read(
         "tracked_files": [],
         "apply_commands": [],
     }
-    assert any(
-        "Could not plan the skill link refresh" in item and "real `mb update` stops" in item
-        for item in result["warnings"]
-    )
+    warnings = [item for item in result["warnings"] if item.startswith("Could not read ")]
+    assert len(warnings) == 1, result["warnings"]
+    assert named in warnings[0]
+    assert "cannot plan the skill link refresh" in warnings[0]
+    assert "real `mb update` stops" in warnings[0]
+    assert ("save it as UTF-8" in warnings[0]) == (named == "`.gitignore`")
     assert human.exception is None, human.exception
     assert human.exit_code == 0
-    assert "Could not plan the skill link refresh" in human.stdout
+    assert f"warning: {warnings[0]}" in human.stdout
     assert calls == []
 
 

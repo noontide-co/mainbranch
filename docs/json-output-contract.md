@@ -124,8 +124,8 @@ Entries today:
   with the installed version's templates, what a run without a terminal would
   report (#1100). When a newer release is available, that release may also
   stop for `AGENTS.md`. If a file the plan reads cannot be read (not UTF-8, no
-  permission, a folder), `--check` predicts nothing and says so in `warnings`;
-  the run stops there with an error;
+  permission, a folder, a link that loops), `--check` predicts nothing and
+  names it in `warnings`; the run stops there with an error;
 - from `mb update`, including `--check` and `--no-refresh-surfaces`, the Codex
   `AGENTS.md` repair when Codex guidance is still not ready after the refresh
   (or the refresh did not run): the same

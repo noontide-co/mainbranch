@@ -373,8 +373,8 @@ surface, and `mb update --check` when you want the facts and no writes at all:
 the repo files a run without a terminal would leave for you, and
 `consent: no_terminal`, or `not_needed` when the refresh changes none (#1100).
 When a newer release is available, it may also stop for `AGENTS.md`. A file
-the plan cannot read (not UTF-8, no permission, a folder) is named in
-`warnings` instead.
+the plan cannot read (not UTF-8, no permission, a folder, a link that loops)
+is named in `warnings` instead.
 
 Inside Claude Code, `/mb-update` calls `mb update` for this mechanical step and keeps
 ownership of the human-readable "what's new" summary. Codex users should open a
