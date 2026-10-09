@@ -18,13 +18,13 @@ from typing import Any
 
 from mb import __version__
 from mb import codex as codex_mod
-from mb.doctor import _not_business_folder_guard
+from mb import unreadable as unreadable_mod
+from mb.doctor import _not_business_folder_guard, codex_repair_actions
 from mb.engine import (
     PACKAGE_NAME,
     PLUGIN_INSTALL_COMMAND,
     bundled_skills,
     claude_mainbranch_plugin_status,
-    consent_destinations,
     engine_root,
     install_mode,
     looks_like_uv_tool_install,
@@ -32,7 +32,6 @@ from mb.engine import (
     plan_link_skills,
     plugin_switch_operator_action,
     plugin_wiring_status,
-    public_operations,
     repo_flag,
 )
 
@@ -100,12 +99,14 @@ SURFACE_LINK_APPLY_NOTE = (
     "Claude Code skill links, which writes the repo files listed in `changes`."
 )
 CHECK_PLAN_UNREADABLE_MESSAGE = (
-    "Could not read {target}, so this check cannot plan the {part} refresh or "
-    "say which repo files it would change ({error}). A real `mb update` stops "
+    "Could not read {target} ({error}), so this check cannot plan the {part} "
+    "refresh or say which repo files it would change. A real `mb update` stops "
     "there too, with an error. {fix}, then run the check again."
 )
 # The files the skill-link plan decodes as UTF-8 text.
-LINK_PLAN_TEXT_FILES = (".gitignore", ".claude/settings.local.json")
+# The plan reads settings first, so a file that does not decode is looked for
+# in the same order (#1106 item 2).
+LINK_PLAN_TEXT_FILES = (".claude/settings.local.json", ".gitignore")
 SURFACE_CODEX_APPLY_NOTE = (
     "For a person to run at a terminal, not an agent: refreshes this repo's "
     "Codex guidance, which writes or deletes the tracked files listed in "
@@ -205,8 +206,24 @@ def _version_from_mb_command(command: str | None = None) -> str | None:
 
 
 def _command_error(label: str, result: subprocess.CompletedProcess[str]) -> str:
+    named = _unreadable_command_error(result)
+    if named:
+        return named
     details = (result.stderr or result.stdout).strip()
     return f"{label} failed with exit code {result.returncode}: {details or 'no output'}"
+
+
+def _unreadable_command_error(result: subprocess.CompletedProcess[str]) -> str:
+    """The sentence an `mb ... --json` step printed for a file it could not read (#1106)."""
+    try:
+        payload = json.loads(result.stdout)
+    except ValueError:
+        return ""
+    errors = payload.get("errors") if isinstance(payload, dict) else None
+    for item in errors if isinstance(errors, list) else []:
+        if isinstance(item, dict) and item.get("code") == unreadable_mod.JSON_ERROR_CODE:
+            return str(item.get("message") or "")
+    return ""
 
 
 def _command_output(result: subprocess.CompletedProcess[str]) -> str:
@@ -702,81 +719,54 @@ def _surface_consent(
 def _check_codex_plan(repo: Path, codex: dict[str, Any]) -> dict[str, Any]:
     """The Codex part of `mb doctor repair --plan --only codex`, read-only.
 
-    Only the fields `_surface_consent` reads, built the way doctor builds its
-    `codex-agents-md` and `codex-global-skill` actions, without doctor's
-    network and version checks. `codex` is the readiness `--check` already
-    read, so it is read once.
+    Built by doctor's own `codex_repair_actions` (#1106), so the two cannot
+    drift, without doctor's network and version checks. `codex` is the
+    readiness `--check` already read, so it is read once.
     """
     if _not_business_folder_guard(repo) is not None:
         # Doctor plans nothing outside a business folder.
         return {"actions": [], "operator_actions": []}
-    actions: list[dict[str, Any]] = []
-    operator_actions: list[dict[str, Any]] = []
-    if not codex.get("instructions", {}).get("ok", False):
-        agents_plan = codex_mod.agents_md_plan(repo)
-        operations = agents_plan["operations"]
-        actions.append(
-            {
-                "id": "codex-agents-md",
-                "operations": public_operations(operations),
-                "tracked_changes": consent_destinations(repo, operations),
-            }
-        )
-        blocked = codex_mod.agents_md_operator_action(agents_plan, repo=repo)
-        if blocked is not None:
-            operator_actions.append(blocked)
-    if not codex.get("global_skill", {}).get("ok", True):
-        operations = codex_mod.global_skill_operations()
-        actions.append(
-            {
-                "id": "codex-global-skill",
-                "operations": public_operations(operations),
-                "tracked_changes": consent_destinations(repo, operations),
-            }
-        )
+    actions, operator_actions = codex_repair_actions(repo, codex)
     return {"actions": actions, "operator_actions": operator_actions}
 
 
-def _failing_path(repo: Path, exc: Exception) -> str:
-    """The file or folder a plan could not read, relative to the repo if inside."""
-    raw = ""
-    if isinstance(exc, OSError) and exc.filename:
-        raw = os.fsdecode(exc.filename)
-    elif isinstance(exc, RuntimeError):
-        found = re.match(r"Symlink loop from '(.+)'$", str(exc))
-        raw = found.group(1) if found else ""
-    elif isinstance(exc, UnicodeDecodeError):
-        # The exception names no file; find the one that does not decode.
-        for rel in LINK_PLAN_TEXT_FILES:
-            try:
-                (repo / rel).read_text(encoding="utf-8")
-            except UnicodeDecodeError:
-                return rel
-            except (OSError, ValueError):
-                continue
-    if not raw:
-        return ""
-    repo_real = os.path.realpath(repo)
-    for base in (str(repo), repo_real):
-        if raw.startswith(base + os.sep):
-            return os.path.relpath(raw, base).replace(os.sep, "/")
-    return raw
-
-
-def _unreadable_plan_warning(repo: Path, part: str, exc: Exception) -> str:
-    path = _failing_path(repo, exc)
-    if path == ".gitignore":
-        fix = "Check `.gitignore` (for example, save it as UTF-8 text you can read)"
-    elif path:
-        fix = "Check that file or folder"
-    else:
-        fix = "Check the files in the error"
+def _unreadable_plan_warning(repo: Path, part: str, exc: BaseException) -> str:
+    path, reason, fix = unreadable_mod.describe(exc, repo, text_files=LINK_PLAN_TEXT_FILES)
     return CHECK_PLAN_UNREADABLE_MESSAGE.format(
         target=f"`{path}`" if path else "a file it needs",
         part=part,
-        error=exc,
+        error=reason,
         fix=fix,
     )
+
+
+def _guard_unreadable(
+    result: dict[str, Any], repo: Path, part: str, read: Callable[[], Any], *, check: bool
+) -> bool:
+    """Run one read step; a file it cannot read is named instead of a traceback (#1106).
+
+    `--check` names it in a warning, as for the skill-link plan (#1101); a run
+    names it in `errors`, once, and fails. False when the step could not read.
+    """
+    try:
+        read()
+    except (OSError, ValueError, RuntimeError) as exc:
+        if not unreadable_mod.is_unreadable_error(exc):
+            raise
+        if check:
+            # One warning per path: two steps that trip on the same folder
+            # name it once.
+            path = unreadable_mod.describe(exc, repo, text_files=LINK_PLAN_TEXT_FILES)[0]
+            named = f"Could not read `{path}` ("
+            if not path or not any(str(item).startswith(named) for item in result["warnings"]):
+                result["warnings"].append(_unreadable_plan_warning(repo, part, exc))
+        else:
+            note = unreadable_mod.message(exc, repo, text_files=LINK_PLAN_TEXT_FILES)
+            result["ok"] = False
+            if note not in result["errors"]:
+                result["errors"].append(note)
+        return False
+    return True
 
 
 def _predict_surface_consent(result: dict[str, Any], repo: Path, codex: dict[str, Any]) -> None:
@@ -789,10 +779,13 @@ def _predict_surface_consent(result: dict[str, Any], repo: Path, codex: dict[str
     UTF-8, no permission, a folder, a looping link) is named in a warning,
     because the run stops with an error at the same place.
     """
-    # RuntimeError: pathlib's symlink loop on Python 3.10 to 3.12.
+    # RuntimeError: pathlib's symlink loop on Python 3.10 to 3.12; any other
+    # RuntimeError is a programming error and stays loud (#1106 item 4).
     try:
         link_plan = plan_link_skills(repo)
     except (OSError, ValueError, RuntimeError) as exc:
+        if isinstance(exc, RuntimeError) and not unreadable_mod.is_unreadable_error(exc):
+            raise
         result["warnings"].append(_unreadable_plan_warning(repo, "skill link", exc))
         return
     if link_plan.get("ok") is not True:
@@ -800,6 +793,8 @@ def _predict_surface_consent(result: dict[str, Any], repo: Path, codex: dict[str
     try:
         codex_plan = _check_codex_plan(repo, codex)
     except (OSError, ValueError, RuntimeError) as exc:
+        if isinstance(exc, RuntimeError) and not unreadable_mod.is_unreadable_error(exc):
+            raise
         result["warnings"].append(_unreadable_plan_warning(repo, "Codex guidance", exc))
         return
     consent = _surface_consent(link_plan, codex_plan, repo)
@@ -1409,6 +1404,7 @@ def run(
         if result["installed_ahead_of_latest"]:
             result["actions"] = ["would leave this install alone; it is newer than PyPI's latest"]
         codex_status: dict[str, Any] | None = None
+        codex_readable = True
         if refresh_surfaces:
             surface_commands = [
                 f"mb skill link --repo {shlex.quote(str(target_repo))} --json",
@@ -1433,8 +1429,17 @@ def run(
                 "planned": True,
                 "command": surface_commands[1],
             }
-            codex_status = codex_mod.readiness(target_repo)
-            _predict_surface_consent(result, target_repo, codex_status)
+            status: dict[str, Any] = {}
+            codex_readable = _guard_unreadable(
+                result,
+                target_repo,
+                "Codex guidance",
+                lambda: status.update(codex_mod.readiness(target_repo)),
+                check=True,
+            )
+            if codex_readable:
+                codex_status = status
+                _predict_surface_consent(result, target_repo, codex_status)
         else:
             result["actions"].append("would skip agent surface refresh")
         new_version = str(result.get("new_version") or "")
@@ -1452,8 +1457,21 @@ def run(
                 "available": False,
                 "source": "not_newer",
             }
-        _add_codex_follow_up(result, target_repo, codex_status)
-        _add_plugin_follow_up(result, target_repo)
+        if codex_readable:
+            _guard_unreadable(
+                result,
+                target_repo,
+                "Codex guidance",
+                lambda: _add_codex_follow_up(result, target_repo, codex_status),
+                check=True,
+            )
+        _guard_unreadable(
+            result,
+            target_repo,
+            "Claude Code plugin",
+            lambda: _add_plugin_follow_up(result, target_repo),
+            check=True,
+        )
         return result
 
     if mode in {"pipx", "uv", "wheel"} and latest is None:
@@ -1543,8 +1561,20 @@ def run(
         )
     else:
         result["actions"].append("skipped agent surface refresh")
-    _add_codex_follow_up(result, target_repo)
-    _add_plugin_follow_up(result, target_repo)
+    _guard_unreadable(
+        result,
+        target_repo,
+        "Codex guidance",
+        lambda: _add_codex_follow_up(result, target_repo),
+        check=False,
+    )
+    _guard_unreadable(
+        result,
+        target_repo,
+        "Claude Code plugin",
+        lambda: _add_plugin_follow_up(result, target_repo),
+        check=False,
+    )
     result["next_actions"] = list(dict.fromkeys(result["next_actions"]))
     return result
 

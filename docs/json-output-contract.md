@@ -125,7 +125,13 @@ Entries today:
   report (#1100). When a newer release is available, that release may also
   stop for `AGENTS.md`. If a file the plan reads cannot be read (not UTF-8, no
   permission, a folder, a link that loops), `--check` predicts nothing and
-  names it in `warnings`; the run stops there with an error;
+  names it in `warnings`; the run stops there with an error. The same holds
+  for the Codex readiness read (an `AGENTS.md` that is not UTF-8, a repo
+  `.claude` folder or `CODEX_HOME` you cannot open, #1106). The path is
+  relative to the repo, or `~/...` under the home folder, and the sentence
+  ends with that file's own fix. `mb doctor --json` and
+  `mb doctor repair --plan --json` stop with exit 1 and one error
+  `{"code": "unreadable_file", "message": ...}` naming the same path;
 - from `mb update`, including `--check` and `--no-refresh-surfaces`, the Codex
   `AGENTS.md` repair when Codex guidance is still not ready after the refresh
   (or the refresh did not run): the same

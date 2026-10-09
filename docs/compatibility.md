@@ -374,7 +374,9 @@ the repo files a run without a terminal would leave for you, and
 `consent: no_terminal`, or `not_needed` when the refresh changes none (#1100).
 When a newer release is available, it may also stop for `AGENTS.md`. A file
 the plan cannot read (not UTF-8, no permission, a folder, a link that loops)
-is named in `warnings` instead.
+is named in `warnings` instead, with its fix; so is an `AGENTS.md`, repo
+`.claude` folder or Codex folder that the Codex readiness check cannot read.
+`mb update` and `mb doctor` stop with an error naming that file.
 
 Inside Claude Code, `/mb-update` calls `mb update` for this mechanical step and keeps
 ownership of the human-readable "what's new" summary. Codex users should open a
