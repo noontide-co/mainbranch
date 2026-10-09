@@ -148,12 +148,7 @@ def _judge_git(
         indexed = run(["ls-files", "-z", "--full-name"], root)
         if indexed is None or indexed.returncode != 0:
             raise unknown(shown)
-        target_name = relative.as_posix()
-        if any(
-            entry != target_name and _fold(entry) == _fold(target_name)
-            for entry in map(os.fsdecode, indexed.stdout.split(b"\0"))
-            if entry
-        ):
+        if _index_spelling_differs(indexed.stdout, relative):
             raise _spelling_refusal(shown)
         _check_spelling(base, relative, shown)
         verdict = run(["check-ignore", "-q", "--", relative.as_posix()], root)
@@ -247,6 +242,42 @@ def _check_spelling(base: Path, relative: Path, shown: str) -> None:
             for sibling in siblings
         ):
             raise _spelling_refusal(shown)
+
+
+def _index_spelling_differs(index: bytes, relative: Path) -> bool:
+    target_name = relative.as_posix()
+    return any(
+        entry != target_name and _fold(entry) == _fold(target_name)
+        for entry in map(os.fsdecode, index.split(b"\0"))
+        if entry
+    )
+
+
+def _check_missing_parent_index_spelling(given: Path, shown: str) -> None:
+    """Check an index path even when the target's folders are missing on disk."""
+
+    for ancestor in given.parent.parents:
+        if ancestor.is_dir():
+            break
+    else:
+        return
+    top = _git(["rev-parse", "--show-toplevel"], ancestor)
+    if top is None or top.returncode != 0:
+        if _inside_git_checkout(ancestor):
+            raise _git_unknown(shown)
+        return
+    try:
+        base = Path(top.stdout.decode("utf-8", "replace").strip() or ".").resolve()
+        relative = (given.parent.resolve(strict=False) / given.name).relative_to(base)
+    except ValueError:
+        return
+    except (OSError, RuntimeError):
+        raise _git_unplaced(shown) from None
+    indexed = _git(["ls-files", "-z", "--full-name"], base)
+    if indexed is None or indexed.returncode != 0:
+        raise _git_unknown(shown)
+    if _index_spelling_differs(indexed.stdout, relative):
+        raise _spelling_refusal(shown)
 
 
 def _spelling_refusal(shown: str) -> ReadRefusal:
@@ -351,6 +382,7 @@ def check_out(raw: str, *, force: bool = False) -> OutTarget:
     try:
         parent = given.parent.resolve(strict=True)
     except (OSError, RuntimeError):
+        _check_missing_parent_index_spelling(given, shown)
         raise ReadRefusal(
             "out_parent_missing",
             f"--out {shown}: the folder does not exist; nothing was read or written. "

@@ -1366,6 +1366,35 @@ def test_case_variant_out_refuses_an_index_only_tracked_file(
     assert status.stdout == b" D private/Report.json\n"
 
 
+def test_case_variant_out_refuses_an_index_only_tracked_file_with_missing_folders(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    root = _checkout_with(tmp_path / "missing-index-folders", "private/\n")
+    _git(root, "config", "core.ignorecase", "true")
+    tracked = root / "private" / "deep" / "Report.json"
+    tracked.parent.mkdir(parents=True)
+    tracked.write_bytes(b"personal original\n")
+    _git(root, "add", "-f", "private/deep/Report.json")
+    _git(root, "commit", "-q", "-m", "tracked report")
+    tracked.unlink()
+    tracked.parent.rmdir()
+    tracked.parent.parent.rmdir()
+
+    result = _out(repo, SC_ARGS, root / "PRIVATE" / "DEEP" / "report.json", "--force")
+    exact = _out(repo, SC_ARGS, tracked, "--force")
+
+    _refused(result, "out_path_git_unknown")
+    _refused(exact, "out_parent_missing")
+    assert api.calls == [] and not (root / "private").exists()
+    status = subprocess.run(["git", "status", "--short"], cwd=root, capture_output=True, check=True)
+    assert status.stdout == b" D private/deep/Report.json\n"
+
+
 def test_unicode_variant_out_refuses_an_index_only_tracked_file(
     repo: Path,
     client_file: Path,
