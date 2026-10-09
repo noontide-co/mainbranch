@@ -1061,3 +1061,182 @@ def test_site_check_unknown_site_exits_2(tmp_path: Path, monkeypatch):
     assert result.exit_code == 2
     assert "gamma" in result.stderr
     assert "alpha, beta" in result.stderr
+
+
+def _ads_site(
+    tmp_path: Path,
+    *,
+    customer: bool = True,
+    primary: bool = True,
+    approvals: bool = False,
+) -> tuple[Path, Path]:
+    business = tmp_path / "business"
+    site = tmp_path / "site"
+    init_run(path=str(business), name="Acme")
+    site.mkdir()
+    customer_line = "google_ads_customer_id: '0000000000'\n" if customer else ""
+    (business / "core" / "offer.md").write_text(
+        (
+            "---\n"
+            "gtm_container_id: GTM-ABC1234\n"
+            f"{customer_line}"
+            "consent_posture: standard_tag_consent_reviewed\n"
+            "privacy_policy_url: https://example.com/privacy\n"
+            "---\n\n"
+            "# Offer\n"
+        ),
+        encoding="utf-8",
+    )
+    conversion: dict[str, object] = {
+        "kind": "lead_form",
+        "url": "https://tally.so/r/example",
+        "render": "link_out",
+    }
+    if primary:
+        conversion["primary_conversions"] = ["mb_lead_submit"]
+    if approvals:
+        conversion["operator_approvals"] = {
+            "gtm_container_reviewed": True,
+            "conversion_actions_reviewed": True,
+            "consent_posture_reviewed": True,
+        }
+    _write_conversion(site, conversion)
+    _write_html(site, events=["mb_cta_click", "mb_form_start", "mb_lead_submit"])
+    return business, site
+
+
+def _evidence(payload: dict[str, object], kind: str) -> dict[str, object]:
+    items = payload["evidence"]
+    assert isinstance(items, list)
+    return next(item for item in items if item["kind"] == kind)
+
+
+def test_site_check_reports_google_ads_declared_connected_and_evidence_separately(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business, site = _ads_site(tmp_path)
+
+    result = runner.invoke(
+        app, ["site", "check", str(site), "--business-repo", str(business), "--json"]
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["state"] == "ready_for_operator_review"
+    plan = _evidence(payload, "google_ads_plan")
+    assert plan["state"] == "passed"
+    assert plan["status"] == "declared"
+    assert str(plan["summary"]).startswith("Declared:")
+    connection = _evidence(payload, "google_ads_connection")
+    assert connection["state"] == "manual"
+    assert connection["status"] == "not_checked"
+    assert "read-only Google Ads MCP" in str(connection["next"])
+    assert "CSV export" in str(connection["next"])
+    conversion = _evidence(payload, "google_ads_conversion_evidence")
+    assert conversion["state"] == "manual"
+    assert conversion["status"] == "no_evidence_recorded"
+    assert conversion["tag_fired"] == "no_evidence_recorded"
+    assert conversion["attributed_conversion"] == "no_evidence_recorded"
+    manual_kinds = {item["kind"] for item in payload["manual"]}
+    assert {"google_ads_connection", "google_ads_conversion_evidence"} <= manual_kinds
+
+
+def test_site_check_never_reports_google_ads_connected_from_google_sign_in(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business, site = _ads_site(tmp_path)
+    monkeypatch.setattr(
+        "mb.site.connect_mod.status_all",
+        lambda *args, **kwargs: {
+            "providers": [
+                {"provider": "google", "state": "connected", "connected": True, "ok": True}
+            ],
+            "summary": {},
+        },
+    )
+
+    result = runner.invoke(
+        app, ["site", "check", str(site), "--business-repo", str(business), "--json"]
+    )
+
+    payload = json.loads(result.stdout)
+    assert payload["facts"]["provider_state"]["google"]["connected"] is True
+    assert _evidence(payload, "google_ads_connection")["status"] == "not_checked"
+
+
+def test_site_check_google_ads_partly_declared_still_reports_other_checks(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business, site = _ads_site(tmp_path, primary=False)
+
+    result = runner.invoke(
+        app, ["site", "check", str(site), "--business-repo", str(business), "--json"]
+    )
+
+    payload = json.loads(result.stdout)
+    plan = _evidence(payload, "google_ads_plan")
+    assert plan["state"] == "manual"
+    assert plan["status"] == "partly_declared"
+    assert plan["summary"] == "Missing primary conversion plan before launch review."
+    assert _evidence(payload, "google_ads_connection")["status"] == "not_checked"
+    assert _evidence(payload, "google_ads_conversion_evidence")["status"] == "no_evidence_recorded"
+
+
+def test_site_check_without_google_ads_customer_adds_no_google_ads_checks(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business, site = _ads_site(tmp_path, customer=False)
+
+    result = runner.invoke(
+        app, ["site", "check", str(site), "--business-repo", str(business), "--json"]
+    )
+
+    payload = json.loads(result.stdout)
+    assert _evidence(payload, "google_ads_plan") == {
+        "kind": "google_ads_plan",
+        "state": "manual",
+        "summary": "Missing Google Ads customer ID before launch review.",
+    }
+    kinds = {item["kind"] for item in payload["evidence"]}
+    assert "google_ads_connection" not in kinds
+    assert "google_ads_conversion_evidence" not in kinds
+
+
+def test_site_check_google_ads_checks_do_not_block_ready(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business, site = _ads_site(tmp_path, approvals=True)
+
+    result = runner.invoke(
+        app, ["site", "check", str(site), "--business-repo", str(business), "--json"]
+    )
+
+    payload = json.loads(result.stdout)
+    assert payload["state"] == "ready"
+    assert payload["ok"] is True
+    assert _evidence(payload, "google_ads_connection")["status"] == "not_checked"
+
+
+def test_site_check_human_output_names_google_ads_next_steps(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business, site = _ads_site(tmp_path)
+
+    result = runner.invoke(app, ["site", "check", str(site), "--business-repo", str(business)])
+
+    assert result.exit_code == 0
+    assert "google_ads_plan: Declared:" in result.stdout
+    assert "manual   google_ads_connection: Not checked:" in result.stdout
+    assert "manual   google_ads_conversion_evidence: No conversion evidence recorded:" in (
+        result.stdout
+    )
+    assert "next: Read the account through Google's read-only Google Ads MCP" in result.stdout
+    assert "next: Confirm the tag fires in GTM Preview or Tag Assistant" in result.stdout
