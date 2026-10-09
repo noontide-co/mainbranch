@@ -11,8 +11,8 @@ quota. A path is refused when:
   (``.<name>.mb-out.tmp``; a rule for the file name alone, or a negation that
   re-includes the temporary file, would not cover it);
 - git cannot answer inside a checkout (fail closed);
-- the checkout sets ``core.ignorecase`` to false and a folder name is spelled
-  differently from the one on disk (a disk that does not tell case apart);
+- a folder or existing file is spelled differently from its name on disk, or
+  a file with the same name in another case already exists beside the target;
 - it already exists and ``--force`` was not given, or it exists and is not a
   plain file;
 - its folder does not exist (no folder is created);
@@ -86,7 +86,7 @@ def _git(
         return None
 
 
-def _check_git(parent: Path, name: str, shown: str) -> None:
+def _check_git(parent: Path, name: str, shown: str, original_parent: Path) -> None:
     """Allow a path outside any checkout, or one git reports ignored; refuse the rest.
 
     The path is judged with the repository variables dropped (what a plain ``git``
@@ -95,12 +95,14 @@ def _check_git(parent: Path, name: str, shown: str) -> None:
     counts as exported, as it does for git, which refuses to run with it.
     """
 
-    _judge_git(parent, name, shown, inherit_env=False)
+    _judge_git(parent, name, shown, original_parent, inherit_env=False)
     if any(var in os.environ for var in _GIT_ENV_INHERITED):
-        _judge_git(parent, name, shown, inherit_env=True)
+        _judge_git(parent, name, shown, original_parent, inherit_env=True)
 
 
-def _judge_git(parent: Path, name: str, shown: str, *, inherit_env: bool) -> None:
+def _judge_git(
+    parent: Path, name: str, shown: str, original_parent: Path, *, inherit_env: bool
+) -> None:
     def run(args: list[str], cwd: Path) -> subprocess.CompletedProcess[bytes] | None:
         # Without the inherited variables, call `_git` exactly as it always was.
         return _git(args, cwd, inherit_env=True) if inherit_env else _git(args, cwd)
@@ -134,6 +136,14 @@ def _judge_git(parent: Path, name: str, shown: str, *, inherit_env: bool) -> Non
             relative = parent.relative_to(found) / name
         if ".git" in relative.parts:
             raise unknown(shown)
+        found_original = _identity_ancestor(original_parent, base)
+        if found_original is not None:
+            original_spelling = _spelled_as_on_disk(original_parent, found_original)
+            if original_spelling is False:
+                raise _spelling_refusal(shown)
+            if original_spelling is None:
+                raise _git_unplaced(shown, which)
+        _check_spelling(base, relative, shown)
         verdict = run(["check-ignore", "-q", "--", relative.as_posix()], root)
         if verdict is None or verdict.returncode not in {0, 1}:
             raise unknown(shown)
@@ -151,7 +161,6 @@ def _judge_git(parent: Path, name: str, shown: str, *, inherit_env: bool) -> Non
             raise unknown(shown)
         if temp_verdict.returncode == 1:
             raise _temp_refusal(shown, show_temp(temp_name(name)), which)
-        _check_spelling(base, relative, root, shown, which, run)
         return
     if inherit_env:
         # The exported variables name a repository git cannot use from here.
@@ -193,6 +202,9 @@ def _spelled_as_on_disk(path: Path, base: Path) -> bool | None:
 
     folder = base
     for part in path.relative_to(base).parts:
+        if part == "..":
+            folder = folder / part
+            continue
         try:
             if part not in os.listdir(folder):
                 return False
@@ -202,45 +214,35 @@ def _spelled_as_on_disk(path: Path, base: Path) -> bool | None:
     return True
 
 
-def _check_spelling(
-    base: Path,
-    relative: Path,
-    root: Path,
-    shown: str,
-    which: str,
-    run: Any,
-) -> None:
-    """Refuse a folder spelled unlike the disk when git matches ignore rules by exact case.
-
-    ``base`` is the work tree as found on disk and ``relative`` the path git judged.
-    With ``core.ignorecase`` false, git matched the rules against the spelling given,
-    but the file lands in the folder the disk has, which those rules may not cover.
-    """
+def _check_spelling(base: Path, relative: Path, shown: str) -> None:
+    """Refuse a path whose spelling could address an existing name differently."""
 
     folders = relative.parent
     target = base / relative
     names = folders / relative.name if os.path.lexists(target) else folders
     spelled = _spelled_as_on_disk(base / names, base)
-    if spelled is True:
-        return
-    setting = run(["config", "--bool", "core.ignorecase"], root)
-    if setting is not None and setting.returncode == 0 and setting.stdout.strip() == b"true":
-        return
     if spelled is None:
-        raise _git_unplaced(shown, which)
-    if setting is not None and setting.returncode == 0:
-        seen = "sets core.ignorecase to false"
-    elif setting is not None and setting.returncode == 1 and not setting.stdout.strip():
-        seen = "does not set core.ignorecase (git then treats it as false)"
-    else:
-        seen = "did not let mb read core.ignorecase"
-    raise ReadRefusal(
+        raise _git_unplaced(shown)
+    if spelled is False:
+        raise _spelling_refusal(shown)
+    if not os.path.lexists(target):
+        try:
+            siblings = os.listdir(target.parent)
+        except OSError:
+            raise _git_unplaced(shown) from None
+        if any(
+            sibling != relative.name and _fold(sibling) == _fold(relative.name)
+            for sibling in siblings
+        ):
+            raise _spelling_refusal(shown)
+
+
+def _spelling_refusal(shown: str) -> ReadRefusal:
+    return ReadRefusal(
         "out_path_git_unknown",
-        f"--out {shown}: this checkout{which} {seen}, and the path is spelled differently "
-        "from the folder on disk (in case or accents) while the disk treats both spellings as "
-        "one folder, so git's ignore rules may not cover where the file would land; nothing "
-        "was read or written. Spell the folders as they are on disk, or set core.ignorecase "
-        "to true (what git init sets on such a disk).",
+        f"--out {shown}: the path is spelled differently from a folder or file on disk, "
+        "so mb cannot safely check where the file would land; nothing was read or written. "
+        "Spell the path exactly as it is on disk.",
     )
 
 
@@ -366,7 +368,7 @@ def check_out(raw: str, *, force: bool = False) -> OutTarget:
             "out_path_not_file",
             f"--out {shown} exists and is not a plain file; nothing was read or written.",
         )
-    _check_git(parent, name, shown)
+    _check_git(parent, name, shown, given.parent)
     if info is not None and not force:
         raise ReadRefusal(
             "out_path_exists",

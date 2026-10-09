@@ -1228,7 +1228,7 @@ def _checkout_ignoring_open(tmp_path: Path, ignorecase: str) -> Path:
 
 
 @pytest.mark.parametrize("env", [False, True])
-def test_ignorecase_false_refuses_a_folder_spelled_unlike_the_disk(
+def test_a_folder_spelled_unlike_the_disk_is_refused_with_ignorecase_false(
     repo: Path,
     client_file: Path,
     google: Any,
@@ -1247,21 +1247,13 @@ def test_ignorecase_false_refuses_a_folder_spelled_unlike_the_disk(
     result = _out(repo, SC_ARGS, root / "OPEN" / "x.json")
 
     _refused(result, "out_path_git_unknown")
-    assert "core.ignorecase" in result.stderr and "spelled differently" in result.stderr
+    assert "Spell the path exactly as it is on disk" in result.stderr
     assert api.calls == [] and list((root / "open").iterdir()) == []
 
 
-@pytest.mark.parametrize(
-    ("ignorecase", "seen"),
-    [
-        ("false", "sets core.ignorecase to false"),
-        ("true", ""),
-        ("unset", "does not set core.ignorecase (git then treats it as false)"),
-        ("broken", "did not let mb read core.ignorecase"),
-    ],
-)
-def test_a_spelling_unlike_the_disk_is_judged_by_core_ignorecase(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, ignorecase: str, seen: str
+@pytest.mark.parametrize("ignorecase", ["false", "true", "unset", "broken"])
+def test_a_spelling_unlike_the_disk_is_refused_regardless_of_git_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, ignorecase: str
 ) -> None:
     # Runs on any disk: the disk is made to report another spelling.
     from mb.google_reads import ReadRefusal
@@ -1281,15 +1273,63 @@ def test_a_spelling_unlike_the_disk_is_judged_by_core_ignorecase(
 
         monkeypatch.setattr(go_out, "_git", no_config)
 
-    if ignorecase == "true":
-        assert go_out.check_out(str(root / "OPEN" / "x.json")).path.name == "x.json"
-        return
     with pytest.raises(ReadRefusal) as refused:
         go_out.check_out(str(root / "OPEN" / "x.json"))
     assert refused.value.rule == "out_path_git_unknown"
-    assert seen in str(refused.value) and "nothing was read or written" in str(refused.value)
-    if ignorecase != "false":
-        assert "sets core.ignorecase to false" not in str(refused.value)
+    assert "Spell the path exactly as it is on disk" in str(refused.value)
+    assert "core.ignorecase" not in str(refused.value)
+
+
+@pytest.mark.parametrize("folder", ["private", "PRIVATE"])
+def test_case_variant_out_cannot_replace_a_tracked_file_on_case_insensitive_disk(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    folder: str,
+) -> None:
+    if not _case_insensitive(tmp_path):
+        pytest.skip("this disk tells apart names that differ only in case")
+    api = _signed(repo, client_file, google, monkeypatch)
+    root = _checkout_with(tmp_path / "case-tracked", "private/\n")
+    _git(root, "config", "core.ignorecase", "true")
+    (root / "private").mkdir()
+    tracked = root / "private" / "Report.json"
+    original = b"personal original\n"
+    tracked.write_bytes(original)
+    _git(root, "add", "-f", "private/Report.json")
+    _git(root, "commit", "-q", "-m", "tracked report")
+
+    result = _out(repo, SC_ARGS, root / folder / "report.json", "--force")
+
+    _refused(result, "out_path_git_unknown")
+    assert api.calls == [] and tracked.read_bytes() == original
+    assert not list((root / "private").glob(".*.mb-out.tmp"))
+    diff = subprocess.run(["git", "diff", "--exit-code"], cwd=root, capture_output=True)
+    assert diff.returncode == 0 and diff.stdout == b""
+
+
+def test_case_variant_out_cannot_replace_an_untracked_file(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    root = _checkout_with(tmp_path / "case-untracked", "private/\n")
+    _git(root, "config", "core.ignorecase", "true")
+    (root / "private").mkdir()
+    existing = root / "private" / "Report.json"
+    original = b"untracked original\n"
+    existing.write_bytes(original)
+
+    result = _out(repo, SC_ARGS, root / "private" / "report.json", "--force")
+
+    _refused(result, "out_path_git_unknown")
+    assert api.calls == [] and existing.read_bytes() == original
+    assert not list((root / "private").glob(".*.mb-out.tmp"))
 
 
 @pytest.mark.parametrize("var", ["GIT_DIR", "GIT_WORK_TREE"])
