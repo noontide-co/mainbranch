@@ -3851,12 +3851,12 @@ def _google_read_exit(
         except google_out_mod.OutWriteError as exc:
             if exc.existing_temp:
                 detail = (
-                    f"{exc.existing_temp} is already there (an earlier or concurrent run); "
-                    "it was left as it is. Remove it and run again."
+                    f"{google_out_mod.show_temp(exc.existing_temp)} is already there (an earlier "
+                    "or concurrent run); it was left as it is. Remove it and run again."
                 )
             elif exc.leftover_temp:
                 detail = (
-                    f"the temporary file {google_reads_mod.terminal_safe(exc.leftover_temp, 300)} "
+                    f"the temporary file {google_out_mod.show_temp(exc.leftover_temp)} "
                     "could not be removed and is still there; remove it yourself."
                 )
             else:

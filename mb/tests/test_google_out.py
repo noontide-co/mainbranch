@@ -1426,8 +1426,10 @@ def test_the_last_guard_hides_any_part_named_like_home(
     assert guard("~/nope/../../homefolder/x.json", "x.json") == "~/…/x.json"
     assert guard("homefo\x1b[1mlder/x.json", "x.json") == "…/x.json"
     assert guard("/T/homefolder", "homefolder") == "…"
-    # A name that only contains it is not the home folder.
-    assert guard("/T/homefolder2/x.json", "x.json") == "/T/homefolder2/x.json"
+    # A part that only contains it is hidden too; one without it is not.
+    assert guard("/T/homefolder2/x.json", "x.json") == "…/x.json"
+    assert guard("~/pulls/my-homefolder.json", "my-homefolder.json") == "~/…"
+    assert guard("/T/home-folder/x.json", "x.json") == "/T/home-folder/x.json"
 
 
 # Ways to name the home folder: (shell folder, prefix) with `H` home as given, `R` its
@@ -1598,3 +1600,161 @@ def test_a_dotdot_after_a_link_is_not_shown_as_a_path_under_home(
         assert "~/x.json" not in result.stdout + result.stderr
         assert "--out linkout/../x.json already exists" in result.stderr
     assert not (home / "x.json").exists()
+
+
+# --- a home-named file in the temp name, `~user`, existing_temp (#1080) ------------------
+
+# File names that name the home folder, or only contain its name (`H` in another case).
+TEMP_NAMES = [
+    "homefolder",
+    ".homefolder",
+    "homefolder.json",
+    "HomeFolder",
+    "pull-homefolder-1.json",
+]
+# Every message that names the temporary file.
+TEMP_MESSAGES = [
+    "temp-not-ignored",
+    "leftover-after-write",
+    "existing-temp",
+    "leftover-after-failure",
+]
+
+
+@pytest.mark.parametrize("home_spelling", ["as-is", "upper"])
+@pytest.mark.parametrize("message", TEMP_MESSAGES)
+@pytest.mark.parametrize("name", TEMP_NAMES)
+def test_a_home_named_file_is_never_printed_through_its_temp(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    home_spelling: str,
+    message: str,
+    name: str,
+) -> None:
+    if home_spelling == "upper" and not _case_insensitive(tmp_path):
+        pytest.skip("this disk tells apart folder names that differ only in case")
+    api = _signed(repo, client_file, google, monkeypatch)
+    real_unlink = os.unlink
+    home = tmp_path / "homefolder"
+    home.mkdir()
+    monkeypatch.setenv(
+        "HOME", str(tmp_path / ("HOMEFOLDER" if home_spelling == "upper" else "homefolder"))
+    )
+    if message == "temp-not-ignored":
+        # The file is ignored, its temporary file re-included.
+        folder = _checkout_with(home / "checkout", "pulls/*\n!pulls/.*.tmp\n") / "pulls"
+    else:
+        folder = home / "pulls"
+    folder.mkdir()
+    if message.startswith("leftover"):
+        _stuck_unlink(monkeypatch, PermissionError)
+    if message in {"existing-temp", "leftover-after-failure"}:
+        _failing_link(monkeypatch)
+    expected = {"temp-not-ignored": 2, "leftover-after-write": 0}.get(message, 1)
+    target = folder / name
+    temp = folder / go_out.temp_name(name)
+
+    for extra in ((), ("--json",)):
+        if message == "existing-temp":
+            temp.write_text("an earlier run", encoding="utf-8")
+        result = _out(repo, SC_ARGS, target, *extra)
+        text = result.stdout + result.stderr
+
+        assert result.exit_code == expected, text
+        assert "homefolder" not in text.lower(), text
+        if extra:
+            payload = json.loads(result.stdout)
+            assert payload["safe_to_share"] is True
+            text = json.dumps(payload, ensure_ascii=False) + result.stderr
+            assert "homefolder" not in text.lower(), text
+        assert ".….mb-out.tmp" in text, text
+        assert temp.exists() is (message != "temp-not-ignored")
+        for left in (temp, target):
+            if left.exists():
+                real_unlink(left)
+    if message == "temp-not-ignored":
+        assert api.calls == []
+
+
+def test_an_existing_temp_is_named_without_terminal_escapes(
+    repo: Path, client_file: Path, google: Any, monkeypatch: pytest.MonkeyPatch, outdir: Path
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    _failing_link(monkeypatch)
+
+    for n, extra in enumerate(((), ("--json",))):
+        name = f"x{n}\x1b[31m.json"
+        (outdir / go_out.temp_name(name)).write_text("an earlier run", encoding="utf-8")
+        result = _out(repo, SC_ARGS, outdir / name, *extra)
+
+        assert result.exit_code == 1 and "(out_write_failed)" in result.stderr
+        assert "is already there" in result.stderr
+        assert "\x1b" not in result.stdout + result.stderr
+        assert f".x{n}.json.mb-out.tmp" in result.stderr
+        if extra:
+            assert "\x1b" not in json.loads(result.stdout)["summary"]
+
+
+def _users(monkeypatch: pytest.MonkeyPatch, known: dict[str, Path]) -> None:
+    """`~name` knows only the users given here, whatever this computer has."""
+
+    import pwd
+
+    real = pwd.getpwnam
+
+    def getpwnam(name: str) -> Any:
+        if name in known:
+            entry = list(real("root"))
+            entry[5] = str(known[name])
+            return pwd.struct_passwd(entry)
+        raise KeyError(name)
+
+    monkeypatch.setattr(pwd, "getpwnam", getpwnam)
+
+
+def test_an_unknown_user_is_refused_cleanly(
+    repo: Path, client_file: Path, google: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    _users(monkeypatch, {})
+
+    human = _out(repo, SC_ARGS, "~unknownuser/x.json")
+    as_json = _out(repo, SC_ARGS, "~unknownuser/x.json", "--json")
+
+    for result in (human, as_json):
+        _refused(result, "out_user_unknown")
+        assert "unexpected error" not in result.stdout + result.stderr
+        assert "~unknownuser names a user this computer does not know" in result.stderr
+        assert "nothing was read or written" in result.stderr
+    payload = json.loads(as_json.stdout)
+    assert payload["rule"] == "out_user_unknown" and payload["safe_to_share"] is True
+    assert "~unknownuser/x.json" in payload["summary"]
+    assert api.calls == []
+
+
+def test_another_users_home_is_shown_as_typed(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    other = tmp_path / "alexhome"
+    (other / "pulls").mkdir(parents=True)
+    _users(monkeypatch, {"alex": other})
+
+    written = _out(repo, SC_ARGS, "~alex/pulls/x.json")
+    as_json = _out(repo, SC_ARGS, "~alex/pulls/y.json", "--json")
+    refused = _out(repo, SC_ARGS, "~alex/nope/x.json", "--json")
+
+    assert written.exit_code == 0 and (other / "pulls" / "x.json").is_file()
+    assert "wrote ~alex/pulls/x.json (mode 0600)" in written.stdout
+    assert as_json.exit_code == 0 and json.loads(as_json.stdout)["out"] == "~alex/pulls/y.json"
+    _refused(refused, "out_parent_missing")
+    assert "--out ~alex/nope/x.json" in refused.stderr
+    for result in (written, as_json, refused):
+        assert "alexhome" not in result.stdout + result.stderr
