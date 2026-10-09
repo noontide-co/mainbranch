@@ -500,7 +500,10 @@ _WORD = r"[\w'\u2019]+(?:-[\w'\u2019]+)*"
 # customers that are fake") is agent wording only when made-up data follows
 # within a few words ("with customers who signed up last month" is owner talk).
 _MADE_UP_WORD = (
-    r"(?:sample|synthetic|fake|placeholder|dummy|mock|test|made[\s-]up|fictional|stand-in)\b"
+    r"(?:(?:sample|synthetic|fake|placeholder|dummy|mock|test|made[\s-]up|fictional|stand-in"
+    r"|invented|imaginary|pretend)\b"
+    r"|(?:do\s+not|don['\u2019]t|doesn['\u2019]t)\s+exist\b"
+    r"|(?:not|aren['\u2019]t)\s+real\b)"
 )
 _AUDIENCE_QUALIFIER = (
     rf"(?:['\u2019]|\s+(?:that|who|we|from)\b)(?:\s+{_WORD}){{0,4}}?\s+{_MADE_UP_WORD}"
