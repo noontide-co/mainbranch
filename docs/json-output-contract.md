@@ -390,6 +390,27 @@ markdown. Use `overall_state` as summary health and `findings[].code` for
 repair cards, such as `content_strategy_unindexed_layer` when a layer exists
 but is not indexed from `core/content-strategy.md`.
 
+### `mb site check --json`
+
+`schema: mainbranch.site_readiness` keeps its `state` values (`missing`,
+`blocked`, `ready_for_preview`, `ready_for_operator_review`, `ready`) and its
+`evidence[]` items of `kind`, `state` and `summary`. Items whose `state` is
+`manual` or `missing` are also listed in `manual`.
+
+Google Ads is reported as three separate checks, never one implied from
+another:
+
+| `kind` | `status` | Meaning |
+|--------|----------|---------|
+| `google_ads_plan` | `declared` or `partly_declared` | The repo declares a Google Ads customer and primary conversion plan. Declared only. |
+| `google_ads_connection` | `not_checked` | Main Branch has no Google Ads read, so the account is not checked. `next` names the read paths. A connected `google` provider (Analytics, Search Console) is not a Google Ads connection. |
+| `google_ads_conversion_evidence` | `no_evidence_recorded` | No evidence that the tag fires (`tag_fired`) or that Google Ads attributes a conversion (`attributed_conversion`). `next` names the step. |
+
+`status`, `next`, `tag_fired` and `attributed_conversion` are additive and
+appear only once a Google Ads customer is declared; without one,
+`google_ads_plan` keeps its earlier shape and the other two items are absent.
+The two new items have `state: manual` and do not change `state` or `ok`.
+
 ### `mb google ... --out --json`
 
 The summary (`schema: mb.google.out`) carries `out`, the path of the private

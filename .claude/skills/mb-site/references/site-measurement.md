@@ -33,6 +33,23 @@ The readiness states are exactly `missing`, `blocked`, `ready_for_preview`, `rea
 
 Do not invent `ready_for_launch` or say Main Branch can launch a campaign.
 
+## Google Ads: Declared, Connected, Evidence
+
+Once a Google Ads customer is declared, `mb site check` reports three separate
+evidence items. Never collapse them into "Google Ads is set up":
+
+- `google_ads_plan` (`status: declared`): the repo names a customer and primary
+  conversion plan. Nothing more.
+- `google_ads_connection` (`status: not_checked`): Main Branch cannot read
+  Google Ads. Quote `next`: Google's read-only Google Ads MCP server if it is
+  installed and approved, or a Google Ads CSV export. A Google sign-in for
+  Analytics or Search Console is not a Google Ads connection.
+- `google_ads_conversion_evidence` (`status: no_evidence_recorded`): a tag
+  firing in GTM Preview or Tag Assistant and a conversion Google Ads attributes
+  are separate proofs; `mb site check` sees neither.
+
+`ready` does not mean the account is reachable or conversions are proven.
+
 ## Instrumentation Facts
 
 Use `facts.instrumentation` from `mb site check` when the operator asks "what
