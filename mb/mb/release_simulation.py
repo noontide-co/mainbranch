@@ -483,6 +483,10 @@ def _contains_overclaim(text: str) -> bool:
     return any(term in text for term in overclaim_terms)
 
 
+# Maintainer framing an operator would never use. No owner wording on the line
+# excuses it, so it has no translation fragments.
+_NO_RELEASE_FRAMING = "plain business wording, with no release or test framing"
+
 _TECHNICAL_LANGUAGE_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
     (
         re.compile(r"\bclean\s+(?:on|branch)\s+`?main`?\b", re.IGNORECASE),
@@ -567,6 +571,11 @@ _TECHNICAL_LANGUAGE_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
         "before this goes to a remote",
         "before anything is shared outside your machine",
     ),
+    (
+        re.compile(r"\brelease evidence\b|\btest(?:ing)? (?:the|this) release\b", re.IGNORECASE),
+        "release evidence",
+        _NO_RELEASE_FRAMING,
+    ),
 )
 
 _BROAD_CHECKPOINT_NOTE_PATTERNS: tuple[re.Pattern[str], ...] = (
@@ -644,6 +653,8 @@ def _translation_candidate_precedes(earlier: str, candidate: str) -> bool:
 
 def _translation_fragments(preferred: str) -> tuple[str, ...]:
     normalized = preferred.lower()
+    if preferred == _NO_RELEASE_FRAMING:
+        return ()
     if "unsaved" in normalized:
         return (
             "nothing unsaved locally",
