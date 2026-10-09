@@ -37,10 +37,13 @@ def read_json_object(path: Path, *, default: dict[str, Any] | None = None) -> di
     return data
 
 
-def atomic_write_text(path: Path, text: str, *, encoding: str = "utf-8") -> None:
-    """Write text by replacing the target from a same-directory temp file."""
+def atomic_write_text(
+    path: Path, text: str, *, encoding: str = "utf-8", mode: int | None = None
+) -> None:
+    """Replace a file from a same-directory temp file with its final mode already set."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    mode = path.stat().st_mode & 0o777 if path.exists() else 0o644
+    if mode is None:
+        mode = path.stat().st_mode & 0o777 if path.exists() else 0o644
     fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
     tmp = Path(tmp_name)
     try:
