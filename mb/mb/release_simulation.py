@@ -492,10 +492,26 @@ _NO_RELEASE_FRAMING = "plain business wording, with no release or test framing"
 _OWNER_RELEASE_NOUNS = (
     "notes?|headlines?|copy|date|day|emails?|pages?|announcements?|posts?|videos?|builds?"
 )
+# The audience must end the phrase: a possessive or a clause after it ("with
+# users' sample data", "with customers that are fake") is agent wording.
 _OWNER_RELEASE_AUDIENCE = (
     r"with\s+(?:(?:a|an|one|two|three|four|five|six|seven|eight|nine|ten|"
-    r"some|several|few|\d+)\s+)?(?:beta\s+)?"
-    r"(?:users|customers|testers|subscribers|clients|members)"
+    r"some|several|few|\d+)\s+)?(?:(?:real|actual)\s+)?(?:beta\s+)?"
+    r"(?:users|customers|testers|subscribers|clients|members)\b"
+    r"(?!['\u2019]|\s+(?:that|who|we|from)\b)"
+)
+# Made-up data after an owner noun ("the release email flow with sample
+# records") turns owner release talk back into release framing.
+_MADE_UP_DATA = (
+    r"(?:[\s-]+[\w'\u2019-]+){0,3}?\s+with\s+(?:(?:a|an|some|the|few|\d+)\s+)?"
+    r"(?:sample|synthetic|fake|placeholder|dummy|mock|test|made-up|fictional|stand-in)\b"
+)
+_RELEASE_FRAMING_PATTERN = re.compile(
+    r"(?<!-)\brelease[\s-]+evidence\b"
+    r"|\btest(?:ing)?\s+(?:the|this)\s+release\b"
+    rf"(?![\s-]+(?:{_OWNER_RELEASE_NOUNS})\b(?!{_MADE_UP_DATA}))"
+    rf"(?![\s-]+{_OWNER_RELEASE_AUDIENCE})",
+    re.IGNORECASE,
 )
 
 _TECHNICAL_LANGUAGE_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
@@ -583,12 +599,7 @@ _TECHNICAL_LANGUAGE_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
         "before anything is shared outside your machine",
     ),
     (
-        re.compile(
-            r"(?<!-)\brelease evidence\b"
-            rf"|\btest(?:ing)? (?:the|this) release\b"
-            rf"(?![\s-]+(?:{_OWNER_RELEASE_NOUNS}|{_OWNER_RELEASE_AUDIENCE})\b)",
-            re.IGNORECASE,
-        ),
+        _RELEASE_FRAMING_PATTERN,
         "release evidence",
         _NO_RELEASE_FRAMING,
     ),
@@ -621,14 +632,19 @@ def _strip_fenced_code(text: str) -> str:
 
 def _visible_technical_leakage(text: str) -> list[dict[str, str]]:
     examples: list[dict[str, str]] = []
-    for line in text.splitlines():
-        stripped = line.strip()
+    lines = [line.strip() for line in text.splitlines()]
+    for index, stripped in enumerate(lines):
         if not stripped or _is_allowed_technical_detail_line(stripped):
             continue
         matched_spans: list[tuple[int, int]] = []
         for pattern, phrase, preferred in _TECHNICAL_LANGUAGE_PATTERNS:
-            match = pattern.search(stripped)
-            if match is None:
+            searched = stripped
+            if pattern is _RELEASE_FRAMING_PATTERN:
+                # Release framing can wrap onto the next line ("testing the" /
+                # "release"); count it once, on the line where it starts.
+                searched = _with_next_line(stripped, lines[index + 1 : index + 2])
+            match = pattern.search(searched)
+            if match is None or match.start() >= len(stripped):
                 continue
             span = match.span()
             if _owner_translation_precedes(stripped, match.start(), preferred):
@@ -641,10 +657,20 @@ def _visible_technical_leakage(text: str) -> list[dict[str, str]]:
                 {
                     "phrase": phrase,
                     "preferred": preferred,
-                    "excerpt": _short_excerpt(stripped, match.start(), match.end()),
+                    "excerpt": _short_excerpt(
+                        stripped if match.end() <= len(stripped) else searched.replace("\n", " "),
+                        match.start(),
+                        match.end(),
+                    ),
                 }
             )
     return examples
+
+
+def _with_next_line(line: str, following: list[str]) -> str:
+    if not following or not following[0] or _is_allowed_technical_detail_line(following[0]):
+        return line
+    return f"{line}\n{following[0]}"
 
 
 def _owner_translation_precedes(line: str, end: int, preferred: str) -> bool:
