@@ -2934,18 +2934,24 @@ def global_skill_status(repo: str | Path) -> dict[str, Any]:
     cleanup = global_skill_cleanup()
     stale.extend(cleanup["removals"])
     ok = bool(not missing and not stale and not read_error and not missing_markers)
+    linked = [str(path) for path in _linked_current_skill_folders()]
+    summary = (
+        "The global Main Branch Codex skill bundle is installed and current."
+        if ok
+        else (
+            "The global Main Branch Codex skill bundle is missing, stale, "
+            "or has old plugin artifacts."
+        )
+    )
+    # #1087 item 6: informational, not an action; present only when it applies.
+    extra: dict[str, Any] = (
+        {"linked": linked, "note": _linked_current_note(linked)} if linked else {}
+    )
     return {
         "checked": True,
         "ok": ok,
         "state": "ok" if ok else "global_skill_missing_or_stale",
-        "summary": (
-            "The global Main Branch Codex skill bundle is installed and current."
-            if ok
-            else (
-                "The global Main Branch Codex skill bundle is missing, stale, "
-                "or has old plugin artifacts."
-            )
-        ),
+        "summary": f"{summary} {extra['note']}" if extra else summary,
         "name": CODEX_GLOBAL_SKILL_NAME,
         "display_name": "Main Branch",
         "path": CODEX_GLOBAL_SKILL_RELATIVE_PATH,
@@ -2963,6 +2969,7 @@ def global_skill_status(repo: str | Path) -> dict[str, Any]:
         "routes": list(CODEX_SLASH_COMMAND_NAMES),
         "repair": "" if ok else repair_text(repo),
         "repair_command": repair_command(repo),
+        **extra,
         "safe_to_share": True,
     }
 
@@ -3096,6 +3103,38 @@ def _held_global_skill_entry(path: Path) -> Path | None:
     return None
 
 
+def _linked_current_skill_folders() -> list[Path]:
+    """Linked skill folders that already hold the current skill file (#1087 item 6).
+
+    Nothing is written through them, as for any linked folder, but there is
+    nothing for a person to do either, so they are not listed as kept.
+    """
+
+    found: list[Path] = []
+    for name in CODEX_GLOBAL_SKILL_NAMES:
+        path = global_skill_file_path(name)
+        if (
+            path.parent.is_symlink()
+            and not path.is_symlink()
+            and path.is_file()
+            and _read_text_or_none(path) == render_codex_global_skill_md(name)
+        ):
+            found.append(path.parent)
+    return found
+
+
+def _linked_current_note(linked: list[str]) -> str:
+    """The informational note for linked skill folders that are current (#1087 item 6)."""
+
+    return (
+        ", ".join(linked)
+        + (" is a link" if len(linked) == 1 else " are links")
+        + " to a folder that already holds the current Main Branch skill file. "
+        "Nothing to do: Main Branch does not write through links, and if a later "
+        "release changes the skill, `mb doctor` will say so."
+    )
+
+
 def global_skill_cleanup() -> dict[str, Any]:
     """Old global Codex surfaces to remove, per file, and what stays (#1056).
 
@@ -3136,10 +3175,12 @@ def global_skill_cleanup() -> dict[str, Any]:
     ]
     removals: dict[str, list[dict[str, Any]]] = {}
     kept: list[str] = [str(plugin_link)] if plugin_link and plugin_root.exists() else []
+    linked = _linked_current_skill_folders()
     kept.extend(
         str(held)
         for name in CODEX_GLOBAL_SKILL_NAMES
         if (held := _held_global_skill_entry(global_skill_file_path(name))) is not None
+        and held not in linked
     )
     for label, path, is_owned, main_branch_named, remove_link in surfaces:
         operations, others = _owned_tree_cleanup(path, is_owned, remove_link=remove_link)
@@ -3282,6 +3323,7 @@ def write_global_skill_source() -> dict[str, Any]:
         elif path.exists() or path.is_symlink():
             kept.append(str(path))  # #1067: changed since the plan, so it stays
     kept = list(dict.fromkeys(kept))
+    status = global_skill_status(Path.cwd())
 
     return {
         "ok": True,
@@ -3291,7 +3333,9 @@ def write_global_skill_source() -> dict[str, Any]:
         "changed_paths": changed_paths,
         "kept": kept,
         "relative_paths": [f"{name}/SKILL.md" for name in CODEX_GLOBAL_SKILL_NAMES],
-        "status": global_skill_status(Path.cwd()),
+        "status": status,
+        # #1087 item 6: a current linked folder is reported, not kept.
+        **{key: status[key] for key in ("linked", "note") if key in status},
         "safe_to_share": True,
     }
 
@@ -3417,6 +3461,10 @@ def write_global_plugin_source() -> dict[str, Any]:
     for _relative, (path, text) in writes.items():
         # #1062: a symlinked commands/ is a person's; never write or walk through it.
         if path.parent == commands_dir and commands_dir.is_symlink():
+            continue
+        # #1087: a link that appeared above the plugin root mid-run is not written through.
+        if (above := _plugin_link_above(path)) is not None:
+            kept.append(str(above))
             continue
         # #1067: never write or walk through a link inside the plugin root.
         link = _symlinked_ancestor(root, path)

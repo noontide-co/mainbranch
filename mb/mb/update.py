@@ -594,41 +594,63 @@ def _codex_tracked_changes(plan: dict[str, Any]) -> list[dict[str, str]] | None:
     return changes
 
 
-def _codex_new_repo_files(
-    plan: dict[str, Any], repo: Path, known: list[dict[str, str]]
+def _new_repo_files(
+    operations: list[Any], repo: Path, known: list[dict[str, str]]
 ) -> list[dict[str, str]]:
-    """Files the Codex AGENTS.md repair would create in the business repo (#1053).
+    """Planned writes that would create a file in the business repo.
 
-    `tracked_changes` names only files git already tracks, so a missing
-    AGENTS.md is not in it. A new AGENTS.md still shows in `git status`, so it
-    needs the same yes as a tracked write. An untracked AGENTS.md link counts
-    too, dangling or not (#1072): the apply replaces the link itself
-    (`replace_link`), so the inside-repo check resolves the parent folder,
-    never the link.
+    `tracked_changes` names only files git already tracks, so a missing file
+    is not in it. A new file still shows in `git status`, so it needs the same
+    yes as a tracked write. An untracked link counts too, dangling or not
+    (#1072): the apply replaces the link itself (`replace_link`), so the
+    inside-repo check resolves the parent folder, never the link.
     """
     repo_real = os.path.realpath(repo)
     seen = {item["path"] for item in known}
     found: list[dict[str, str]] = []
-    for action in plan.get("actions", []):
-        if not isinstance(action, dict) or action.get("id") != "codex-agents-md":
+    for operation in operations:
+        if not isinstance(operation, dict) or operation.get("op") != "write":
             continue
-        for operation in action.get("operations") or []:
-            if not isinstance(operation, dict) or operation.get("op") != "write":
-                continue
-            path = str(operation.get("path") or "")
-            # #1072: a link the person made is held like a tracked file, whether
-            # or not it points anywhere; only a regular file is refreshed freely.
-            if not path or (os.path.exists(path) and not os.path.islink(path)):
-                continue
-            real = os.path.join(os.path.realpath(os.path.dirname(path)), os.path.basename(path))
-            if not real.startswith(repo_real + os.sep):
-                continue
-            rel = os.path.relpath(real, repo_real).replace(os.sep, "/")
-            if rel not in seen:
-                seen.add(rel)
-                op = "replace_link" if os.path.islink(path) else "create"
-                found.append({"path": rel, "op": op})
+        path = str(operation.get("path") or "")
+        # #1072: a link the person made is held like a tracked file, whether
+        # or not it points anywhere; only a regular file is refreshed freely.
+        if not path or (os.path.exists(path) and not os.path.islink(path)):
+            continue
+        real = os.path.join(os.path.realpath(os.path.dirname(path)), os.path.basename(path))
+        if not real.startswith(repo_real + os.sep):
+            continue
+        rel = os.path.relpath(real, repo_real).replace(os.sep, "/")
+        if rel not in seen:
+            seen.add(rel)
+            op = "replace_link" if os.path.islink(path) else "create"
+            found.append({"path": rel, "op": op})
     return found
+
+
+def _codex_new_repo_files(
+    plan: dict[str, Any], repo: Path, known: list[dict[str, str]]
+) -> list[dict[str, str]]:
+    """Files the Codex AGENTS.md repair would create in the business repo (#1053)."""
+    operations = [
+        operation
+        for action in plan.get("actions", [])
+        if isinstance(action, dict) and action.get("id") == "codex-agents-md"
+        for operation in action.get("operations") or []
+    ]
+    return _new_repo_files(operations, repo, known)
+
+
+def _link_new_repo_files(
+    plan: dict[str, Any], repo: Path, known: list[dict[str, str]]
+) -> list[dict[str, str]]:
+    """Files the skill link would create in the business repo (#1087 item 10).
+
+    A missing `.gitignore` is created by the link, so it needs a yes like a
+    new AGENTS.md. Everything else the link creates (the skill links,
+    `.claude/settings.local.json`) is one of the lines that `.gitignore` holds.
+    """
+    found = _new_repo_files(list(plan.get("operations") or []), repo, known)
+    return [item for item in found if item["path"] == ".gitignore"]
 
 
 def _codex_blocked_actions(plan: dict[str, Any]) -> list[dict[str, Any]]:
@@ -962,6 +984,8 @@ def _refresh_surfaces(
             f"`{_update_command(target_repo)}` again."
         )
         return
+    # #1087 item 10: creating a missing .gitignore needs the same yes.
+    link_changes.extend(_link_new_repo_files(link_plan, target_repo, link_changes))
     # #1052: a Codex AGENTS.md repair that would refuse, or leave a person's
     # files behind, needs a manual step first. No consent prompt, no write.
     codex_blocked = _codex_blocked_actions(codex_plan)
@@ -1470,6 +1494,11 @@ def render_human(result: dict[str, Any]) -> None:
         for action in result.get("next_actions", []):
             print(f"next: {action}")
 
+    adapter = result.get("codex_adapter")
+    global_skill = adapter.get("global_skill") if isinstance(adapter, dict) else None
+    if isinstance(global_skill, dict) and global_skill.get("note"):
+        # #1087 item 6: informational, not a warning or a step to run.
+        print(f"note: {global_skill['note']}")
     if result.get("errors"):
         for error in result["errors"]:
             print(f"error: {error}")
