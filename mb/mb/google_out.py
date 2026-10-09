@@ -31,6 +31,7 @@ from __future__ import annotations
 import os
 import stat
 import subprocess
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -355,9 +356,10 @@ def check_out(raw: str, *, force: bool = False) -> OutTarget:
 
 
 def _shown(raw: str) -> str:
-    """``raw`` as printed in a refusal: ``~/...`` when it is an absolute path under home."""
+    """``raw`` as printed in a refusal: ``~/...`` when it leads under home."""
 
-    return terminal_safe(_home_relative(raw), 120) or "PATH"
+    shown = terminal_safe(_home_relative(raw), 120) or "PATH"
+    return hide_home_name(shown, Path(raw).name) if raw else shown
 
 
 def _home_relative(raw: str) -> str:
@@ -383,17 +385,57 @@ def _under_home(path: Path) -> str | None:
     """
 
     home = Path.home()
-    candidates = (path, path.resolve())
+    # `.` and `..` are collapsed first: a `..` through a missing folder must not keep
+    # the spelling before it (`nope/../../<home>/x.json`).
+    candidates = (Path(os.path.normpath(path)), path.resolve())
     for candidate in candidates:
         found = _identity_ancestor(candidate, home)
-        if found is not None:
+        if found is not None and ".." not in candidate.relative_to(found).parts:
             return "~/" + candidate.relative_to(found).as_posix()
     for candidate in candidates:
         try:
-            return "~/" + candidate.relative_to(home).as_posix()
+            rest = candidate.relative_to(home)
         except ValueError:
             continue
+        if ".." not in rest.parts:
+            return "~/" + rest.as_posix()
     return None
+
+
+def _fold(name: str) -> str:
+    return unicodedata.normalize("NFC", name).casefold()
+
+
+def _home_names() -> set[str]:
+    """Every spelling of the home folder's own name mb can see, folded for comparison."""
+
+    names: set[str] = set()
+    try:
+        home = Path.home()
+        names.add(home.name)
+        if home.is_symlink():
+            names.add(Path(os.readlink(home)).name)
+        names.add(home.resolve().name)
+    except (OSError, RuntimeError, ValueError):
+        pass
+    return {_fold(name) for name in names if name}
+
+
+def hide_home_name(shown: str, file_name: str) -> str:
+    """Last guard before a path is printed: never a part named like the home folder.
+
+    If one is there anyway, only ``~/…/`` or ``…/`` and the file name are shown.
+    """
+
+    names = _home_names()
+    parts = terminal_safe(shown, len(shown) + 1).split("/")
+    if not any(_fold(part) in names for part in parts if part not in {"", "~"}):
+        return shown
+    prefix = "~/…" if shown.startswith("~/") else "…"
+    name = terminal_safe(file_name, 120)
+    if not name or _fold(name) in names:
+        return prefix
+    return f"{prefix}/{name}"
 
 
 class OutWriteError(OSError):
@@ -470,12 +512,12 @@ def display_path(path: Path) -> str:
         real = path.resolve()
         home = _identity_ancestor(real, Path.home())
         if home is not None:
-            return "~/" + real.relative_to(home).as_posix()
+            return hide_home_name("~/" + real.relative_to(home).as_posix(), path.name)
         # Identity could not be compared: fall back to the spelling.
-        return "~/" + real.relative_to(Path.home()).as_posix()
+        return hide_home_name("~/" + real.relative_to(Path.home()).as_posix(), path.name)
     except (OSError, RuntimeError, ValueError):
         pass
-    return str(path)
+    return hide_home_name(str(path), path.name)
 
 
 def leftover_warning(temp: str) -> str:

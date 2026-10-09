@@ -372,7 +372,7 @@ but is not indexed from `core/content-strategy.md`.
 
 The summary (`schema: mb.google.out`) carries `out`, the path of the private
 file, shown as `~/...` when it is under the home folder, so the summary has no
-username and `safe_to_share: true` is accurate. There is no absolute-path field:
+home folder name and `safe_to_share: true` is accurate. There is no absolute-path field:
 an agent opens the file by the path it passed to `--out` (expanding `~` to the
 home folder). If the read worked but the file could not be written, stdout
 carries the usual failure envelope (`ok: false`, `rule: out_write_failed`,
@@ -380,10 +380,12 @@ carries the usual failure envelope (`ok: false`, `rule: out_write_failed`,
 The message names at most the temporary file's name (`.<name>.mb-out.tmp`),
 never a full path. If the file was written but that temporary copy could not be
 removed, the summary is still `ok: true` (exit 0) and `warnings` holds one
-message naming it. A refusal (exit 2, `rule: out_*`) shows an absolute `--out`
-under the home folder as `~/...` in `summary` and `errors`, so it too has no
-username under `safe_to_share: true`; a relative `--out` that leads under the
-home folder is shown as `~/...` as well, and any other relative `--out` as typed. See [google.md](google.md#--out-keep-a-large-pull-in-a-private-file).
+message naming it. A refusal (exit 2, `rule: out_*`) shows an `--out` that leads under the home
+folder (absolute or relative, after `.` and `..` are collapsed) as `~/...` in
+`summary` and `errors`, and any other `--out` as typed. If a part named like
+the home folder would still be printed, only `…/` and the file name are shown,
+so neither a refusal nor the summary has the home folder's name under
+`safe_to_share: true`. See [google.md](google.md#--out-keep-a-large-pull-in-a-private-file).
 
 ## First Migrated Surfaces
 

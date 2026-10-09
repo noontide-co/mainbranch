@@ -191,7 +191,7 @@ Every read takes `--out PATH`. It writes the same JSON that `--json` prints
 step, and prints only a short summary: the path, the row count and
 `may_have_more`. With `--json` the summary is JSON (`mb.google.out`). A path
 under your home folder is shown as `~/...`, so the summary never prints your
-username, and `safe_to_share: true` holds; there is no absolute-path field, so
+home folder's name, and `safe_to_share: true` holds; there is no absolute-path field, so
 an agent opens the file by the path it passed to `--out` (expand `~` to the
 home folder). Add
 `--force` to replace an existing file.
@@ -223,12 +223,15 @@ with another case, or through a link or firmlink, is matched to the real
 folder by file identity, so its ignored folders are allowed when PATH spells
 its folders as they are on disk.
 
-A refusal shows PATH as you gave it, except that an absolute path under your
-home folder is shown as `~/...`, so a refusal (also marked `safe_to_share:
-true` with `--json`) never prints your username. A relative PATH is judged by
-where it leads from the folder you run the command in: under your home folder
-it is shown as `~/...` too (with home `/Users/alex`, `alex/pulls/x.json` typed
-in `/Users` shows as `~/pulls/x.json`); anywhere else it is shown as typed. A relative PATH is relative to the
+A refusal shows PATH as you gave it, except that a PATH leading under your
+home folder is shown as `~/...`. A relative PATH is judged by where it leads
+from the folder you run the command in, after `.` and `..` are collapsed and
+links followed (with home `/Users/alex`, `alex/pulls/x.json` typed in `/Users`
+shows as `~/pulls/x.json`); anywhere else PATH is shown as typed. As a last
+check, if a folder named like your home folder (in any case, or the name of a
+link to it) would still be printed, only `…/` and the file name are shown. So
+a refusal or summary (marked `safe_to_share: true` with `--json`) never prints
+your home folder's name. A relative PATH is relative to the
 folder you run the command from, not `--repo`. A failed read writes nothing. If
 the read worked but the file cannot be written, the command exits 1 with
 `out_write_failed` (with `--json`, the failure envelope is also on stdout, like the read failures). If `mb` cannot remove its own temporary file after a failed write, the message names it and says to remove it; "nothing was left behind" is only printed when that is true. If the file was written but the temporary copy could not be removed, the command still exits 0 and the summary adds a `warning:` line (with `--json`, an entry in `warnings`) naming `.<name>.mb-out.tmp`, a second copy of the report to remove yourself. The report goes through `.<name>.mb-out.tmp` beside the

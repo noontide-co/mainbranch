@@ -22,6 +22,7 @@ import pytest
 
 from mb import google_out as go_out
 from mb.cli import app
+from mb.google_reads import terminal_safe
 from tests.test_google_connect import (  # noqa: F401 (fixtures are used by name)
     client_file,
     google,
@@ -158,7 +159,9 @@ def test_every_read_takes_out(
     )
     assert document["ok"] is True
     assert _mode(target) == 0o600
-    assert f"wrote {target.resolve()}" in result.stdout
+    # As printed: a long temp root is cut to the display cap.
+    shown = terminal_safe(go_out.display_path(target), 200)
+    assert f"wrote {shown}" in result.stdout
 
 
 def test_summary_counts_rows_sitemaps_and_paging(
@@ -1401,3 +1404,127 @@ def test_a_temp_already_gone_is_not_reported_as_left_behind(
     assert failed.exit_code == 1 and "nothing was left behind" in failed.stderr
     assert "still there" not in written.stdout + failed.stderr
     assert sorted(p.name for p in outdir.iterdir()) == ["x.json"]
+
+
+# --- the home folder's name never printed: a fixed corpus (#1080) -------------------------
+
+
+def test_the_last_guard_hides_any_part_named_like_home(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = tmp_path / "Homefolder"
+    home.mkdir()
+    (tmp_path / "homelink").symlink_to(home)
+    monkeypatch.setenv("HOME", str(tmp_path / "homelink"))
+
+    guard = go_out.hide_home_name
+    assert guard("~/pulls/x.json", "x.json") == "~/pulls/x.json"
+    assert guard("elsewhere/x.json", "x.json") == "elsewhere/x.json"
+    # The link's name, its target's name, in any case and through terminal escapes.
+    assert guard("/T/homelink/nope/x.json", "x.json") == "…/x.json"
+    assert guard("/T/HOMEFOLDER/x.json", "x.json") == "…/x.json"
+    assert guard("~/nope/../../homefolder/x.json", "x.json") == "~/…/x.json"
+    assert guard("homefo\x1b[1mlder/x.json", "x.json") == "…/x.json"
+    assert guard("/T/homefolder", "homefolder") == "…"
+    # A name that only contains it is not the home folder.
+    assert guard("/T/homefolder2/x.json", "x.json") == "/T/homefolder2/x.json"
+
+
+# Ways to name the home folder: (shell folder, prefix) with `H` home as given, `R` its
+# real path, `T` the temp root; `HOMEFOLDER` spellings run only on a case-insensitive disk.
+CORPUS_PREFIXES = {
+    "abs": ("T", "{H}/"),
+    "abs-real": ("T", "{R}/"),
+    "abs-upper": ("T", "{T}/HOMEFOLDER/"),
+    "abs-link": ("T", "{T}/homelink/"),
+    "abs-firmlink": ("T", "/System/Volumes/Data{R}/"),
+    "abs-double-slash": ("T", "{H}//"),
+    "tilde": ("T", "~/"),
+    "rel-from-parent": ("T", "homefolder/"),
+    "rel-upper-from-parent": ("T", "HOMEFOLDER/"),
+    "rel-link-from-parent": ("T", "homelink/"),
+    "rel-trailing-slashes": ("T", "homefolder//"),
+    "rel-inside": ("H", ""),
+    "rel-dot-inside": ("H", "./"),
+    "rel-up-from-pulls": ("H/pulls", "../"),
+    "rel-up-up-from-pulls": ("H/pulls", "../../homefolder/"),
+    "rel-three-up-from-pulls": ("H/pulls", "../../../{Tname}/homefolder/"),
+    "rel-from-root": ("/", "{Rrel}/"),
+    "cwd-link": ("T/homelink", ""),
+    "cwd-upper": ("T/HOMEFOLDER", ""),
+    "dotdot-existing-abs": ("T", "{H}/pulls/../"),
+    "dotdot-existing-rel": ("H", "pulls/../"),
+    "dotdot-missing-abs": ("T", "{H}/nope/../"),
+    "dotdot-missing-back-abs": ("T", "{H}/nope/../../homefolder/"),
+    "dotdot-missing-rel": ("H", "nope/../../homefolder/"),
+    "dotdot-missing-two-rel": ("H", "nope/nope2/../../../homefolder/"),
+    "dotdot-missing-from-parent": ("T", "homefolder/nope/../../homefolder/"),
+}
+# What the path names below home: (suffix, expected exit code).
+CORPUS_TARGETS = {
+    "missing-parent": ("nope/x.json", 2),
+    "link": ("pulls/link.json", 2),
+    "in-checkout": ("checkout/docs/x.json", 2),
+    "exists": ("pulls/exists.json", 2),
+    "folder": ("pulls", 2),
+    "git-folder": ("checkout/.git/x.json", 2),
+    "tracked": ("checkout/tracked.json", 2),
+    "allowed": ("pulls/new-{n}.json", 0),
+}
+CORPUS_HOMES = ["as-is", "trailing-slash", "link", "upper", "real"]
+
+
+@pytest.mark.parametrize("home_kind", CORPUS_HOMES)
+@pytest.mark.parametrize("prefix", list(CORPUS_PREFIXES))
+def test_the_home_folder_name_is_never_printed(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    home_kind: str,
+    prefix: str,
+) -> None:
+    upper_case = "upper" in prefix or home_kind == "upper"
+    if upper_case and not _case_insensitive(tmp_path):
+        pytest.skip("this disk tells apart folder names that differ only in case")
+    _signed(repo, client_file, google, monkeypatch)
+    home = tmp_path / "homefolder"
+    (home / "pulls").mkdir(parents=True)
+    (home / "pulls" / "exists.json").write_text("{}", encoding="utf-8")
+    (home / "pulls" / "link.json").symlink_to(home / "pulls" / "gone.json")
+    _checkout_with(home / "checkout", TEMPLATE_GITIGNORE.read_text(encoding="utf-8"))
+    (tmp_path / "homelink").symlink_to(home)
+    real = home.resolve()
+    if prefix == "abs-firmlink" and not Path(f"/System/Volumes/Data{real}").is_dir():
+        pytest.skip("no firmlinked data volume on this machine")
+    monkeypatch.setenv(
+        "HOME",
+        {
+            "as-is": str(home),
+            "trailing-slash": f"{home}/",
+            "link": str(tmp_path / "homelink"),
+            "upper": str(tmp_path / "HOMEFOLDER"),
+            "real": str(real),
+        }[home_kind],
+    )
+    cwd, spelled = CORPUS_PREFIXES[prefix]
+    folders = {"T": tmp_path, "H": home, "/": Path("/")}
+    head, _, rest = cwd.partition("/")
+    monkeypatch.chdir(folders[head] / rest if head in folders else Path(cwd))
+    spelled = spelled.format(
+        H=home, R=real, T=tmp_path, Tname=tmp_path.name, Rrel=str(real).lstrip("/")
+    )
+
+    for target, (suffix, code) in CORPUS_TARGETS.items():
+        for n, extra in enumerate(((), ("--json",))):
+            out = spelled + suffix.format(n=n)
+            result = _out(repo, SC_ARGS, out, *extra)
+            text = (result.stdout + result.stderr).lower()
+
+            # A `..` through a missing folder leaves no folder to write in.
+            expected = 2 if prefix.startswith("dotdot-missing") else code
+            assert result.exit_code == expected, (target, out, result.stdout + result.stderr)
+            assert "homefolder" not in text and "homelink" not in text, (target, out, text)
+            if extra:
+                assert json.loads(result.stdout)["safe_to_share"] is True
