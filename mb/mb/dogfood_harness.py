@@ -446,10 +446,10 @@ def _apply_broken_skill_wiring_fixture(repo: Path) -> list[str]:
 
 
 def _apply_public_safe_refusal_fixture(repo: Path) -> list[str]:
-    path = repo / "documents" / "sanitized-private-boundary-fixture.md"
+    path = repo / "documents" / "private-data-rules.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        """# Sanitized Private Boundary Fixture
+        """# Private Data Rules
 
 This is synthetic sample data. It is not a real customer record,
 credential, token, account ID, member note, or private business transcript.
@@ -462,7 +462,7 @@ clearly synthetic sample data, and keep anything shared publicly safe.
 """,
         encoding="utf-8",
     )
-    return ["added synthetic private-data refusal fixture"]
+    return ["added synthetic private-data refusal sample"]
 
 
 def _apply_legacy_drift_fixture(repo: Path) -> list[str]:
