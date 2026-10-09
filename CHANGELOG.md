@@ -13,6 +13,18 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- `mb connect <provider> --scope user` and `mb connect rotate` now put your
+  previous credential back (or remove the new one) when the user-scope connect
+  file cannot be written for any reason, such as a full disk or an I/O error,
+  not only when it is read-only. The message names the file, what went wrong,
+  and that the credential was restored, with no error dump or credential
+  value. It names a blocked parent folder when that is the cause, and keeps
+  the user-scope file private during replacement. Before, the new credential
+  stayed stored with nothing recording it.
+- `mb doctor` says why an Agent Access Dossier check was not recorded: a
+  tracked `.mb/connect.yaml` or a read-only user-scope connect file. It no
+  longer blames a tracked `.mb/connect.yaml` when the user-scope file was the
+  cause.
 - A new business repo's `CLAUDE.md` no longer gives one `status:` list for
   every file type. It lists the values `mb validate` accepts for bets,
   decisions, offers and pushes, taken from the same sets `mb validate`
