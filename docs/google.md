@@ -214,6 +214,7 @@ read from Google (a refused path costs no quota) and refuses with exit 2:
 | `out_parent_missing` | The folder does not exist. `mb` never creates folders. |
 | `out_path_link` | PATH itself is a link, even a dangling one. |
 | `out_path_invalid` | PATH is empty or has no file name. |
+| `out_user_unknown` | PATH starts with `~name/` and this computer has no user `name`. |
 | `out_force_without_out` | `--force` was given without `--out`. |
 
 Folders above the file may be links (macOS keeps `/tmp` behind one): the
@@ -228,9 +229,13 @@ home folder is shown as `~/...`. A relative PATH is judged by where it leads
 from the folder you run the command in, with links followed first and then
 `.` and `..` collapsed, as the system does (with home `/Users/alex`, `alex/pulls/x.json` typed in `/Users`
 shows as `~/pulls/x.json`); anywhere else PATH is shown as typed. As a last
-check, on the whole text before it is cut to fit the terminal, if a folder
-named like your home folder (in any case, or the name of a link to it) would
-still be printed, only `…/` and the file name are shown. So
+check, on the whole text before it is cut to fit the terminal, if a part
+that contains your home folder's name (in any case, or the name of a link to
+it) would still be printed, only `…/` and the file name are shown, or only
+`…/` when the file name contains it. The temporary file's name goes through the
+same check: for a file named like your home folder it is shown as
+`.….mb-out.tmp`. A PATH starting with another user's `~name/` is shown as
+`~name/...`, never as that user's full home path. So
 a refusal or summary (marked `safe_to_share: true` with `--json`) never prints
 your home folder's name. A relative PATH is relative to the
 folder you run the command from, not `--repo`. A failed read writes nothing. If

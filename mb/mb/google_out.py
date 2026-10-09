@@ -56,6 +56,8 @@ class OutTarget:
 
     path: Path
     force: bool
+    # How the summary shows ``path`` when ``display_path`` would not do (``~name/...``).
+    shown: str = ""
 
 
 def _git(
@@ -148,7 +150,7 @@ def _judge_git(parent: Path, name: str, shown: str, *, inherit_env: bool) -> Non
         if temp_verdict is None or temp_verdict.returncode not in {0, 1}:
             raise unknown(shown)
         if temp_verdict.returncode == 1:
-            raise _temp_refusal(shown, temp_name(name), which)
+            raise _temp_refusal(shown, show_temp(temp_name(name)), which)
         _check_spelling(base, relative, root, shown, which, run)
         return
     if inherit_env:
@@ -299,13 +301,32 @@ def temp_name(name: str) -> str:
     return f".{name}.mb-out.tmp"
 
 
+def show_temp(temp: str) -> str:
+    """A temporary file's name as printed: never one that holds the home folder's name."""
+
+    # The same last guard as a path part, on the whole name before it is cut.
+    full = terminal_safe(temp, len(temp) + 1)
+    if _holds_home_name(full):
+        return ".….mb-out.tmp"
+    return terminal_safe(full, 300)
+
+
 def check_out(raw: str, *, force: bool = False) -> OutTarget:
     """Judge ``--out`` before any read. A relative PATH is relative to the shell's folder."""
 
     shown = _shown(raw)
     if not raw or "\x00" in raw:
         raise ReadRefusal("out_path_invalid", "--out needs a file path; nothing was read.")
-    given = Path(raw).expanduser()
+    try:
+        given = Path(raw).expanduser()
+    except RuntimeError:
+        # `~name/...` for a user this computer does not know.
+        raise ReadRefusal(
+            "out_user_unknown",
+            f"--out {shown}: {_shown(raw.split('/', 1)[0])} names a user this computer does "
+            "not know, so it names no folder; nothing was read or written. Use ~/ for your "
+            "own home folder, or a full path.",
+        ) from None
     if not given.is_absolute():
         given = Path.cwd() / given
     name = given.name
@@ -352,7 +373,24 @@ def check_out(raw: str, *, force: bool = False) -> OutTarget:
             f"--out {shown} already exists; nothing was read or written. "
             "Pick another path, or add --force to replace it.",
         )
-    return OutTarget(path=target, force=force)
+    return OutTarget(path=target, force=force, shown=_other_home_shown(raw, target))
+
+
+def _other_home_shown(raw: str, target: Path) -> str:
+    """For ``~name/...`` (another user's home), the path as ``~name/...``, else ``""``.
+
+    The summary then never prints that user's home folder as a full path.
+    """
+
+    user = raw.split("/", 1)[0]
+    if not user.startswith("~") or user == "~":
+        return ""
+    try:
+        home = Path(os.path.expanduser(user)).resolve()
+        rest = target.parent.resolve().relative_to(home) / target.name
+    except (OSError, RuntimeError, ValueError):
+        return ""
+    return hide_home_name(f"{user}/{rest.as_posix()}", target.name)
 
 
 def _shown(raw: str) -> str:
@@ -436,20 +474,26 @@ def _home_names() -> set[str]:
 
 
 def hide_home_name(shown: str, file_name: str) -> str:
-    """Last guard before a path is printed: never a part named like the home folder.
+    """Last guard before a path is printed: never a part that contains the home folder's name.
 
     If one is there anyway, only ``~/…/`` or ``…/`` and the file name are shown.
     """
 
-    names = _home_names()
     parts = terminal_safe(shown, len(shown) + 1).split("/")
-    if not any(_fold(part) in names for part in parts if part not in {"", "~"}):
+    if not any(_holds_home_name(part) for part in parts if part not in {"", "~"}):
         return shown
     prefix = "~/…" if shown.startswith("~/") else "…"
     name = terminal_safe(file_name, 120)
-    if not name or _fold(name) in names:
+    if not name or _holds_home_name(name):
         return prefix
     return f"{prefix}/{name}"
+
+
+def _holds_home_name(text: str) -> bool:
+    """Whether ``text`` contains a spelling of the home folder's name, in any case."""
+
+    folded = _fold(text)
+    return any(name in folded for name in _home_names())
 
 
 class OutWriteError(OSError):
@@ -536,7 +580,7 @@ def display_path(path: Path) -> str:
 
 def leftover_warning(temp: str) -> str:
     return (
-        f"the temporary file {terminal_safe(temp, 300)} could not be removed and is still "
+        f"the temporary file {show_temp(temp)} could not be removed and is still "
         "there, a second copy of the report beside the file; remove it yourself."
     )
 
@@ -554,7 +598,7 @@ def summary(
         count = 1 if result.get("inspection_result") else 0
     info: dict[str, Any] = {
         "ok": True,
-        "out": display_path(target.path),
+        "out": target.shown or display_path(target.path),
         "mode": "0600",
         "source_command": command,
         "row_count": count,

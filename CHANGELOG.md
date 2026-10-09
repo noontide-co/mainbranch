@@ -81,6 +81,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- `mb google ... --out` never prints the home folder's name through the
+  temporary file's name either. For a file named like your home folder (or one
+  whose name contains it, in any case), the "temporary file is not ignored"
+  refusal, the leftover-copy warning and the failed-write message show
+  `.….mb-out.tmp` instead, and a folder or file whose name contains the home
+  folder's name is hidden in the path as well. `--out ~name/x.json` for a user
+  this computer does not know is now a plain refusal (`out_user_unknown`, exit
+  2, nothing read or written) instead of an unexpected error, and a path under
+  another user's home is shown as `~name/...`, not as that user's full home
+  path. The name of an earlier run's temporary file in the failed-write message
+  is printed without terminal escape codes.
 - `mb site check` no longer lets a declared Google Ads customer read as more
   than it is. Once the repo declares a Google Ads customer, the check reports
   three things apart: `google_ads_plan` says only that the customer and
