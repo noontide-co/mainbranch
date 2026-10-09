@@ -487,6 +487,12 @@ def _contains_overclaim(text: str) -> bool:
 # excuses it, so it has no translation fragments.
 _NO_RELEASE_FRAMING = "plain business wording, with no release or test framing"
 
+# An owner of a software or PR business tests a release's notes, headline or
+# copy, or tests a release with beta users. Those are not maintainer framing.
+_OWNER_RELEASE_NOUNS = (
+    "notes?|headlines?|copy|date|day|emails?|pages?|announcements?|posts?|videos?|builds?|with"
+)
+
 _TECHNICAL_LANGUAGE_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
     (
         re.compile(r"\bclean\s+(?:on|branch)\s+`?main`?\b", re.IGNORECASE),
@@ -572,7 +578,11 @@ _TECHNICAL_LANGUAGE_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
         "before anything is shared outside your machine",
     ),
     (
-        re.compile(r"\brelease evidence\b|\btest(?:ing)? (?:the|this) release\b", re.IGNORECASE),
+        re.compile(
+            r"(?<!-)\brelease evidence\b"
+            rf"|\btest(?:ing)? (?:the|this) release\b(?![\s-]+(?:{_OWNER_RELEASE_NOUNS})\b)",
+            re.IGNORECASE,
+        ),
         "release evidence",
         _NO_RELEASE_FRAMING,
     ),

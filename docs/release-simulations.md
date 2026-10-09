@@ -236,7 +236,9 @@ that make the operator decode git first. Warnings include "working tree clean",
 none surfaced", and "Git is clean" unless the answer has already translated the
 matching business meaning. Maintainer framing such as "release evidence" or
 "testing the release" is a warning whatever precedes it: an operator never
-says it, so simulation prompts and fixture files avoid it too. Checkpoint
+says it, so simulation prompts and fixture files avoid it too. An owner's own
+release talk, such as "test the release notes", "pre-release evidence of
+demand" or "test this release with five beta users", is not flagged. Checkpoint
 examples should name the saved business artifact specifically, such as
 `[updated] offer and founder-call research`, instead of broad buckets like
 `[updated] core and research`, `[drafted] files`, or `[ran] changes`.
