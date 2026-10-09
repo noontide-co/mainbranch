@@ -369,9 +369,12 @@ terminal. Each entry has `command`, `changes` and `note`.
 Use `--no-refresh-surfaces` to update the package without touching any
 surface, and `mb update --check` when you want the facts and no writes at all:
 `--check` never runs an installer and never refreshes a surface. Its
-`surface_refresh.planned` reports the repo files a run without a terminal
-would leave for you, and `consent: no_terminal`, or `not_needed` when the
-refresh changes none (#1100).
+`surface_refresh.planned` reports, with the installed version's templates,
+the repo files a run without a terminal would leave for you, and
+`consent: no_terminal`, or `not_needed` when the refresh changes none (#1100).
+When a newer release is available, it may also stop for `AGENTS.md`. A file
+the plan cannot read (not UTF-8, no permission, a folder) is named in
+`warnings` instead.
 
 Inside Claude Code, `/mb-update` calls `mb update` for this mechanical step and keeps
 ownership of the human-readable "what's new" summary. Codex users should open a

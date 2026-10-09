@@ -3657,7 +3657,10 @@ def _tree_snapshot(*roots: Path) -> dict[str, str]:
                 elif path.is_dir():
                     snapshot[str(path)] = "dir"
                 else:
-                    snapshot[str(path)] = path.read_bytes().hex()
+                    try:
+                        snapshot[str(path)] = path.read_bytes().hex()
+                    except PermissionError:
+                        snapshot[str(path)] = f"unreadable:{path.stat().st_mode:o}"
     return snapshot
 
 
@@ -3776,3 +3779,84 @@ def test_check_matches_the_run_for_a_folder_that_is_not_a_business_repo(
 
     assert checked["surface_refresh"]["planned"] == ran["surface_refresh"]["planned"]
     assert not folder.exists()
+
+
+def _unreadable_gitignore(repo: Path, kind: str) -> None:
+    """A tracked `.gitignore` the skill-link plan cannot read (#1101 review)."""
+    codex_mod.write_agents_md(repo)
+    gitignore = repo / ".gitignore"
+    if kind == "folder":
+        gitignore.unlink()
+        _commit_all(repo, "No .gitignore")
+        gitignore.mkdir()
+        (gitignore / "keep").write_text("x\n", encoding="utf-8")
+        return
+    if kind == "latin1":
+        gitignore.write_bytes("node_modules/\n# café notes\n".encode("latin-1"))
+    elif kind == "utf16":
+        gitignore.write_bytes("node_modules/\n".encode("utf-16"))
+    else:
+        assert kind == "unreadable"
+    _commit_all(repo, f"{kind} .gitignore")
+    if kind == "unreadable":
+        gitignore.chmod(0)
+
+
+@pytest.mark.parametrize("kind", ["latin1", "utf16", "unreadable", "folder"])
+def test_check_does_not_crash_on_a_gitignore_it_cannot_read(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path, tmp_path: Path, kind: str
+) -> None:
+    if kind == "unreadable" and hasattr(os, "geteuid") and os.geteuid() == 0:
+        pytest.skip("root can read a mode 000 file")
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    _unreadable_gitignore(business_repo, kind)
+    monkeypatch.chdir(tmp_path)
+    status_before = _git(business_repo, "status", "--porcelain", "--ignored")
+    tree_before = _tree_snapshot(business_repo, tmp_path / "home")
+    try:
+        as_json = runner.invoke(app, ["update", "--check", "--json", "--repo", str(business_repo)])
+        human = runner.invoke(app, ["update", "--check", "--repo", str(business_repo)])
+        assert _tree_snapshot(business_repo, tmp_path / "home") == tree_before
+        assert _git(business_repo, "status", "--porcelain", "--ignored") == status_before
+    finally:
+        if kind == "unreadable":
+            (business_repo / ".gitignore").chmod(0o644)
+
+    assert as_json.exception is None, as_json.exception
+    assert as_json.exit_code == 0, as_json.stdout
+    result = json.loads(as_json.stdout)
+    assert result["ok"] is True
+    assert result["surface_refresh"]["planned"] == {
+        "consent": "not_needed",
+        "tracked_files": [],
+        "apply_commands": [],
+    }
+    assert any(
+        "Could not plan the skill link refresh" in item and "real `mb update` stops" in item
+        for item in result["warnings"]
+    )
+    assert human.exception is None, human.exception
+    assert human.exit_code == 0
+    assert "Could not plan the skill link refresh" in human.stdout
+    assert calls == []
+
+
+def test_check_reads_codex_readiness_once(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    reads: list[Path] = []
+
+    def counted(repo: Path) -> dict[str, Any]:
+        reads.append(Path(repo))
+        return _REAL_CODEX_READINESS(repo)
+
+    monkeypatch.setattr(codex_mod, "readiness", counted)
+
+    result = update_mod.run(repo=business_repo, check=True, interactive=False)
+
+    assert result["ok"] is True, result["errors"]
+    assert result["surface_refresh"]["planned"]["consent"] == "no_terminal"
+    assert len(reads) == 1

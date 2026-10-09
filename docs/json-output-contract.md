@@ -120,8 +120,12 @@ Entries today:
   `mb doctor repair --repo <path> --plan --only codex` stays in `next_actions`,
   once, so an agent can show the plan first. `mb update --check` writes
   nothing and lists no apply command here, but its `surface_refresh.planned`
-  (`consent`, `tracked_files`, `tracked_changes`, `apply_commands`) predicts
-  what a run without a terminal would report (#1100);
+  (`consent`, `tracked_files`, `tracked_changes`, `apply_commands`) predicts,
+  with the installed version's templates, what a run without a terminal would
+  report (#1100). When a newer release is available, that release may also
+  stop for `AGENTS.md`. If a file the plan reads cannot be read (not UTF-8, no
+  permission, a folder), `--check` predicts nothing and says so in `warnings`;
+  the run stops there with an error;
 - from `mb update`, including `--check` and `--no-refresh-surfaces`, the Codex
   `AGENTS.md` repair when Codex guidance is still not ready after the refresh
   (or the refresh did not run): the same

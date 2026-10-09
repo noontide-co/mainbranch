@@ -99,6 +99,12 @@ SURFACE_LINK_APPLY_NOTE = (
     "For a person to run at a terminal, not an agent: refreshes this repo's "
     "Claude Code skill links, which writes the repo files listed in `changes`."
 )
+CHECK_PLAN_UNREADABLE_MESSAGE = (
+    "Could not plan the {part} refresh, so this check cannot say which repo "
+    "files it would change: {error}. A real `mb update` stops there too, with "
+    "an error. Check that file (for example, save `.gitignore` as UTF-8 text "
+    "you can read), then run the check again."
+)
 SURFACE_CODEX_APPLY_NOTE = (
     "For a person to run at a terminal, not an agent: refreshes this repo's "
     "Codex guidance, which writes or deletes the tracked files listed in "
@@ -692,17 +698,17 @@ def _surface_consent(
     }
 
 
-def _check_codex_plan(repo: Path) -> dict[str, Any]:
+def _check_codex_plan(repo: Path, codex: dict[str, Any]) -> dict[str, Any]:
     """The Codex part of `mb doctor repair --plan --only codex`, read-only.
 
     Only the fields `_surface_consent` reads, built the way doctor builds its
     `codex-agents-md` and `codex-global-skill` actions, without doctor's
-    network and version checks.
+    network and version checks. `codex` is the readiness `--check` already
+    read, so it is read once.
     """
     if _not_business_folder_guard(repo) is not None:
         # Doctor plans nothing outside a business folder.
         return {"actions": [], "operator_actions": []}
-    codex = codex_mod.readiness(repo)
     actions: list[dict[str, Any]] = []
     operator_actions: list[dict[str, Any]] = []
     if not codex.get("instructions", {}).get("ok", False):
@@ -730,18 +736,33 @@ def _check_codex_plan(repo: Path) -> dict[str, Any]:
     return {"actions": actions, "operator_actions": operator_actions}
 
 
-def _predict_surface_consent(result: dict[str, Any], repo: Path) -> None:
+def _predict_surface_consent(result: dict[str, Any], repo: Path, codex: dict[str, Any]) -> None:
     """`--check`: report the consent stop an unattended run would hit (#1100).
 
-    Read-only: the same plans the run makes, in this process. Only a repo
-    whose refresh would change repo files gains the planned fields, so every
-    other check result stays as it was. A plan that cannot be made predicts
-    nothing.
+    Read-only: the same plans the run makes, in this process, with this
+    install's templates. Only a repo whose refresh would change repo files
+    gains the planned fields, so every other check result stays as it was. A
+    plan that cannot be made predicts nothing; a file it cannot read (not
+    UTF-8, no permission, a folder) is named in a warning, because the run
+    stops with an error at the same place.
     """
-    link_plan = plan_link_skills(repo)
+    try:
+        link_plan = plan_link_skills(repo)
+    except (OSError, ValueError) as exc:
+        result["warnings"].append(
+            CHECK_PLAN_UNREADABLE_MESSAGE.format(part="skill link", error=exc)
+        )
+        return
     if link_plan.get("ok") is not True:
         return
-    consent = _surface_consent(link_plan, _check_codex_plan(repo), repo)
+    try:
+        codex_plan = _check_codex_plan(repo, codex)
+    except (OSError, ValueError) as exc:
+        result["warnings"].append(
+            CHECK_PLAN_UNREADABLE_MESSAGE.format(part="Codex guidance", error=exc)
+        )
+        return
+    consent = _surface_consent(link_plan, codex_plan, repo)
     if consent is None or not consent["tracked_files"]:
         return
     planned = result["surface_refresh"]["planned"]
@@ -886,8 +907,11 @@ def _base_result(
     }
 
 
-def _add_codex_follow_up(result: dict[str, Any], repo: Path) -> None:
-    codex = codex_mod.readiness(repo)
+def _add_codex_follow_up(
+    result: dict[str, Any], repo: Path, codex: dict[str, Any] | None = None
+) -> None:
+    if codex is None:
+        codex = codex_mod.readiness(repo)
     instructions = codex.get("instructions", {})
     global_skill = codex.get("global_skill", {})
     plugin_install = codex.get("plugin_install", {})
@@ -1344,6 +1368,7 @@ def run(
             )
         if result["installed_ahead_of_latest"]:
             result["actions"] = ["would leave this install alone; it is newer than PyPI's latest"]
+        codex_status: dict[str, Any] | None = None
         if refresh_surfaces:
             surface_commands = [
                 f"mb skill link --repo {shlex.quote(str(target_repo))} --json",
@@ -1368,7 +1393,8 @@ def run(
                 "planned": True,
                 "command": surface_commands[1],
             }
-            _predict_surface_consent(result, target_repo)
+            codex_status = codex_mod.readiness(target_repo)
+            _predict_surface_consent(result, target_repo, codex_status)
         else:
             result["actions"].append("would skip agent surface refresh")
         new_version = str(result.get("new_version") or "")
@@ -1386,7 +1412,7 @@ def run(
                 "available": False,
                 "source": "not_newer",
             }
-        _add_codex_follow_up(result, target_repo)
+        _add_codex_follow_up(result, target_repo, codex_status)
         _add_plugin_follow_up(result, target_repo)
         return result
 
