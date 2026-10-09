@@ -20,6 +20,7 @@ import pytest
 from mb import connect as connect_mod
 from mb import doctor as doctor_mod
 from mb.cli import app
+from mb.credential_store import SecretStore
 from mb.durable import atomic_write_text
 from tests.test_connect_followups_1076 import (
     _assert_untouched,
@@ -196,6 +197,128 @@ def test_a_user_scope_file_that_no_longer_parses_stores_nothing(repo: Path, as_j
     assert "invalid YAML" in result.output
     assert bool(_store_snapshot() == before)
     assert path.read_bytes() == data
+
+
+def test_an_error_after_record_replacement_restores_record_and_secret(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _user_scope_cloudflare(repo)
+    path = connect_mod._user_scope_path()
+    frozen = (path, path.read_bytes(), path.stat().st_ino, path.stat().st_mode & 0o777)
+    before_store = _store_snapshot()
+    config = repo / ".mb/connect.yaml"
+    before_config = config.read_bytes() if config.exists() else None
+    real_atomic = atomic_write_text
+    failed = False
+
+    def fail_after_replace(file: Path, *args: Any, **kwargs: Any) -> None:
+        nonlocal failed
+        real_atomic(file, *args, **kwargs)
+        if file == path and not failed:
+            failed = True
+            raise OSError(errno.EIO, DETAIL)
+
+    monkeypatch.setattr(connect_mod, "atomic_write_text", fail_after_replace)
+    result = _run(repo, "reconnect", True)
+
+    assert result.exit_code == 1, result.output
+    assert _summary(result, True).find("(EIO)") >= 0
+    _assert_clean(result)
+    assert path.read_bytes() == frozen[1]
+    assert path.stat().st_mode & 0o777 == frozen[3]
+    assert bool(_store_snapshot() == before_store)
+    assert (config.read_bytes() if config.exists() else None) == before_config
+
+
+def test_user_scope_mode_is_set_before_replace(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _user_scope_cloudflare(repo)
+    path = connect_mod._user_scope_path()
+    real_chmod = Path.chmod
+
+    def fail_final_chmod(self: Path, mode: int, *args: Any, **kwargs: Any) -> None:
+        if self == path and mode == 0o600:
+            raise OSError(errno.EIO, DETAIL)
+        real_chmod(self, mode, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "chmod", fail_final_chmod)
+    result = _run(repo, "reconnect", True)
+
+    assert result.exit_code == 0, result.output
+    assert path.stat().st_mode & 0o777 == 0o600
+
+
+def test_parent_permission_failure_names_folder_and_restores_secret(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    connect_mod.connect_provider("apify", repo=repo, token="apify-fixture-token")
+    path = connect_mod._user_scope_path()
+    assert not path.exists()
+    before_store = _store_snapshot()
+    config = repo / ".mb/connect.yaml"
+    before_config = config.read_bytes() if config.exists() else None
+    real_mkdir = Path.mkdir
+
+    def fail_parent_mkdir(self: Path, *args: Any, **kwargs: Any) -> None:
+        if self == path.parent:
+            raise PermissionError(errno.EACCES, DETAIL)
+        real_mkdir(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "mkdir", fail_parent_mkdir)
+    result = _run(repo, "connect", True)
+
+    assert result.exit_code == 1, result.output
+    payload = json.loads(result.stdout)
+    assert payload["state"] == "metadata_write_failed"
+    assert "folder ~/home/connect" in payload["summary"]
+    assert "Make that folder writable" in payload["summary"]
+    assert "The new credential was removed" in payload["summary"]
+    assert "Make it writable or move it" not in result.output
+    assert str(tmp_path) not in result.output
+    _assert_clean(result)
+    assert bool(_store_snapshot() == before_store)
+    assert (config.read_bytes() if config.exists() else None) == before_config
+    assert not path.exists()
+
+
+@pytest.mark.parametrize("as_json", [False, True])
+@pytest.mark.parametrize("how", ["write", "read_only"])
+def test_restore_failure_replay_uses_home_relative_repo(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, as_json: bool, how: str
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    expected_repo = "~/biz"
+    if how == "write" and as_json:
+        repo = repo.rename(repo.with_name("biz with space"))
+        expected_repo = "~/'biz with space'"
+    _user_scope_cloudflare(repo)
+    path = connect_mod._user_scope_path()
+    real_set = SecretStore.set
+    writes = 0
+
+    def fail_restore(self: SecretStore, *args: Any, **kwargs: Any) -> None:
+        nonlocal writes
+        writes += 1
+        if writes > 1:
+            raise OSError(DETAIL)
+        real_set(self, *args, **kwargs)
+
+    monkeypatch.setattr(SecretStore, "set", fail_restore)
+    if how == "write":
+        _fail_user_write(path, "write", errno.ENOSPC, monkeypatch)
+    else:
+
+        def refuse(*args: Any, **kwargs: Any) -> Path:
+            raise connect_mod.UserScopeReadOnlyError(path)
+
+        monkeypatch.setattr(connect_mod, "_write_user_scope_provider", refuse)
+
+    result = _run(repo, "reconnect", as_json)
+
+    assert result.exit_code == 1, result.output
+    assert f"--repo {expected_repo}" in result.output
+    assert str(tmp_path) not in result.output
+    _assert_clean(result)
 
 
 # --- mb doctor: the not-recorded label follows the reason ---------------------------------

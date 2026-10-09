@@ -188,6 +188,17 @@ def _shown_user_scope_path(path: Path) -> str:
     return str(path)
 
 
+def _shell_replay_command(command: list[str], repo: Path) -> str:
+    """Show a replayable command without exposing an absolute home path."""
+
+    parts = [shlex.quote(part) for part in command]
+    repo_index = command.index("--repo") + 1
+    with suppress(ValueError, RuntimeError):
+        relative = repo.relative_to(Path.home())
+        parts[repo_index] = "~" if relative == Path(".") else f"~/{shlex.quote(str(relative))}"
+    return " ".join(parts)
+
+
 def _user_scope_write_failure(exc: OSError) -> tuple[str, str]:
     """What went wrong writing the user-scope file, and what to fix first.
 
@@ -199,6 +210,9 @@ def _user_scope_write_failure(exc: OSError) -> tuple[str, str]:
         return "the disk is full", "Free some disk space"
     if exc.errno == errno.EROFS:
         return "its file system is read-only", "Make that file system writable"
+    if isinstance(exc, PermissionError):
+        folder = _shown_user_scope_path(_user_scope_path().parent)
+        return f"permission to write in its folder {folder} was denied", "Make that folder writable"
     code = errno.errorcode.get(exc.errno or 0, "")
     cause = f"the file system reported an error ({code})" if code else "a file system error"
     return cause, "Check that disk and folder"
@@ -223,6 +237,10 @@ class ConfigBoundaryError(ValueError):
 
 class MetadataWriteError(RuntimeError):
     """A credential was stored, but its metadata and rollback both failed."""
+
+
+class UserScopeRecordRestoreError(OSError):
+    """The user-scope write failed and the prior record could not be restored."""
 
 
 class ConfigCorruptError(ValueError):
@@ -958,14 +976,17 @@ def _ensure_user_scope_writable() -> None:
 
     path = _user_scope_path()
     try:
-        if not path.stat().st_mode & stat.S_IWUSR:
-            raise UserScopeReadOnlyError(path)
-        # No truncation or creation: ask the OS about ownership and ACLs too.
-        # Keep the mode check above even when a privileged process can write.
-        fd = os.open(path, os.O_WRONLY)
-        os.close(fd)
+        mode = path.stat().st_mode
     except FileNotFoundError:
         return
+    if not mode & stat.S_IWUSR:
+        raise UserScopeReadOnlyError(path)
+    # No truncation or creation: ask the OS about ownership and ACLs too.
+    # A stat denial is a folder access error, while an open denial on an
+    # existing writable file means the file itself is protected.
+    try:
+        fd = os.open(path, os.O_WRONLY)
+        os.close(fd)
     except PermissionError:
         raise UserScopeReadOnlyError(path) from None
 
@@ -979,15 +1000,29 @@ def _write_user_scope(data: dict[str, Any]) -> Path:
 
     path = _user_scope_path()
     _ensure_user_scope_writable()
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with suppress(OSError):
-            path.parent.chmod(0o700)
-        atomic_write_text(path, yaml.safe_dump(data, sort_keys=False))
-    except PermissionError:
-        raise UserScopeReadOnlyError(path) from None
+    previous = path.read_bytes() if path.exists() else None
+    previous_mode = path.stat().st_mode & 0o777 if previous is not None else None
+    path.parent.mkdir(parents=True, exist_ok=True)
     with suppress(OSError):
-        path.chmod(0o600)
+        path.parent.chmod(0o700)
+    try:
+        atomic_write_text(path, yaml.safe_dump(data, sort_keys=False), mode=0o600)
+    except OSError as exc:
+        # Normally the replace is the final operation. Restore as well if a
+        # writer reports an error after replacing the record.
+        try:
+            current = path.read_bytes() if path.exists() else None
+            current_mode = path.stat().st_mode & 0o777 if current is not None else None
+            if (current, current_mode) != (previous, previous_mode):
+                if previous is None:
+                    path.unlink()
+                else:
+                    atomic_write_text(path, previous.decode("utf-8"), mode=previous_mode)
+        except OSError:
+            raise UserScopeRecordRestoreError("user-scope record restore failed") from None
+        if isinstance(exc, PermissionError) and previous is not None:
+            raise UserScopeReadOnlyError(path) from None
+        raise
     return path
 
 
@@ -1926,8 +1961,12 @@ def connect_provider(
                 cause, fix = "is unreadable or invalid YAML", "Fix or move that file"
             else:
                 shown = _shown_user_scope_path(_user_scope_path())
-                reason, fix = _user_scope_write_failure(exc)
-                cause = f"could not be written: {reason}"
+                if isinstance(exc, UserScopeRecordRestoreError):
+                    cause = "could not be written, and its previous contents could not be restored"
+                    fix = "Inspect and repair that file"
+                else:
+                    reason, fix = _user_scope_write_failure(exc)
+                    cause = f"could not be written: {reason}"
             if previous_secret is not None:
                 try:
                     # Recovery gets its own bounded attempt even if the original
@@ -1955,12 +1994,18 @@ def connect_provider(
                     for key, value in metadata.items():
                         command.extend(["--metadata", f"{key}={value}"])
                     action = "replaced" if previous_secret.present else "stored"
+                    record_state = (
+                        "The repo metadata is unchanged, but the user-scope record "
+                        "may have changed."
+                        if isinstance(exc, UserScopeRecordRestoreError)
+                        else "The repo metadata is unchanged."
+                    )
                     raise MetadataWriteError(
                         f"The {provider.name} credential was {action} but not recorded: "
                         f"the user-scope connect file {shown} {cause}, and the "
-                        "previous credential state could not be restored. The repo metadata "
-                        f"is unchanged. {fix} first, then rerun "
-                        f"`{shlex.join(command)}` with the credential again."
+                        f"previous credential state could not be restored. {record_state} "
+                        f"{fix} first, then rerun "
+                        f"`{_shell_replay_command(command, target)}` with the credential again."
                     ) from None
             if isinstance(exc, OSError):
                 if previous_secret is None:
@@ -1969,6 +2014,12 @@ def connect_provider(
                     undone = "The previous credential was restored."
                 else:
                     undone = "The new credential was removed, so nothing was stored."
+                if isinstance(exc, UserScopeRecordRestoreError):
+                    raise MetadataWriteError(
+                        f"The {provider.name} user-scope record {shown} could not be restored "
+                        f"after a write error. {undone} The repo metadata is unchanged, but "
+                        f"the user-scope record may have changed. {fix}, then rerun the command."
+                    ) from None
                 raise MetadataWriteError(
                     f"The {provider.name} connection was not recorded: the user-scope "
                     f"connect file {shown} {cause}. {undone} The repo metadata is "

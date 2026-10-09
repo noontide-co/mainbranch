@@ -18,7 +18,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   file cannot be written for any reason, such as a full disk or an I/O error,
   not only when it is read-only. The message names the file, what went wrong,
   and that the credential was restored, with no error dump or credential
-  value. Before, the new credential stayed stored with nothing recording it.
+  value. It names a blocked parent folder when that is the cause, and keeps
+  the user-scope file private during replacement. Before, the new credential
+  stayed stored with nothing recording it.
 - `mb doctor` says why an Agent Access Dossier check was not recorded: a
   tracked `.mb/connect.yaml` or a read-only user-scope connect file. It no
   longer blames a tracked `.mb/connect.yaml` when the user-scope file was the

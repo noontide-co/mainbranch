@@ -1063,6 +1063,9 @@ restored (or the new one removed), and that the repo metadata is unchanged. If
 the restore also fails, the message is the stored-but-not-recorded one above
 with that cause and its fix in place of the read-only file. No backend error
 text or credential value is shown.
+The replacement file has mode `0600` before it becomes visible. A blocked
+parent folder is named as the cause and the repair points to that folder.
+Recovery commands show repos under your home folder with a `~/` path.
 
 `mb connect test` only reads that file to run its check: the check still
 runs and the repo metadata is still recorded, and the result says
