@@ -462,7 +462,7 @@ clearly synthetic sample data, and keep anything shared publicly safe.
 """,
         encoding="utf-8",
     )
-    return ["added synthetic private-data refusal fixture"]
+    return ["added synthetic private-data refusal sample"]
 
 
 def _apply_legacy_drift_fixture(repo: Path) -> list[str]:

@@ -490,7 +490,12 @@ _NO_RELEASE_FRAMING = "plain business wording, with no release or test framing"
 # An owner of a software or PR business tests a release's notes, headline or
 # copy, or tests a release with beta users. Those are not maintainer framing.
 _OWNER_RELEASE_NOUNS = (
-    "notes?|headlines?|copy|date|day|emails?|pages?|announcements?|posts?|videos?|builds?|with"
+    "notes?|headlines?|copy|date|day|emails?|pages?|announcements?|posts?|videos?|builds?"
+)
+_OWNER_RELEASE_AUDIENCE = (
+    r"with\s+(?:(?:a|an|one|two|three|four|five|six|seven|eight|nine|ten|"
+    r"some|several|few|\d+)\s+)?(?:beta\s+)?"
+    r"(?:users|customers|testers|subscribers|clients|members)"
 )
 
 _TECHNICAL_LANGUAGE_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
@@ -580,7 +585,8 @@ _TECHNICAL_LANGUAGE_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
     (
         re.compile(
             r"(?<!-)\brelease evidence\b"
-            rf"|\btest(?:ing)? (?:the|this) release\b(?![\s-]+(?:{_OWNER_RELEASE_NOUNS})\b)",
+            rf"|\btest(?:ing)? (?:the|this) release\b"
+            rf"(?![\s-]+(?:{_OWNER_RELEASE_NOUNS}|{_OWNER_RELEASE_AUDIENCE})\b)",
             re.IGNORECASE,
         ),
         "release evidence",
