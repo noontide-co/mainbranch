@@ -465,6 +465,28 @@ def test_git_missing_inside_a_checkout_is_refused_and_outside_is_allowed(
     assert _out(repo, SC_ARGS, outdir / "ok.json").exit_code == 0
 
 
+def test_git_index_unavailable_refuses_before_read(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    checkout: Path,
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    real = go_out._git
+
+    def unavailable(args: list[str], cwd: Path) -> Any:
+        if args[0] == "ls-files":
+            return subprocess.CompletedProcess(args, 128, b"", b"fatal")
+        return real(args, cwd)
+
+    monkeypatch.setattr(go_out, "_git", unavailable)
+    target = checkout / PRIVATE_PULLS / "x.json"
+
+    _refused(_out(repo, SC_ARGS, target), "out_path_git_unknown")
+    assert api.calls == [] and not target.exists()
+
+
 def test_force_without_out_is_refused(repo: Path) -> None:
     result = runner.invoke(app, [*SC_ARGS, "--repo", str(repo), "--force"])
 
@@ -1228,7 +1250,7 @@ def _checkout_ignoring_open(tmp_path: Path, ignorecase: str) -> Path:
 
 
 @pytest.mark.parametrize("env", [False, True])
-def test_ignorecase_false_refuses_a_folder_spelled_unlike_the_disk(
+def test_a_folder_spelled_unlike_the_disk_is_refused_with_ignorecase_false(
     repo: Path,
     client_file: Path,
     google: Any,
@@ -1247,21 +1269,13 @@ def test_ignorecase_false_refuses_a_folder_spelled_unlike_the_disk(
     result = _out(repo, SC_ARGS, root / "OPEN" / "x.json")
 
     _refused(result, "out_path_git_unknown")
-    assert "core.ignorecase" in result.stderr and "spelled differently" in result.stderr
+    assert "Spell the path exactly as it is on disk" in result.stderr
     assert api.calls == [] and list((root / "open").iterdir()) == []
 
 
-@pytest.mark.parametrize(
-    ("ignorecase", "seen"),
-    [
-        ("false", "sets core.ignorecase to false"),
-        ("true", ""),
-        ("unset", "does not set core.ignorecase (git then treats it as false)"),
-        ("broken", "did not let mb read core.ignorecase"),
-    ],
-)
-def test_a_spelling_unlike_the_disk_is_judged_by_core_ignorecase(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, ignorecase: str, seen: str
+@pytest.mark.parametrize("ignorecase", ["false", "true", "unset", "broken"])
+def test_a_spelling_unlike_the_disk_is_refused_regardless_of_git_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, ignorecase: str
 ) -> None:
     # Runs on any disk: the disk is made to report another spelling.
     from mb.google_reads import ReadRefusal
@@ -1281,15 +1295,177 @@ def test_a_spelling_unlike_the_disk_is_judged_by_core_ignorecase(
 
         monkeypatch.setattr(go_out, "_git", no_config)
 
-    if ignorecase == "true":
-        assert go_out.check_out(str(root / "OPEN" / "x.json")).path.name == "x.json"
-        return
     with pytest.raises(ReadRefusal) as refused:
         go_out.check_out(str(root / "OPEN" / "x.json"))
     assert refused.value.rule == "out_path_git_unknown"
-    assert seen in str(refused.value) and "nothing was read or written" in str(refused.value)
-    if ignorecase != "false":
-        assert "sets core.ignorecase to false" not in str(refused.value)
+    assert "Spell the path exactly as it is on disk" in str(refused.value)
+    assert "core.ignorecase" not in str(refused.value)
+
+
+@pytest.mark.parametrize("folder", ["private", "PRIVATE"])
+def test_case_variant_out_cannot_replace_a_tracked_file_on_case_insensitive_disk(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    folder: str,
+) -> None:
+    if not _case_insensitive(tmp_path):
+        pytest.skip("this disk tells apart names that differ only in case")
+    api = _signed(repo, client_file, google, monkeypatch)
+    root = _checkout_with(tmp_path / "case-tracked", "private/\n")
+    _git(root, "config", "core.ignorecase", "true")
+    (root / "private").mkdir()
+    tracked = root / "private" / "Report.json"
+    original = b"personal original\n"
+    tracked.write_bytes(original)
+    _git(root, "add", "-f", "private/Report.json")
+    _git(root, "commit", "-q", "-m", "tracked report")
+
+    result = _out(repo, SC_ARGS, root / folder / "report.json", "--force")
+
+    _refused(result, "out_path_git_unknown")
+    assert api.calls == [] and tracked.read_bytes() == original
+    assert not list((root / "private").glob(".*.mb-out.tmp"))
+    diff = subprocess.run(["git", "diff", "--exit-code"], cwd=root, capture_output=True)
+    assert diff.returncode == 0 and diff.stdout == b""
+
+
+@pytest.mark.parametrize("folder", ["private", "PRIVATE"])
+@pytest.mark.parametrize("force", [False, True])
+def test_case_variant_out_refuses_an_index_only_tracked_file(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    folder: str,
+    force: bool,
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    root = _checkout_with(tmp_path / "case-index-only", "private/\n")
+    _git(root, "config", "core.ignorecase", "true")
+    (root / "private").mkdir()
+    tracked = root / "private" / "Report.json"
+    tracked.write_bytes(b"personal original\n")
+    _git(root, "add", "-f", "private/Report.json")
+    _git(root, "commit", "-q", "-m", "tracked report")
+    tracked.unlink()
+    if folder == "PRIVATE" and not _case_insensitive(tmp_path):
+        (root / "PRIVATE").mkdir()
+
+    args = ("--force",) if force else ()
+    result = _out(repo, SC_ARGS, root / folder / "report.json", *args)
+
+    _refused(result, "out_path_git_unknown")
+    assert "Spell the path exactly as it is on disk" in result.stderr
+    assert api.calls == [] and not tracked.exists()
+    assert not list((root / folder).glob(".*.mb-out.tmp"))
+    status = subprocess.run(["git", "status", "--short"], cwd=root, capture_output=True, check=True)
+    assert status.stdout == b" D private/Report.json\n"
+
+
+def test_case_variant_out_refuses_an_index_only_tracked_file_with_missing_folders(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    root = _checkout_with(tmp_path / "missing-index-folders", "private/\n")
+    _git(root, "config", "core.ignorecase", "true")
+    tracked = root / "private" / "deep" / "Report.json"
+    tracked.parent.mkdir(parents=True)
+    tracked.write_bytes(b"personal original\n")
+    _git(root, "add", "-f", "private/deep/Report.json")
+    _git(root, "commit", "-q", "-m", "tracked report")
+    tracked.unlink()
+    tracked.parent.rmdir()
+    tracked.parent.parent.rmdir()
+
+    result = _out(repo, SC_ARGS, root / "PRIVATE" / "DEEP" / "report.json", "--force")
+    exact = _out(repo, SC_ARGS, tracked, "--force")
+
+    _refused(result, "out_path_git_unknown")
+    _refused(exact, "out_parent_missing")
+    assert api.calls == [] and not (root / "private").exists()
+    status = subprocess.run(["git", "status", "--short"], cwd=root, capture_output=True, check=True)
+    assert status.stdout == b" D private/deep/Report.json\n"
+
+
+def test_unicode_variant_out_refuses_an_index_only_tracked_file(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    root = _checkout_with(tmp_path / "unicode-index-only", "private/\n")
+    _git(root, "config", "core.ignorecase", "true")
+    _git(root, "config", "core.precomposeunicode", "false")
+    (root / "private").mkdir()
+    tracked = root / "private" / "Cafe\u0301.json"
+    tracked.write_bytes(b"personal original\n")
+    _git(root, "add", "-f", "private/Cafe\u0301.json")
+    _git(root, "commit", "-q", "-m", "tracked report")
+    tracked.unlink()
+
+    result = _out(repo, SC_ARGS, root / "private" / "Caf\u00e9.json", "--force")
+
+    _refused(result, "out_path_git_unknown")
+    assert api.calls == [] and not tracked.exists()
+    assert not list((root / "private").glob(".*.mb-out.tmp"))
+    status = subprocess.run(
+        ["git", "status", "--short", "-z"], cwd=root, capture_output=True, check=True
+    )
+    assert status.stdout == " D private/Cafe\u0301.json\0".encode()
+
+
+def test_exact_spelling_of_an_index_only_tracked_file_keeps_its_refusal(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    root = _checkout_with(tmp_path / "exact-index-only", "private/\n")
+    (root / "private").mkdir()
+    tracked = root / "private" / "Report.json"
+    tracked.write_bytes(b"personal original\n")
+    _git(root, "add", "-f", "private/Report.json")
+    _git(root, "commit", "-q", "-m", "tracked report")
+    tracked.unlink()
+
+    result = _out(repo, SC_ARGS, tracked, "--force")
+
+    _refused(result, "out_path_in_repo")
+    assert api.calls == [] and not tracked.exists()
+
+
+def test_case_variant_out_cannot_replace_an_untracked_file(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    root = _checkout_with(tmp_path / "case-untracked", "private/\n")
+    _git(root, "config", "core.ignorecase", "true")
+    (root / "private").mkdir()
+    existing = root / "private" / "Report.json"
+    original = b"untracked original\n"
+    existing.write_bytes(original)
+
+    result = _out(repo, SC_ARGS, root / "private" / "report.json", "--force")
+
+    _refused(result, "out_path_git_unknown")
+    assert api.calls == [] and existing.read_bytes() == original
+    assert not list((root / "private").glob(".*.mb-out.tmp"))
 
 
 @pytest.mark.parametrize("var", ["GIT_DIR", "GIT_WORK_TREE"])

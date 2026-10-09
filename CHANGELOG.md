@@ -81,6 +81,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- `mb google ... --out` now refuses a path spelled differently from a folder or
+  existing file on disk, or from a tracked path in git's index even when its
+  file is missing from disk. It refuses before reading the report, even with
+  `--force`, so a case variant cannot replace a saved file in an ignored folder.
 - `mb google ... --out` never prints the home folder's name through the
   temporary file's name either. For a file named like your home folder (or one
   whose name contains it, in any case), the "temporary file is not ignored"
@@ -123,10 +127,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   instead of counted as outside it; a `GIT_WORK_TREE` spelled with another case
   or through a firmlink is matched to the real folder, so its ignored folders
   are allowed; and an empty `GIT_DIR=""` or `GIT_WORK_TREE=""` counts as set,
-  as git refuses to run with it. A checkout with `core.ignorecase` false or unset
-  on a disk that does not tell case apart refuses a folder name spelled unlike
-  the one on disk, because git's ignore rules may not cover where the file
-  lands. If the file is written but its temporary copy cannot be removed, the
+  as git refuses to run with it. A folder name spelled unlike the one on disk
+  is refused, because git's ignore rules may not cover where the file lands.
+  If the file is written but its temporary copy cannot be removed, the
   summary now says so and names it (#1080).
 - In a business repo with no `.gitignore`, `mb update` run by an agent, a
   schedule or with `--json` no longer leaves a new, uncommitted `.gitignore`
