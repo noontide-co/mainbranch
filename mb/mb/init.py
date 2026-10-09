@@ -18,6 +18,7 @@ from typing import Any
 from mb import checkpoint as checkpoint_mod
 from mb import codex as codex_mod
 from mb import team as team_mod
+from mb import validate as validate_mod
 from mb.durable import atomic_write_text
 from mb.engine import link_skills, write_plugin_wiring
 from mb.migrate import LATEST_SCHEMA_VERSION, SCHEMA_MARKER
@@ -108,6 +109,29 @@ def _read_template(name: str) -> str:
         if here.exists():
             return here.read_text(encoding="utf-8")
         return ""
+
+
+# Each file type `mb validate` checks a `status:` for, and the schema it checks
+# against. The CLAUDE.md conventions list these values from the same sets, so
+# the scaffold cannot teach a status `mb validate` rejects (#1119).
+STATUS_CONVENTION_SCHEMAS = (
+    ("Bets", "bets"),
+    ("Decisions", "decisions"),
+    ("Offers", "core/offers"),
+    ("Pushes", "pushes"),
+)
+
+
+def status_conventions() -> str:
+    """The CLAUDE.md conventions lines for `status:` values, one set per file type."""
+    lines = [
+        "- Each file type has its own `status:` values; `mb validate` names the",
+        "  allowed values when one is wrong:",
+    ]
+    for label, schema in STATUS_CONVENTION_SCHEMAS:
+        allowed = validate_mod.SCHEMAS[schema]["enums"]["status"]
+        lines.append(f"  - {label}: `{' | '.join(sorted(allowed))}`")
+    return "\n".join(lines)
 
 
 def _render(text: str, mapping: dict[str, str]) -> str:
@@ -205,6 +229,7 @@ def run(
         "GH_USERNAME": gh_user,
         "OWNER_NAME": owner_display_name,
         "OWNER_SLUG": owner_slug,
+        "STATUS_CONVENTIONS": status_conventions(),
     }
 
     claude_tmpl = _read_template("CLAUDE.md.tmpl") or _DEFAULT_CLAUDE
@@ -585,7 +610,7 @@ rules, or commands. Engine internals stay canonical.
 
 - Decisions, research, bets, and offers carry a small block of metadata at the top
   (frontmatter). Run `mb validate` to check it.
-- Status field: proposed | running | scaling | killed | graduated | died.
+{{STATUS_CONVENTIONS}}
 - One owner per file (CODEOWNERS pattern).
 
 ## Connected accounts

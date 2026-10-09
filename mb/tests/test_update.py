@@ -2478,6 +2478,35 @@ def test_update_terminal_no_leaves_tracked_files(
     assert codex_apply in commands
 
 
+def test_update_leaves_an_old_claude_md_conventions_line_alone(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path
+) -> None:
+    # #1119: CLAUDE.md is written once by `mb init` and belongs to the
+    # operator. `mb update` refreshes AGENTS.md, .gitignore and skill links,
+    # even after a yes, and never rewrites the old one-set status line.
+    old = (
+        "# Business\n\n## Conventions\n\n"
+        "- Status field: proposed | running | scaling | killed | graduated | died.\n"
+    )
+    (business_repo / "CLAUDE.md").write_text(old, encoding="utf-8")
+    _commit_all(business_repo, "Old conventions line")
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    asked: list[list[str]] = []
+
+    def say_yes(repo: Path, files: list[str]) -> bool:
+        asked.append(files)
+        return True
+
+    result = update_mod.run(repo=business_repo, interactive=True, confirm_surfaces=say_yes)
+
+    assert result["ok"] is True, result["errors"]
+    assert asked == [[".gitignore", "AGENTS.md"]]
+    assert (business_repo / "CLAUDE.md").read_text(encoding="utf-8") == old
+    changed = sorted(line[3:] for line in _git(business_repo, "status", "--porcelain").splitlines())
+    assert "CLAUDE.md" not in changed
+
+
 def test_update_terminal_yes_applies_once_then_unattended_runs_need_no_consent(
     monkeypatch: pytest.MonkeyPatch, business_repo: Path
 ) -> None:
