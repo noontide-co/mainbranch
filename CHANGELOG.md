@@ -11,6 +11,28 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+## [0.6.5] - 2026-10-09
+
+`mb google ... --out PATH` writes a Search Console or GA4 read to a private
+file you choose and shows only the path and row count. It refuses a path a git
+checkout would track or one spelled differently from the file on disk or in
+git, never prints your home folder's name, and says plainly when it refuses
+or what it cleaned up. `mb site check` reports Google Ads in
+three parts (the declared plan, the account connection Main Branch cannot
+check, and conversion evidence), a placeholder customer ID such as
+`000-000-0000` no longer counts as declared, and `mb status` explains the
+Google Ads part of the measurement manual count. Every command `mb update`
+and `mb doctor` suggest names your business repo, so it works from any
+folder. `mb update --check` now says when a real update would stop to ask
+about your repo's files (`.gitignore`, `AGENTS.md`). A file or folder
+`mb update` or `mb doctor` cannot read is named with a fix instead of a
+traceback. The Codex cleanup keeps linked skill folders and your own files.
+`mb connect` refuses cleanly, before storing anything, when the user-scope
+file is read-only for any reason, and a stored Google sign-in with a
+malformed client secret reads as unusable with one next step everywhere. To
+upgrade a uv install, run
+`uv tool install --refresh-package mainbranch mainbranch@latest`.
+
 ### Added
 
 - `mb google` reads take `--out PATH`: a large Search Console or GA4 pull goes
@@ -81,10 +103,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
-- `mb google ... --out` now refuses a path spelled differently from a folder or
-  existing file on disk, or from a tracked path in git's index even when its
-  file is missing from disk. It refuses before reading the report, even with
-  `--force`, so a case variant cannot replace a saved file in an ignored folder.
+- `mb google ... --out` now refuses a path spelled differently (letter case or
+  Unicode form) from a folder or existing file on disk, or from a tracked path
+  in git's index even when its file is missing from disk. It refuses before
+  reading the report, even with `--force`, so a case variant cannot replace a
+  saved file in an ignored folder.
 - `mb google ... --out` never prints the home folder's name through the
   temporary file's name either. For a file named like your home folder (or one
   whose name contains it, in any case), the "temporary file is not ignored"
@@ -144,11 +167,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   files are `.gitignore`, `.claude/settings.local.json` and `AGENTS.md`; the
   folders are the repo's `.claude` and `.claude/skills` (and the skill links
   in it), your personal `~/.claude` and `~/.claude/skills`, and your Codex
-  folder (`CODEX_HOME`, `~/.codex` by default) and its `skills` folder. Each
-  can be not UTF-8, closed to you, a folder where a file belongs, or a link
-  that loops. `--check` names it in a warning and still exits 0; the update,
+  folder (`CODEX_HOME`, `~/.codex` by default) and its `skills` folder. A
+  file that is not UTF-8 and a file or folder closed to you are named, as are
+  a `.gitignore` or `settings.local.json` that is a folder and a link that
+  loops at your Codex folder, its `skills` folder or a skill link in
+  `.claude/skills`. `--check` names it in a warning and still exits 0; the update,
   `mb doctor`, `mb doctor repair --plan` and `mb skill link --plan` stop with
-  one error that names it (code `unreadable_file` in `--json`). Nothing is
+  one error that names it (for `mb doctor`, `mb doctor repair --plan` and
+  `mb skill link --plan`, code `unreadable_file` in `--json`). Nothing is
   written.
 - When the file it cannot read sits under a link that loops, for example a
   `~/.codex` that links to itself, the message now names that link to remove,
