@@ -18,6 +18,7 @@ import pytest
 from typer.testing import CliRunner
 
 from mb import codex as codex_mod
+from mb import durable as durable_mod
 from mb import update as update_mod
 from mb.cli import app
 
@@ -719,3 +720,156 @@ def test_global_kept_manual_step_names_the_writes_in_the_apply(
     for path in entry["on_apply"]["removes"]:
         assert path in entry["manual_step"]
     assert "it keeps the files above" in entry["manual_step"]
+
+
+# --- #1087 item 2: a link appears above the plugin root mid-run -------------
+
+
+def _tree(folder: Path) -> dict[str, bytes | None]:
+    """Every entry under `folder`, with file bytes; folders map to None."""
+
+    return {
+        path.relative_to(folder).as_posix(): (path.read_bytes() if path.is_file() else None)
+        for path in sorted(folder.rglob("*"))
+    }
+
+
+@pytest.mark.parametrize("swap_after", ["write", "removal"])
+def test_plugin_source_stops_at_a_parent_link_that_appears_mid_run(
+    roots: tuple[Path, Path], tmp_path: Path, monkeypatch: pytest.MonkeyPatch, swap_after: str
+) -> None:
+    monkeypatch.delenv("MAINBRANCH_CODEX_PLUGIN_ROOT")
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg"))
+    root = codex_mod.global_plugin_source_root()
+    _place(root, _released_files("0.3.33", "plugin"))
+    outside = tmp_path / "synced"
+    behind: dict[str, dict[str, bytes | None]] = {}
+    done: list[str] = []
+
+    def swap() -> None:
+        root.parent.rename(outside)
+        root.parent.symlink_to(outside, target_is_directory=True)
+        behind["at_swap"] = _tree(outside)
+
+    real_write = durable_mod.atomic_write_text
+    real_remove = codex_mod._remove_owned_entry
+
+    def write_then_link(path: Path, text: str) -> None:
+        real_write(path, text)
+        done.append(str(path))
+        if swap_after == "write" and len(done) == 1:
+            swap()
+
+    def remove_then_link(item: dict[str, Any]) -> bool:
+        removed = real_remove(item)
+        if swap_after == "removal" and removed and not behind:
+            done.append(str(item["path"]))
+            swap()
+        return removed
+
+    monkeypatch.setattr(codex_mod, "atomic_write_text", write_then_link)
+    monkeypatch.setattr(codex_mod, "_remove_owned_entry", remove_then_link)
+    result = codex_mod.write_global_plugin_source()
+
+    assert root.parent.is_symlink()
+    assert _tree(outside) == behind["at_swap"]  # nothing behind the link was touched
+    assert str(root.parent) in result["kept"]
+    # The result names only what changed before the link appeared.
+    if swap_after == "write":
+        assert result["changed_paths"] == done[:1]
+    else:
+        legacy = str(root / codex_mod.CODEX_LEGACY_PLUGIN_DIR_RELATIVE_PATH) + os.sep
+        assert [path for path in result["changed_paths"] if path.startswith(legacy)] == done[-1:]
+    assert len(result["changed_paths"]) == len(set(result["changed_paths"]))
+
+
+# --- #1087 item 6: a linked skill folder that already holds the current skill -
+
+
+@pytest.fixture
+def linked_current(roots: tuple[Path, Path], tmp_path: Path) -> tuple[Path, Path]:
+    """`main-branch` is a link to a folder of a person's that holds the current skill."""
+
+    codex_mod.write_global_skill_source()
+    link = codex_mod.global_skill_file_path(codex_mod.CODEX_GLOBAL_SKILL_NAME).parent
+    mine = tmp_path / "my-skills" / "main-branch"
+    mine.parent.mkdir()
+    link.rename(mine)
+    link.symlink_to(mine, target_is_directory=True)
+    return link, mine
+
+
+def test_a_current_linked_skill_folder_gets_an_informational_note_not_a_kept_step(
+    repo: Path, linked_current: tuple[Path, Path]
+) -> None:
+    link, mine = linked_current
+    before = _tree(mine)
+
+    status = codex_mod.global_skill_status(repo)
+    plan = _doctor(repo, "--plan", "--only", "codex")
+    applied = _doctor(repo, "--apply", "--only", "codex")
+    direct = codex_mod.write_global_skill_source()
+
+    assert status["ok"] is True
+    assert str(link) not in status["kept"]
+    assert status["linked"] == [str(link)]
+    assert "Nothing to do" in status["note"] and status["note"] in status["summary"]
+    for payload in (plan, applied):
+        assert "codex-global-kept" not in _operator(payload)
+        assert not any(item["id"] == "codex-global-skill" for item in payload["actions"])
+        checks = [
+            check
+            for section in payload["sections"]
+            for check in section.get("checks", [])
+            if check.get("name") == "codex-global-skill"
+        ]
+        assert [check["note"] for check in checks] == [status["note"]]
+        assert checks[0]["state"] == "ok"
+    assert applied["exit_code"] == 0
+    assert codex_mod.global_skill_operations() == []
+    assert direct["kept"] == [] and direct["changed_paths"] == []
+    assert direct["linked"] == [str(link)] and direct["note"] == status["note"]
+    assert link.is_symlink()
+    assert _tree(mine) == before
+
+
+@pytest.mark.parametrize("check", [False, True], ids=["run", "check"])
+def test_update_shows_the_linked_folder_note_once_as_information(
+    repo: Path,
+    linked_current: tuple[Path, Path],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    check: bool,
+) -> None:
+    link, mine = linked_current
+    before = _tree(mine)
+    monkeypatch.setattr(update_mod, "install_mode", lambda: "wheel")
+    monkeypatch.setattr(update_mod, "_latest_pypi_version", lambda: None)
+
+    result = update_mod.run(repo=repo, check=check, refresh_surfaces=False, interactive=False)
+    update_mod.render_human(result)
+    printed = capsys.readouterr().out
+
+    note = result["codex_adapter"]["global_skill"]["note"]
+    assert result["codex_adapter"]["global_skill"]["linked"] == [str(link)]
+    assert not any(item.get("id") == "codex-global-kept" for item in result["operator_actions"])
+    assert not any(str(link) in warning for warning in result["warnings"])
+    assert printed.count(note) == 1
+    assert f"note: {note}" in printed
+    assert _tree(mine) == before
+
+
+def test_a_stale_linked_skill_folder_still_gets_the_kept_step(
+    repo: Path, linked_current: tuple[Path, Path]
+) -> None:
+    link, mine = linked_current
+    (mine / "SKILL.md").write_text(POLICY, encoding="utf-8")
+
+    status = codex_mod.global_skill_status(repo)
+    entry = _operator(_doctor(repo, "--plan", "--only", "codex"))["codex-global-kept"]
+
+    assert "linked" not in status and "note" not in status
+    assert str(link) in status["kept"]
+    assert str(link) in entry["changes"]
+    assert "delete the rest yourself" in entry["manual_step"]
+    assert (mine / "SKILL.md").read_text(encoding="utf-8") == POLICY

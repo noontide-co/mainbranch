@@ -2959,6 +2959,12 @@ def repair_plan(
             "missing_markers": codex_global_skill["missing_markers"],
             "slash_commands_ready": codex_status.get("slash_commands_ready", False),
             "repair": codex_global_skill["repair"],
+            # #1087 item 6: a linked folder that is already current; informational.
+            **{
+                key: codex_global_skill[key]
+                for key in ("linked", "note")
+                if key in codex_global_skill
+            },
         },
     ]
     codex_actions: list[dict[str, Any]] = []

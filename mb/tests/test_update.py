@@ -3584,3 +3584,58 @@ def test_update_keeps_the_apply_suggestion_when_global_kept_entries_also_have_wo
     assert any("--apply --only codex" in command for command in result["next_actions"])
     entry = next(a for a in result["operator_actions"] if a.get("id") == "codex-global-kept")
     assert entry["on_apply"]["writes" if work == "write" else "removes"]
+
+
+# --- #1087 item 10: no new .gitignore without a yes ------------------------
+
+
+def _without_gitignore(repo: Path) -> None:
+    codex_mod.write_agents_md(repo)
+    (repo / ".gitignore").unlink()
+    _commit_all(repo, "No .gitignore")
+
+
+def test_unattended_update_does_not_create_a_missing_gitignore(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    _without_gitignore(business_repo)
+
+    result = update_mod.run(repo=business_repo, interactive=False)
+
+    assert not (business_repo / ".gitignore").exists()
+    assert _git(business_repo, "status", "--porcelain") == ""
+    assert ["mb", "skill", "link", "--repo", str(business_repo), "--json"] not in calls
+    assert result["ok"] is True, result["errors"]
+    planned = result["surface_refresh"]["planned"]
+    assert planned["consent"] == "no_terminal"
+    assert planned["tracked_files"] == [".gitignore"]
+    assert {"path": ".gitignore", "op": "create"} in planned["tracked_changes"]
+    link_apply = f"mb skill link --repo {shlex.quote(str(business_repo))}"
+    entries = [item for item in result["operator_actions"] if item["command"] == link_apply]
+    assert [item["changes"] for item in entries] == [[".gitignore"]]
+    assert result["surface_refresh"]["claude"]["applied"] is False
+    assert any("Left repo files unchanged: .gitignore" in w for w in result["warnings"])
+
+
+def test_terminal_yes_creates_a_missing_gitignore(
+    monkeypatch: pytest.MonkeyPatch, business_repo: Path
+) -> None:
+    calls: list[list[str]] = []
+    _wheel_update_env(monkeypatch, calls)
+    _without_gitignore(business_repo)
+    asked: list[list[str]] = []
+
+    def say_yes(repo: Path, files: list[str]) -> bool:
+        asked.append(files)
+        return True
+
+    result = update_mod.run(repo=business_repo, interactive=True, confirm_surfaces=say_yes)
+
+    assert asked == [[".gitignore (create)"]]
+    assert result["ok"] is True, result["errors"]
+    assert result["surface_refresh"]["claude"]["applied"] is True
+    entries, _ = engine_mod._link_gitignore_entries()
+    lines = (business_repo / ".gitignore").read_text(encoding="utf-8").splitlines()
+    assert all(entry in lines for entry in entries)
