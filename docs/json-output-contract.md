@@ -382,7 +382,8 @@ never a full path. If the file was written but that temporary copy could not be
 removed, the summary is still `ok: true` (exit 0) and `warnings` holds one
 message naming it. A refusal (exit 2, `rule: out_*`) shows an absolute `--out`
 under the home folder as `~/...` in `summary` and `errors`, so it too has no
-username under `safe_to_share: true`; a relative `--out` is shown as typed. See [google.md](google.md#--out-keep-a-large-pull-in-a-private-file).
+username under `safe_to_share: true`; a relative `--out` that leads under the
+home folder is shown as `~/...` as well, and any other relative `--out` as typed. See [google.md](google.md#--out-keep-a-large-pull-in-a-private-file).
 
 ## First Migrated Surfaces
 

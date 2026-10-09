@@ -1048,10 +1048,18 @@ def test_a_refusal_under_home_shows_a_tilde(
     (home / "pulls" / "link.json").symlink_to(home / "pulls" / "gone.json")
     monkeypatch.setenv("HOME", str(home))
 
-    for out, shown, rule in (
-        (home / "nope" / "x.json", "~/nope/x.json", "out_parent_missing"),
-        (home / "pulls" / "link.json", "~/pulls/link.json", "out_path_link"),
+    _checkout_with(home / "checkout", TEMPLATE_GITIGNORE.read_text(encoding="utf-8"))
+
+    # (shell folder, --out as typed, shown, rule); relative paths that lead under home too.
+    for cwd, out, shown, rule in (
+        (tmp_path, str(home / "nope" / "x.json"), "~/nope/x.json", "out_parent_missing"),
+        (tmp_path, str(home / "pulls" / "link.json"), "~/pulls/link.json", "out_path_link"),
+        (tmp_path, "homefolder/nope/x.json", "~/nope/x.json", "out_parent_missing"),
+        (home / "pulls", "../../homefolder/nope/x.json", "~/nope/x.json", "out_parent_missing"),
+        (tmp_path, "homefolder/checkout/docs/x.json", "~/checkout/docs/x.json", "out_path_in_repo"),
+        (home, "nope/x.json", "~/nope/x.json", "out_parent_missing"),
     ):
+        monkeypatch.chdir(cwd)
         human = _out(repo, SC_ARGS, out)
         as_json = _out(repo, SC_ARGS, out, "--json")
 
@@ -1062,9 +1070,35 @@ def test_a_refusal_under_home_shows_a_tilde(
         for text in (human.stdout + human.stderr, as_json.stdout + as_json.stderr):
             assert str(home) not in text and home.name not in text
 
-    # A relative path is shown as typed.
-    monkeypatch.chdir(home)
-    assert "--out nope/x.json:" in _out(repo, SC_ARGS, "nope/x.json").stderr
+    # A relative path that does not lead under home is shown as typed.
+    monkeypatch.chdir(tmp_path)
+    assert "--out elsewhere/x.json:" in _out(repo, SC_ARGS, "elsewhere/x.json").stderr
+
+
+def test_home_is_found_by_spelling_when_identity_cannot_be_compared(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    home = tmp_path / "homefolder"
+    (home / "pulls").mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(home))
+
+    def unreadable(*_: Any) -> bool:
+        raise PermissionError("cannot look (synthetic)")
+
+    monkeypatch.setattr(os.path, "samefile", unreadable)
+
+    refused = _out(repo, SC_ARGS, home / "nope" / "x.json", "--json")
+    written = _out(repo, SC_ARGS, home.resolve() / "pulls" / "q.json", "--json")
+
+    assert "~/nope/x.json" in json.loads(refused.stdout)["summary"]
+    assert written.exit_code == 0 and json.loads(written.stdout)["out"] == "~/pulls/q.json"
+    for text in (refused.stdout + refused.stderr, written.stdout + written.stderr):
+        assert home.name not in text
 
 
 def _env_text(text: str) -> None:
@@ -1214,16 +1248,35 @@ def test_ignorecase_false_refuses_a_folder_spelled_unlike_the_disk(
     assert api.calls == [] and list((root / "open").iterdir()) == []
 
 
-@pytest.mark.parametrize("ignorecase", ["false", "true"])
+@pytest.mark.parametrize(
+    ("ignorecase", "seen"),
+    [
+        ("false", "sets core.ignorecase to false"),
+        ("true", ""),
+        ("unset", "does not set core.ignorecase (git then treats it as false)"),
+        ("broken", "did not let mb read core.ignorecase"),
+    ],
+)
 def test_a_spelling_unlike_the_disk_is_judged_by_core_ignorecase(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, ignorecase: str
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, ignorecase: str, seen: str
 ) -> None:
     # Runs on any disk: the disk is made to report another spelling.
     from mb.google_reads import ReadRefusal
 
-    root = _checkout_ignoring_open(tmp_path, ignorecase)
+    root = _checkout_ignoring_open(tmp_path, "false" if ignorecase == "broken" else ignorecase)
+    if ignorecase == "unset":
+        _git(root, "config", "--unset", "core.ignorecase")
     (root / "OPEN").mkdir(exist_ok=True)
     monkeypatch.setattr(go_out, "_spelled_as_on_disk", lambda *_: False)
+    if ignorecase == "broken":
+        real = go_out._git
+
+        def no_config(args: list[str], cwd: Path, **kwargs: Any) -> Any:
+            if args[0] == "config":
+                return subprocess.CompletedProcess(args, 128, b"", b"fatal")
+            return real(args, cwd, **kwargs)
+
+        monkeypatch.setattr(go_out, "_git", no_config)
 
     if ignorecase == "true":
         assert go_out.check_out(str(root / "OPEN" / "x.json")).path.name == "x.json"
@@ -1231,7 +1284,9 @@ def test_a_spelling_unlike_the_disk_is_judged_by_core_ignorecase(
     with pytest.raises(ReadRefusal) as refused:
         go_out.check_out(str(root / "OPEN" / "x.json"))
     assert refused.value.rule == "out_path_git_unknown"
-    assert "core.ignorecase to false" in str(refused.value)
+    assert seen in str(refused.value) and "nothing was read or written" in str(refused.value)
+    if ignorecase != "false":
+        assert "sets core.ignorecase to false" not in str(refused.value)
 
 
 @pytest.mark.parametrize("var", ["GIT_DIR", "GIT_WORK_TREE"])
@@ -1290,3 +1345,59 @@ def test_a_temp_left_after_a_successful_write_is_named(
     assert len(info["warnings"]) == 1 and ".y.json.mb-out.tmp" in info["warnings"][0]
     assert "synthetic" not in human.stdout + human.stderr + as_json.stdout
     assert (outdir / ".y.json.mb-out.tmp").is_file()
+
+
+def _stuck_unlink(monkeypatch: pytest.MonkeyPatch, error: type[OSError]) -> None:
+    real_unlink = os.unlink
+
+    def stuck(path: Any, *args: Any, **kwargs: Any) -> None:
+        if str(path).endswith(".mb-out.tmp"):
+            if error is FileNotFoundError:
+                real_unlink(path, *args, **kwargs)  # someone else removed it first
+            raise error("cannot remove (synthetic)")
+        real_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(os, "unlink", stuck)
+
+
+def test_a_leftover_temp_name_is_printed_without_terminal_escapes(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    outdir: Path,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    _stuck_unlink(monkeypatch, PermissionError)
+    name = "x\x1b[31m.json"
+
+    written = _out(repo, SC_ARGS, outdir / name)
+    as_json = _out(repo, SC_ARGS, outdir / ("y" + name), "--json")
+    _failing_link(monkeypatch)
+    failed = _out(repo, SC_ARGS, outdir / ("z" + name))
+
+    assert written.exit_code == 0 and "warning:" in written.stdout
+    assert as_json.exit_code == 0
+    assert failed.exit_code == 1 and "remove it yourself" in failed.stderr
+    for text in (written.stdout, failed.stderr, json.loads(as_json.stdout)["warnings"][0]):
+        assert "\x1b" not in text and ".mb-out.tmp" in text
+
+
+def test_a_temp_already_gone_is_not_reported_as_left_behind(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    outdir: Path,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    _stuck_unlink(monkeypatch, FileNotFoundError)
+
+    written = _out(repo, SC_ARGS, outdir / "x.json", "--json")
+    _failing_link(monkeypatch)
+    failed = _out(repo, SC_ARGS, outdir / "y.json")
+
+    assert written.exit_code == 0 and json.loads(written.stdout)["warnings"] == []
+    assert failed.exit_code == 1 and "nothing was left behind" in failed.stderr
+    assert "still there" not in written.stdout + failed.stderr
+    assert sorted(p.name for p in outdir.iterdir()) == ["x.json"]

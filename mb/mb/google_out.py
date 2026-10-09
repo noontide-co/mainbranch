@@ -225,13 +225,19 @@ def _check_spelling(
         return
     if spelled is None:
         raise _git_unplaced(shown, which)
+    if setting is not None and setting.returncode == 0:
+        seen = "sets core.ignorecase to false"
+    elif setting is not None and setting.returncode == 1 and not setting.stdout.strip():
+        seen = "does not set core.ignorecase (git then treats it as false)"
+    else:
+        seen = "did not let mb read core.ignorecase"
     raise ReadRefusal(
         "out_path_git_unknown",
-        f"--out {shown}: this checkout{which} sets core.ignorecase to false, but the disk does "
-        "not tell folder names apart by case and the path is spelled differently from the "
-        "folder on disk, so git's ignore rules may not cover where the file would land; "
-        "nothing was read or written. Spell the folders as they are on disk, or set "
-        "core.ignorecase to true (what git init sets on this disk).",
+        f"--out {shown}: this checkout{which} {seen}, and the path is spelled differently "
+        "from the folder on disk (in case or accents) while the disk treats both spellings as "
+        "one folder, so git's ignore rules may not cover where the file would land; nothing "
+        "was read or written. Spell the folders as they are on disk, or set core.ignorecase "
+        "to true (what git init sets on such a disk).",
     )
 
 
@@ -355,21 +361,39 @@ def _shown(raw: str) -> str:
 
 
 def _home_relative(raw: str) -> str:
+    """``~/...`` when ``raw`` leads under home, even as a relative path; otherwise ``raw``."""
+
     if not raw or "\x00" in raw:
         return raw
     try:
         given = Path(raw).expanduser()
         if not given.is_absolute():
-            return raw
-        home = Path.home()
-        # The spelling given first, then where it really is (a link, a case variant).
-        for path in (given, given.resolve()):
-            found = _identity_ancestor(path, home)
-            if found is not None:
-                return "~/" + path.relative_to(found).as_posix()
+            given = Path.cwd() / given
+        under = _under_home(given)
     except (OSError, RuntimeError, ValueError):
-        pass
-    return raw
+        return raw
+    return raw if under is None else under
+
+
+def _under_home(path: Path) -> str | None:
+    """``path`` as ``~/...`` when it is under the home folder, else ``None``.
+
+    The spelling given is tried first, then where it really is (a link, a case
+    variant), by file identity; if identity cannot be compared, by spelling alone.
+    """
+
+    home = Path.home()
+    candidates = (path, path.resolve())
+    for candidate in candidates:
+        found = _identity_ancestor(candidate, home)
+        if found is not None:
+            return "~/" + candidate.relative_to(found).as_posix()
+    for candidate in candidates:
+        try:
+            return "~/" + candidate.relative_to(home).as_posix()
+        except ValueError:
+            continue
+    return None
 
 
 class OutWriteError(OSError):
@@ -424,6 +448,8 @@ def write_out(target: OutTarget, text: str) -> str:
         if created:
             try:
                 os.unlink(tmp)
+            except FileNotFoundError:
+                pass  # Already gone: nothing is left behind.
             except OSError:
                 if failure is not None:
                     failure.leftover_temp = tmp.name
@@ -445,6 +471,8 @@ def display_path(path: Path) -> str:
         home = _identity_ancestor(real, Path.home())
         if home is not None:
             return "~/" + real.relative_to(home).as_posix()
+        # Identity could not be compared: fall back to the spelling.
+        return "~/" + real.relative_to(Path.home()).as_posix()
     except (OSError, RuntimeError, ValueError):
         pass
     return str(path)
@@ -452,8 +480,8 @@ def display_path(path: Path) -> str:
 
 def leftover_warning(temp: str) -> str:
     return (
-        f"the temporary file {temp} could not be removed and is still there, a second copy "
-        "of the report beside the file; remove it yourself."
+        f"the temporary file {terminal_safe(temp, 300)} could not be removed and is still "
+        "there, a second copy of the report beside the file; remove it yourself."
     )
 
 

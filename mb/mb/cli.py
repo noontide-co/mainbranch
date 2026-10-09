@@ -3856,8 +3856,8 @@ def _google_read_exit(
                 )
             elif exc.leftover_temp:
                 detail = (
-                    f"the temporary file {exc.leftover_temp} could not be removed and is still "
-                    "there; remove it yourself."
+                    f"the temporary file {google_reads_mod.terminal_safe(exc.leftover_temp, 300)} "
+                    "could not be removed and is still there; remove it yourself."
                 )
             else:
                 detail = "nothing was left behind."
