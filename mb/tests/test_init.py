@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from mb import codex as codex_mod
 from mb import init as init_mod
 from mb.init import _DEFAULT_CLAUDE, DATA_FOLDERS, _read_template, run
@@ -454,3 +456,45 @@ def test_init_already_initialized_backfills_plugin_wiring(tmp_path: Path) -> Non
     assert second["status"] == "already-initialized"
     assert engine_mod.plugin_wiring_status(target)["wired"] is True
     assert ".claude/settings.json" in second["created"]
+
+
+def _status_lines(claude_md: str) -> dict[str, set[str]]:
+    """The `status:` sets the CLAUDE.md conventions name, keyed by file type."""
+    conventions = _section(claude_md, "## Conventions", "\n## ")
+    found: dict[str, set[str]] = {}
+    for line in conventions.splitlines():
+        label, sep, rest = line.strip().removeprefix("- ").partition(": `")
+        if sep and rest.endswith("`"):
+            found[label] = {value.strip() for value in rest[:-1].split("|")}
+    return found
+
+
+@pytest.mark.parametrize("source", ["template", "fallback"])
+def test_init_claude_md_status_values_match_mb_validate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, source: str
+) -> None:
+    # #1119: one status set for every file type taught agents that `running`
+    # is a bet status; `mb validate` rejects it. Each type's set comes from
+    # the schema `mb validate` checks.
+    from mb.validate import SCHEMAS
+
+    if source == "fallback":
+        real = init_mod._read_template
+        monkeypatch.setattr(
+            init_mod,
+            "_read_template",
+            lambda name: "" if name == "CLAUDE.md.tmpl" else real(name),
+        )
+    target = tmp_path / "acme"
+    assert run(path=str(target), name="Acme Brewing")["status"] == "ok"
+    text = (target / "CLAUDE.md").read_text(encoding="utf-8")
+
+    assert "{{" not in text
+    assert "Status field" not in text
+    assert _status_lines(text) == {
+        "Bets": set(SCHEMAS["bets"]["enums"]["status"]),
+        "Decisions": set(SCHEMAS["decisions"]["enums"]["status"]),
+        "Offers": set(SCHEMAS["core/offers"]["enums"]["status"]),
+        "Pushes": set(SCHEMAS["pushes"]["enums"]["status"]),
+    }
+    assert "`mb validate` names the" in text
