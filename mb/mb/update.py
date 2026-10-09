@@ -103,10 +103,6 @@ CHECK_PLAN_UNREADABLE_MESSAGE = (
     "refresh or say which repo files it would change. A real `mb update` stops "
     "there too, with an error. {fix}, then run the check again."
 )
-# The files the skill-link plan decodes as UTF-8 text.
-# The plan reads settings first, so a file that does not decode is looked for
-# in the same order (#1106 item 2).
-LINK_PLAN_TEXT_FILES = (".claude/settings.local.json", ".gitignore")
 SURFACE_CODEX_APPLY_NOTE = (
     "For a person to run at a terminal, not an agent: refreshes this repo's "
     "Codex guidance, which writes or deletes the tracked files listed in "
@@ -731,7 +727,7 @@ def _check_codex_plan(repo: Path, codex: dict[str, Any]) -> dict[str, Any]:
 
 
 def _unreadable_plan_warning(repo: Path, part: str, exc: BaseException) -> str:
-    path, reason, fix = unreadable_mod.describe(exc, repo, text_files=LINK_PLAN_TEXT_FILES)
+    path, reason, fix = unreadable_mod.describe(exc, repo)
     return CHECK_PLAN_UNREADABLE_MESSAGE.format(
         target=f"`{path}`" if path else "a file it needs",
         part=part,
@@ -756,12 +752,12 @@ def _guard_unreadable(
         if check:
             # One warning per path: two steps that trip on the same folder
             # name it once.
-            path = unreadable_mod.describe(exc, repo, text_files=LINK_PLAN_TEXT_FILES)[0]
+            path = unreadable_mod.describe(exc, repo)[0]
             named = f"Could not read `{path}` ("
             if not path or not any(str(item).startswith(named) for item in result["warnings"]):
                 result["warnings"].append(_unreadable_plan_warning(repo, part, exc))
         else:
-            note = unreadable_mod.message(exc, repo, text_files=LINK_PLAN_TEXT_FILES)
+            note = unreadable_mod.message(exc, repo)
             result["ok"] = False
             if note not in result["errors"]:
                 result["errors"].append(note)

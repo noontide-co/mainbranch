@@ -1,4 +1,4 @@
-"""Name a file or folder Main Branch could not read, with its own fix (#1101, #1106).
+"""Name a file or folder Main Branch could not read, with its own fix (#1101, #1106, #1109).
 
 `mb update` and `mb doctor` read files a person owns: `.gitignore`,
 `.claude/settings.local.json`, `AGENTS.md`, the repo's `.claude` folder and the
@@ -44,7 +44,7 @@ def _decoded_path(exc: BaseException) -> str:
     return found
 
 
-def _raw_path(exc: BaseException, repo: Path, text_files: Iterable[str]) -> str:
+def _raw_path(exc: BaseException) -> str:
     if isinstance(exc, OSError) and exc.filename:
         return os.fsdecode(exc.filename)
     if _is_symlink_loop(exc):
@@ -56,17 +56,10 @@ def _raw_path(exc: BaseException, repo: Path, text_files: Iterable[str]) -> str:
             return ""
         return value if isinstance(value, str) else ""
     if isinstance(exc, UnicodeDecodeError):
-        found = _decoded_path(exc)
-        if found:
-            return found
-        # Nothing names the file; find the first candidate that does not decode.
-        for rel in text_files:
-            try:
-                (repo / rel).read_text(encoding="utf-8")
-            except UnicodeDecodeError:
-                return str(repo / rel)
-            except OSError:
-                continue
+        # Only the file being decoded is named. Another file that does not
+        # decode either may not be the one that failed, so none is guessed
+        # (#1109 item 3).
+        return _decoded_path(exc)
     return ""
 
 
@@ -77,34 +70,65 @@ def _within(raw: str, bases: Iterable[str]) -> str | None:
     return None
 
 
-def _first_closed_folder(raw: str, base: str) -> str:
-    """The first folder between `base` and `raw` that cannot be entered (#1106 item 3)."""
+def _loops(path: str) -> bool:
+    """True when `path` is a link that never reaches a real file or folder."""
+    if not os.path.islink(path):
+        return False
+    try:
+        os.stat(path)
+    except OSError as exc:
+        return exc.errno == errno.ELOOP
+    return False
+
+
+def _closed(path: str) -> bool:
+    """True when `path` is a folder this user cannot enter."""
+    return os.path.isdir(path) and not os.access(path, os.X_OK)
+
+
+def _first_blocked_folder(raw: str, base: str) -> str:
+    """The first folder between `base` and `raw` that blocks the way to it.
+
+    A folder that cannot be entered (#1106 item 3), or a link that loops: the
+    link to remove is that one, not the path below it (#1109 item 1).
+    """
     current = base
     for part in Path(os.path.relpath(raw, base)).parts[:-1]:
         current = os.path.join(current, part)
-        if os.path.isdir(current) and not os.access(current, os.X_OK):
+        if _loops(current) or _closed(current):
             return current
     return raw
 
 
-def _display(raw: str, repo: Path) -> str:
+def _locate(raw: str, repo: Path) -> tuple[str, str]:
+    """`(named, shown)`: the path to name, and how to show it.
+
+    Under the repo it is shown relative to it, under the home folder as
+    `~/...`; anywhere else it stays absolute, since there is nothing shorter.
+    """
     repo_bases = list(dict.fromkeys([str(repo), os.path.realpath(repo)]))
     base = _within(raw, repo_bases)
     if base is not None:
-        raw = _first_closed_folder(raw, base)
-        return os.path.relpath(raw, base).replace(os.sep, "/")
+        raw = _first_blocked_folder(raw, base)
+        return raw, os.path.relpath(raw, base).replace(os.sep, "/")
     home = str(Path.home())
     base = _within(raw, list(dict.fromkeys([home, os.path.realpath(home)])))
     if base is not None:
-        raw = _first_closed_folder(raw, base)
-        return "~/" + os.path.relpath(raw, base).replace(os.sep, "/")
-    return raw
+        raw = _first_blocked_folder(raw, base)
+        return raw, "~/" + os.path.relpath(raw, base).replace(os.sep, "/")
+    return raw, raw
 
 
-def _reason(exc: BaseException) -> str:
+def _is_loop(exc: BaseException, named: str) -> bool:
+    if named and _loops(named):
+        return True
+    return _is_symlink_loop(exc) or (isinstance(exc, OSError) and exc.errno == errno.ELOOP)
+
+
+def _reason(exc: BaseException, named: str) -> str:
     if isinstance(exc, UnicodeDecodeError):
         return "it is not UTF-8 text"
-    if _is_symlink_loop(exc) or (isinstance(exc, OSError) and exc.errno == errno.ELOOP):
+    if _is_loop(exc, named):
         return "it is a link that loops back on itself"
     if isinstance(exc, IsADirectoryError):
         return "it is a folder, not a file"
@@ -115,33 +139,37 @@ def _reason(exc: BaseException) -> str:
     return type(exc).__name__
 
 
-def _fix(path: str, exc: BaseException) -> str:
+def _fix(path: str, exc: BaseException, named: str) -> str:
     """The failing file's own fix (#1106 item 5)."""
     if not path:
+        if isinstance(exc, UnicodeDecodeError):
+            return "Save the files Main Branch reads in this repo as UTF-8 text"
         return "Check the files Main Branch reads in this repo"
-    named = f"`{path}`"
+    shown = f"`{path}`"
     if isinstance(exc, UnicodeDecodeError):
-        return f"Save {named} as UTF-8 text"
-    if _is_symlink_loop(exc) or (isinstance(exc, OSError) and exc.errno == errno.ELOOP):
-        return f"Remove the link {named} or point it at a real file or folder"
+        return f"Save {shown} as UTF-8 text"
+    if _is_loop(exc, named):
+        return f"Remove the link {shown} or point it at a real file or folder"
     if isinstance(exc, IsADirectoryError):
-        return f"Move the {named} folder aside so a file can take its place"
+        return f"Move the {shown} folder aside so a file can take its place"
     if isinstance(exc, PermissionError):
-        return f"Give your user read access to {named}"
-    return f"Check {named}"
+        if _closed(named) and os.access(named, os.R_OK):
+            # Readable but not enterable (mode 600): read access is already
+            # there; entering needs execute permission (#1109 item 5).
+            return f"Let your user enter the {shown} folder (give it execute permission)"
+        return f"Give your user read access to {shown}"
+    return f"Check {shown}"
 
 
-def describe(
-    exc: BaseException, repo: Path, *, text_files: Iterable[str] = ()
-) -> tuple[str, str, str]:
+def describe(exc: BaseException, repo: Path) -> tuple[str, str, str]:
     """`(path, reason, fix)` for an unreadable-file error; `path` may be empty."""
-    raw = _raw_path(exc, repo, text_files)
-    path = _display(raw, repo) if raw else ""
-    return path, _reason(exc), _fix(path, exc)
+    raw = _raw_path(exc)
+    named, path = _locate(raw, repo) if raw else ("", "")
+    return path, _reason(exc, named), _fix(path, exc, named)
 
 
-def message(exc: BaseException, repo: Path, *, text_files: Iterable[str] = ()) -> str:
+def message(exc: BaseException, repo: Path) -> str:
     """One sentence for an `errors` entry: what could not be read and the fix."""
-    path, reason, fix = describe(exc, repo, text_files=text_files)
+    path, reason, fix = describe(exc, repo)
     target = f"`{path}`" if path else "a file it needs"
     return f"Main Branch could not read {target} ({reason}). {fix}, then run the command again."
