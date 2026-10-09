@@ -31,6 +31,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   checks, so an agent no longer tells you a bet can be `running` (#1119).
   `mb update` does not rewrite `CLAUDE.md`, so an existing repo keeps its old
   line until you edit it; `mb validate` still names the allowed values.
+- When `mb update` or `mb doctor` cannot read a file because a folder above it
+  is closed to you, the message no longer calls that folder "a link that loops"
+  or tells you to remove it, even if the read itself failed on a loop. It gets
+  the fix for a closed folder. A folder you can neither read nor enter (mode
+  000) now gets "Let your user open the folder (give it read and execute
+  permission)" instead of "Give your user read access", since read access alone
+  still would not let you in (#1117).
 
 ## [0.6.5] - 2026-10-09
 
