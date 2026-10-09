@@ -82,8 +82,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 ### Fixed
 
 - `mb google ... --out` now refuses a path spelled differently from a folder or
-  existing file on disk, even with `--force`, before reading the report. This
-  prevents a case variant from replacing a saved file in an ignored folder.
+  existing file on disk, or from a tracked path in git's index even when its
+  file is missing from disk. It refuses before reading the report, even with
+  `--force`, so a case variant cannot replace a saved file in an ignored folder.
 - `mb google ... --out` never prints the home folder's name through the
   temporary file's name either. For a file named like your home folder (or one
   whose name contains it, in any case), the "temporary file is not ignored"

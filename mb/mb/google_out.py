@@ -13,6 +13,8 @@ quota. A path is refused when:
 - git cannot answer inside a checkout (fail closed);
 - a folder or existing file is spelled differently from its name on disk, or
   a file with the same name in another case already exists beside the target;
+- its spelling differs by case or Unicode normalization from a tracked index
+  path, including one whose file is missing from disk;
 - it already exists and ``--force`` was not given, or it exists and is not a
   plain file;
 - its folder does not exist (no folder is created);
@@ -143,6 +145,16 @@ def _judge_git(
                 raise _spelling_refusal(shown)
             if original_spelling is None:
                 raise _git_unplaced(shown, which)
+        indexed = run(["ls-files", "-z", "--full-name"], root)
+        if indexed is None or indexed.returncode != 0:
+            raise unknown(shown)
+        target_name = relative.as_posix()
+        if any(
+            entry != target_name and _fold(entry) == _fold(target_name)
+            for entry in map(os.fsdecode, indexed.stdout.split(b"\0"))
+            if entry
+        ):
+            raise _spelling_refusal(shown)
         _check_spelling(base, relative, shown)
         verdict = run(["check-ignore", "-q", "--", relative.as_posix()], root)
         if verdict is None or verdict.returncode not in {0, 1}:

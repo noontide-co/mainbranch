@@ -465,6 +465,28 @@ def test_git_missing_inside_a_checkout_is_refused_and_outside_is_allowed(
     assert _out(repo, SC_ARGS, outdir / "ok.json").exit_code == 0
 
 
+def test_git_index_unavailable_refuses_before_read(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    checkout: Path,
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    real = go_out._git
+
+    def unavailable(args: list[str], cwd: Path) -> Any:
+        if args[0] == "ls-files":
+            return subprocess.CompletedProcess(args, 128, b"", b"fatal")
+        return real(args, cwd)
+
+    monkeypatch.setattr(go_out, "_git", unavailable)
+    target = checkout / PRIVATE_PULLS / "x.json"
+
+    _refused(_out(repo, SC_ARGS, target), "out_path_git_unknown")
+    assert api.calls == [] and not target.exists()
+
+
 def test_force_without_out_is_refused(repo: Path) -> None:
     result = runner.invoke(app, [*SC_ARGS, "--repo", str(repo), "--force"])
 
@@ -1308,6 +1330,91 @@ def test_case_variant_out_cannot_replace_a_tracked_file_on_case_insensitive_disk
     assert not list((root / "private").glob(".*.mb-out.tmp"))
     diff = subprocess.run(["git", "diff", "--exit-code"], cwd=root, capture_output=True)
     assert diff.returncode == 0 and diff.stdout == b""
+
+
+@pytest.mark.parametrize("folder", ["private", "PRIVATE"])
+@pytest.mark.parametrize("force", [False, True])
+def test_case_variant_out_refuses_an_index_only_tracked_file(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    folder: str,
+    force: bool,
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    root = _checkout_with(tmp_path / "case-index-only", "private/\n")
+    _git(root, "config", "core.ignorecase", "true")
+    (root / "private").mkdir()
+    tracked = root / "private" / "Report.json"
+    tracked.write_bytes(b"personal original\n")
+    _git(root, "add", "-f", "private/Report.json")
+    _git(root, "commit", "-q", "-m", "tracked report")
+    tracked.unlink()
+    if folder == "PRIVATE" and not _case_insensitive(tmp_path):
+        (root / "PRIVATE").mkdir()
+
+    args = ("--force",) if force else ()
+    result = _out(repo, SC_ARGS, root / folder / "report.json", *args)
+
+    _refused(result, "out_path_git_unknown")
+    assert "Spell the path exactly as it is on disk" in result.stderr
+    assert api.calls == [] and not tracked.exists()
+    assert not list((root / folder).glob(".*.mb-out.tmp"))
+    status = subprocess.run(["git", "status", "--short"], cwd=root, capture_output=True, check=True)
+    assert status.stdout == b" D private/Report.json\n"
+
+
+def test_unicode_variant_out_refuses_an_index_only_tracked_file(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    root = _checkout_with(tmp_path / "unicode-index-only", "private/\n")
+    _git(root, "config", "core.ignorecase", "true")
+    _git(root, "config", "core.precomposeunicode", "false")
+    (root / "private").mkdir()
+    tracked = root / "private" / "Cafe\u0301.json"
+    tracked.write_bytes(b"personal original\n")
+    _git(root, "add", "-f", "private/Cafe\u0301.json")
+    _git(root, "commit", "-q", "-m", "tracked report")
+    tracked.unlink()
+
+    result = _out(repo, SC_ARGS, root / "private" / "Caf\u00e9.json", "--force")
+
+    _refused(result, "out_path_git_unknown")
+    assert api.calls == [] and not tracked.exists()
+    assert not list((root / "private").glob(".*.mb-out.tmp"))
+    status = subprocess.run(
+        ["git", "status", "--short", "-z"], cwd=root, capture_output=True, check=True
+    )
+    assert status.stdout == " D private/Cafe\u0301.json\0".encode()
+
+
+def test_exact_spelling_of_an_index_only_tracked_file_keeps_its_refusal(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    root = _checkout_with(tmp_path / "exact-index-only", "private/\n")
+    (root / "private").mkdir()
+    tracked = root / "private" / "Report.json"
+    tracked.write_bytes(b"personal original\n")
+    _git(root, "add", "-f", "private/Report.json")
+    _git(root, "commit", "-q", "-m", "tracked report")
+    tracked.unlink()
+
+    result = _out(repo, SC_ARGS, tracked, "--force")
+
+    _refused(result, "out_path_in_repo")
+    assert api.calls == [] and not tracked.exists()
 
 
 def test_case_variant_out_cannot_replace_an_untracked_file(
