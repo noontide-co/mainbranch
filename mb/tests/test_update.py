@@ -3652,6 +3652,12 @@ def _tree_snapshot(*roots: Path) -> dict[str, str]:
             dirnames[:] = sorted(name for name in dirnames if name != ".git")
             for name in [*dirnames, *filenames]:
                 path = Path(dirpath) / name
+                try:
+                    path.lstat()
+                except PermissionError:
+                    # Listed in a folder that can be read but not entered.
+                    snapshot[str(path)] = "unreachable"
+                    continue
                 if path.is_symlink():
                     snapshot[str(path)] = "link:" + os.readlink(path)
                 elif path.is_dir():
@@ -3957,6 +3963,24 @@ def test_check_names_a_looping_link_whose_path_has_quotes_and_a_backslash(
     assert str(tmp_path) not in warning
 
 
+def test_a_decode_error_outside_read_text_names_no_guessed_file(
+    business_repo: Path,
+) -> None:
+    # #1109 item 3: `.gitignore` does not decode either, but nothing shows it is
+    # the file that failed, so it is not named.
+    (business_repo / ".gitignore").write_bytes("# café\n".encode("latin-1"))
+    try:
+        b"\xff".decode("utf-8")
+    except UnicodeDecodeError as caught:
+        exc = caught
+
+    warning = update_mod._unreadable_plan_warning(business_repo, "skill link", exc)
+
+    assert warning.startswith("Could not read a file it needs (it is not UTF-8 text)")
+    assert "`.gitignore`" not in warning
+    assert "Save the files Main Branch reads in this repo as UTF-8 text" in warning
+
+
 def test_check_keeps_a_programming_error_loud(
     monkeypatch: pytest.MonkeyPatch, business_repo: Path
 ) -> None:
@@ -3980,15 +4004,21 @@ def _codex_unreadable(repo: Path, kind: str) -> Path:
         _commit_all(repo, "Latin-1 AGENTS.md")
         return repo / "AGENTS.md"
     _commit_all(repo, "Current AGENTS.md")
-    if kind == "claude_closed":
+    if kind == "codex_home_loop":
+        # #1109 item 1: the Codex folder itself is a link to itself.
+        looped = Path(os.environ["CODEX_HOME"])
+        looped.symlink_to(looped.name)
+        return looped
+    if kind in {"claude_closed", "claude_no_enter"}:
         closed = repo / ".claude"
         closed.mkdir()
         (closed / "settings.json").write_text("{}\n", encoding="utf-8")
     else:
-        assert kind == "codex_home_closed"
+        assert kind in {"codex_home_closed", "codex_home_no_enter"}
         closed = Path(os.environ["CODEX_HOME"])
         (closed / "skills").mkdir(parents=True)
-    closed.chmod(0)
+    # #1109 item 5: mode 600 can be read but not entered.
+    closed.chmod(0o600 if kind.endswith("_no_enter") else 0)
     return closed
 
 
@@ -3996,6 +4026,17 @@ CODEX_UNREADABLE = [
     ("agents_latin1", "`AGENTS.md`", "Save `AGENTS.md` as UTF-8 text"),
     ("claude_closed", "`.claude`", "Give your user read access to `.claude`"),
     ("codex_home_closed", "`~/.codex`", "Give your user read access to `~/.codex`"),
+    ("codex_home_loop", "`~/.codex`", "Remove the link `~/.codex` or point it"),
+    (
+        "claude_no_enter",
+        "`.claude`",
+        "Let your user enter the `.claude` folder (give it execute permission)",
+    ),
+    (
+        "codex_home_no_enter",
+        "`~/.codex`",
+        "Let your user enter the `~/.codex` folder (give it execute permission)",
+    ),
 ]
 
 
@@ -4008,7 +4049,8 @@ def test_update_and_doctor_name_a_codex_file_they_cannot_read(
     named: str,
     fix: str,
 ) -> None:
-    if kind != "agents_latin1" and hasattr(os, "geteuid") and os.geteuid() == 0:
+    root_skips = kind not in {"agents_latin1", "codex_home_loop"}
+    if root_skips and hasattr(os, "geteuid") and os.geteuid() == 0:
         pytest.skip("root can read a mode 000 folder")
     calls: list[list[str]] = []
     _wheel_update_env(monkeypatch, calls)
@@ -4016,6 +4058,8 @@ def test_update_and_doctor_name_a_codex_file_they_cannot_read(
     monkeypatch.chdir(tmp_path)
     repo = str(business_repo)
     tree_before = _tree_snapshot(business_repo, tmp_path / "home")
+    # Git lists a folder it can read but not enter (mode 600) as untracked.
+    status_before = _git(business_repo, "status", "--porcelain")
     try:
         check_json = runner.invoke(app, ["update", "--check", "--json", "--repo", repo])
         check_human = runner.invoke(app, ["update", "--check", "--repo", repo])
@@ -4026,9 +4070,10 @@ def test_update_and_doctor_name_a_codex_file_they_cannot_read(
             app, ["doctor", "repair", "--plan", "--only", "codex", "--json", "--repo", repo]
         )
         assert _tree_snapshot(business_repo, tmp_path / "home") == tree_before
-        assert _git(business_repo, "status", "--porcelain") == ""
+        assert _git(business_repo, "status", "--porcelain") == status_before
     finally:
-        closed.chmod(0o755)
+        if not closed.is_symlink():
+            closed.chmod(0o755)
 
     invoked = [check_json, check_human, run_json, doctor_json, doctor_human, plan_json]
     for item in invoked:

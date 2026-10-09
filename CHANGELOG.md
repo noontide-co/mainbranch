@@ -137,11 +137,22 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   link git does not track, or a link that points nowhere, is kept the same
   way; the prompt names it `.gitignore (replace link)`.
 - `mb update`, `mb update --check` and `mb doctor` no longer stop with a
-  Python traceback when they cannot read an `AGENTS.md` that is not UTF-8, a
-  repo `.claude` folder you have no permission to open, or your Codex folder
-  (`CODEX_HOME`). `--check` names the file in a warning and still exits 0; the
-  update, `mb doctor` and `mb doctor repair --plan` stop with one error that
-  names it (code `unreadable_file` in `--json`). Nothing is written.
+  Python traceback when they cannot read a file or folder they need. The
+  files are `.gitignore`, `.claude/settings.local.json` and `AGENTS.md`; the
+  folders are the repo's `.claude` and `.claude/skills` (and the skill links
+  in it), your personal `~/.claude` and `~/.claude/skills`, and your Codex
+  folder (`CODEX_HOME`, `~/.codex` by default) and its `skills` folder. Each
+  can be not UTF-8, closed to you, a folder where a file belongs, or a link
+  that loops. `--check` names it in a warning and still exits 0; the update,
+  `mb doctor`, `mb doctor repair --plan` and `mb skill link --plan` stop with
+  one error that names it (code `unreadable_file` in `--json`). Nothing is
+  written.
+- When the file it cannot read sits under a link that loops, for example a
+  `~/.codex` that links to itself, the message now names that link to remove,
+  not the path below it. A folder you can read but not enter (mode 600) gets a
+  fix about entering it (execute permission) rather than read access. When a
+  text that is not UTF-8 cannot be traced to its file, the message no longer
+  guesses another file that also fails to decode; it says "a file it needs".
 - When `mb update --check` cannot read a file, the warning now names it the way
   you would type it: relative to your repo, or `~/...` in your home folder,
   even when the path holds a quote or a backslash. When a whole folder is

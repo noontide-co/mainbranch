@@ -128,10 +128,15 @@ Entries today:
   names it in `warnings`; the run stops there with an error. The same holds
   for the Codex readiness read (an `AGENTS.md` that is not UTF-8, a repo
   `.claude` folder or `CODEX_HOME` you cannot open, #1106). The path is
-  relative to the repo, or `~/...` under the home folder, and the sentence
-  ends with that file's own fix. `mb doctor --json` and
-  `mb doctor repair --plan --json` stop with exit 1 and one error
-  `{"code": "unreadable_file", "message": ...}` naming the same path;
+  relative to the repo, or `~/...` under the home folder; a path outside both
+  (for example `CODEX_HOME=/opt/codex`) is shown absolute. A folder on the way
+  that cannot be entered, or a link on the way that loops, is named instead of
+  the path below it (#1109). The sentence ends with that file's own fix. When
+  a file that is not UTF-8 cannot be told apart, no file is guessed: the
+  message says "a file it needs". `mb doctor --json`,
+  `mb doctor repair --plan --json` and `mb skill link --plan --json` stop with
+  exit 1 and one error `{"code": "unreadable_file", "message": ...}` naming
+  the same path;
 - from `mb update`, including `--check` and `--no-refresh-surfaces`, the Codex
   `AGENTS.md` repair when Codex guidance is still not ready after the refresh
   (or the refresh did not run): the same
