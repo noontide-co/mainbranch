@@ -81,6 +81,18 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- `mb google ... --out` refusals now show a path under your home folder as
+  `~/...`, like the summary, so a refusal marked safe to share no longer prints
+  your username. With `GIT_DIR` or `GIT_WORK_TREE` exported, a refusal that
+  comes from that repository says so; a work tree `mb` cannot examine is refused
+  instead of counted as outside it; a `GIT_WORK_TREE` spelled with another case
+  or through a firmlink is matched to the real folder, so its ignored folders
+  are allowed; and an empty `GIT_DIR=""` or `GIT_WORK_TREE=""` counts as set,
+  as git refuses to run with it. A checkout with `core.ignorecase` set to false
+  on a disk that does not tell case apart refuses a folder name spelled unlike
+  the one on disk, because git's ignore rules may not cover where the file
+  lands. If the file is written but its temporary copy cannot be removed, the
+  summary now says so and names it (#1080).
 - `mb connect` now names the user-scope file and refuses before storing a
   credential when ownership or an access-control list prevents writing it,
   just as it does for a read-only file mode. If writing is denied after connect

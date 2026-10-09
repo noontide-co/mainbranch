@@ -1035,3 +1035,258 @@ def test_the_module_uses_no_grant_or_token_names() -> None:
     # `--out` only handles the already-shaped result; it never touches a credential.
     source = Path(go_out.__file__).read_text(encoding="utf-8")
     assert not re.search(r"access_token|refresh_token|client_secret|oauth_grant|read_token", source)
+
+
+# --- follow-ups from the #1081 reviews (#1080) -------------------------------------------
+
+
+def test_a_refusal_under_home_shows_a_tilde(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    home = tmp_path / "homefolder"
+    (home / "pulls").mkdir(parents=True)
+    (home / "pulls" / "link.json").symlink_to(home / "pulls" / "gone.json")
+    monkeypatch.setenv("HOME", str(home))
+
+    for out, shown, rule in (
+        (home / "nope" / "x.json", "~/nope/x.json", "out_parent_missing"),
+        (home / "pulls" / "link.json", "~/pulls/link.json", "out_path_link"),
+    ):
+        human = _out(repo, SC_ARGS, out)
+        as_json = _out(repo, SC_ARGS, out, "--json")
+
+        _refused(human, rule)
+        assert f"--out {shown}" in human.stderr
+        payload = json.loads(as_json.stdout)
+        assert payload["safe_to_share"] is True and shown in payload["summary"]
+        for text in (human.stdout + human.stderr, as_json.stdout + as_json.stderr):
+            assert str(home) not in text and home.name not in text
+
+    # A relative path is shown as typed.
+    monkeypatch.chdir(home)
+    assert "--out nope/x.json:" in _out(repo, SC_ARGS, "nope/x.json").stderr
+
+
+def _env_text(text: str) -> None:
+    assert "GIT_DIR or GIT_WORK_TREE in this shell" in text
+    assert "nothing was read or written" in text
+
+
+def test_a_work_tree_mb_cannot_examine_is_refused_not_counted_as_outside(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from mb.google_reads import ReadRefusal
+
+    _separate_git_dir(tmp_path, monkeypatch)
+    outside = tmp_path / "elsewhere" / "x.json"
+    assert go_out.check_out(str(outside)).path.name == "x.json"
+
+    def unreadable(*_: Any) -> bool:
+        raise PermissionError("cannot look (synthetic)")
+
+    with monkeypatch.context() as patched:
+        patched.setattr(os.path, "samefile", unreadable)
+        with pytest.raises(ReadRefusal) as refused:
+            go_out.check_out(str(outside))
+    assert refused.value.rule == "out_path_git_unknown"
+    assert "could not examine that work tree" in str(refused.value)
+    assert "synthetic" not in str(refused.value)
+
+    # A work tree that is not there cannot be examined either.
+    monkeypatch.setenv("GIT_WORK_TREE", str(tmp_path / "missing"))
+    with pytest.raises(ReadRefusal) as missing:
+        go_out.check_out(str(outside))
+    assert missing.value.rule == "out_path_git_unknown"
+    assert "GIT_DIR or GIT_WORK_TREE" in str(missing.value)
+
+
+def test_refusals_from_the_exported_repository_say_so(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, checkout: Path
+) -> None:
+    from mb.google_reads import ReadRefusal
+
+    work = _separate_git_dir(tmp_path, monkeypatch)
+    exclude = tmp_path / "sep.git" / "info" / "exclude"
+    exclude.write_text("ignored/\nreport.json\n", encoding="utf-8")
+
+    for path, rule in (
+        (work / "open" / "x.json", "out_path_in_repo"),
+        (work / "report.json", "out_temp_not_ignored"),
+    ):
+        with pytest.raises(ReadRefusal) as refused:
+            go_out.check_out(str(path))
+        assert refused.value.rule == rule
+        _env_text(str(refused.value))
+    if _case_insensitive(tmp_path):
+        with pytest.raises(ReadRefusal) as unplaced:
+            go_out.check_out(str(tmp_path / "WORK" / "open" / "x.json"))
+        assert unplaced.value.rule == "out_path_git_unknown"
+        assert "could not place" in str(unplaced.value)
+        _env_text(str(unplaced.value))
+
+    # Without the variables the text is as before.
+    monkeypatch.delenv("GIT_DIR")
+    monkeypatch.delenv("GIT_WORK_TREE")
+    with pytest.raises(ReadRefusal) as plain:
+        go_out.check_out(str(checkout / "docs" / "x.json"))
+    assert " is inside a git checkout and git does not ignore it, so the data" in str(plain.value)
+    assert "GIT_DIR" not in str(plain.value)
+
+
+def _ignored_by_git(tmp_path: Path, work: Path, file: Path) -> bool:
+    env = {
+        "HOME": str(tmp_path),
+        "PATH": os.environ["PATH"],
+        "GIT_DIR": str(tmp_path / "sep.git"),
+        "GIT_WORK_TREE": str(work),
+    }
+    done = subprocess.run(
+        ["git", "status", "--porcelain", "--ignored", "-uall"],
+        cwd=work,
+        env=env,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    relative = file.relative_to(work).as_posix()
+    return f"!! {relative}" in done.stdout.splitlines()
+
+
+@pytest.mark.parametrize("spelling", ["case", "firmlink"])
+def test_a_work_tree_exported_in_another_spelling_allows_its_ignored_folders(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spelling: str
+) -> None:
+    from mb.google_reads import ReadRefusal
+
+    work = _separate_git_dir(tmp_path, monkeypatch, name="Biz")
+    if spelling == "case":
+        if not _case_insensitive(tmp_path):
+            pytest.skip("this disk tells apart folder names that differ only in case")
+        exported = str(tmp_path / "BIZ")
+    else:
+        data = Path("/System/Volumes/Data")
+        real = work.resolve()
+        if not data.is_dir() or not (data / str(real).lstrip("/")).is_dir():
+            pytest.skip("no firmlinked data volume on this machine")
+        exported = str(data) + str(real)
+    monkeypatch.setenv("GIT_WORK_TREE", exported)
+
+    target = go_out.check_out(str(work / "ignored" / "x.json"))
+    target.path.write_text("{}", encoding="utf-8")
+    assert _ignored_by_git(tmp_path, work, work / "ignored" / "x.json")
+    with pytest.raises(ReadRefusal) as refused:
+        go_out.check_out(str(work / "open" / "x.json"))
+    assert refused.value.rule == "out_path_in_repo"
+    assert go_out.check_out(str(tmp_path / "elsewhere" / "x.json")).path.name == "x.json"
+
+
+def _checkout_ignoring_open(tmp_path: Path, ignorecase: str) -> Path:
+    root = tmp_path / "cased"
+    root.mkdir()
+    _git(root, "init", "-q")
+    _git(root, "config", "core.ignorecase", ignorecase)
+    (root / "open").mkdir()
+    (root / ".git" / "info" / "exclude").write_text("OPEN/\n", encoding="utf-8")
+    return root
+
+
+@pytest.mark.parametrize("env", [False, True])
+def test_ignorecase_false_refuses_a_folder_spelled_unlike_the_disk(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    env: bool,
+) -> None:
+    if not _case_insensitive(tmp_path):
+        pytest.skip("this disk tells apart folder names that differ only in case")
+    api = _signed(repo, client_file, google, monkeypatch)
+    root = _checkout_ignoring_open(tmp_path, "false")
+    if env:
+        monkeypatch.chdir(root)
+        monkeypatch.setenv("GIT_DIR", ".git")
+
+    result = _out(repo, SC_ARGS, root / "OPEN" / "x.json")
+
+    _refused(result, "out_path_git_unknown")
+    assert "core.ignorecase" in result.stderr and "spelled differently" in result.stderr
+    assert api.calls == [] and list((root / "open").iterdir()) == []
+
+
+@pytest.mark.parametrize("ignorecase", ["false", "true"])
+def test_a_spelling_unlike_the_disk_is_judged_by_core_ignorecase(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, ignorecase: str
+) -> None:
+    # Runs on any disk: the disk is made to report another spelling.
+    from mb.google_reads import ReadRefusal
+
+    root = _checkout_ignoring_open(tmp_path, ignorecase)
+    (root / "OPEN").mkdir(exist_ok=True)
+    monkeypatch.setattr(go_out, "_spelled_as_on_disk", lambda *_: False)
+
+    if ignorecase == "true":
+        assert go_out.check_out(str(root / "OPEN" / "x.json")).path.name == "x.json"
+        return
+    with pytest.raises(ReadRefusal) as refused:
+        go_out.check_out(str(root / "OPEN" / "x.json"))
+    assert refused.value.rule == "out_path_git_unknown"
+    assert "core.ignorecase to false" in str(refused.value)
+
+
+@pytest.mark.parametrize("var", ["GIT_DIR", "GIT_WORK_TREE"])
+def test_an_empty_git_variable_counts_as_set_as_it_does_for_git(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    outdir: Path,
+    var: str,
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    shell = tmp_path / "shellfolder"
+    shell.mkdir()
+    monkeypatch.chdir(shell)
+    monkeypatch.setenv(var, "")
+    git_env = {"HOME": str(tmp_path), "PATH": os.environ["PATH"], var: ""}
+    plain = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"], cwd=shell, env=git_env, capture_output=True
+    )
+    assert plain.returncode != 0  # git itself will not run with it
+
+    _unusable_text(_out(repo, SC_ARGS, outdir / "q.json"))
+
+    assert api.calls == [] and list(outdir.iterdir()) == []
+
+
+def test_a_temp_left_after_a_successful_write_is_named(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    outdir: Path,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    real_unlink = os.unlink
+
+    def stuck(path: Any, *args: Any, **kwargs: Any) -> None:
+        if str(path).endswith(".mb-out.tmp"):
+            raise OSError("cannot remove (synthetic)")
+        real_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(os, "unlink", stuck)
+
+    human = _out(repo, SC_ARGS, outdir / "x.json")
+    assert human.exit_code == 0 and (outdir / "x.json").is_file()
+    assert "warning:" in human.stdout and ".x.json.mb-out.tmp" in human.stdout
+    assert "remove it yourself" in human.stdout
+    real_unlink(outdir / ".x.json.mb-out.tmp")
+
+    as_json = _out(repo, SC_ARGS, outdir / "y.json", "--json")
+    assert as_json.exit_code == 0
+    info = json.loads(as_json.stdout)
+    assert info["ok"] is True and info["safe_to_share"] is True
+    assert len(info["warnings"]) == 1 and ".y.json.mb-out.tmp" in info["warnings"][0]
+    assert "synthetic" not in human.stdout + human.stderr + as_json.stdout
+    assert (outdir / ".y.json.mb-out.tmp").is_file()

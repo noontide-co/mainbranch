@@ -378,7 +378,11 @@ home folder). If the read worked but the file could not be written, stdout
 carries the usual failure envelope (`ok: false`, `rule: out_write_failed`,
 `exit_code: 1`), the same shape as the read failures, and the process exits 1.
 The message names at most the temporary file's name (`.<name>.mb-out.tmp`),
-never a full path. See [google.md](google.md#--out-keep-a-large-pull-in-a-private-file).
+never a full path. If the file was written but that temporary copy could not be
+removed, the summary is still `ok: true` (exit 0) and `warnings` holds one
+message naming it. A refusal (exit 2, `rule: out_*`) shows an absolute `--out`
+under the home folder as `~/...` in `summary` and `errors`, so it too has no
+username under `safe_to_share: true`; a relative `--out` is shown as typed. See [google.md](google.md#--out-keep-a-large-pull-in-a-private-file).
 
 ## First Migrated Surfaces
 
