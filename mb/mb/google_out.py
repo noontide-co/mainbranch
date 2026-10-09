@@ -358,8 +358,11 @@ def check_out(raw: str, *, force: bool = False) -> OutTarget:
 def _shown(raw: str) -> str:
     """``raw`` as printed in a refusal: ``~/...`` when it leads under home."""
 
-    shown = terminal_safe(_home_relative(raw), 120) or "PATH"
-    return hide_home_name(shown, Path(raw).name) if raw else shown
+    # The guard sees the whole text; only then is it cut to the display width, so a
+    # home-named part cannot hide behind the cut (`homefolder…`).
+    placed = _home_relative(raw)
+    full = terminal_safe(placed, len(placed) + 1) or "PATH"
+    return terminal_safe(hide_home_name(full, Path(raw).name) if raw else full, 120)
 
 
 def _home_relative(raw: str) -> str:
@@ -385,9 +388,12 @@ def _under_home(path: Path) -> str | None:
     """
 
     home = Path.home()
-    # `.` and `..` are collapsed first: a `..` through a missing folder must not keep
-    # the spelling before it (`nope/../../<home>/x.json`).
-    candidates = (Path(os.path.normpath(path)), path.resolve())
+    # Where the path really leads comes first (links followed, then `..`, also through
+    # a missing folder). The spelling with `.` and `..` collapsed is used only when it
+    # leads to the same place: after a link, `link/..` is not the link's own folder.
+    real = _folders_resolved(path)
+    lexical = Path(os.path.normpath(path))
+    candidates = (real, lexical) if _folders_resolved(lexical) == real else (real,)
     for candidate in candidates:
         found = _identity_ancestor(candidate, home)
         if found is not None and ".." not in candidate.relative_to(found).parts:
@@ -400,6 +406,14 @@ def _under_home(path: Path) -> str | None:
         if ".." not in rest.parts:
             return "~/" + rest.as_posix()
     return None
+
+
+def _folders_resolved(path: Path) -> Path:
+    """``path`` with its folders resolved; the last part is kept, even when it is a link."""
+
+    if path.name in {"", ".", ".."}:
+        return path.resolve()
+    return path.parent.resolve() / path.name
 
 
 def _fold(name: str) -> str:

@@ -381,7 +381,8 @@ The message names at most the temporary file's name (`.<name>.mb-out.tmp`),
 never a full path. If the file was written but that temporary copy could not be
 removed, the summary is still `ok: true` (exit 0) and `warnings` holds one
 message naming it. A refusal (exit 2, `rule: out_*`) shows an `--out` that leads under the home
-folder (absolute or relative, after `.` and `..` are collapsed) as `~/...` in
+folder (absolute or relative, with links followed and then `.` and `..`
+collapsed) as `~/...` in
 `summary` and `errors`, and any other `--out` as typed. If a part named like
 the home folder would still be printed, only `…/` and the file name are shown,
 so neither a refusal nor the summary has the home folder's name under

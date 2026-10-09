@@ -1528,3 +1528,73 @@ def test_the_home_folder_name_is_never_printed(
             assert "homefolder" not in text and "homelink" not in text, (target, out, text)
             if extra:
                 assert json.loads(result.stdout)["safe_to_share"] is True
+
+
+# Cells only the last guard can pass, through the CLI: (shell folder, --out, exit, shown).
+GUARD_CELLS = {
+    # A folder elsewhere named like home (a backup volume's copy, say).
+    "elsewhere-named-like-home": ("T", "other/homefolder/x.json", 0, "…/x.json"),
+    "elsewhere-named-like-home-missing": ("T", "other/gone/homefolder/x.json", 2, "…/x.json"),
+    # The home-named part ends at character 119, where the display is cut.
+    "cut-at-the-display-width": ("T", "q" * 105 + "/../homefolder/../away/x.json", 2, "…/x.json"),
+}
+
+
+@pytest.mark.parametrize("cell", list(GUARD_CELLS))
+def test_the_guard_is_reached_through_the_cli(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    cell: str,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    home = tmp_path / "homefolder"
+    home.mkdir()
+    (tmp_path / "other" / "homefolder").mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.chdir(tmp_path)
+    _, out, code, shown = GUARD_CELLS[cell]
+    if cell == "cut-at-the-display-width":
+        assert out.index("homefolder") + len("homefolder") == 119
+
+    for n, extra in enumerate(((), ("--json",))):
+        result = _out(repo, SC_ARGS, out.replace("x.json", f"x{n}.json"), *extra)
+        text = result.stdout + result.stderr
+
+        assert result.exit_code == code, text
+        assert "homefolder" not in text.lower(), text
+        expected = shown.replace("x.json", f"x{n}.json")
+        if extra:
+            payload = json.loads(result.stdout)
+            assert payload["safe_to_share"] is True
+            assert expected in (payload.get("out") or payload["summary"])
+        else:
+            assert expected in text
+
+
+def test_a_dotdot_after_a_link_is_not_shown_as_a_path_under_home(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    home = tmp_path / "homefolder"
+    home.mkdir()
+    (tmp_path / "away" / "deep").mkdir(parents=True)
+    (tmp_path / "away" / "x.json").write_text("{}", encoding="utf-8")
+    (home / "linkout").symlink_to(tmp_path / "away" / "deep")
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.chdir(home)
+
+    # `linkout/..` is `away/`, not home: the file that exists is away/x.json.
+    for extra in ((), ("--json",)):
+        result = _out(repo, SC_ARGS, "linkout/../x.json", *extra)
+
+        _refused(result, "out_path_exists")
+        assert "~/x.json" not in result.stdout + result.stderr
+        assert "--out linkout/../x.json already exists" in result.stderr
+    assert not (home / "x.json").exists()
