@@ -49,6 +49,14 @@ LAST_STATUS_SEEN_RELATIVE_PATH = Path(".mb") / "last-status-seen.json"
 LAST_STATUS_SEEN_GITIGNORE_ENTRY = ".mb/last-status-seen.json"
 STALE_DECISION_DAYS = 14
 UNCODIFIED_DECISION_DAYS = 7
+# Plain words for the Google Ads statuses mb site check reports.
+GOOGLE_ADS_STATUS_WORDS = {
+    "declared": "customer and conversion plan declared",
+    "partly_declared": "customer declared, conversion plan missing",
+    "placeholder": "customer ID is a placeholder",
+    "not_checked": "account connection not checked",
+    "no_evidence_recorded": "no conversion evidence recorded",
+}
 STALE_RESEARCH_DAYS = 45
 ACTIVE_BET_STATUSES = {"open", "paused"}
 BET_APPETITE_TIERS = {"trivial", "small", "material", "strategic"}
@@ -3667,8 +3675,18 @@ def _candidate_site_repo_records(repo: Path) -> list[dict[str, Any]]:
     return records
 
 
-def _measurement_payload(result: dict[str, Any], *, repair_command: str) -> dict[str, Any]:
+def _google_ads_statuses(result: dict[str, Any]) -> dict[str, str]:
+    """Map each Google Ads evidence kind to its status, so manual_count is explained."""
+
     return {
+        str(item["kind"]): str(item["status"])
+        for item in result.get("evidence") or []
+        if str(item.get("kind") or "").startswith("google_ads_") and item.get("status")
+    }
+
+
+def _measurement_payload(result: dict[str, Any], *, repair_command: str) -> dict[str, Any]:
+    payload: dict[str, Any] = {
         "available": True,
         "state": result["state"],
         "ok": result["ok"],
@@ -3689,6 +3707,10 @@ def _measurement_payload(result: dict[str, Any], *, repair_command: str) -> dict
         "manual_count": len(result.get("manual") or []),
         "safe_to_share": True,
     }
+    google_ads = _google_ads_statuses(result)
+    if google_ads:
+        payload["google_ads"] = google_ads
+    return payload
 
 
 def _measurement(repo: Path) -> dict[str, Any]:
@@ -4845,6 +4867,13 @@ def render_human(
         console.print(
             f"[bold]Measurement[/bold] {measurement.get('state')}  {measurement.get('summary')}"
         )
+        google_ads = measurement.get("google_ads")
+        if isinstance(google_ads, dict) and google_ads:
+            words = [
+                GOOGLE_ADS_STATUS_WORDS.get(str(value), str(value).replace("_", " "))
+                for value in google_ads.values()
+            ]
+            console.print(f"  Google Ads: {'; '.join(words)}")
         if verbose and measurement.get("repair"):
             console.print(f"  next: {measurement['repair']}")
 

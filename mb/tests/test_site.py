@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from mb.cli import app
@@ -112,7 +113,7 @@ def test_site_check_reports_ready_for_operator_review(tmp_path: Path, monkeypatc
         (
             "---\n"
             "gtm_container_id: GTM-ABC1234\n"
-            "google_ads_customer_id: '0000000000'\n"
+            "google_ads_customer_id: '5550100000'\n"
             "consent_posture: standard_tag_consent_reviewed\n"
             "privacy_policy_url: https://example.com/privacy\n"
             "---\n\n"
@@ -162,7 +163,7 @@ def test_site_check_inspects_dist_build_output(tmp_path: Path, monkeypatch) -> N
         (
             "---\n"
             "gtm_container_id: GTM-ABC1234\n"
-            "google_ads_customer_id: '0000000000'\n"
+            "google_ads_customer_id: '5550100000'\n"
             "consent_posture: standard_tag_consent_reviewed\n"
             "privacy_policy_url: https://example.com/privacy\n"
             "---\n\n"
@@ -207,7 +208,7 @@ def test_site_check_reports_astro_launch_instrumentation_widgets(
             "gtm_container_id: GTM-ABC1234\n"
             "ga4_measurement_id: G-ABC123DEF\n"
             "meta_pixel_id: '123456789012345'\n"
-            "google_ads_customer_id: '0000000000'\n"
+            "google_ads_customer_id: '5550100000'\n"
             "consent_posture: standard_tag_consent_reviewed\n"
             "privacy_policy_url: https://example.com/privacy\n"
             "---\n\n"
@@ -312,7 +313,7 @@ def test_site_check_uses_source_link_when_business_repo_is_omitted(
         (
             "---\n"
             "gtm_container_id: GTM-ABC1234\n"
-            "google_ads_customer_id: '0000000000'\n"
+            "google_ads_customer_id: '5550100000'\n"
             "consent_posture: standard_tag_consent_reviewed\n"
             "privacy_policy_url: https://example.com/privacy\n"
             "---\n\n"
@@ -363,7 +364,7 @@ def test_site_check_uses_child_descriptor_relative_hub_when_source_link_is_omitt
         (
             "---\n"
             "gtm_container_id: GTM-ABC1234\n"
-            "google_ads_customer_id: '0000000000'\n"
+            "google_ads_customer_id: '5550100000'\n"
             "consent_posture: standard_tag_consent_reviewed\n"
             "privacy_policy_url: https://example.com/privacy\n"
             "---\n\n"
@@ -440,7 +441,7 @@ def test_site_check_blocks_child_descriptor_with_absolute_local_checkout(
         {
             "kind": "lead_form",
             "gtm_container_id": "GTM-ABC1234",
-            "google_ads_customer_id": "0000000000",
+            "google_ads_customer_id": "5550100000",
             "primary_conversions": ["mb_lead_submit"],
             "metadata": {
                 "consent_posture": "standard_tag_consent_reviewed",
@@ -489,7 +490,7 @@ def test_site_check_accepts_child_descriptor_with_explicit_business_repo(
         (
             "---\n"
             "gtm_container_id: GTM-ABC1234\n"
-            "google_ads_customer_id: '0000000000'\n"
+            "google_ads_customer_id: '5550100000'\n"
             "consent_posture: standard_tag_consent_reviewed\n"
             "privacy_policy_url: https://example.com/privacy\n"
             "---\n\n"
@@ -662,7 +663,7 @@ def test_status_includes_measurement_summary_when_conversion_plan_exists(
         (
             "---\n"
             "gtm_container_id: GTM-ABC1234\n"
-            "google_ads_customer_id: '0000000000'\n"
+            "google_ads_customer_id: '5550100000'\n"
             "consent_posture: standard_tag_consent_reviewed\n"
             "privacy_policy_url: https://example.com/privacy\n"
             "---\n\n"
@@ -706,7 +707,7 @@ def test_status_follows_business_repo_site_record_for_measurement(
         (
             "---\n"
             "gtm_container_id: GTM-ABC1234\n"
-            "google_ads_customer_id: '0000000000'\n"
+            "google_ads_customer_id: '5550100000'\n"
             "consent_posture: standard_tag_consent_reviewed\n"
             "privacy_policy_url: https://example.com/privacy\n"
             "---\n\n"
@@ -1069,16 +1070,18 @@ def _ads_site(
     customer: bool = True,
     primary: bool = True,
     approvals: bool = False,
+    customer_id: str = "5550100000",
+    gtm_id: str = "GTM-ABC1234",
 ) -> tuple[Path, Path]:
     business = tmp_path / "business"
     site = tmp_path / "site"
     init_run(path=str(business), name="Acme")
     site.mkdir()
-    customer_line = "google_ads_customer_id: '0000000000'\n" if customer else ""
+    customer_line = f"google_ads_customer_id: '{customer_id}'\n" if customer else ""
     (business / "core" / "offer.md").write_text(
         (
             "---\n"
-            "gtm_container_id: GTM-ABC1234\n"
+            f"gtm_container_id: {gtm_id}\n"
             f"{customer_line}"
             "consent_posture: standard_tag_consent_reviewed\n"
             "privacy_policy_url: https://example.com/privacy\n"
@@ -1240,3 +1243,107 @@ def test_site_check_human_output_names_google_ads_next_steps(tmp_path: Path, mon
     )
     assert "next: Read the account through Google's read-only Google Ads MCP" in result.stdout
     assert "next: Confirm the tag fires in GTM Preview or Tag Assistant" in result.stdout
+
+
+@pytest.mark.parametrize(
+    "customer_id",
+    ["000-000-0000", "0000000000", "TODO", "tbd", "xxx-xxx-xxxx", "XXXXXXXXXX", "placeholder"],
+)
+def test_site_check_placeholder_google_ads_customer_is_not_declared(
+    tmp_path: Path, monkeypatch, customer_id: str
+) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business, site = _ads_site(tmp_path, approvals=True, customer_id=customer_id)
+
+    result = runner.invoke(
+        app, ["site", "check", str(site), "--business-repo", str(business), "--json"]
+    )
+
+    payload = json.loads(result.stdout)
+    assert _evidence(payload, "google_ads_plan") == {
+        "kind": "google_ads_plan",
+        "state": "manual",
+        "status": "placeholder",
+        "summary": (
+            "Not declared: the Google Ads customer ID is a placeholder, "
+            "so no Google Ads customer is recorded."
+        ),
+        "next": (
+            "Replace it with the 10-digit customer ID shown at the top of "
+            "the Google Ads account, then run mb site check again."
+        ),
+    }
+    kinds = {item["kind"] for item in payload["evidence"]}
+    assert "google_ads_connection" not in kinds
+    assert "google_ads_conversion_evidence" not in kinds
+    # A placeholder customer never makes the repo ready for paid traffic.
+    assert payload["state"] == "ready_for_preview"
+
+
+def test_site_check_placeholder_google_ads_customer_names_missing_plan(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business, site = _ads_site(tmp_path, primary=False, customer_id="000-000-0000")
+
+    result = runner.invoke(app, ["site", "check", str(site), "--business-repo", str(business)])
+
+    assert result.exit_code == 0
+    assert (
+        "manual google_ads_plan: Not declared: the Google Ads customer ID is a "
+        "placeholder, so no Google Ads customer is recorded. The primary conversion "
+        "plan is also missing."
+    ) in " ".join(result.stdout.split())
+    assert "next: Replace it with the 10-digit customer ID" in result.stdout
+
+
+@pytest.mark.parametrize("customer_id", ["", "   "])
+def test_site_check_blank_google_ads_customer_reads_as_missing(
+    tmp_path: Path, monkeypatch, customer_id: str
+) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business, site = _ads_site(tmp_path, customer_id=customer_id)
+
+    result = runner.invoke(
+        app, ["site", "check", str(site), "--business-repo", str(business), "--json"]
+    )
+
+    payload = json.loads(result.stdout)
+    assert _evidence(payload, "google_ads_plan") == {
+        "kind": "google_ads_plan",
+        "state": "manual",
+        "summary": "Missing Google Ads customer ID before launch review.",
+    }
+
+
+def test_site_check_dashed_google_ads_customer_is_declared(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business, site = _ads_site(tmp_path, approvals=True, customer_id="555-010-0000")
+
+    result = runner.invoke(
+        app, ["site", "check", str(site), "--business-repo", str(business), "--json"]
+    )
+
+    payload = json.loads(result.stdout)
+    assert _evidence(payload, "google_ads_plan")["status"] == "declared"
+    assert payload["state"] == "ready"
+
+
+@pytest.mark.parametrize("gtm_id", ["GTM-TODO", "GTM-TBD"])
+def test_site_check_gtm_shares_the_placeholder_words(
+    tmp_path: Path, monkeypatch, gtm_id: str
+) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business, site = _ads_site(tmp_path, gtm_id=gtm_id)
+
+    result = runner.invoke(
+        app, ["site", "check", str(site), "--business-repo", str(business), "--json"]
+    )
+
+    payload = json.loads(result.stdout)
+    assert _evidence(payload, "gtm_container")["state"] == "blocked"

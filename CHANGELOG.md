@@ -92,6 +92,17 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   another user's home is shown as `~name/...`, not as that user's full home
   path. The name of an earlier run's temporary file in the failed-write message
   is printed without terminal escape codes.
+- A placeholder Google Ads customer ID such as `000-000-0000`, `xxx-xxx-xxxx`,
+  `TODO` or `TBD` no longer counts as declared. `mb site check` says the ID is a
+  placeholder, asks for the real 10-digit customer ID from the top of the
+  Google Ads account, and the site cannot reach `ready` until it is recorded.
+  The check uses the same placeholder words as GTM IDs, so a GTM ID of
+  `GTM-TODO` or `GTM-TBD` is now flagged as a placeholder too (part of #1105).
+- `mb status` now says why the measurement manual count includes Google Ads:
+  a `Google Ads:` line under Measurement names each status (for example
+  "account connection not checked; no conversion evidence recorded"), and
+  `--json` adds `measurement.google_ads`. Repos with no Google Ads customer see
+  the same output as before (part of #1105).
 - `mb site check` no longer lets a declared Google Ads customer read as more
   than it is. Once the repo declares a Google Ads customer, the check reports
   three things apart: `google_ads_plan` says only that the customer and
