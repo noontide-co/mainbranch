@@ -425,9 +425,45 @@ def analyze_credential_safety(text: str) -> dict[str, Any]:
 # cannot make the scan super-linear. Between `checkpoint` and the message flag
 # only options (and the values of the options that take one) may appear: a
 # word, `;`, `&&`, `|`, a closing backtick or any other command in between
-# means the `-m` belongs to something else.
+# means the `-m` belongs to something else. The one exception is a single bare
+# word right after `mb checkpoint` that leads straight to the message flag: the
+# command takes no positional argument, so that is reported as an unknown
+# argument and its message is not read as a subject.
 _CHECKPOINT_COMMAND = re.compile(r"(?<![\w./~@%+=:-])checkpoint(?=[\s\\])")
 _CHECKPOINT_WINDOW = 400
+_CHECKPOINT_MB_PREFIX = re.compile(r"(?<![\w./~@%+=:-])mb[ \t]+$")
+_CHECKPOINT_BARE_WORD = re.compile(r"[A-Za-z][\w-]*(?=\s)")
+# Small English words that join a sentence, not a command ("mb checkpoint with
+# --message ...", "mb checkpoint then -m ..."). The CLI would reject them as
+# well, but they read as prose, so they are not reported as an argument. Words
+# that could be typed as a command (save, run, commit, now) are not listed.
+_CHECKPOINT_PROSE_WORDS = frozenset(
+    {
+        "a",
+        "again",
+        "an",
+        "and",
+        "as",
+        "but",
+        "by",
+        "for",
+        "if",
+        "in",
+        "it",
+        "later",
+        "of",
+        "on",
+        "or",
+        "so",
+        "that",
+        "the",
+        "then",
+        "to",
+        "using",
+        "via",
+        "with",
+    }
+)
 _CHECKPOINT_FINDING_LIMIT = 20
 _CHECKPOINT_PLACEHOLDER_VERBS = frozenset({"verb"})
 _CHECKPOINT_VALUE_OPTIONS = frozenset({"--repo", "--validate", "--mode"})
@@ -443,7 +479,9 @@ _CHECKPOINT_CLOSING_QUOTE = {quote: re.compile(r"(?<!\\)" + quote) for quote in 
 _CHECKPOINT_UNQUOTED_END = re.compile(r"[;|&`]|\s-{1,2}[A-Za-z]")
 _CHECKPOINT_BRACKET_OPENERS = "[\u3010\uff3b\u3014"
 _CHECKPOINT_PLACEHOLDER_BRACKET = re.compile(
-    r"[\[\u3010\uff3b\u3014]\s*(?:\.{2,}|\u2026|<[^>]*>|verb|\$\w+|\{\w*\})\s*[\]\u3011\uff3d\u3015]",
+    r"[\[\u3010\uff3b\u3014]\s*"
+    r"(?:\.{2,}|\u2026|<[^>]*>|verb|\$\w+|\$\{\w+\}|\{\w*\})"
+    r"\s*[\]\u3011\uff3d\u3015]",
     re.IGNORECASE,
 )
 
@@ -470,22 +508,29 @@ def _checkpoint_command_window(text: str, start: int, limit: int) -> str:
     return _CHECKPOINT_CONTINUATION.sub(" ", window)
 
 
-def _checkpoint_message_start(window: str) -> tuple[int, int] | None:
-    """Return the start and end of the checkpoint's own message flag, if it has one."""
+def _checkpoint_message_start(window: str) -> tuple[int, int, str | None] | None:
+    """Return the start and end of the checkpoint's own message flag, if it has one.
+
+    The third item is the one bare word that came before the flag, if any.
+    """
     cursor = 0
+    bare: str | None = None
     while True:
         while cursor < len(window) and window[cursor].isspace():
             cursor += 1
         option = _CHECKPOINT_OPTION.match(window, cursor)
         if option is None:
-            return None
+            word = _CHECKPOINT_BARE_WORD.match(window, cursor)
+            if word is None or bare is not None or word.group().lower() in _CHECKPOINT_PROSE_WORDS:
+                return None
+            bare = word.group()
+            cursor = word.end()
+            continue
         name = option.group("name")
         cursor = option.end()
         if name in _CHECKPOINT_MESSAGE_OPTIONS:
-            if option.group("assign"):
-                return option.start(), cursor
-            if cursor < len(window) and window[cursor].isspace():
-                return option.start(), cursor
+            if option.group("assign") or (cursor < len(window) and window[cursor].isspace()):
+                return option.start(), cursor, bare
             return None
         if option.group("assign"):
             token = _CHECKPOINT_TOKEN.match(window, cursor)
@@ -517,11 +562,21 @@ def _checkpoint_subject(window: str, cursor: int) -> tuple[str, int]:
     return raw.strip(), cursor + len(raw) - len(raw.lstrip())
 
 
-def _checkpoint_finding(window: str, accepted: list[str]) -> dict[str, Any] | None:
+def _checkpoint_finding(
+    window: str, accepted: list[str], *, after_mb: bool
+) -> dict[str, Any] | None:
     flag = _checkpoint_message_start(window)
     if flag is None:
         return None
-    flag_start, after_flag = flag
+    flag_start, after_flag, bare = flag
+    if bare is not None:
+        if not after_mb:
+            return None
+        return {
+            "kind": "unknown_checkpoint_argument",
+            "argument": bare[:40],
+            "excerpt": _short_excerpt(window, 0, after_flag),
+        }
     subject, subject_start = _checkpoint_subject(window, after_flag)
     verb_match = _CHECKPOINT_VERB.match(subject)
     excerpt_end = subject_start + len(subject) + 1
@@ -562,16 +617,23 @@ def analyze_checkpoint_verbs(text: str) -> dict[str, Any]:
     that ``mb checkpoint --validate`` reads; nothing is copied here. A rejected
     verb (``[repaired] x``) is reported as ``rejected_checkpoint_verb``; a subject
     that opens a bracket but is not ``[verb] object`` (``[]``, ``[fixed]offer``,
-    ``[fixed][repaired] x``) as ``malformed_checkpoint_subject``. Subjects with
-    no bracket at all, and placeholders, are skipped. The findings list is capped.
+    ``[fixed][repaired] x``) as ``malformed_checkpoint_subject``. A bare word
+    between ``mb checkpoint`` and the message flag is ``unknown_checkpoint_argument``,
+    unless it is a small prose word (``with``, ``then``, ``and``).
+    Subjects with no bracket at all, and placeholders, are skipped. The findings
+    list is capped.
     """
     accepted = [entry.verb for entry in checkpoint_verbs.registry().values()]
     violations: list[dict[str, Any]] = []
     total = 0
-    starts = [match.end() for match in _CHECKPOINT_COMMAND.finditer(text)]
-    for index, start in enumerate(starts):
-        limit = starts[index + 1] if index + 1 < len(starts) else len(text)
-        finding = _checkpoint_finding(_checkpoint_command_window(text, start, limit), accepted)
+    matches = list(_CHECKPOINT_COMMAND.finditer(text))
+    for index, match in enumerate(matches):
+        start = match.end()
+        limit = matches[index + 1].end() if index + 1 < len(matches) else len(text)
+        after_mb = _CHECKPOINT_MB_PREFIX.search(text, max(0, match.start() - 8), match.start())
+        finding = _checkpoint_finding(
+            _checkpoint_command_window(text, start, limit), accepted, after_mb=bool(after_mb)
+        )
         if finding is None:
             continue
         total += 1
@@ -828,22 +890,30 @@ def _strip_fenced_code(text: str) -> str:
 # Release framing can wrap over several lines. A line is searched together with
 # the lines after it until they hold this many words. The longest thing the
 # pattern reads past "release" is an owner-audience lookahead (about 17 words),
-# so 24 sees all of it and never cuts a lookahead short.
+# so 24 sees all of it and never cuts a lookahead short. The window is also
+# bounded by characters, so lines of one huge token each do not pull in 24
+# lines apiece. The lookahead is "with" + a two-word count ("a handful of") +
+# "real beta" + a noun + up to 4 words + a made-up word: about 17 words, and
+# 240 characters allows 14 per word.
 _WRAP_WORDS = 24
+_WRAP_CHARS = 240
 
 
 def _wrapped_text(
     lines: list[str], joinable: list[bool], word_counts: list[int], index: int
 ) -> str:
-    # Always the whole next line, then more lines until enough words follow.
-    # Blank lines and technical-detail lines end the window. Every joinable line
-    # holds a word, so a window spans at most _WRAP_WORDS + 1 lines.
+    # Always the whole next line, then more lines until enough words or
+    # characters follow. Blank lines and technical-detail lines end the window.
+    # Every joinable line holds a word, so a window spans at most
+    # _WRAP_WORDS + 1 lines.
     window = [lines[index]]
     words = 0
+    chars = 0
     follow = index + 1
-    while follow < len(lines) and joinable[follow] and words < _WRAP_WORDS:
+    while follow < len(lines) and joinable[follow] and words < _WRAP_WORDS and chars < _WRAP_CHARS:
         window.append(lines[follow])
         words += word_counts[follow]
+        chars += len(lines[follow]) + 1
         follow += 1
     return "\n".join(window)
 

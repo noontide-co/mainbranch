@@ -2431,3 +2431,104 @@ def test_another_users_home_reached_through_dotdot_is_shown_as_typed(
     plain = _out(repo, SC_ARGS, "~sam/../plain/d.json", "--json")
     assert plain.exit_code == 0
     assert json.loads(plain.stdout)["out"] == "~sam/../plain/d.json"
+
+
+@pytest.mark.parametrize(
+    ("platform", "config", "rule"),
+    [
+        ("darwin", b"true\n", "out_path_in_repo"),
+        ("darwin", b"false\n", "out_path_git_unknown"),
+        ("darwin", None, "out_path_git_unknown"),
+        ("linux", b"true\n", "out_path_git_unknown"),
+        ("win32", b"true\n", "out_path_git_unknown"),
+        ("cygwin", b"true\n", "out_path_git_unknown"),
+    ],
+)
+def test_the_index_spelling_refusal_picks_its_rule_by_platform_and_git_setting(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, platform: str, config: bytes | None, rule: str
+) -> None:
+    # A stubbed git and a patched platform: both branches run on any disk, so a Linux
+    # runner needs no NFD-capable file system.
+    monkeypatch.setattr("sys.platform", platform)
+    asked: list[list[str]] = []
+
+    def run(args: list[str], cwd: Path) -> subprocess.CompletedProcess[bytes] | None:
+        asked.append(args)
+        if config is None:
+            return None
+        return subprocess.CompletedProcess(args, 0, config, b"")
+
+    refusal = go_out._index_spelling_refusal("form", run, tmp_path, "~/x.json")
+
+    assert refusal.rule == rule
+    # Off macOS git is not even asked: the setting changes nothing there.
+    assert bool(asked) == (platform == "darwin")
+    # A case difference is never the tracked-path wording.
+    case = go_out._index_spelling_refusal("case", run, tmp_path, "~/x.json")
+    assert case.rule == "out_path_git_unknown"
+
+
+@pytest.mark.parametrize(
+    ("typed", "name"),
+    [
+        ("~/../bobhome/pulls/a.json", "a.json"),
+        ("~/../../outside/q.json", "q.json"),
+        ("~/bob-link/pulls/a.json", "a.json"),
+    ],
+)
+def test_a_home_path_that_leaves_your_home_is_shown_as_typed(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    typed: str,
+    name: str,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    mine = tmp_path / "level" / "myhome"
+    mine.mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(mine))
+    (tmp_path / "level" / "bobhome" / "pulls").mkdir(parents=True)
+    (tmp_path / "outside").mkdir()
+    (mine / "bob-link").symlink_to(tmp_path / "level" / "bobhome")
+
+    written = _out(repo, SC_ARGS, typed)
+    as_json = _out(repo, SC_ARGS, typed.replace(name, "b-" + name), "--json")
+
+    assert written.exit_code == 0, written.stderr
+    assert f"wrote {typed} (mode 0600)" in written.stdout
+    assert json.loads(as_json.stdout)["out"] == typed.replace(name, "b-" + name)
+    for result in (written, as_json):
+        assert str(tmp_path) not in result.stdout + result.stderr
+
+    # Staying in your home still shows `~/...`, links included.
+    (mine / "pulls").mkdir()
+    (mine / "inner-link").symlink_to(mine / "pulls")
+    for stays in ("~/pulls/c.json", "~/inner-link/d.json", "~/../myhome/pulls/e.json"):
+        own = _out(repo, SC_ARGS, stays, "--json")
+        assert own.exit_code == 0, own.stderr
+        assert json.loads(own.stdout)["out"] == "~/pulls/" + stays.rsplit("/", 1)[1]
+
+
+def test_a_refusal_for_a_home_path_that_leaves_your_home_is_unchanged(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    mine = tmp_path / "myhome"
+    mine.mkdir()
+    monkeypatch.setenv("HOME", str(mine))
+    (tmp_path / "bobhome").mkdir()
+    (tmp_path / "bobhome" / "a.json").write_text("mine\n")
+
+    exists = _out(repo, SC_ARGS, "~/../bobhome/a.json")
+    missing = _out(repo, SC_ARGS, "~/../nowhere/a.json")
+
+    _refused(exists, "out_path_exists")
+    _refused(missing, "out_parent_missing")
+    assert api.calls == []
+    assert (tmp_path / "bobhome" / "a.json").read_text() == "mine\n"

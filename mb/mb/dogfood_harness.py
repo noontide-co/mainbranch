@@ -1657,6 +1657,23 @@ def evidence_template(state: HarnessState, *, install_mode: str, mb_version: str
             checkpoint_verbs_line += (
                 f"- Checkpoint subjects: not `[verb] object`: {', '.join(malformed)}\n"
             )
+        unknown = sorted(
+            {
+                str(item.get("argument"))
+                for item in findings
+                if item.get("kind") == "unknown_checkpoint_argument"
+            }
+        )
+        if unknown:
+            checkpoint_verbs_line += (
+                f"- Checkpoint commands: `mb checkpoint` takes no argument: {', '.join(unknown)}\n"
+            )
+        total = rubric["checkpoint_verbs"].get("total_violations")
+        if isinstance(total, int) and total > len(findings):
+            checkpoint_verbs_line += (
+                f"- Checkpoint findings: {total} in all; the lines above cover only the first "
+                f"{len(findings)}\n"
+            )
     skill_present = (state.fixture_repo / ".claude" / "skills" / "mb-start" / "SKILL.md").exists()
     status_schema = status_payload.get("schema_version", "unknown")
     status_wiring = nested_get(status_payload, ("runtime", "skill_wiring", "ok"))

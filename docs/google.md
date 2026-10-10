@@ -241,7 +241,11 @@ cut to fit. The temporary file's name goes through the
 same check: for a file named like your home folder it is shown as
 `.….mb-out.tmp`. A PATH starting with another user's `~name/` is shown as
 `~name/...`, never as that user's full home path; `~you/...` for your own
-user name shows as `~/...`. So
+user name shows as `~/...`. A path that starts with `~/` or `~name/` and then
+leaves that home (`~/../bobhome/pulls/a.json`, `~/../../outside/q.json`,
+`~name/../bobhome/x.json`, or `~/bob-link/x.json` where `bob-link` is a link in
+your home to another home) is shown exactly as you typed it, never as a full
+path; one that comes back into your own home shows as `~/...`. So
 a refusal or summary (marked `safe_to_share: true` with `--json`) never prints
 your home folder's name. A relative PATH is relative to the
 folder you run the command from, not `--repo`. A failed read writes nothing. If

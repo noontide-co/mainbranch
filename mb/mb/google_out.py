@@ -482,13 +482,22 @@ def check_out(raw: str, *, force: bool = False) -> OutTarget:
 def _other_home_shown(raw: str, target: Path) -> str:
     """For ``~name/...`` (another user's home), the path as ``~name/...``, else ``""``.
 
+    A ``~/...`` path that leaves your home is shown as typed too.
+
     The summary then never prints that user's home folder as a full path. When that
     home is the same folder as your own, ``""`` too: the summary shows ``~/...``.
     """
 
     user = raw.split("/", 1)[0]
-    if not user.startswith("~") or user == "~":
+    if not user.startswith("~"):
         return ""
+    if user == "~":
+        # Your own home: `~/...` stays as it was while the path stays inside it. A path
+        # that leaves it (`~/../bobhome/...`, or through a link to another home) is shown
+        # as typed, so no other folder is printed in full.
+        if display_path(target).startswith("~/"):
+            return ""
+        return hide_home_name(terminal_safe(raw, len(raw) + 1), target.name)
     try:
         home = Path(os.path.expanduser(user)).resolve()
         rest = target.parent.resolve().relative_to(home) / target.name
