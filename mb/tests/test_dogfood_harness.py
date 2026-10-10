@@ -437,6 +437,54 @@ def test_evidence_template_labels_print_mode_as_proxy(tmp_path: Path) -> None:
     assert "- Checkpoint verbs: rejected by `mb checkpoint --validate`: [repaired]\n" in mixed
     assert "- Checkpoint subjects: not `[verb] object`: []\n" in mixed
     assert "[None]" not in mixed
+    assert "Checkpoint findings:" not in mixed
+
+
+def _checkpoint_summary(tmp_path: Path, checkpoint_verbs: dict[str, object]) -> str:
+    state = harness.HarnessState(
+        engine_repo=tmp_path / "engine",
+        root=tmp_path,
+        evidence_dir=tmp_path / "evidence",
+        fixture_repo=tmp_path / "fixture",
+        mb_path=tmp_path / "venv" / "bin" / "mb",
+    )
+    state.fixture_repo.mkdir(parents=True, exist_ok=True)
+    state.claude = {"ran": True, "rubric": {"checkpoint_verbs": checkpoint_verbs}}
+    return harness.evidence_template(state, install_mode="editable", mb_version="mb 0.3.6")
+
+
+def test_evidence_template_names_an_unknown_checkpoint_argument(tmp_path: Path) -> None:
+    unknown = _checkpoint_summary(
+        tmp_path,
+        {
+            "ok": False,
+            "violations": [{"kind": "unknown_checkpoint_argument", "argument": "save"}],
+            "total_violations": 1,
+        },
+    )
+
+    assert "- Checkpoint commands: `mb checkpoint` takes no argument: save\n" in unknown
+    assert "Checkpoint verbs:" not in unknown
+    assert "Checkpoint findings:" not in unknown
+
+
+def test_evidence_template_reports_the_true_total_above_the_finding_cap(tmp_path: Path) -> None:
+    findings = [{"kind": "rejected_checkpoint_verb", "verb": "repaired"}] * 20
+    note = "- Checkpoint findings: 26 in all; the lines above cover only the first 20\n"
+
+    at_cap = _checkpoint_summary(
+        tmp_path, {"ok": False, "violations": findings, "total_violations": 20}
+    )
+    capped = _checkpoint_summary(
+        tmp_path, {"ok": False, "violations": findings, "total_violations": 26}
+    )
+    legacy = _checkpoint_summary(tmp_path, {"ok": False, "violations": findings})
+
+    assert "Checkpoint findings:" not in at_cap
+    assert legacy == at_cap
+    assert "- Checkpoint verbs: rejected by `mb checkpoint --validate`: [repaired]\n" in capped
+    assert note in capped
+    assert capped.replace(note, "") == at_cap
 
 
 def test_materialize_fixture_profiles_create_observable_repo_states(
