@@ -13,6 +13,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- `mb google ... --out` display fixes. The "inside a git checkout" refusal for
+  a tracked file written in the other Unicode spelling now applies only on
+  macOS, where git folds those spellings together; elsewhere it keeps the
+  earlier "spelled differently" refusal (still refused, nothing read or
+  written). A path shortened to hide your home folder's name now also fits the
+  display limit after the cut. `--out ~name/../otherhome/x.json` is shown as
+  you typed it instead of printing that other home folder in full.
 - `mb status` repair and update suggestions now name your business repo when
   you run it from another folder: the skill-wiring repairs (`mb skill link`,
   `mb skill repair`), the ranked next action and the drift repair, `mb update`
