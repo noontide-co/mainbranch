@@ -74,18 +74,20 @@ Required fact paths:
 - `brain.bets.exit_criteria.triggered_failure_signals`
 - `brain.bets.exit_criteria.triggered_double_down_signals`
 - `vocabulary`
-Approval gates and public/private boundaries: the status fact names; see
-`references/router-and-language.md` (Approval Gates and Public/Private Boundaries).
+Approval gates: `updates_repairs_migrations`, `file_writes`, `checkpoint`,
+`provider_mutation`, `publishing_or_spend`, `customer_contact`, `private_data`,
+`destructive_operations`, and `status_marker`.
+
+Public/private boundaries: `no_secrets`, `no_raw_provider_exports`,
+`no_customer_member_data`, `no_private_runtime_settings`, and
+`no_raw_finance_legal_records`.
 
 Core route: status facts first, runtime mismatch gates before business routing,
 one owner-facing recommendation, business language first, and explicit approval
 before mutating the status marker or doing durable writes.
 
-**Continuity facts:** Use `since_last_check.journal`, top-level `journal`,
-GitHub activity, and `checkpoint` from status to explain "where we left off."
-Do not run raw `git log` unless status says journal facts are unavailable.
-If `core/operations/pulse/` exists, read today's `log/<date>-*-pulse.md` and
-carry its ONE action into the session open (offer the pulse skill if missing).
+**Continuity facts:** "where we left off" comes from status `journal` and `checkpoint`;
+rules in `references/router-and-language.md` (Continuity Facts).
 Saving progress: `mb checkpoint --plan --json`, validate the subject (verb from
 `references/router-and-language.md`), then after approval `mb checkpoint --message "..." --yes`.
 
