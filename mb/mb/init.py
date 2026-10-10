@@ -121,6 +121,15 @@ STATUS_CONVENTION_SCHEMAS = (
     ("Pushes", "pushes"),
 )
 
+# Every other schema with a `status:` enum, and why the conventions do not list
+# it. A new constrained type is in neither set, which fails
+# `test_every_status_enum_schema_is_listed_or_excluded` until someone decides.
+# Topology status lives in `validate.TOPOLOGY_STATUS`, outside `SCHEMAS[...]["enums"]`.
+STATUS_CONVENTION_EXCLUDED = {
+    "campaigns": "legacy: `pushes/` replaced it and shares the push status values",
+    "push-playbooks": "drafted by the ads skills as plans, not part of the daily vocabulary",
+}
+
 
 def _join_labels(labels: list[str]) -> str:
     return ", ".join(labels[:-1]) + f" and {labels[-1]}" if len(labels) > 1 else labels[0]

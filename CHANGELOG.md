@@ -21,6 +21,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   died" (made before the conventions were corrected) and prints the replacement
   text. It is a warning only: the exit code is unchanged and nothing is rewritten.
   Repos without that line see no change.
+- `mb doctor` also catches the oldest wording of that line ("Status enum:", from
+  the first 0.1.x releases), and no longer warns when a `CLAUDE.md` only quotes
+  the old line inside a sentence. The warning now says which line to replace.
+- `mb doctor repair --plan` lists the old status line as a manual step, so the
+  plan matches what `mb doctor` reports. Nothing is applied or rewritten.
 - When a `status:` value is wrong, the summary that `mb validate`, `mb status` and
   `mb doctor repair --plan` show now names the allowed values for each file type (for bets:
   `canceled | closed | open | paused`) instead of "one of the allowed lifecycle

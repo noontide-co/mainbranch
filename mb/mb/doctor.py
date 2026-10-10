@@ -839,10 +839,15 @@ def _repo_layout_check(repo: Path) -> dict[str, Any]:
     }
 
 
-# The one-set status line `mb init` wrote into CLAUDE.md before #1121, in both
-# shipped forms (bundled template with backticks, embedded fallback without).
+# The one-set status line `mb init` wrote into CLAUDE.md before #1121, in each
+# shipped form: "Status enum:" (0.1.x, backticked template and plain embedded
+# fallback) and "Status field:" (later 0.x). Anchored to a list item, as every
+# shipped form is, so a CLAUDE.md that quotes the line inside a sentence is not
+# flagged.
 _OLD_STATUS_LINE_RE = re.compile(
-    r"Status field:[ \t]*`?proposed \| running \| scaling \| killed \| graduated \| died`?"
+    r"^[ \t]*[-*][ \t]+(Status (?:field|enum)):[ \t]*"
+    r"`?proposed \| running \| scaling \| killed \| graduated \| died`?",
+    re.MULTILINE,
 )
 
 
@@ -857,7 +862,8 @@ def _old_status_line_check(repo: Path) -> dict[str, Any] | None:
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return None
-    if _OLD_STATUS_LINE_RE.search(text) is None:
+    match = _OLD_STATUS_LINE_RE.search(text)
+    if match is None:
         return None
     from mb import init as init_mod
 
@@ -865,7 +871,7 @@ def _old_status_line_check(repo: Path) -> dict[str, Any] | None:
     repair = (
         "CLAUDE.md still says every file type uses `proposed | running | scaling | killed | "
         "graduated | died`; `mb validate` rejects `running` on a bet. Replace the "
-        "`Status field:` line (and any lines continuing it) with:\n" + suggested
+        f"`{match.group(1)}:` line (and any lines continuing it) with:\n" + suggested
     )
     return {
         "name": "claude-status-line",
@@ -3198,6 +3204,43 @@ def repair_plan(
             ],
         )
     )
+
+    status_line_check = next(
+        (check for check in doctor_report["checks"] if check["name"] == "claude-status-line"),
+        None,
+    )
+    if status_line_check is not None:
+        status_line_action = _action(
+            id="claude-status-line",
+            title="Replace the old status line in CLAUDE.md",
+            state="warn",
+            mode="manual",
+            command="mb doctor --json",
+            safe_to_apply=False,
+            reason=(
+                "CLAUDE.md still gives one status set for every file type; `mb doctor` "
+                "prints the replacement lines, and doctor never rewrites CLAUDE.md"
+            ),
+        )
+        actions.append(status_line_action)
+        sections.append(
+            _section(
+                "claude-status-line",
+                "CLAUDE.md Status Line",
+                "warn",
+                "CLAUDE.md still teaches one status set for every file type",
+                checks=[
+                    {
+                        "name": "claude-status-line",
+                        "state": "warn",
+                        "summary": str(status_line_check["detail"]),
+                        "path": "CLAUDE.md",
+                        "content_included": False,
+                    }
+                ],
+                actions=[status_line_action],
+            )
+        )
 
     sections.append(
         _section(

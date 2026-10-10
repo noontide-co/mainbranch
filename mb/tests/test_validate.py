@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from typing import Any
 
 from typer.testing import CliRunner
 
@@ -2491,15 +2492,24 @@ def test_validate_names_the_allowed_status_values_in_the_rollup(tmp_path: Path) 
     assert "shipped" not in report["validation_categories"]["top_operator_summary"]
 
 
+def _wrong_topology_status_report(tmp_path: Path) -> dict[str, Any]:
+    # At the real path with the real schema id, so the topology check runs (#1133).
+    _write(
+        tmp_path / "core" / "operations" / "repo-topology.md",
+        _repo_topology().replace("status: active\n", "status: wrong\n"),
+    )
+    report = run(path=str(tmp_path))
+    topology = [f for f in report["files"] if f["path"] == "core/operations/repo-topology.md"][0]
+    assert topology["schema"] == "repo-topology"
+    assert any(error.startswith("topology status='wrong'") for error in topology["errors"])
+    assert "status_enum_mismatch" in report["validation_categories"]["by_category"]
+    return report
+
+
 def test_validate_leaves_other_status_like_enums_out_of_the_allowed_status_list(
     tmp_path: Path,
 ) -> None:
-    _write(
-        tmp_path / "core" / "repo-topology.md",
-        "---\ntype: repo_topology\nstatus: wrong\n---\n# Topology\n",
-    )
-
-    report = run(path=str(tmp_path))
+    report = _wrong_topology_status_report(tmp_path)
 
     for entry in report["validation_categories"]["by_category"].values():
         assert "allowed_status" not in entry
@@ -2508,12 +2518,8 @@ def test_validate_leaves_other_status_like_enums_out_of_the_allowed_status_list(
 def test_validate_status_rollup_for_a_topology_status_has_no_stale_example(
     tmp_path: Path,
 ) -> None:
-    _write(
-        tmp_path / "core" / "repo-topology.md",
-        "---\ntype: repo_topology\nstatus: wrong\n---\n# Topology\n",
-    )
-
-    report = run(path=str(tmp_path))
+    report = _wrong_topology_status_report(tmp_path)
 
     top = report["validation_categories"]
+    assert top["top_category"] == "status_enum_mismatch"
     assert "shipped" not in top["top_operator_summary"] + top["top_repair"]

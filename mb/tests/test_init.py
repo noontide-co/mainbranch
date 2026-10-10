@@ -509,3 +509,30 @@ def test_init_claude_md_status_values_match_mb_validate(
     }
     assert listed == {label.lower() for label in _status_lines(text)}
     assert lead_in.endswith("each have their own `status:` values;")
+
+
+def test_every_status_enum_schema_is_listed_or_excluded() -> None:
+    # #1133: the drift test above compares the lead-in with the list, and both come
+    # from STATUS_CONVENTION_SCHEMAS, so a new constrained type would go unseen.
+    from mb.validate import SCHEMAS
+
+    listed = {schema for _, schema in init_mod.STATUS_CONVENTION_SCHEMAS}
+    excluded = set(init_mod.STATUS_CONVENTION_EXCLUDED)
+    assert not listed & excluded
+    constrained = {name for name, spec in SCHEMAS.items() if "status" in spec["enums"]}
+    assert constrained == listed | excluded
+    assert all(init_mod.STATUS_CONVENTION_EXCLUDED.values())
+
+
+def test_a_new_status_enum_schema_fails_the_coverage_check(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from mb import validate
+
+    monkeypatch.setitem(
+        validate.SCHEMAS,
+        "brand-new",
+        {"glob": "x/*.md", "required": [], "enums": {"status": {"a"}}},
+    )
+    with pytest.raises(AssertionError):
+        test_every_status_enum_schema_is_listed_or_excluded()
