@@ -842,13 +842,45 @@ def _repo_layout_check(repo: Path) -> dict[str, Any]:
 # The one-set status line `mb init` wrote into CLAUDE.md before #1121, in each
 # shipped form: "Status enum:" (0.1.x, backticked template and plain embedded
 # fallback) and "Status field:" (later 0.x). Anchored to a list item, as every
-# shipped form is, so a CLAUDE.md that quotes the line inside a sentence is not
-# flagged.
+# shipped form is, so a CLAUDE.md that quotes the line inside a sentence, or in a
+# fenced code block (see `_outside_fences`), is not flagged.
 _OLD_STATUS_LINE_RE = re.compile(
     r"^[ \t]*[-*][ \t]+(Status (?:field|enum)):[ \t]*"
     r"`?proposed \| running \| scaling \| killed \| graduated \| died`?",
     re.MULTILINE,
 )
+
+
+_FENCE_OPEN_RE = re.compile(r"^ {0,3}(`{3,}(?=[^`]*$)|~{3,})")
+
+
+def _outside_fences(text: str) -> str:
+    """Return ``text`` with lines inside fenced code blocks blanked (CommonMark).
+
+    A fence opens with three or more backticks or tildes (up to three spaces of
+    indent, optional info string) and closes on the same character at least as
+    long; an unclosed fence runs to the end of the file.
+    """
+    kept: list[str] = []
+    fence: str | None = None
+    for line in text.split("\n"):
+        if fence is None:
+            opened = _FENCE_OPEN_RE.match(line)
+            if opened:
+                fence = opened.group(1)
+                kept.append("")
+            else:
+                kept.append(line)
+            continue
+        kept.append("")
+        stripped = line.strip()
+        if (
+            len(line) - len(line.lstrip(" ")) <= 3
+            and len(stripped) >= len(fence)
+            and set(stripped) == {fence[0]}
+        ):
+            fence = None
+    return "\n".join(kept)
 
 
 def _old_status_line_check(repo: Path) -> dict[str, Any] | None:
@@ -862,7 +894,7 @@ def _old_status_line_check(repo: Path) -> dict[str, Any] | None:
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return None
-    match = _OLD_STATUS_LINE_RE.search(text)
+    match = _OLD_STATUS_LINE_RE.search(_outside_fences(text))
     if match is None:
         return None
     from mb import init as init_mod

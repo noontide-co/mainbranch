@@ -3013,6 +3013,53 @@ def test_doctor_flags_the_old_status_line_as_an_indented_star_item(tmp_path: Pat
     assert "claude-status-line" in {c["name"] for c in report["checks"]}
 
 
+_OLD_ITEM = f"- Status field: {_OLD_STATUS_SEQUENCE}\n"
+
+
+def _status_line_findings(tmp_path: Path, extra: str) -> list[dict[str, Any]]:
+    repo = tmp_path / "fence"
+    init_run(path=str(repo), name="Acme")
+    claude_md = repo / "CLAUDE.md"
+    claude_md.write_text(claude_md.read_text(encoding="utf-8") + "\n" + extra, encoding="utf-8")
+    report = doctor_mod.run(path=str(repo))
+    plan = doctor_mod.repair_plan(repo)
+    findings = [c for c in report["checks"] if c["name"] == "claude-status-line"]
+    assert len(findings) == len([s for s in plan["sections"] if s["id"] == "claude-status-line"])
+    return findings
+
+
+@pytest.mark.parametrize(
+    "fenced",
+    [
+        "```\n" + _OLD_ITEM + "```\n",
+        "~~~\n" + _OLD_ITEM + "~~~\n",
+        "```markdown\n" + _OLD_ITEM + "```\n",
+        "~~~md\n" + _OLD_ITEM + "~~~\n",
+        "   ```\n" + _OLD_ITEM + "   ```\n",
+        "````\n```\n" + _OLD_ITEM + "````\n",
+        "```\n" + _OLD_ITEM,  # unclosed: runs to the end of the file
+    ],
+    ids=["backtick", "tilde", "info", "tilde-info", "indented", "longer-fence", "unclosed"],
+)
+def test_old_status_line_inside_a_fence_is_not_flagged(tmp_path: Path, fenced: str) -> None:
+    assert _status_line_findings(tmp_path, fenced) == []
+
+
+def test_old_status_line_outside_and_after_a_fence_is_still_flagged(tmp_path: Path) -> None:
+    assert len(_status_line_findings(tmp_path, _OLD_ITEM)) == 1
+    assert len(_status_line_findings(tmp_path / "x", "```\nfoo\n```\n" + _OLD_ITEM)) == 1
+    # Four spaces of indent is not a fence, so the line is still live.
+    assert len(_status_line_findings(tmp_path / "y", "    ```\n" + _OLD_ITEM)) == 1
+
+
+def test_one_old_status_line_in_a_fence_and_one_outside_is_one_finding(tmp_path: Path) -> None:
+    fenced = "```\n" + _OLD_ITEM.replace("field", "enum") + "```\n\n"
+    findings = _status_line_findings(tmp_path, fenced + _OLD_ITEM)
+    assert len(findings) == 1
+    # The finding names the live line, not the quoted one.
+    assert "Replace the `Status field:` line" in findings[0]["detail"]
+
+
 @pytest.mark.parametrize("form", ["template", "fallback-0.1"])
 def test_repair_plan_lists_the_old_status_line_as_a_manual_action(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, form: str
