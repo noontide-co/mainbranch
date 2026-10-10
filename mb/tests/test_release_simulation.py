@@ -6,6 +6,7 @@ import ast
 import json
 import subprocess
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -1503,7 +1504,7 @@ def test_checkpoint_verbs_is_a_warning_not_a_hard_gate() -> None:
     assert {key for key in flagged if key != "checkpoint_verbs"} == set(clean)
 
 
-_LINEAR_SCAN_CASES = {
+_LINEAR_SCAN_CASES: dict[str, tuple[Callable[[int], str], int]] = {
     "quote-flags": (lambda n: "mb checkpoint " + "-m '" * n, 5_000),
     "bare-word": (lambda n: "checkpoint " * n, 5_000),
     "long-word": (lambda n: "mb checkpoint " + "x" * n, 12_500),
