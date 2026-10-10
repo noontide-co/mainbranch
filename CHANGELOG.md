@@ -26,6 +26,20 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   `canceled | closed | open | paused`) instead of "one of the allowed lifecycle
   values" with an example status that no file type accepts. `mb validate --json` adds
   `allowed_status` beside it.
+- `mb google ... --out` display and wording follow-ups. Typing your own user
+  (`--out ~you/pulls/x.json`) now shows `~/pulls/x.json` in the summary and in
+  every message, like `~/`; another user's home still never shows as a full
+  path. With `HOME` unset and no home folder on record for you, `--out ~/x.json`
+  is refused before anything is read or written with a message that says the
+  home folder cannot be found (`out_home_not_found`), not the "unknown user"
+  one. A short home folder name (four letters or fewer, such as `sam`) is
+  hidden only where it stands alone (`sam.json`, `sam-report.json`), so
+  `samples.json` and similar report names show again; longer names are hidden
+  as before, and a cut to fit the terminal can no longer leave a short name
+  standing alone. With `core.precomposeunicode=true`, a tracked file named in another
+  Unicode form (git stores `é` as one character, the disk lists it as two) is refused as a tracked path
+  (`out_path_in_repo`) instead of the generic spelling message. Nothing is read
+  or written in any refusal, and no JSON key changed.
 - `mb site check` only counts a Google Ads customer ID as declared when it is
   exactly 10 digits (dashes and spaces ignored). Values such as `TODO: add id`,
   `N/A`, `none`, `123` or letters now read as a placeholder, with the same

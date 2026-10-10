@@ -208,13 +208,14 @@ read from Google (a refused path costs no quota) and refuses with exit 2:
 | --- | --- |
 | `out_path_in_repo` | PATH is inside a git checkout, the business repo included, and git does not report it ignored (a tracked file, or one `git add` would pick up). `--force` never lifts this. When `GIT_DIR` or `GIT_WORK_TREE` is exported (even as an empty value, which git also counts as set and refuses to run with), the path is judged a second time with them, and refused unless both answers allow it; a refusal from that second judgment says it comes from the checkout those variables name. |
 | `out_temp_not_ignored` | PATH is in a git checkout and git ignores the file, but not its temporary file `.<name>.mb-out.tmp` in the same folder (for example `.gitignore` lists only `report.json` or `*.json`, or `dir/*` followed by `!dir/*.tmp`). The report is written to that temporary file first, so git must ignore both paths; a negation that re-includes the temporary file is refused. |
-| `out_path_git_unknown` | PATH is inside a checkout and git could not answer, or `mb` could not place the path in the checkout (for example `BIZ/` for `Biz/` on a case-insensitive disk), so it cannot check the ignore rule. The same rule refuses a folder or existing file spelled differently from its name on disk, a target whose name differs only in case from an existing file in that folder, and a case or Unicode-normalization variant of a tracked path in git's index even when that file is missing from disk. This holds for every `core.ignorecase` setting, including with `--force`; use the exact spelling on disk or in git. An exported `GIT_DIR` or `GIT_WORK_TREE` that names a repository git cannot use, or a work tree `mb` cannot examine, is also refused. Nothing is read; the message says which. |
+| `out_path_git_unknown` | PATH is inside a checkout and git could not answer, or `mb` could not place the path in the checkout (for example `BIZ/` for `Biz/` on a case-insensitive disk), so it cannot check the ignore rule. The same rule refuses a folder or existing file spelled differently from its name on disk, a target whose name differs only in case from an existing file in that folder, and a case variant of a tracked path in git's index (and a case-and-Unicode-form variant), even when that file is missing from disk. With `core.precomposeunicode=true` (git stores a name in NFC that the disk lists in NFD), a path that differs from a tracked one only in Unicode normalization is refused as `out_path_in_repo`, because it is that tracked file. This holds for every `core.ignorecase` setting, including with `--force`; use the exact spelling on disk or in git. An exported `GIT_DIR` or `GIT_WORK_TREE` that names a repository git cannot use, or a work tree `mb` cannot examine, is also refused. Nothing is read; the message says which. |
 | `out_path_exists` | The file exists and `--force` was not given. |
 | `out_path_not_file` | PATH exists and is not a plain file (a folder, for example). |
 | `out_parent_missing` | The folder does not exist. `mb` never creates folders. |
 | `out_path_link` | PATH itself is a link, even a dangling one. |
 | `out_path_invalid` | PATH is empty or has no file name. |
 | `out_user_unknown` | PATH starts with `~name/` and this computer has no user `name`. |
+| `out_home_not_found` | PATH starts with `~` or `~/`, but `HOME` is not set and this computer has no home folder for the current user, so `~` names no folder. Set `HOME` or give a full path. |
 | `out_force_without_out` | `--force` was given without `--out`. |
 
 Folders above the file may be links (macOS keeps `/tmp` behind one): the
@@ -232,10 +233,15 @@ shows as `~/pulls/x.json`); anywhere else PATH is shown as typed. As a last
 check, on the whole text before it is cut to fit the terminal, if a part
 that contains your home folder's name (in any case, or the name of a link to
 it) would still be printed, only `…/` and the file name are shown, or only
-`…/` when the file name contains it. The temporary file's name goes through the
+`…` when the file name contains it. A home folder name of four letters or fewer
+(`sam`, `ana`) is hidden only where no letter touches it, so `sam.json` and
+`sam-report.json` are hidden but `samples.json` is shown; a longer name is
+hidden wherever a part contains it. The same check runs again on text that was
+cut to fit. The temporary file's name goes through the
 same check: for a file named like your home folder it is shown as
 `.….mb-out.tmp`. A PATH starting with another user's `~name/` is shown as
-`~name/...`, never as that user's full home path. So
+`~name/...`, never as that user's full home path; `~you/...` for your own
+user name shows as `~/...`. So
 a refusal or summary (marked `safe_to_share: true` with `--json`) never prints
 your home folder's name. A relative PATH is relative to the
 folder you run the command from, not `--repo`. A failed read writes nothing. If

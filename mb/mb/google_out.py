@@ -13,8 +13,10 @@ quota. A path is refused when:
 - git cannot answer inside a checkout (fail closed);
 - a folder or existing file is spelled differently from its name on disk, or
   a file with the same name in another case already exists beside the target;
-- its spelling differs by case or Unicode normalization from a tracked index
-  path, including one whose file is missing from disk;
+- its spelling differs by case from a tracked index path, including one whose
+  file is missing from disk; a difference in Unicode normalization alone is
+  that tracked file when git precomposes names (``core.precomposeunicode``), so
+  it is the tracked-path refusal;
 - it already exists and ``--force`` was not given, or it exists and is not a
   plain file;
 - its folder does not exist (no folder is created);
@@ -34,6 +36,7 @@ import os
 import stat
 import subprocess
 import unicodedata
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -148,18 +151,14 @@ def _judge_git(
         indexed = run(["ls-files", "-z", "--full-name"], root)
         if indexed is None or indexed.returncode != 0:
             raise unknown(shown)
-        if _index_spelling_differs(indexed.stdout, relative):
-            raise _spelling_refusal(shown)
+        if kind := _index_spelling_differs(indexed.stdout, relative):
+            raise _index_spelling_refusal(kind, run, root, shown, which)
         _check_spelling(base, relative, shown)
         verdict = run(["check-ignore", "-q", "--", relative.as_posix()], root)
         if verdict is None or verdict.returncode not in {0, 1}:
             raise unknown(shown)
         if verdict.returncode == 1:
-            raise ReadRefusal(
-                "out_path_in_repo",
-                f"--out {shown} is inside a git checkout{which} and git does not ignore it, so "
-                f"the data could be committed; nothing was read or written. {OUT_HINT}.",
-            )
+            raise _in_repo_refusal(shown, which)
         # The report is first written to a fixed temporary name beside the target, so
         # git must ignore that exact path too (a negation can re-include it).
         temp = relative.parent / temp_name(name)
@@ -244,12 +243,47 @@ def _check_spelling(base: Path, relative: Path, shown: str) -> None:
             raise _spelling_refusal(shown)
 
 
-def _index_spelling_differs(index: bytes, relative: Path) -> bool:
+def _index_spelling_differs(index: bytes, relative: Path) -> str:
+    """How ``relative`` is spelled against a tracked path: ``""``, ``"form"`` or ``"case"``.
+
+    ``"form"`` is a Unicode normalization difference only (git may store a name in
+    NFC that the disk lists in NFD); anything that also differs by case is ``"case"``.
+    """
+
     target_name = relative.as_posix()
-    return any(
-        entry != target_name and _fold(entry) == _fold(target_name)
-        for entry in map(os.fsdecode, index.split(b"\0"))
-        if entry
+    found = ""
+    for entry in map(os.fsdecode, index.split(b"\0")):
+        if not entry or entry == target_name or _fold(entry) != _fold(target_name):
+            continue
+        if unicodedata.normalize("NFC", entry) == unicodedata.normalize("NFC", target_name):
+            found = found or "form"
+        else:
+            return "case"
+    return found
+
+
+def _index_spelling_refusal(
+    kind: str,
+    run: Callable[[list[str], Path], subprocess.CompletedProcess[bytes] | None],
+    root: Path,
+    shown: str,
+    which: str = "",
+) -> ReadRefusal:
+    # With `core.precomposeunicode` git stores a name in NFC that the disk lists in NFD,
+    # so the other Unicode form is that same tracked file. Without it the two are not
+    # known to be one file, and the generic spelling refusal stays.
+    if kind == "form":
+        config = run(["config", "--type=bool", "core.precomposeunicode"], root)
+        if config is not None and config.returncode == 0 and config.stdout.strip() == b"true":
+            return _in_repo_refusal(shown, which)
+    return _spelling_refusal(shown)
+
+
+def _in_repo_refusal(shown: str, which: str = "") -> ReadRefusal:
+    return ReadRefusal(
+        "out_path_in_repo",
+        f"--out {shown} is inside a git checkout{which} and git does not ignore it, so "
+        f"the data could be committed; nothing was read or written. {OUT_HINT}.",
     )
 
 
@@ -276,8 +310,8 @@ def _check_missing_parent_index_spelling(given: Path, shown: str) -> None:
     indexed = _git(["ls-files", "-z", "--full-name"], base)
     if indexed is None or indexed.returncode != 0:
         raise _git_unknown(shown)
-    if _index_spelling_differs(indexed.stdout, relative):
-        raise _spelling_refusal(shown)
+    if kind := _index_spelling_differs(indexed.stdout, relative):
+        raise _index_spelling_refusal(kind, _git, base, shown)
 
 
 def _spelling_refusal(shown: str) -> ReadRefusal:
@@ -342,18 +376,25 @@ def _git_unplaced(shown: str, which: str = "") -> ReadRefusal:
     )
 
 
+_TEMP_TAIL = ".mb-out.tmp"
+
+
 def temp_name(name: str) -> str:
-    return f".{name}.mb-out.tmp"
+    return f".{name}{_TEMP_TAIL}"
 
 
 def show_temp(temp: str) -> str:
     """A temporary file's name as printed: never one that holds the home folder's name."""
 
-    # The same last guard as a path part, on the whole name before it is cut.
+    # The same last guard as a path part, on the file's own name (the fixed
+    # `.mb-out.tmp` frame is not a name), before the name is cut.
     full = terminal_safe(temp, len(temp) + 1)
-    if _holds_home_name(full):
+    own = full[1 : -len(_TEMP_TAIL)] if full.startswith(".") and full.endswith(_TEMP_TAIL) else full
+    if _holds_home_name(own):
         return ".….mb-out.tmp"
-    return terminal_safe(full, 300)
+    cut = terminal_safe(full, 300)
+    # A cut can leave a short home name standing alone (`sam…`).
+    return ".….mb-out.tmp" if cut != full and _holds_home_name(cut) else cut
 
 
 def check_out(raw: str, *, force: bool = False) -> OutTarget:
@@ -365,6 +406,14 @@ def check_out(raw: str, *, force: bool = False) -> OutTarget:
     try:
         given = Path(raw).expanduser()
     except RuntimeError:
+        if raw.split("/", 1)[0] == "~":
+            # HOME is unset and the passwd database has no entry for this user.
+            raise ReadRefusal(
+                "out_home_not_found",
+                f"--out {shown}: the home folder cannot be found (HOME is not set and this "
+                "computer has no home folder for the current user), so ~ names no folder; "
+                "nothing was read or written. Set HOME, or give a full path.",
+            ) from None
         # `~name/...` for a user this computer does not know.
         raise ReadRefusal(
             "out_user_unknown",
@@ -425,7 +474,8 @@ def check_out(raw: str, *, force: bool = False) -> OutTarget:
 def _other_home_shown(raw: str, target: Path) -> str:
     """For ``~name/...`` (another user's home), the path as ``~name/...``, else ``""``.
 
-    The summary then never prints that user's home folder as a full path.
+    The summary then never prints that user's home folder as a full path. When that
+    home is the same folder as your own, ``""`` too: the summary shows ``~/...``.
     """
 
     user = raw.split("/", 1)[0]
@@ -433,10 +483,22 @@ def _other_home_shown(raw: str, target: Path) -> str:
         return ""
     try:
         home = Path(os.path.expanduser(user)).resolve()
+        if _is_own_home(home):
+            # Your own home under your own name: shown like ``~/``.
+            return ""
         rest = target.parent.resolve().relative_to(home) / target.name
     except (OSError, RuntimeError, ValueError):
         return ""
     return hide_home_name(f"{user}/{rest.as_posix()}", target.name)
+
+
+def _is_own_home(home: Path) -> bool:
+    """Whether ``home`` is the same folder as your own home; ``False`` when that cannot be told."""
+
+    try:
+        return os.path.samefile(home, Path.home())
+    except (OSError, RuntimeError):
+        return False
 
 
 def _shown(raw: str) -> str:
@@ -446,7 +508,15 @@ def _shown(raw: str) -> str:
     # home-named part cannot hide behind the cut (`homefolder…`).
     placed = _home_relative(raw)
     full = terminal_safe(placed, len(placed) + 1) or "PATH"
-    return terminal_safe(hide_home_name(full, Path(raw).name) if raw else full, 120)
+    guarded = hide_home_name(full, Path(raw).name) if raw else full
+    return _cut_guarded(guarded, 120, Path(raw).name)
+
+
+def _cut_guarded(text: str, limit: int, file_name: str) -> str:
+    """``text`` cut to ``limit``; a cut that leaves a home-named part is guarded again."""
+
+    cut = terminal_safe(text, limit)
+    return hide_home_name(cut, file_name) if cut != text else cut
 
 
 def _home_relative(raw: str) -> str:
@@ -520,7 +590,9 @@ def _home_names() -> set[str]:
 
 
 def hide_home_name(shown: str, file_name: str) -> str:
-    """Last guard before a path is printed: never a part that contains the home folder's name.
+    """Last guard before a path is printed: never a part that names the home folder.
+
+    A short home name counts only where no letter touches it (see ``_holds_home_name``).
 
     If one is there anyway, only ``~/…/`` or ``…/`` and the file name are shown.
     """
@@ -535,11 +607,32 @@ def hide_home_name(shown: str, file_name: str) -> str:
     return f"{prefix}/{name}"
 
 
+# A home name this short is hidden only where it stands alone in a part (`sam`,
+# `.sam`, `sam.json`, `sam-report.json`), not inside a longer word (`samples.json`).
+SHORT_HOME_NAME = 4
+
+
 def _holds_home_name(text: str) -> bool:
-    """Whether ``text`` contains a spelling of the home folder's name, in any case."""
+    """Whether ``text`` names the home folder, in any case.
+
+    A longer home name is found anywhere in ``text``. A short one is found only
+    when no letter touches it on either side (digits and ``_`` do not count as
+    letters), so a common report name that merely contains it still shows.
+    """
 
     folded = _fold(text)
-    return any(name in folded for name in _home_names())
+    for name in _home_names():
+        if len(name) > SHORT_HOME_NAME:
+            if name in folded:
+                return True
+            continue
+        start = folded.find(name)
+        while start != -1:
+            end = start + len(name)
+            if not (folded[:start][-1:].isalpha() or folded[end : end + 1].isalpha()):
+                return True
+            start = folded.find(name, start + 1)
+    return False
 
 
 class OutWriteError(OSError):
@@ -658,7 +751,8 @@ def summary(
 
 def render_summary(info: dict[str, Any]) -> list[str]:
     lines = [
-        f"{info['source_command']}: wrote {terminal_safe(info['out'], 200)} (mode {info['mode']})",
+        f"{info['source_command']}: wrote {_cut_guarded(info['out'], 200, Path(info['out']).name)} "
+        f"(mode {info['mode']})",
         f"rows: {info['row_count']}, may_have_more: {str(info['may_have_more']).lower()}",
     ]
     lines.extend(f"warning: {warning}" for warning in info.get("warnings", []))
