@@ -2622,8 +2622,19 @@ def start_cmd(
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """Check runtime handoff readiness and print or launch the Claude Code command."""
+
+    def read_report(*, launching: bool) -> dict[str, Any]:
+        # A connect file it cannot read is named, not a traceback (#1129).
+        return _unreadable_guard(
+            repo,
+            command="mb start",
+            schema_name="mainbranch.start.result",
+            json_out=json_out,
+            read=lambda: start_mod.run(repo=repo, launch=launching),
+        )
+
     if json_out and launch:
-        report = start_mod.run(repo=repo, launch=False)
+        report = read_report(launching=False)
         message = "`--json` cannot be combined with `--launch`; run without `--json` to launch."
         report["ok"] = False
         report["errors"] = [message]
@@ -2634,7 +2645,7 @@ def start_cmd(
         typer.echo(_json_payload(report, command="mb start", schema_name="mainbranch.start.result"))
         raise typer.Exit(2)
 
-    report = start_mod.run(repo=repo, launch=launch)
+    report = read_report(launching=launch)
     if json_out:
         typer.echo(_json_payload(report, command="mb start", schema_name="mainbranch.start.result"))
     else:

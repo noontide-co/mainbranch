@@ -285,6 +285,11 @@ _NOT_RECORDED_TAILS = {
     "user_scope_read_only": " (not recorded: the user-scope connect file is read-only)",
     "user_scope_write_failed": " (not recorded: the user-scope connect file could not be written)",
 }
+# `user_scope_write_failed` also covers a user-scope file that cannot be read
+# or parsed; `exit_follows_check` marks that case, so it is not called a write failure.
+_USER_SCOPE_UNREADABLE_TAIL = (
+    " (not recorded: the user-scope connect file is unreadable or invalid)"
+)
 
 
 def _dossier_provider_rows(path: Path) -> list[tuple[str, str]]:
@@ -367,6 +372,10 @@ def _dossier_verify_section(repo: Path) -> dict[str, Any]:
                 checked = str(result.get("state") or validation.get("state") or "")
                 state_text = connect_mod.state_label(checked or ("ready" if ok else "failed"))
                 summary_tail = _NOT_RECORDED_TAILS.get(not_recorded_reason, " (not recorded)")
+                if not_recorded_reason == "user_scope_write_failed" and result.get(
+                    "exit_follows_check"
+                ):
+                    summary_tail = _USER_SCOPE_UNREADABLE_TAIL
             else:
                 state_text = connect_mod.state_label(
                     str(status.get("state") or ("ready" if ok else "failed"))

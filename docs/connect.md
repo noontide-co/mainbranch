@@ -1076,7 +1076,9 @@ still runs, the exit code is the one a successful check would give, and the file
 is left as it was. `--json` then says `recorded: false` with
 `not_recorded_reason: user_scope_write_failed` and a sanitized
 `not_recorded_detail` sentence naming the file and the cause; `mb doctor` shows
-"not recorded: the user-scope connect file could not be written". The same
+"not recorded: the user-scope connect file could not be written", or, when the
+file cannot be read or parsed, "not recorded: the user-scope connect file is
+unreadable or invalid". The same
 applies to a Google read that cannot record an expired sign-in in the
 user-scope file, whether it is full, read-only, unreadable or invalid: the repo
 metadata is put back as it was, and the read result carries a
@@ -1095,6 +1097,14 @@ and the message says to fix or move it. `mb connect test` with such a file
 puts `.mb/connect.yaml` back as it was and says the check was not recorded;
 the exit code follows the check itself, not the stale stored status, by the
 same rule as when `.mb/connect.yaml` is tracked by git: a failed check exits 1.
+In `--json` that case carries `needs_action` (the check's own result, which the
+exit code follows) and `exit_follows_check: true`, which says so. A passing
+check still exits 0 there while the file needs fixing: read `recorded` and
+`not_recorded_detail`, not the exit code alone.
+`mb doctor`, `mb doctor repair --plan` and their `--json` forms name that file
+(`~/...`) in one `unreadable_file` error and exit 1, rather than failing, when it
+is invalid YAML, is not a YAML mapping, is not valid UTF-8, cannot be opened or
+is a folder.
 Fresh sign-in retries keep `--scope user`, the selected repo and any
 access-token replacement flag; use the same OAuth client and metadata again.
 When the folder is what refuses a write (permission denied on the folder, not on

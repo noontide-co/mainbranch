@@ -250,7 +250,18 @@ class UserScopeRecordRestoreError(OSError):
 
 
 class ConfigCorruptError(ValueError):
-    """Raised when local connect metadata cannot be parsed safely."""
+    """Raised when local connect metadata cannot be parsed safely.
+
+    `file_path` and `problem` (what is wrong with it, as a short clause) are set
+    for a file that holds the wrong thing, so `mb doctor` can name it instead of failing.
+    """
+
+    def __init__(
+        self, message: str = "", *, file_path: Path | None = None, problem: str = ""
+    ) -> None:
+        super().__init__(message)
+        self.file_path = file_path
+        self.problem = problem
 
 
 # Optional `google` slot holding one OAuth grant (client and refresh token) as
@@ -779,12 +790,16 @@ def _read_config(repo: Path) -> dict[str, Any]:
     except (OSError, yaml.YAMLError) as exc:
         raise ConfigCorruptError(
             "Refusing to update .mb/connect.yaml because it is unreadable or invalid YAML. "
-            "Fix or move the file, then rerun the command."
+            "Fix or move the file, then rerun the command.",
+            file_path=path,
+            problem="it is not valid YAML",
         ) from exc
     if not isinstance(raw, dict):
         raise ConfigCorruptError(
             "Refusing to update .mb/connect.yaml because it does not contain a YAML object. "
-            "Fix or move the file, then rerun the command."
+            "Fix or move the file, then rerun the command.",
+            file_path=path,
+            problem="it does not contain a YAML object",
         )
     providers = raw.get("providers")
     if not isinstance(providers, dict):
@@ -953,12 +968,16 @@ def _read_user_scope() -> dict[str, Any]:
         # ValueError covers bytes that are not UTF-8 (UnicodeDecodeError).
         raise ConfigCorruptError(
             "Refusing to update connect user-scope metadata because it is unreadable or "
-            "invalid YAML. Fix or move the file, then rerun the command."
+            "invalid YAML. Fix or move the file, then rerun the command.",
+            file_path=path,
+            problem="it is not valid YAML",
         ) from exc
     if not isinstance(raw, dict):
         raise ConfigCorruptError(
             "Refusing to update connect user-scope metadata because it does not contain a YAML "
-            "object. Fix or move the file, then rerun the command."
+            "object. Fix or move the file, then rerun the command.",
+            file_path=path,
+            problem="it does not contain a YAML object",
         )
     repos = raw.get("repos")
     if not isinstance(repos, dict):

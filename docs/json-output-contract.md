@@ -490,6 +490,25 @@ temporary file's name that contains it is shown as `.….mb-out.tmp`,
 so neither a refusal nor the summary has the home folder's name under
 `safe_to_share: true`. See [google.md](google.md#--out-keep-a-large-pull-in-a-private-file).
 
+### `mb connect test --json`
+
+The payload is the provider check: `ok`, `provider`, `validation`, `status`,
+`recorded` and, when a check was not recorded, `not_recorded_reason`
+(`connect_yaml_tracked`, `user_scope_read_only` or `user_scope_write_failed`)
+with a sanitized `not_recorded_detail`. Two further keys are additive and absent
+otherwise:
+
+- `needs_action` is the check's own result, `true` when it should exit 1. It
+  is set when `.mb/connect.yaml` is tracked by git, for a Google check, and in
+  the case below.
+- `exit_follows_check` is `true` only when the user-scope file could not be
+  read or parsed (invalid YAML, not a mapping, not valid UTF-8). The check ran,
+  nothing was recorded and `.mb/connect.yaml` was put back, so the stored status
+  is stale and the exit code follows `needs_action` (a failed check exits 1; a
+  passing check exits 0 with `recorded: false`). Consumers can ignore the key;
+  `mb doctor` uses it to say the file is "unreadable or invalid" rather than
+  "could not be written". It was added after `oe-v0.6.5` and is not in a release yet.
+
 ## First Migrated Surfaces
 
 The v1 envelope is present on:

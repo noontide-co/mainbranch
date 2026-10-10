@@ -11,8 +11,29 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ## [Unreleased]
 
+### Changed
+
+- For a user-scope connect file that is not valid UTF-8, `mb connect status
+  --json` now reports `state: config_corrupt` instead of `invalid_request`
+  (exit 2 either way), and `mb connect status` and `mb status` (human and
+  `--json`, where the message is in the `status_unavailable` error) say the file
+  is unreadable or invalid instead of showing decoder text. Read `state` as
+  `config_corrupt` for an unreadable user-scope file of any kind.
+- `mb connect test --json` can carry `exit_follows_check: true` (with
+  `needs_action`) when the user-scope file is unreadable or invalid; see
+  `docs/json-output-contract.md`.
+
 ### Fixed
 
+- `mb doctor`, `mb doctor repair --plan` and `mb start` (human and `--json`) no
+  longer fail with a Python error when the user-scope connect file is invalid
+  YAML, is not a YAML mapping, cannot be opened (no permission) or is a folder,
+  or when `.mb/connect.yaml` is invalid YAML or not a mapping. They name the file
+  (`~/...` for the user-scope file), say why and what to do, and exit 1, the
+  same as `mb doctor` already did for a user-scope file that is not UTF-8.
+  (`mb start` also failed for a user-scope file that is not UTF-8.) Doctor's "not recorded" note for such a file now says the
+  user-scope connect file "is unreadable or invalid"; "could not be written"
+  stays for a real write failure.
 - A user-scope connect file that is not valid UTF-8 now counts as unreadable,
   like one that is not valid YAML. Before, a Google read left
   `.mb/connect.yaml` saying the sign-in expired with no note, a Google sign-in
