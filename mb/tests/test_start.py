@@ -296,6 +296,7 @@ def test_start_json_names_doctor_repair_when_start_wiring_is_missing(
     init_run(path=str(repo), name="Acme")
     shutil.rmtree(repo / ".claude" / "skills")
 
+    monkeypatch.chdir(repo)  # from another folder the commands name the repo (#1083)
     result = runner.invoke(app, ["start", "--repo", str(repo), "--json"])
 
     assert result.exit_code == 1
@@ -380,6 +381,7 @@ def test_start_json_preserves_books_readiness(
     )
     (repo / ".gitignore").write_text("", encoding="utf-8")
 
+    monkeypatch.chdir(repo)  # from another folder the commands name the repo (#1083)
     result = runner.invoke(app, ["start", "--repo", str(repo), "--json"])
 
     assert result.exit_code == 0
