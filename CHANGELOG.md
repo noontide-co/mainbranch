@@ -25,6 +25,15 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- Run from another folder, more suggested commands now name your business repo
+  instead of acting on the folder you are in: the next actions in `mb status`
+  (JSON and the plain list), the commands in `mb start` (JSON and human),
+  `mb validate` in the legacy repair steps of `mb doctor repair --plan`,
+  `mb books status` and `mb books doctor` (the repo goes last), and the
+  `--business-repo` in the site-check command. A site path with spaces or
+  shell characters is quoted. Inside the repo nothing changes. The docs also
+  say that `--only codex` and `--all-agents`, like `--only claude`, leave the
+  CLAUDE.md status-line finding out of `mb doctor repair --plan`.
 - `mb doctor`, `mb doctor repair --plan` and `mb start` (human and `--json`) no
   longer fail with a Python error when the user-scope connect file is invalid
   YAML, is not a YAML mapping, cannot be opened (no permission) or is a folder,

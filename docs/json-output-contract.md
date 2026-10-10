@@ -259,7 +259,10 @@ and `update.command` / `update.update_check_command`. It also covers the
 backticked commands in `checks[mainbranch-version].detail` (matching
 `update.command`) and `checks[legacy-campaigns].detail`, and their repair-plan
 section summaries; the explicitly labelled commands in `receipt.skipped_surfaces`;
-and the shared skill-wiring `fallback_commands` (including the repair section).
+the shared skill-wiring `fallback_commands` (including the repair section);
+and, in `mb doctor repair --plan --json`, the backticked commands in
+`sections[validation].checks[].report.legacy_repair.next_steps[]` (`mb validate
+--repo <path> --json`; `raw.validation.legacy_repair` keeps the source text).
 `onboarding.checklist[].next_action` names the repo for skill linking, starting,
 and checkpoint-hook repair in doctor, status and onboarding output. The shared
 freshness object's `post_update_commands` names the repo too. For compatibility,
@@ -279,7 +282,17 @@ exactly these fields: `update.command` and `update.update_check_command`;
 anywhere in the report (`drift.items[]`, `readiness.checks[]`,
 `runtime.skill_wiring`); `operator_summary`, `top_repair` and
 `top_operator_summary` in `validation.validation_categories`; and
-`validation.legacy_repair.next_steps[]`. `mb spine show` and `mb spine init`
+`validation.legacy_repair.next_steps[]`; `readiness.next_actions[]` (the only
+`next_actions` list `mb status` rewrites: `ads`, `launch`, `update` and Codex
+guidance keep theirs); `books.next_command` (`mb books status` and `mb books
+doctor` take the repo as a trailing path: `mb books status --json <path>`); and
+`measurement.repair_command` when it names a site repo (`mb site check "<site>"
+--business-repo .` becomes `--business-repo <path>`; a site path with shell
+characters is shell-quoted). A bare `mb site check` is left as written, in both
+places it appears: `measurement.repair_command` when the business repo holds its
+own `.mainbranch/conversion.json`, and when no site conversion plan is found.
+From another folder it checks that folder, so run it from the business repo.
+`mb spine show` and `mb spine init`
 name it in their `summary` (`mb spine declare --repo <path> --store <provider>`).
 Inside the repo these keep their existing spelling, including `--repo .`.
 Left as written: `mb_command` (the command that ran), the Codex guidance
@@ -287,6 +300,12 @@ Left as written: `mb_command` (the command that ran), the Codex guidance
 placeholder commands such as `mb onboard --path <repo>`, and `raw.*` and
 `result` copies. `mb status` and `mb graph` take no `--repo` flag; their
 path argument is the supported form.
+
+`mb start --json` (and the human output) rewrites its command fields the same
+way, from another folder, once the report is built: the fields above wherever
+`mb start` carries them (`update`, `runtime.skill_wiring`, `books.next_command`,
+`ranked_actions[].command`, `readiness`) and its own top-level `next_actions[]`.
+A launch has already run when this happens, so what ran is never rewritten.
 
 `mb doctor --json` adds a `claude-status-line` entry to `checks[]` only when the
 business repo's `CLAUDE.md` still has the pre-#1121 list item "Status field:"
@@ -297,8 +316,9 @@ overall `ok` and the exit code are unchanged) with `path`, `repair` and `detail`
 the replacement conventions. Nothing is written. Repos without the line see no
 new entry. `mb doctor repair --plan --json` lists it as a manual action and
 section named `claude-status-line` (never applied). `mb doctor repair --plan
---only claude` leaves it out: the finding is about business conventions, not
-agent wiring, and that scope keeps only agent-wiring sections. The `status_enum_mismatch`
+--only claude`, `--only codex` and `--all-agents` leave it out: the finding is
+about business conventions, not agent wiring, and those scopes keep only
+agent-wiring sections. The `status_enum_mismatch`
 entry of `validation_categories.by_category` (and the top-level `by_category`
 copy in `mb validate --json`) gains `allowed_status`, a map from file type to its
 allowed `status:` values, whenever a file's `status:` was rejected, and its

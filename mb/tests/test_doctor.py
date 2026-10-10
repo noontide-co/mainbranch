@@ -2687,6 +2687,34 @@ def test_the_rewriter_leaves_shell_lines_alone_inside_the_repo(
     )
 
 
+def test_the_rewriter_names_the_business_repo_flag_and_the_books_positional(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = tmp_path / "biz one"
+    repo.mkdir()
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+    monkeypatch.chdir(other)
+    quoted = shlex.quote(str(repo.resolve()))
+    cases = {
+        'mb site check "/s" --business-repo .': f'mb site check "/s" --business-repo {quoted}',
+        "mb site check /s --business-repo /x": "mb site check /s --business-repo /x",
+        "mb site check /s --business-repo=.": "mb site check /s --business-repo=.",
+        "mb site check /s --business-repo": "mb site check /s --business-repo",
+        "mb books status --json": f"mb books status --json {quoted}",
+        "mb books doctor --plan --json": f"mb books doctor --plan --json {quoted}",
+        f"mb books status --json {quoted}": f"mb books status --json {quoted}",
+        "mb books check": "mb books check",
+    }
+    for command, expected in cases.items():
+        assert doctor_mod._qualify_command(command, repo) == expected, command
+        assert doctor_mod._qualify_command(expected, repo) == expected, command
+    monkeypatch.chdir(repo)
+    assert doctor_mod._qualify_command('mb site check "/s" --business-repo .', repo) == (
+        'mb site check "/s" --business-repo .'
+    )
+
+
 def _business_repo_without_spine(tmp_path: Path) -> Path:
     repo = tmp_path / "biz"
     init_run(path=str(repo), name="Acme")
@@ -3090,7 +3118,12 @@ def test_repair_plan_lists_the_old_status_line_as_a_manual_action(
     assert plan["ok"] == clean["ok"]
     assert plan["summary"]["write_actions"] == clean["summary"]["write_actions"]
     # --only scopes leave it out, and apply never touches CLAUDE.md.
-    scoped = doctor_mod.repair_plan(repo, only="claude")
-    assert "claude-status-line" not in {a["id"] for a in scoped["actions"]}
+    for scoped in (
+        doctor_mod.repair_plan(repo, only="claude"),
+        doctor_mod.repair_plan(repo, only="codex"),
+        doctor_mod.repair_plan(repo, all_agents=True),
+    ):
+        assert "claude-status-line" not in {a["id"] for a in scoped["actions"]}
+        assert "claude-status-line" not in {s["id"] for s in scoped["sections"]}
     doctor_mod.repair_apply(repo)
     assert claude_md.read_bytes() == before
