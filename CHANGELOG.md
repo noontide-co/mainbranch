@@ -13,6 +13,22 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- `mb connect google --oauth --scope user` now puts the previous Google sign-in
+  back (or removes the new one) when the user-scope connect file turns
+  read-only part way through, as it does for any other write failure. Before,
+  the new sign-in stayed stored. Recovery commands in these messages show your
+  repo as `~/...` instead of the full home path. When a restore itself fails
+  (here and in `mb connect <provider> --scope user`), the message now says
+  which part stayed changed: the Google grant, the access token or both, or the
+  provider's credential.
+- `mb connect token google` and `mb connect exec google` now say on stderr
+  when they could not record that the sign-in expired
+  (`recorded: no (...)`, as `mb connect test google` does). The token and the
+  command's own output are not touched. If the repo metadata could not be put
+  back either, the note says that too, and so does `mb connect test google`.
+- When a closed folder (not the file) is why the user-scope connect file could
+  not be replaced, `mb connect` and `mb connect test` name the folder and say
+  to make it writable, instead of calling the file read-only.
 - Saving progress should no longer suggest a save note that
   `mb checkpoint --validate` would turn down. The start and end-of-session
   guidance now says to pick the opening word from the ones `--validate` accepts

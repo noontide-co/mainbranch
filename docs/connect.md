@@ -1079,14 +1079,19 @@ is left as it was. `--json` then says `recorded: false` with
 "not recorded: the user-scope connect file could not be written". The same
 applies to a Google read that cannot record an expired sign-in in the
 user-scope file: the repo metadata is put back as it was, and the read result
-carries a `not_recorded_note`. During `mb connect google --oauth --scope user`,
-any such write failure restores the previous sign-in (or removes the new one)
-and exits 1 with `metadata_write_failed`, like the other providers. If the file
-turns read-only in the middle of a Google sign-in, after the check, the sign-in
-names the file and says what is stored. Make the file writable before running
-the suggested check after a renewal. Fresh sign-in retries keep `--scope user`,
-the selected repo and any access-token replacement flag; use the same OAuth
-client and metadata again.
+carries a `not_recorded_note`. `mb connect token google` and
+`mb connect exec google` print that note on stderr as `recorded: no (...)`,
+never in the token or the command's own output, and only when it applies. If
+putting `.mb/connect.yaml` back also fails, the note says so, and the file may
+still show the check. During `mb connect google --oauth --scope user`, any
+failure to write the file, including a file that turns read-only after the
+check, restores the previous sign-in (or removes the new one) and exits 1 with
+`metadata_write_failed`, like the other providers. If a restore fails, the
+message says which part stayed changed (the Google grant, the access token, or
+both; for other providers, that provider's credential). Fresh sign-in retries keep `--scope user`, the selected repo and any
+access-token replacement flag; use the same OAuth client and metadata again.
+When the folder is what refuses a write (permission denied on the folder, not on
+the file), the message names that folder, not a read-only file.
 
 Use user scope when several worktrees for the same business repo should read
 the same credential metadata from local Main Branch state:

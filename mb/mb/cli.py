@@ -2356,6 +2356,9 @@ def connect_cmd(
             typer.echo(f"mb connect exec: {outcome['error']}", err=True)
             if outcome["repair_command"]:
                 typer.echo(f"repair: {outcome['repair_command']}", err=True)
+        if outcome.get("not_recorded_note"):
+            note_line = connect_mod.not_recorded_line(outcome["not_recorded_note"])
+            typer.echo(f"mb connect exec: {note_line}", err=True)
         raise typer.Exit(outcome["returncode"])
     if target == "rotate":
         if not provider:
@@ -2408,6 +2411,9 @@ def connect_cmd(
             result = connect_mod.read_token(provider, repo)
         except ValueError as exc:
             _connect_error_exit("mb connect token", exc, json_out=json_out)
+        if result.get("not_recorded_note"):
+            note_line = connect_mod.not_recorded_line(result["not_recorded_note"])
+            typer.echo(f"mb connect token: {note_line}", err=True)
         if not result["ok"]:
             typer.echo(f"mb connect token: {result['error']}", err=True)
             if result["repair_command"]:
