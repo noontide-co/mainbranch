@@ -29,6 +29,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   display limit after the cut. A `~name/...` path that leads out of that home
   (for example `~name/../otherhome/x.json`), and not into yours, is shown as
   you typed it instead of printing the folder it reaches in full.
+- `mb google ... --out`: a `~/...` path that leaves your home (for example
+  `~/../bobhome/pulls/a.json`, `~/../../outside/q.json`, or `~/bob-link/x.json`
+  where `bob-link` is a link in your home to another home) is now shown as you
+  typed it instead of printing the folder it reaches in full. A `~/` path that
+  stays in your home shows `~/...` as before, and nothing that was refused is
+  allowed.
 - `mb doctor` no longer warns about the old status line in `CLAUDE.md` when it
   only appears inside a fenced code block (an example you quote). The same line
   as a normal list item is still flagged. The docs now say why
