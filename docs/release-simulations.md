@@ -249,9 +249,10 @@ examples should name the saved business artifact specifically, such as
 
 The rubric's `checkpoint_verbs` result appears only when a proposed
 `mb checkpoint --message "[verb] ..."` (or `-m`, in a code block or in prose)
-would be turned down by `mb checkpoint --validate`. Only options (and the values
-of `--repo`, `--validate` and `--mode`) may sit between `checkpoint` and the
-message flag, so an unrelated `git commit -m` after `;`, `&&`, `|`, a closing
+would be turned down by `mb checkpoint --validate`, or is not a valid command at
+all (see the third kind below). Apart from that one bare word, only options (and
+the values of `--repo`, `--validate` and `--mode`) may sit between `checkpoint`
+and the message flag, so an unrelated `git commit -m` after `;`, `&&`, `|`, a closing
 backtick or a sentence does not count; a backslash continuation (with `\n` or
 `\r\n` endings, with or without a space before the backslash) is followed. A
 finding is one of three kinds:

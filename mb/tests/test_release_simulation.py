@@ -1264,6 +1264,13 @@ def _malformed_subjects(text: str) -> list[str]:
         ("uv run mb checkpoint --message `[repaired] x`", ["repaired"]),
         ('python -m mb checkpoint -m="[repaired] x"', ["repaired"]),
         ('mb checkpoint --message "[repaired] a; b && c"', ["repaired"]),
+        ('mb checkpoint --repo $(pwd) --yes -m "[repaired] x"', ["repaired"]),
+        ('mb checkpoint --dry-run -m "[repaired] x"', ["repaired"]),
+        ('mb checkpoint -y --message "[repaired] x" --json', ["repaired"]),
+        ('cd ~/biz && mb checkpoint --message "[repaired] x"', ["repaired"]),
+        ('mb checkpoint -m "[repaired] x" 2>&1 | tee log', ["repaired"]),
+        ('mb checkpoint -m "[repaired] x"; git push', ["repaired"]),
+        ('Run `mb checkpoint --yes -m "[repaired] x"` to save.', ["repaired"]),
         (f'mb checkpoint -m "[{"a" * 41}] x"', ["a" * 40]),
         (
             'mb checkpoint --message "[repaired] a"\nmb checkpoint --message "[updated] b"\n'
@@ -1274,6 +1281,7 @@ def _malformed_subjects(text: str) -> list[str]:
 )
 def test_checkpoint_verbs_flags_a_rejected_verb(text: str, verbs: list[str]) -> None:
     assert _rejected_verbs(text) == verbs
+    assert release_simulation.analyze_checkpoint_verbs(text)["total_violations"] == len(verbs)
     rubric = release_simulation.score_transcript(text)
     assert rubric["checkpoint_verbs"]["ok"] is False
 
