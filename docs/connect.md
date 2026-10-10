@@ -1070,7 +1070,18 @@ Recovery commands show repos under your home folder with a `~/` path.
 `mb connect test` only reads that file to run its check: the check still
 runs and the repo metadata is still recorded, and the result says
 `recorded: false` with `not_recorded_reason: user_scope_read_only` in `--json`.
-Human output says `recorded: no` and names the read-only file. If the file
+Human output says `recorded: no` and names the read-only file. When the file
+cannot be written for another reason (a full disk, an I/O error), the check
+still runs, the exit code is the one a successful check would give, and the file
+is left as it was. `--json` then says `recorded: false` with
+`not_recorded_reason: user_scope_write_failed` and a sanitized
+`not_recorded_detail` sentence naming the file and the cause; `mb doctor` shows
+"not recorded: the user-scope connect file could not be written". The same
+applies to a Google read that cannot record an expired sign-in in the
+user-scope file: the repo metadata is put back as it was, and the read result
+carries a `not_recorded_note`. During `mb connect google --oauth --scope user`,
+any such write failure restores the previous sign-in (or removes the new one)
+and exits 1 with `metadata_write_failed`, like the other providers. If the file
 turns read-only in the middle of a Google sign-in, after the check, the sign-in
 names the file and says what is stored. Make the file writable before running
 the suggested check after a renewal. Fresh sign-in retries keep `--scope user`,
