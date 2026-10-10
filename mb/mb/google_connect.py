@@ -47,10 +47,12 @@ from mb import google_oauth as go
 from mb.credential_store import (
     SUPPORTED_BACKENDS,
     CredentialStoreError,
+    SecretProbe,
     SecretStore,
     new_credential_deadline,
     select_secret_backend,
 )
+from mb.durable import atomic_write_text
 
 PROVIDER_ID = "google"
 GRANT_SLOT = connect_mod.GOOGLE_OAUTH_GRANT_SLOT
@@ -635,6 +637,68 @@ def _store_failure(
     )
 
 
+def _user_scope_write_failure(
+    exc: OSError,
+    store: SecretStore,
+    snapshots: list[tuple[str, SecretProbe]],
+    writes: _Writes,
+    *,
+    reauth: bool,
+    account_label: str,
+) -> GoogleConnectError:
+    """Restore what was stored before, then say why the user-scope record failed.
+
+    Same restore as ``mb connect --scope user``. Shows the true cause and fix with
+    ``~/`` paths, never backend text or a credential.
+    """
+
+    shown = connect_mod._shown_user_scope_path(connect_mod._user_scope_path())
+    restore_failed = isinstance(exc, connect_mod.UserScopeRecordRestoreError)
+    if restore_failed:
+        cause = "could not be written, and its previous contents could not be restored"
+        fix = "Inspect and repair that file"
+    else:
+        reason, fix = connect_mod._user_scope_write_failure(exc)
+        cause = f"could not be written: {reason}"
+    restored = all(connect_mod._restore_secret(store, ref, prior) for ref, prior in snapshots)
+    _minted.pop((store.backend, snapshots[0][0]), None)
+    record_state = (
+        "The repo metadata is unchanged, but the user-scope record may have changed."
+        if restore_failed
+        else "The repo metadata is unchanged."
+    )
+    if not restored:
+        command = ["mb", "connect", "google", "--oauth"]
+        if reauth:
+            command.append("--reauth")
+        else:
+            command.extend(["--scope", "user"])
+        if writes.replaced_access_token:
+            command.append("--replace-access-token")
+        if account_label:
+            command.extend(["--account", account_label])
+        repo = writes.repo if writes.repo is not None else Path.cwd().resolve()
+        command.extend(["--repo", str(repo)])
+        return GoogleConnectError(
+            f"The Google sign-in was stored but not recorded: the user-scope connect file "
+            f"{shown} {cause}, and the previous credential state could not be restored. "
+            f"{record_state} {fix} first, then rerun "
+            f"`{connect_mod._shell_replay_command(command, repo)}` with the same OAuth "
+            "client and metadata.",
+            state="metadata_write_failed",
+        )
+    undone = (
+        "The previous Google credentials were restored."
+        if not writes.fresh or writes.replaced_access_token
+        else "The new sign-in was removed, so nothing was stored."
+    )
+    return GoogleConnectError(
+        f"The Google sign-in was not recorded: the user-scope connect file {shown} "
+        f"{cause}. {undone} {record_state} {fix}, then rerun the command.",
+        state="metadata_write_failed",
+    )
+
+
 def bootstrap(
     repo: str | Path = ".",
     *,
@@ -765,6 +829,16 @@ def bootstrap(
     )
     if progress is not None:
         progress.writes = writes
+    previous_grant: SecretProbe | None = None
+    previous_token: SecretProbe | None = None
+    if normalized_scope == "user":
+        # Snapshot for the restore if the user-scope record cannot be written. A
+        # separate bounded read, taken before anything is stored.
+        previous_grant = store.probe(grant_ref, deadline=new_credential_deadline())
+        previous_token = store.probe(token_ref, deadline=new_credential_deadline())
+        for probe in (previous_grant, previous_token):
+            if not probe.backend_ok:
+                raise _store_failure(connect_mod.KeychainError(probe.reason), writes, "grant")
     # A token minted earlier in this process came from the grant being replaced.
     _minted.pop((store.backend, grant_ref), None)
     writes.grant_started = True
@@ -801,14 +875,25 @@ def bootstrap(
     user_scope_path = ""
     try:
         if normalized_scope == "user":
-            user_scope_path = str(
-                connect_mod._write_user_scope_provider(
-                    repo_id,
-                    repo_identity=config.get("repo_identity") or {},
-                    provider_id=provider.id,
-                    entry=entry,
+            try:
+                user_scope_path = str(
+                    connect_mod._write_user_scope_provider(
+                        repo_id,
+                        repo_identity=config.get("repo_identity") or {},
+                        provider_id=provider.id,
+                        entry=entry,
+                    )
                 )
-            )
+            except OSError as exc:
+                assert previous_grant is not None and previous_token is not None
+                raise _user_scope_write_failure(
+                    exc,
+                    store,
+                    [(grant_ref, previous_grant), (token_ref, previous_token)],
+                    writes,
+                    reauth=reauth,
+                    account_label=account_label,
+                ) from None
             writes.user_scope = True
         path = connect_mod._write_config(target, config)
         writes.metadata = True
@@ -1134,14 +1219,17 @@ def _mint(grant: _Grant) -> _Mint:
     return _Mint(ok=True, token=access_token, expires_at=monotonic() + reuse_for)
 
 
-def _record_read_state(target: Path, grant_ref: str, *, reauth_required: bool) -> None:
+def _record_read_state(target: Path, grant_ref: str, *, reauth_required: bool) -> str:
     """Record (or clear) ``reauth_required`` so status shows it without calling Google.
 
     Best effort, and only when it changes: a read never fails because the
     metadata could not be written. Only the entry still holding ``grant_ref``
-    is touched.
+    is touched. When the user-scope file cannot be written (a full disk, an I/O
+    error) the repo metadata is put back as it was and this returns a
+    sanitized note saying the state was not recorded; otherwise "".
     """
 
+    note = ""
     with suppress(OSError, ValueError):
         config = connect_mod._read_config(target)
         repo_id = str(config.get("repo_id") or connect_mod._repo_identity(target)["repo_id"])
@@ -1152,12 +1240,12 @@ def _record_read_state(target: Path, grant_ref: str, *, reauth_required: bool) -
             else connect_mod._user_scope_provider_entry(repo_id, PROVIDER_ID)
         )
         if not isinstance(entry, dict) or _slot(entry, GRANT_SLOT).get("ref") != grant_ref:
-            return
+            return ""
         raw_previous = entry.get("validation")
         previous: dict[str, Any] = raw_previous if isinstance(raw_previous, dict) else {}
         recorded = previous.get("state") == STATE_REAUTH_REQUIRED
         if recorded == reauth_required:
-            return
+            return ""
         validation: dict[str, Any] = {
             "state": STATE_REAUTH_REQUIRED if reauth_required else "unvalidated",
             "checked_at": connect_mod._now(),
@@ -1175,21 +1263,32 @@ def _record_read_state(target: Path, grant_ref: str, *, reauth_required: bool) -
             validation["repair_command"] = REAUTH_COMMAND
             validation["rule"] = STATE_REAUTH_REQUIRED
         entry["validation"] = validation
+        config_path = connect_mod._config_path(target)
+        previous_config: bytes | None = None
         if isinstance(repo_entry, dict) and not connect_mod.config_tracked_by_git(target):
             # A tracked .mb/connect.yaml is left as it is; the read itself
             # still reports reauth_required with its repair.
+            previous_config = config_path.read_bytes() if config_path.exists() else None
             connect_mod._write_config(target, config)
         if entry.get("scope") == "user" or not isinstance(repo_entry, dict):
             stored = connect_mod._read_user_scope()["repos"].get(repo_id)
             identity = stored.get("repo_identity") if isinstance(stored, dict) else None
-            connect_mod._write_user_scope_provider(
-                repo_id,
-                repo_identity=identity
-                if isinstance(identity, dict)
-                else config.get("repo_identity") or {},
-                provider_id=PROVIDER_ID,
-                entry=entry,
-            )
+            try:
+                connect_mod._write_user_scope_provider(
+                    repo_id,
+                    repo_identity=identity
+                    if isinstance(identity, dict)
+                    else config.get("repo_identity") or {},
+                    provider_id=PROVIDER_ID,
+                    entry=entry,
+                )
+            except OSError as exc:
+                # All or nothing: the repo metadata goes back as it was.
+                if previous_config is not None:
+                    with suppress(OSError):
+                        atomic_write_text(config_path, previous_config.decode("utf-8"))
+                note = connect_mod._user_scope_not_recorded_detail(exc)
+    return note
 
 
 def read_minted_token(entry: dict[str, Any], *, source: str, target: Path) -> dict[str, Any]:
@@ -1243,13 +1342,14 @@ def read_minted_token(entry: dict[str, Any], *, source: str, target: Path) -> di
         )
     key = (backend, ref)
     mint = _minted.get(key)
+    note = ""
     if mint is None or (mint.ok and monotonic() >= mint.expires_at):
         mint = _mint(fields)
         _minted[key] = mint
         if mint.ok or mint.state == STATE_REAUTH_REQUIRED:
-            _record_read_state(target, ref, reauth_required=not mint.ok)
+            note = _record_read_state(target, ref, reauth_required=not mint.ok)
     if not mint.ok:
-        return _read_result(
+        result = _read_result(
             ok=False,
             source=source,
             state=mint.state,
@@ -1258,9 +1358,14 @@ def read_minted_token(entry: dict[str, Any], *, source: str, target: Path) -> di
             error=mint.error,
             repair_command=mint.repair_command,
         )
-    return _read_result(
-        ok=True, source=source, state="ready", backend_state="ready", token=mint.token
-    )
+    else:
+        result = _read_result(
+            ok=True, source=source, state="ready", backend_state="ready", token=mint.token
+        )
+    if note:
+        # Only present when the write-back failed; the read itself is unchanged.
+        result["not_recorded_note"] = note
+    return result
 
 
 def refresh_token_expires_on(entry: dict[str, Any]) -> str:

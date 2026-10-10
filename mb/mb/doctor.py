@@ -283,6 +283,7 @@ _DOSSIER_VERIFY_RE = re.compile(r"^mb connect test ([a-z0-9][a-z0-9-]{1,30})$")
 _NOT_RECORDED_TAILS = {
     "connect_yaml_tracked": " (not recorded: .mb/connect.yaml is tracked by git)",
     "user_scope_read_only": " (not recorded: the user-scope connect file is read-only)",
+    "user_scope_write_failed": " (not recorded: the user-scope connect file could not be written)",
 }
 
 

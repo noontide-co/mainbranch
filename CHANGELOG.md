@@ -21,6 +21,23 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   value. It names a blocked parent folder when that is the cause, and keeps
   the user-scope file private during replacement. Before, the new credential
   stayed stored with nothing recording it.
+- `mb connect test` no longer stops with an unexpected error when the check
+  cannot be written to the user-scope connect file because of a full disk or an
+  I/O error. The check still runs and reports its own result with the same exit
+  code, the file is left as it was, and the result says it was not recorded and
+  why (`not_recorded_reason: user_scope_write_failed` in `--json`, with a
+  `not_recorded_detail` sentence). `mb doctor` labels it too.
+- `mb connect google --oauth --scope user` now puts the previous Google sign-in
+  back (or removes the new one) when the user-scope connect file cannot be
+  written for any reason, as it already did for other providers. It exits 1 with
+  `metadata_write_failed`, names the file, what went wrong and what to fix, and
+  shows paths under your home folder as `~/`. Before, it blamed the repo
+  metadata and left the new sign-in stored.
+- Reading a Google connection no longer leaves `.mb/connect.yaml` changed when
+  the user-scope connect file cannot be written while recording that the
+  sign-in expired. The read gives the same result, the repo metadata is put
+  back, and the read result and `mb connect test google` say it was not
+  recorded.
 - `mb doctor` says why an Agent Access Dossier check was not recorded: a
   tracked `.mb/connect.yaml` or a read-only user-scope connect file. It no
   longer blames a tracked `.mb/connect.yaml` when the user-scope file was the
