@@ -48,7 +48,8 @@ evidence items. Never collapse them into "Google Ads is set up":
   firing in GTM Preview or Tag Assistant and a conversion Google Ads attributes
   are separate proofs; `mb site check` sees neither.
 
-A placeholder customer ID (all zeros, all `X`, `TODO`, `TBD`) reads as
+A customer ID that is not exactly 10 digits once dashes and spaces are removed
+(all zeros, all `X`, `TODO`, `N/A`, `none`, `123`) reads as
 `google_ads_plan` with `status: placeholder`: no customer is declared, so tell
 the operator to record the real 10-digit ID from the top of the Google Ads
 account.

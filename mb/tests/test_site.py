@@ -1247,7 +1247,22 @@ def test_site_check_human_output_names_google_ads_next_steps(tmp_path: Path, mon
 
 @pytest.mark.parametrize(
     "customer_id",
-    ["000-000-0000", "0000000000", "TODO", "tbd", "xxx-xxx-xxxx", "XXXXXXXXXX", "placeholder"],
+    [
+        "000-000-0000",
+        "0000000000",
+        "TODO",
+        "tbd",
+        "xxx-xxx-xxxx",
+        "XXXXXXXXXX",
+        "placeholder",
+        "TODO: add id",
+        "N/A",
+        "none",
+        "123",
+        "555-010-000",
+        "555-010-00001",
+        "555-010-000A",
+    ],
 )
 def test_site_check_placeholder_google_ads_customer_is_not_declared(
     tmp_path: Path, monkeypatch, customer_id: str
@@ -1317,6 +1332,22 @@ def test_site_check_blank_google_ads_customer_reads_as_missing(
         "state": "manual",
         "summary": "Missing Google Ads customer ID before launch review.",
     }
+
+
+@pytest.mark.parametrize("customer_id", ["5550100000", "555 010 0000", "123-456-7890"])
+def test_site_check_ten_digit_google_ads_customer_is_declared(
+    tmp_path: Path, monkeypatch, customer_id: str
+) -> None:
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    business, site = _ads_site(tmp_path, approvals=True, customer_id=customer_id)
+
+    result = runner.invoke(
+        app, ["site", "check", str(site), "--business-repo", str(business), "--json"]
+    )
+
+    payload = json.loads(result.stdout)
+    assert _evidence(payload, "google_ads_plan")["status"] == "declared"
 
 
 def test_site_check_dashed_google_ads_customer_is_declared(tmp_path: Path, monkeypatch) -> None:

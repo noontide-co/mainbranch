@@ -4873,6 +4873,12 @@ def render_human(
                 GOOGLE_ADS_STATUS_WORDS.get(str(value), str(value).replace("_", " "))
                 for value in google_ads.values()
             ]
+            facts = measurement.get("facts") or {}
+            if google_ads.get("google_ads_plan") == "placeholder" and not facts.get(
+                "primary_conversions"
+            ):
+                # A placeholder id hides the plan check; name the missing plan too.
+                words.append("conversion plan missing")
             console.print(f"  Google Ads: {'; '.join(words)}")
         if verbose and measurement.get("repair"):
             console.print(f"  next: {measurement['repair']}")
