@@ -687,15 +687,18 @@ _MADE_UP_WORD = (
 _AUDIENCE_QUALIFIER = (
     rf"(?:['\u2019]|\s+(?:that|who|we|from)\b)(?:\s+{_WORD}){{0,4}}?\s+{_MADE_UP_WORD}"
 )
+# A two-word count ("a few", "a couple of", "a handful of"). Fixed words only, so
+# nothing here repeats and the alternatives add no backtracking.
+_COUNT_PHRASE = r"a\s+(?:few|couple\s+of|handful\s+of)"
 _OWNER_RELEASE_AUDIENCE = (
-    r"with\s+(?:(?:a|an|one|two|three|four|five|six|seven|eight|nine|ten|"
+    rf"with\s+(?:(?:{_COUNT_PHRASE}|a|an|one|two|three|four|five|six|seven|eight|nine|ten|"
     r"some|several|few|\d+)\s+)?(?:(?:real|actual)\s+)?(?:beta\s+)?"
     rf"(?:users|customers|testers|subscribers|clients|members)\b(?!{_AUDIENCE_QUALIFIER})"
 )
 # Made-up data after an owner noun ("the release email flow with sample
 # records") turns owner release talk back into release framing.
 _MADE_UP_DATA = (
-    rf"(?:\s+{_WORD}){{0,3}}?\s+with\s+(?:(?:a|an|some|the|few|\d+)\s+)?"
+    rf"(?:\s+{_WORD}){{0,3}}?\s+with\s+(?:(?:{_COUNT_PHRASE}|a|an|some|the|few|\d+)\s+)?"
     r"(?:sample|synthetic|fake|placeholder|dummy|mock|test|made-up|fictional|stand-in)\b"
 )
 _RELEASE_FRAMING_PATTERN = re.compile(
@@ -822,12 +825,37 @@ def _strip_fenced_code(text: str) -> str:
     return re.sub(r"```.*?```", "", text, flags=re.DOTALL)
 
 
+# Release framing can wrap over several lines. A line is searched together with
+# the lines after it until they hold this many words. The longest thing the
+# pattern reads past "release" is an owner-audience lookahead (about 17 words),
+# so 24 sees all of it and never cuts a lookahead short.
+_WRAP_WORDS = 24
+
+
+def _wrapped_text(
+    lines: list[str], joinable: list[bool], word_counts: list[int], index: int
+) -> str:
+    # Always the whole next line, then more lines until enough words follow.
+    # Blank lines and technical-detail lines end the window. Every joinable line
+    # holds a word, so a window spans at most _WRAP_WORDS + 1 lines.
+    window = [lines[index]]
+    words = 0
+    follow = index + 1
+    while follow < len(lines) and joinable[follow] and words < _WRAP_WORDS:
+        window.append(lines[follow])
+        words += word_counts[follow]
+        follow += 1
+    return "\n".join(window)
+
+
 def _visible_technical_leakage(text: str) -> list[dict[str, str]]:
     examples: list[dict[str, str]] = []
     lines = [line.strip() for line in text.splitlines()]
+    joinable = [bool(line) and not _is_allowed_technical_detail_line(line) for line in lines]
+    word_counts = [len(line.split()) for line in lines]
     carried_into: dict[int, int] = {}
     for index, stripped in enumerate(lines):
-        if not stripped or _is_allowed_technical_detail_line(stripped):
+        if not joinable[index]:
             continue
         matched_spans: list[tuple[int, int]] = []
         consumed = carried_into.get(index, 0)
@@ -835,9 +863,9 @@ def _visible_technical_leakage(text: str) -> list[dict[str, str]]:
             searched = stripped
             start_at = 0
             if pattern is _RELEASE_FRAMING_PATTERN:
-                # Release framing can wrap onto the next line ("testing the" /
-                # "release"); count it once, on the line where it starts.
-                searched = _with_next_line(stripped, lines[index + 1 : index + 2])
+                # Release framing can wrap onto the lines below ("testing" /
+                # "the" / "release"); count it once, on the line where it starts.
+                searched = _wrapped_text(lines, joinable, word_counts, index)
                 # A match that began on the line above already counted the
                 # words it shares with this line; search after them.
                 start_at = consumed
@@ -846,31 +874,33 @@ def _visible_technical_leakage(text: str) -> list[dict[str, str]]:
                 continue
             span = match.span()
             if pattern is _RELEASE_FRAMING_PATTERN and match.end() > len(stripped):
-                carried_into[index + 1] = match.end() - len(stripped) - 1
+                line_start = len(stripped) + 1
+                for offset in range(1, searched.count("\n") + 1):
+                    if match.end() > line_start:
+                        carried_into[index + offset] = max(
+                            carried_into.get(index + offset, 0), match.end() - line_start
+                        )
+                    line_start += len(lines[index + offset]) + 1
             if _owner_translation_precedes(stripped, match.start(), preferred):
                 matched_spans.append(span)
                 continue
             if any(_spans_overlap(span, existing) for existing in matched_spans):
                 continue
             matched_spans.append(span)
+            excerpt_source = stripped
+            if match.end() > len(stripped):
+                # Quote up to the end of the line the match finishes on, not
+                # the whole window.
+                cut = searched.find("\n", match.end())
+                excerpt_source = searched[: len(searched) if cut == -1 else cut].replace("\n", " ")
             examples.append(
                 {
                     "phrase": phrase,
                     "preferred": preferred,
-                    "excerpt": _short_excerpt(
-                        stripped if match.end() <= len(stripped) else searched.replace("\n", " "),
-                        match.start(),
-                        match.end(),
-                    ),
+                    "excerpt": _short_excerpt(excerpt_source, match.start(), match.end()),
                 }
             )
     return examples
-
-
-def _with_next_line(line: str, following: list[str]) -> str:
-    if not following or not following[0] or _is_allowed_technical_detail_line(following[0]):
-        return line
-    return f"{line}\n{following[0]}"
 
 
 def _owner_translation_precedes(line: str, end: int, preferred: str) -> bool:
