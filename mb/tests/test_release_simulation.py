@@ -1389,6 +1389,7 @@ def test_checkpoint_verbs_reports_an_unknown_argument_once(text: str, argument: 
         'mb checkpoint With -m "[repaired] x"',
         'the mb checkpoint to -m "[repaired] x"',
         'mb checkpoint later -m "[repaired] x"',
+        'Run mb checkpoint again -m "[repaired] x"',
     ],
 )
 def test_checkpoint_verbs_leaves_prose_after_the_command_alone(text: str) -> None:

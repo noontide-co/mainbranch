@@ -440,6 +440,7 @@ _CHECKPOINT_BARE_WORD = re.compile(r"[A-Za-z][\w-]*(?=\s)")
 _CHECKPOINT_PROSE_WORDS = frozenset(
     {
         "a",
+        "again",
         "an",
         "and",
         "as",
