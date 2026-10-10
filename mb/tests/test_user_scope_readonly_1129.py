@@ -199,3 +199,34 @@ def test_token_and_exec_print_the_note_after_their_error_line(
         )
         note = next(i for i, line in enumerate(lines) if "recorded: no" in line)
         assert error < note, (name, out)
+
+
+# --- `mb connect test google` after a read-only write-back ------------------------------
+
+
+def test_connect_test_google_calls_a_read_only_file_read_only(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    path = _expired(repo, client_file, google, monkeypatch, tmp_path)
+    config_before = (repo / ".mb" / "connect.yaml").read_bytes()
+    os.chmod(path, 0o400)
+    try:
+        as_json = runner.invoke(app, ["connect", "test", "google", "--repo", str(repo), "--json"])
+        gc.forget_minted()
+        human = runner.invoke(app, ["connect", "test", "google", "--repo", str(repo)])
+    finally:
+        os.chmod(path, 0o600)
+
+    payload = json.loads(as_json.stdout)
+    assert payload["recorded"] is False
+    assert payload["not_recorded_reason"] == "user_scope_read_only"
+    assert "read-only" in payload["not_recorded_detail"]
+    assert "could not be written" not in as_json.output
+    assert "recorded: no (the user-scope connect file ~/" in human.output
+    assert "is read-only" in human.output
+    assert str(tmp_path) not in as_json.output + human.output
+    assert (repo / ".mb" / "connect.yaml").read_bytes() == config_before

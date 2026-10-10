@@ -1206,17 +1206,21 @@ def _mint(grant: _Grant) -> _Mint:
     return _Mint(ok=True, token=access_token, expires_at=monotonic() + reuse_for)
 
 
-def _record_read_state(target: Path, grant_ref: str, *, reauth_required: bool) -> str:
+def _record_read_state(target: Path, grant_ref: str, *, reauth_required: bool) -> tuple[str, str]:
     """Record (or clear) ``reauth_required`` so status shows it without calling Google.
 
     Best effort, and only when it changes: a read never fails because the
     metadata could not be written. Only the entry still holding ``grant_ref``
     is touched. When the user-scope file cannot be written (a full disk, an I/O
-    error) the repo metadata is put back as it was and this returns a
+    error, a read-only file) or cannot be read (unreadable or invalid YAML), the
+    repo metadata is put back as it was and this returns ``(reason, note)``: the
+    rule (``user_scope_read_only`` or ``user_scope_write_failed``) and a
     sanitized note saying the state was not recorded (and, if that put-back
-    also fails, that ``.mb/connect.yaml`` still shows the check); otherwise "".
+    also fails, that ``.mb/connect.yaml`` still shows the check); otherwise
+    ``("", "")``.
     """
 
+    reason = ""
     note = ""
     with suppress(OSError, ValueError):
         config = connect_mod._read_config(target)
@@ -1228,12 +1232,12 @@ def _record_read_state(target: Path, grant_ref: str, *, reauth_required: bool) -
             else connect_mod._user_scope_provider_entry(repo_id, PROVIDER_ID)
         )
         if not isinstance(entry, dict) or _slot(entry, GRANT_SLOT).get("ref") != grant_ref:
-            return ""
+            return "", ""
         raw_previous = entry.get("validation")
         previous: dict[str, Any] = raw_previous if isinstance(raw_previous, dict) else {}
         recorded = previous.get("state") == STATE_REAUTH_REQUIRED
         if recorded == reauth_required:
-            return ""
+            return "", ""
         validation: dict[str, Any] = {
             "state": STATE_REAUTH_REQUIRED if reauth_required else "unvalidated",
             "checked_at": connect_mod._now(),
@@ -1276,6 +1280,11 @@ def _record_read_state(target: Path, grant_ref: str, *, reauth_required: bool) -
                 connect_mod.ConfigCorruptError,
             ) as exc:
                 # All or nothing: the repo metadata goes back as it was.
+                reason = (
+                    "user_scope_read_only"
+                    if isinstance(exc, connect_mod.UserScopeReadOnlyError)
+                    else "user_scope_write_failed"
+                )
                 note = connect_mod._user_scope_not_recorded_detail(exc)
                 if previous_config is not None:
                     try:
@@ -1285,7 +1294,7 @@ def _record_read_state(target: Path, grant_ref: str, *, reauth_required: bool) -
                             "; .mb/connect.yaml could not be put back either, so it "
                             "still shows this check"
                         )
-    return note
+    return reason, note
 
 
 def read_minted_token(entry: dict[str, Any], *, source: str, target: Path) -> dict[str, Any]:
@@ -1339,12 +1348,13 @@ def read_minted_token(entry: dict[str, Any], *, source: str, target: Path) -> di
         )
     key = (backend, ref)
     mint = _minted.get(key)
+    reason = ""
     note = ""
     if mint is None or (mint.ok and monotonic() >= mint.expires_at):
         mint = _mint(fields)
         _minted[key] = mint
         if mint.ok or mint.state == STATE_REAUTH_REQUIRED:
-            note = _record_read_state(target, ref, reauth_required=not mint.ok)
+            reason, note = _record_read_state(target, ref, reauth_required=not mint.ok)
     if not mint.ok:
         result = _read_result(
             ok=False,
@@ -1362,6 +1372,7 @@ def read_minted_token(entry: dict[str, Any], *, source: str, target: Path) -> di
     if note:
         # Only present when the write-back failed; the read itself is unchanged.
         result["not_recorded_note"] = note
+        result["not_recorded_reason"] = reason
     return result
 
 
