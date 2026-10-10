@@ -498,3 +498,14 @@ def test_init_claude_md_status_values_match_mb_validate(
         "Pushes": set(SCHEMAS["pushes"]["enums"]["status"]),
     }
     assert "`mb validate` names the" in text
+    # #1122: the lead-in names exactly the types it lists, not "each file type".
+    assert "Each file type" not in text
+    conventions = _section(text, "## Conventions", "\n## ")
+    before_names = conventions.split("`mb validate` names")[0]
+    lead_in = " ".join(before_names[before_names.rindex("\n- ") :].split())
+    listed = {
+        part.strip(" -")
+        for part in lead_in.lower().replace(" and ", ", ").split("each")[0].split(",")
+    }
+    assert listed == {label.lower() for label in _status_lines(text)}
+    assert lead_in.endswith("each have their own `status:` values;")

@@ -179,7 +179,7 @@ VALIDATION_CATEGORY_AUDIENCE: dict[str, str] = {
 VALIDATION_CATEGORY_OPERATOR_SUMMARY: dict[str, str] = {
     "missing_slug": "Name the thing this file is about so other notes can link to it.",
     "missing_required_key": "Fill in the few required fields this kind of file expects.",
-    "status_enum_mismatch": "Pick a recognized status (for example open, accepted, shipped).",
+    "status_enum_mismatch": "Pick a status this kind of file allows.",
     "enum_mismatch": "Pick one of the allowed values for this field.",
     "no_frontmatter": "Add the YAML header at the top of the file.",
     "yaml_error": "Fix the YAML formatting at the top before anything else can be checked.",
@@ -1421,8 +1421,29 @@ def _validation_category(message: str, *, severity: str, schema: str) -> str:
     return "other_error" if severity == "error" else "other_warning"
 
 
+def _name_allowed_status_values(entry: dict[str, Any] | None, schemas: list[str]) -> None:
+    """Name the allowed `status:` values per file type in the rollup an agent reads.
+
+    The per-file message already lists them; the rollup (`mb status`, `mb doctor`,
+    `mb start` read `repair`) used to say only "one of the allowed lifecycle values",
+    and its example named a status no file type accepts (#1122).
+    """
+    if entry is None or not schemas:
+        return
+    allowed = {
+        schema: sorted(SCHEMAS[schema]["enums"]["status"]) for schema in sorted(set(schemas))
+    }
+    named = "; ".join(
+        f"{schema.rsplit('/', 1)[-1]}: {' | '.join(values)}" for schema, values in allowed.items()
+    )
+    entry["allowed_status"] = allowed
+    entry["repair"] = f"Change `status:` to an allowed value ({named})."
+    entry["operator_summary"] = f"Pick a status this kind of file allows ({named})."
+
+
 def _validation_categories(files: list[dict[str, Any]]) -> dict[str, Any]:
     categories: dict[str, dict[str, Any]] = {}
+    status_schemas: list[str] = []
     for file_result in files:
         path = str(file_result.get("path") or "")
         schema = str(file_result.get("schema") or "")
@@ -1451,11 +1472,18 @@ def _validation_categories(files: list[dict[str, Any]]) -> dict[str, Any]:
                         "recommended_route": VALIDATION_CATEGORY_ROUTE.get(category, ""),
                     },
                 )
+                if (
+                    category == "status_enum_mismatch"
+                    and message.startswith("status=")
+                    and "status" in SCHEMAS.get(schema, {}).get("enums", {})
+                ):
+                    status_schemas.append(schema)
                 entry["count"] += 1
                 entry["errors" if severity == "error" else "warnings"] += 1
                 examples = entry["examples"]
                 if len(examples) < 5:
                     examples.append({"path": path, "message": message})
+    _name_allowed_status_values(categories.get("status_enum_mismatch"), status_schemas)
     ordered = dict(
         sorted(
             categories.items(),
