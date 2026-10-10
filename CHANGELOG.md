@@ -27,6 +27,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   Unicode form (git stores `é` as one character, the disk lists it as two) is refused as a tracked path
   (`out_path_in_repo`) instead of the generic spelling message. Nothing is read
   or written in any refusal, and no JSON key changed.
+- `mb site check` only counts a Google Ads customer ID as declared when it is
+  exactly 10 digits (dashes and spaces ignored). Values such as `TODO: add id`,
+  `N/A`, `none`, `123` or letters now read as a placeholder, with the same
+  next step: record the 10-digit ID from the top of the Google Ads account.
+  `mb status` now names both problems on its Google Ads line when the customer
+  ID is a placeholder and the primary conversion plan is also missing, as
+  `mb site check` does. `GTM-` followed by nothing has been treated as a
+  placeholder GTM ID since 0.6.5; the GTM rule is otherwise unchanged.
 - `mb connect <provider> --scope user` and `mb connect rotate` now put your
   previous credential back (or remove the new one) when the user-scope connect
   file cannot be written for any reason, such as a full disk or an I/O error,

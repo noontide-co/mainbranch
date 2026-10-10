@@ -394,8 +394,16 @@ def _is_placeholder_gtm(value: str) -> bool:
 
 
 def _is_placeholder_google_ads_customer(value: str) -> bool:
+    """Return True for any non-empty value that is not a 10-digit customer ID.
+
+    Dashes and spaces are ignored, so ``555-010-0000`` is a customer ID, while
+    ``TODO: add id``, ``N/A``, ``none``, ``123`` and all-zero ids are not.
+    """
+
     digits = re.sub(r"[\s-]", "", value)
-    return _is_placeholder_id_body(digits) or bool(re.fullmatch(r"0+", digits))
+    if not digits:
+        return _is_placeholder_id_body(digits)
+    return not re.fullmatch(r"[0-9]{10}", digits) or bool(re.fullmatch(r"0+", digits))
 
 
 def _google_ads_customer_declared(facts: dict[str, Any]) -> bool:
