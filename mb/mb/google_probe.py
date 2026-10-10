@@ -596,7 +596,9 @@ def test_google(
         if minted.get("not_recorded_note"):
             # `read_minted_token` could not write the user-scope file.
             recorded = False
-            not_recorded_reason = "user_scope_write_failed"
+            not_recorded_reason = str(
+                minted.get("not_recorded_reason") or "user_scope_write_failed"
+            )
             not_recorded_detail = str(minted["not_recorded_note"])
     status = status_again()
     result = {

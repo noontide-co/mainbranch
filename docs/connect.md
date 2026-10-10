@@ -1078,8 +1078,9 @@ is left as it was. `--json` then says `recorded: false` with
 `not_recorded_detail` sentence naming the file and the cause; `mb doctor` shows
 "not recorded: the user-scope connect file could not be written". The same
 applies to a Google read that cannot record an expired sign-in in the
-user-scope file: the repo metadata is put back as it was, and the read result
-carries a `not_recorded_note`. `mb connect token google` and
+user-scope file, whether it is full, read-only, unreadable or invalid: the repo
+metadata is put back as it was, and the read result carries a
+`not_recorded_note`. `mb connect token google` and
 `mb connect exec google` print that note on stderr as `recorded: no (...)`,
 never in the token or the command's own output, and only when it applies. If
 putting `.mb/connect.yaml` back also fails, the note says so, and the file may
@@ -1088,7 +1089,9 @@ failure to write the file, including a file that turns read-only after the
 check, restores the previous sign-in (or removes the new one) and exits 1 with
 `metadata_write_failed`, like the other providers. If a restore fails, the
 message says which part stayed changed (the Google grant, the access token, or
-both; for other providers, that provider's credential). Fresh sign-in retries keep `--scope user`, the selected repo and any
+both; for other providers, that provider's credential). A user-scope file that
+cannot be read or parsed does the same, and the message says to fix or move it.
+Fresh sign-in retries keep `--scope user`, the selected repo and any
 access-token replacement flag; use the same OAuth client and metadata again.
 When the folder is what refuses a write (permission denied on the folder, not on
 the file), the message names that folder, not a read-only file.
