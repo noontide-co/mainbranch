@@ -118,7 +118,6 @@ def test_a_check_that_cannot_be_written_to_the_user_scope_file_is_not_recorded(
         assert payload["recorded"] is False
         assert payload["not_recorded_reason"] == "user_scope_write_failed"
         assert path.name in payload["not_recorded_detail"]
-        assert "~" in payload["not_recorded_detail"] or "/" in payload["not_recorded_detail"]
     else:
         assert "mb connect test cloudflare: ok" in result.output
         assert "recorded: no (the user-scope connect file" in result.output
@@ -388,3 +387,132 @@ def test_a_successful_read_write_back_has_no_note(
 
     assert "not_recorded_note" not in result
     assert _status(repo)[1]["state"] == "reauth_required"
+
+
+# --- EACCES, home-relative paths, and a restore that fails for only one slot -------------
+
+
+def test_a_check_names_the_user_scope_file_with_a_home_relative_path(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    _user_scope_cloudflare(repo)
+    _fail_user_write(connect_mod._user_scope_path(), "write", errno.ENOSPC, monkeypatch)
+
+    human = _test_cloudflare(repo, False)
+    as_json = _test_cloudflare(repo, True)
+
+    detail = json.loads(as_json.stdout)["not_recorded_detail"]
+    assert "~/" in detail
+    for output in (human.output, detail):
+        assert str(tmp_path) not in output
+    assert "~/" in human.output
+
+
+@pytest.mark.parametrize("how", ["write", "rename"])
+@pytest.mark.parametrize("as_json", [False, True])
+def test_eacces_over_an_existing_file_is_still_read_only_for_a_check(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, how: str, as_json: bool
+) -> None:
+    _user_scope_cloudflare(repo)
+    path = connect_mod._user_scope_path()
+    before = path.read_bytes()
+    _fail_user_write(path, how, errno.EACCES, monkeypatch)
+
+    result = _test_cloudflare(repo, as_json)
+
+    _assert_clean(result)
+    if as_json:
+        payload = json.loads(result.stdout)
+        assert payload["not_recorded_reason"] == "user_scope_read_only"
+        assert "not_recorded_detail" not in payload
+    else:
+        assert "is read-only" in result.output
+    assert path.read_bytes() == before
+
+
+@pytest.mark.parametrize("how", ["write", "rename"])
+@pytest.mark.parametrize("as_json", [False, True])
+def test_eacces_with_no_user_scope_file_yet_blocks_a_first_google_sign_in(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    how: str,
+    as_json: bool,
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    google()
+    path = connect_mod._user_scope_path()
+    assert not path.exists()
+    secrets_before = dict(_local_secrets())
+    _fail_user_write(path, how, errno.EACCES, monkeypatch)
+
+    result = _oauth(repo, *_google_user_args(client_file), *(["--json"] if as_json else []))
+
+    assert result.exit_code == 1, result.output
+    _assert_clean(result)
+    text = json.loads(result.stdout)["summary"] if as_json else result.output
+    assert "permission to write in its folder ~/" in text
+    assert "Make that folder writable" in text
+    assert str(tmp_path) not in text
+    assert "The new sign-in was removed, so nothing was stored" in text
+    assert _secrets_equal(secrets_before)
+
+
+@pytest.mark.parametrize("how", ["write", "rename"])
+def test_eacces_over_an_existing_file_keeps_the_google_read_only_message(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    how: str,
+) -> None:
+    google()
+    _user_scope_cloudflare(repo)
+    path = connect_mod._user_scope_path()
+    _fail_user_write(path, how, errno.EACCES, monkeypatch)
+
+    result = _oauth(repo, *_google_user_args(client_file), "--json")
+
+    assert result.exit_code == 1, result.output
+    _assert_clean(result)
+    summary = json.loads(result.stdout)["summary"]
+    assert "is read-only" in summary
+    assert "could not be restored" not in summary
+
+
+def test_one_failed_restore_does_not_skip_the_other_slot(
+    repo: Path, client_file: Path, google: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _signed_in(repo, client_file, google, "--scope", "user")
+    path = connect_mod._user_scope_path()
+    entry = _config(repo)["providers"]["google"]["secrets"]
+    grant_ref = entry["oauth_grant"]["ref"]
+    token_ref = entry["access_token"]["ref"]
+    # A stored token that differs from the one the sign-in mints next.
+    SecretStore("local-file").set(token_ref, "SYNTH-OLD-TOKEN-1125")
+    secrets_before = dict(_local_secrets())
+    real_set = SecretStore.set
+    writes = 0
+
+    def set_(self: SecretStore, ref: str, *args: Any, **kwargs: Any) -> None:
+        nonlocal writes
+        writes += 1
+        # The two sign-in writes land; of the two restores, the grant's fails.
+        if writes > 2 and ref == grant_ref:
+            raise OSError(DETAIL)
+        real_set(self, ref, *args, **kwargs)
+
+    monkeypatch.setattr(SecretStore, "set", set_)
+    _fail_user_write(path, "write", errno.ENOSPC, monkeypatch)
+
+    result = _oauth(repo, "--reauth", "--client-file", str(client_file), "--json")
+
+    assert result.exit_code == 1, result.output
+    _assert_clean(result)
+    assert "could not be restored" in json.loads(result.stdout)["summary"]
+    # The grant's restore failed; the token's own restore still ran.
+    assert _local_secrets()[token_ref] == "SYNTH-OLD-TOKEN-1125"
+    assert bool(secrets_before[token_ref] == "SYNTH-OLD-TOKEN-1125")

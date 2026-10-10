@@ -637,7 +637,7 @@ def _store_failure(
     )
 
 
-def _user_scope_write_failure(
+def _user_scope_record_failed(
     exc: OSError,
     store: SecretStore,
     snapshots: list[tuple[str, SecretProbe]],
@@ -660,7 +660,9 @@ def _user_scope_write_failure(
     else:
         reason, fix = connect_mod._user_scope_write_failure(exc)
         cause = f"could not be written: {reason}"
-    restored = all(connect_mod._restore_secret(store, ref, prior) for ref, prior in snapshots)
+    # Every slot gets its own attempt: one failed restore must not skip the other.
+    results = [connect_mod._restore_secret(store, ref, prior) for ref, prior in snapshots]
+    restored = all(results)
     _minted.pop((store.backend, snapshots[0][0]), None)
     record_state = (
         "The repo metadata is unchanged, but the user-scope record may have changed."
@@ -886,7 +888,7 @@ def bootstrap(
                 )
             except OSError as exc:
                 assert previous_grant is not None and previous_token is not None
-                raise _user_scope_write_failure(
+                raise _user_scope_record_failed(
                     exc,
                     store,
                     [(grant_ref, previous_grant), (token_ref, previous_token)],
@@ -1263,7 +1265,7 @@ def _record_read_state(target: Path, grant_ref: str, *, reauth_required: bool) -
             validation["repair_command"] = REAUTH_COMMAND
             validation["rule"] = STATE_REAUTH_REQUIRED
         entry["validation"] = validation
-        config_path = connect_mod._config_path(target)
+        config_path = connect_mod._checked_config_path(target)
         previous_config: bytes | None = None
         if isinstance(repo_entry, dict) and not connect_mod.config_tracked_by_git(target):
             # A tracked .mb/connect.yaml is left as it is; the read itself
