@@ -156,6 +156,10 @@ Route:
   business artifact, such as `[updated] offer and founder-call research`; avoid
   broad buckets like `[updated] core and research`, `[drafted] files`, or
   `[ran] changes`.
+  The verb must be one `mb checkpoint --validate "<subject>" --json` accepts;
+  it lists them. Do not coin one from the action: a repair is `[fixed]`, a
+  migration or update run is `[ran]`, a move or rename is `[updated]`. Run
+  `--validate` before showing the operator a subject or command.
 - If local/shared repo state is involved, explain it with the save/sync
   vocabulary above. Do not prescribe a rebase in first response; say reconcile
   unless technical detail is needed.
