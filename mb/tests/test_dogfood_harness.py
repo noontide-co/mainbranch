@@ -425,6 +425,19 @@ def test_evidence_template_labels_print_mode_as_proxy(tmp_path: Path) -> None:
 
     assert "- Checkpoint verbs: rejected by `mb checkpoint --validate`: [repaired]" in flagged
 
+    state.claude["rubric"]["checkpoint_verbs"] = {
+        "ok": False,
+        "violations": [
+            {"kind": "rejected_checkpoint_verb", "verb": "repaired"},
+            {"kind": "malformed_checkpoint_subject", "code": "missing_prefix", "subject": "[]"},
+        ],
+    }
+    mixed = harness.evidence_template(state, install_mode="editable", mb_version="mb 0.3.6")
+
+    assert "- Checkpoint verbs: rejected by `mb checkpoint --validate`: [repaired]\n" in mixed
+    assert "- Checkpoint subjects: not `[verb] object`: []\n" in mixed
+    assert "[None]" not in mixed
+
 
 def test_materialize_fixture_profiles_create_observable_repo_states(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch

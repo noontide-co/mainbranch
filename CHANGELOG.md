@@ -38,6 +38,16 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   now flag any suggested `mb checkpoint --message` whose opening word is not
   accepted, and a test keeps every save example in the bundled skills and docs
   on accepted words.
+- The release-simulation check on suggested save notes is more precise. It no
+  longer flags an unrelated `git commit -m "[repaired] ..."` that shares a line
+  with a `mb checkpoint` command or the word "checkpoint", and it follows
+  commands continued with a backslash (including Windows line endings and no
+  space before the backslash). It now also reports a note that opens a bracket
+  but is not `[verb] object`, such as `[]`, `[fixed]offer` or `[fixed][repaired] ...`,
+  separately from a rejected verb, and it lists at most 20 findings with a total
+  count. The test that keeps save examples on accepted words now also covers the
+  bundled data, workflows, playbooks, `AGENTS.md`, `README.md` and the text the
+  engine writes into business repos.
 - `mb init` conventions in `CLAUDE.md` now say plainly which file types the
   `status:` list covers (bets, decisions, offers, pushes and push playbooks)
   instead of "each file type".
