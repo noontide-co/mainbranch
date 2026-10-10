@@ -477,18 +477,19 @@ carries the usual failure envelope (`ok: false`, `rule: out_write_failed`,
 The message names at most the temporary file's name (`.<name>.mb-out.tmp`),
 never a full path. If the file was written but that temporary copy could not be
 removed, the summary is still `ok: true` (exit 0) and `warnings` holds one
-message naming it. A refusal (exit 2, `rule: out_*`) shows an `--out` that leads under the home
-folder (absolute or relative, with links followed and then `.` and `..`
-collapsed) as `~/...` in
-`summary` and `errors`, and any other `--out` as typed (`~name/...` for another
-user stays `~name/...`, in the summary's `out` too; `~you/...` for your own user
-name is `~/...`; a `~name/..` path that leads out of that home, and not into
-yours, is shown as typed). If a part that contains the home folder's name would still be
-printed, only `…/` and the file name are shown (a home name of four letters or
-fewer counts only where no letter touches it, so `samples.json` still shows); a
-temporary file's name that contains it is shown as `.….mb-out.tmp`,
-so neither a refusal nor the summary has the home folder's name under
-`safe_to_share: true`. See [google.md](google.md#--out-keep-a-large-pull-in-a-private-file).
+message naming it. A refusal (exit 2, `rule: out_*`) shows an `--out` that
+leads under the home folder (absolute or relative, with links followed and
+then `.` and `..` collapsed) as `~/...` in `summary` and `errors`, and any
+other `--out` as typed (`~name/...` for another user stays `~name/...`, in the
+summary's `out` too; `~you/...` for your own user name is `~/...`; a `~/...`
+or `~name/...` path that leaves that home, including through a link, and does
+not come back into yours, is shown as typed). If a part that contains the home
+folder's name would still be printed, only `…/` and the file name are shown (a
+home name of four letters or fewer counts only where no letter touches it, so
+`samples.json` still shows); a temporary file's name that contains it is shown
+as `.….mb-out.tmp`, so neither a refusal nor the summary has the home folder's
+name under `safe_to_share: true`. See
+[google.md](google.md#--out-keep-a-large-pull-in-a-private-file).
 
 ## First Migrated Surfaces
 
