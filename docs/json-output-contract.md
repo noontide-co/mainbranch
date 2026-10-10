@@ -272,13 +272,16 @@ same finding is offered named under `sections[]` and `actions[]`. The workflow i
 stays bare. The list is empty when there is nothing for a person to run.
 
 `mb doctor --json` adds a `claude-status-line` entry to `checks[]` only when the
-business repo's `CLAUDE.md` still has the pre-#1121 line "Status field:
-proposed | running | scaling | killed | graduated | died" (#1122). It is a
-warning (`ok: false`, `severity: warn`; the report's overall `ok` and the exit
-code are unchanged) with `path`, `repair` and `detail` text and `suggested_text`,
+business repo's `CLAUDE.md` still has the pre-#1121 list item "Status field:"
+(or the older "Status enum:") followed by "proposed | running | scaling |
+killed | graduated | died" (#1122); the same text quoted inside a sentence is
+not flagged. It is a warning (`ok: false`, `severity: warn`; the report's
+overall `ok` and the exit code are unchanged) with `path`, `repair` and `detail` text and `suggested_text`,
 the replacement conventions. Nothing is written. Repos without the line see no
-new entry. The `status_enum_mismatch` entry of `validation_categories.by_category`
-(and `by_category` itself) gains `allowed_status`, a map from file type to its
+new entry. `mb doctor repair --plan --json` lists it as a manual action and
+section named `claude-status-line` (never applied). The `status_enum_mismatch`
+entry of `validation_categories.by_category` (and the top-level `by_category`
+copy in `mb validate --json`) gains `allowed_status`, a map from file type to its
 allowed `status:` values, whenever a file's `status:` was rejected, and its
 `repair` and `operator_summary` text names those values; every other key is as
 before.

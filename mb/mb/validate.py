@@ -1424,9 +1424,10 @@ def _validation_category(message: str, *, severity: str, schema: str) -> str:
 def _name_allowed_status_values(entry: dict[str, Any] | None, schemas: list[str]) -> None:
     """Name the allowed `status:` values per file type in the rollup an agent reads.
 
-    The per-file message already lists them; the rollup (`mb status`, `mb doctor`,
-    `mb start` read `repair`) used to say only "one of the allowed lifecycle values",
-    and its example named a status no file type accepts (#1122).
+    The per-file message already lists them; the rollup (`mb validate`, `mb status
+    --json` and `mb doctor repair --plan --json` print `repair`) used to say only
+    "one of the allowed lifecycle values", and its example named a status no file
+    type accepts (#1122).
     """
     if entry is None or not schemas:
         return
