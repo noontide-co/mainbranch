@@ -288,9 +288,11 @@ guidance keep theirs); `books.next_command` (`mb books status` and `mb books
 doctor` take the repo as a trailing path: `mb books status --json <path>`); and
 `measurement.repair_command` when it names a site repo (`mb site check "<site>"
 --business-repo .` becomes `--business-repo <path>`; a site path with shell
-characters is shell-quoted). `mb site check` with no site argument (the
-`measurement.repair_command` for a business repo with no recorded site) is left
-bare. `mb spine show` and `mb spine init`
+characters is shell-quoted). A bare `mb site check` is left as written, in both
+places it appears: `measurement.repair_command` when the business repo holds its
+own `.mainbranch/conversion.json`, and when no site conversion plan is found.
+From another folder it checks that folder, so run it from the business repo.
+`mb spine show` and `mb spine init`
 name it in their `summary` (`mb spine declare --repo <path> --store <provider>`).
 Inside the repo these keep their existing spelling, including `--repo .`.
 Left as written: `mb_command` (the command that ran), the Codex guidance
