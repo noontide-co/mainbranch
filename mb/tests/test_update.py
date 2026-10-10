@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import json
 import os
 import shlex
@@ -19,6 +20,7 @@ from mb import __version__
 from mb import codex as codex_mod
 from mb import engine as engine_mod
 from mb import freshness as freshness_mod
+from mb import unreadable as unreadable_mod
 from mb import update as update_mod
 from mb.cli import app
 
@@ -3897,12 +3899,13 @@ MODE_000_KINDS = {"unreadable", "skills_closed", "personal_skills_closed"}
         (
             "skills_closed",
             "`.claude/skills` (",
-            "Give your user read access to `.claude/skills`,",
+            "Let your user open the `.claude/skills` folder (give it read and execute permission),",
         ),
         (
             "personal_skills_closed",
             "`~/.claude/skills` (",
-            "Give your user read access to `~/.claude/skills`,",
+            "Let your user open the `~/.claude/skills` folder"
+            " (give it read and execute permission),",
         ),
     ],
 )
@@ -4010,6 +4013,64 @@ def test_a_decode_error_outside_read_text_names_no_guessed_file(
     assert "Save the files Main Branch reads in this repo as UTF-8 text" in warning
 
 
+def test_a_loop_error_naming_a_closed_folder_is_not_called_a_loop(
+    business_repo: Path,
+) -> None:
+    # #1117 item 1: the error is a symlink loop, but the walk names a closed
+    # folder above it. That folder is no link, so it gets the permission fix.
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
+        pytest.skip("root can enter a mode 000 folder")
+    closed = business_repo / ".claude"
+    (closed / "skills").mkdir(parents=True)
+    raw = str(closed / "skills" / "mb-start")
+    for mode, fix in (
+        (0o600, "Let your user enter the `.claude` folder (give it execute permission)"),
+        (0, "Let your user open the `.claude` folder (give it read and execute permission)"),
+    ):
+        closed.chmod(mode)
+        try:
+            for exc in (
+                RuntimeError(f"{unreadable_mod.SYMLINK_LOOP_PREFIX}{raw!r}"),
+                OSError(errno.ELOOP, "Too many levels of symbolic links", raw),
+            ):
+                path, reason, named_fix = unreadable_mod.describe(exc, business_repo)
+                warning = update_mod._unreadable_plan_warning(business_repo, "skill link", exc)
+                assert (path, reason, named_fix) == (".claude", "permission denied", fix)
+                assert "loop" not in warning
+                assert "Remove the link" not in warning
+        finally:
+            closed.chmod(0o755)
+
+
+def test_mode_000_names_read_and_execute_only_for_a_folder(business_repo: Path) -> None:
+    # #1117 item 2: a mode 000 folder needs read and execute; a mode 000 file
+    # needs read access only, as before.
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
+        pytest.skip("root can read a mode 000 file")
+    folder = business_repo / ".claude"
+    folder.mkdir()
+    file = business_repo / ".gitignore"
+    folder.chmod(0)
+    file.chmod(0)
+    try:
+        for target, fix in (
+            (
+                folder,
+                "Let your user open the `.claude` folder (give it read and execute permission)",
+            ),
+            (file, "Give your user read access to `.gitignore`"),
+        ):
+            exc = PermissionError(errno.EACCES, "Permission denied", str(target))
+            assert unreadable_mod.describe(exc, business_repo) == (
+                target.name,
+                "permission denied",
+                fix,
+            )
+    finally:
+        folder.chmod(0o755)
+        file.chmod(0o644)
+
+
 def test_check_keeps_a_programming_error_loud(
     monkeypatch: pytest.MonkeyPatch, business_repo: Path
 ) -> None:
@@ -4053,8 +4114,16 @@ def _codex_unreadable(repo: Path, kind: str) -> Path:
 
 CODEX_UNREADABLE = [
     ("agents_latin1", "`AGENTS.md`", "Save `AGENTS.md` as UTF-8 text"),
-    ("claude_closed", "`.claude`", "Give your user read access to `.claude`"),
-    ("codex_home_closed", "`~/.codex`", "Give your user read access to `~/.codex`"),
+    (
+        "claude_closed",
+        "`.claude`",
+        "Let your user open the `.claude` folder (give it read and execute permission)",
+    ),
+    (
+        "codex_home_closed",
+        "`~/.codex`",
+        "Let your user open the `~/.codex` folder (give it read and execute permission)",
+    ),
     ("codex_home_loop", "`~/.codex`", "Remove the link `~/.codex` or point it"),
     (
         "claude_no_enter",

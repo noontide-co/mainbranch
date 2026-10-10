@@ -119,27 +119,37 @@ def _locate(raw: str, repo: Path) -> tuple[str, str]:
     return raw, raw
 
 
-def _is_loop(exc: BaseException, named: str) -> bool:
+def _is_loop(exc: BaseException, named: str, raw: str) -> bool:
+    if named and named != raw:
+        # A folder above the failing path is named: judge it by itself, so a
+        # closed folder is never called a link that loops (#1117 item 1).
+        return _loops(named)
     if named and _loops(named):
         return True
     return _is_symlink_loop(exc) or (isinstance(exc, OSError) and exc.errno == errno.ELOOP)
 
 
-def _reason(exc: BaseException, named: str) -> str:
+def _is_denied(exc: BaseException, named: str, raw: str) -> bool:
+    if named and named != raw:
+        return _closed(named)
+    return isinstance(exc, PermissionError)
+
+
+def _reason(exc: BaseException, named: str, raw: str) -> str:
     if isinstance(exc, UnicodeDecodeError):
         return "it is not UTF-8 text"
-    if _is_loop(exc, named):
+    if _is_loop(exc, named, raw):
         return "it is a link that loops back on itself"
+    if _is_denied(exc, named, raw):
+        return "permission denied"
     if isinstance(exc, IsADirectoryError):
         return "it is a folder, not a file"
-    if isinstance(exc, PermissionError):
-        return "permission denied"
     if isinstance(exc, OSError) and exc.strerror:
         return exc.strerror.lower()
     return type(exc).__name__
 
 
-def _fix(path: str, exc: BaseException, named: str) -> str:
+def _fix(path: str, exc: BaseException, named: str, raw: str) -> str:
     """The failing file's own fix (#1106 item 5)."""
     if not path:
         if isinstance(exc, UnicodeDecodeError):
@@ -148,16 +158,19 @@ def _fix(path: str, exc: BaseException, named: str) -> str:
     shown = f"`{path}`"
     if isinstance(exc, UnicodeDecodeError):
         return f"Save {shown} as UTF-8 text"
-    if _is_loop(exc, named):
+    if _is_loop(exc, named, raw):
         return f"Remove the link {shown} or point it at a real file or folder"
+    if _is_denied(exc, named, raw):
+        if _closed(named):
+            if os.access(named, os.R_OK):
+                # Readable but not enterable (mode 600): read access is already
+                # there; entering needs execute permission (#1109 item 5).
+                return f"Let your user enter the {shown} folder (give it execute permission)"
+            # Neither readable nor enterable (mode 000) (#1117 item 2).
+            return f"Let your user open the {shown} folder (give it read and execute permission)"
+        return f"Give your user read access to {shown}"
     if isinstance(exc, IsADirectoryError):
         return f"Move the {shown} folder aside so a file can take its place"
-    if isinstance(exc, PermissionError):
-        if _closed(named) and os.access(named, os.R_OK):
-            # Readable but not enterable (mode 600): read access is already
-            # there; entering needs execute permission (#1109 item 5).
-            return f"Let your user enter the {shown} folder (give it execute permission)"
-        return f"Give your user read access to {shown}"
     return f"Check {shown}"
 
 
@@ -165,7 +178,7 @@ def describe(exc: BaseException, repo: Path) -> tuple[str, str, str]:
     """`(path, reason, fix)` for an unreadable-file error; `path` may be empty."""
     raw = _raw_path(exc)
     named, path = _locate(raw, repo) if raw else ("", "")
-    return path, _reason(exc, named), _fix(path, exc, named)
+    return path, _reason(exc, named, raw), _fix(path, exc, named, raw)
 
 
 def message(exc: BaseException, repo: Path) -> str:
