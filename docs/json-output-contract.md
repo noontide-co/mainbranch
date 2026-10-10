@@ -291,12 +291,14 @@ path argument is the supported form.
 `mb doctor --json` adds a `claude-status-line` entry to `checks[]` only when the
 business repo's `CLAUDE.md` still has the pre-#1121 list item "Status field:"
 (or the older "Status enum:") followed by "proposed | running | scaling |
-killed | graduated | died" (#1122); the same text quoted inside a sentence is
-not flagged. It is a warning (`ok: false`, `severity: warn`; the report's
+killed | graduated | died" (#1122); the same text quoted inside a sentence, or
+inside a fenced code block (``` or ~~~), is not flagged. It is a warning (`ok: false`, `severity: warn`; the report's
 overall `ok` and the exit code are unchanged) with `path`, `repair` and `detail` text and `suggested_text`,
 the replacement conventions. Nothing is written. Repos without the line see no
 new entry. `mb doctor repair --plan --json` lists it as a manual action and
-section named `claude-status-line` (never applied). The `status_enum_mismatch`
+section named `claude-status-line` (never applied). `mb doctor repair --plan
+--only claude` leaves it out: the finding is about business conventions, not
+agent wiring, and that scope keeps only agent-wiring sections. The `status_enum_mismatch`
 entry of `validation_categories.by_category` (and the top-level `by_category`
 copy in `mb validate --json`) gains `allowed_status`, a map from file type to its
 allowed `status:` values, whenever a file's `status:` was rejected, and its

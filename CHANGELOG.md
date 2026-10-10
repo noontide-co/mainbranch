@@ -21,6 +21,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   display limit after the cut. A `~name/...` path that leads out of that home
   (for example `~name/../otherhome/x.json`), and not into yours, is shown as
   you typed it instead of printing the folder it reaches in full.
+- `mb doctor` no longer warns about the old status line in `CLAUDE.md` when it
+  only appears inside a fenced code block (an example you quote). The same line
+  as a normal list item is still flagged. The docs now say why
+  `mb doctor repair --plan --only claude` leaves that warning out: it is about
+  your business conventions, not agent wiring.
 - `mb status` repair and update suggestions now name your business repo when
   you run it from another folder: the skill-wiring repairs (`mb skill link`,
   `mb skill repair`), the ranked next action and the drift repair, `mb update`
