@@ -29,7 +29,6 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - When a closed folder (not the file) is why the user-scope connect file could
   not be replaced, `mb connect` and `mb connect test` name the folder and say
   to make it writable, instead of calling the file read-only.
-=======
 - Saving progress should no longer suggest a save note that
   `mb checkpoint --validate` would turn down. The start and end-of-session
   guidance now says to pick the opening word from the ones `--validate` accepts
@@ -66,7 +65,6 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   Unicode form (git stores `é` as one character, the disk lists it as two) is refused as a tracked path
   (`out_path_in_repo`) instead of the generic spelling message. Nothing is read
   or written in any refusal, and no JSON key changed.
->>>>>>> origin/main
 - `mb site check` only counts a Google Ads customer ID as declared when it is
   exactly 10 digits (dashes and spaces ignored). Values such as `TODO: add id`,
   `N/A`, `none`, `123` or letters now read as a placeholder, with the same
