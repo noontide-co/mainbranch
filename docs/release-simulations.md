@@ -238,7 +238,11 @@ matching business meaning. Maintainer framing such as "release evidence" or
 "testing the release" is a warning whatever precedes it: an operator never
 says it, so simulation prompts and fixture files avoid it too. An owner's own
 release talk, such as "test the release notes", "pre-release evidence of
-demand" or "test this release with five beta users", is not flagged. Checkpoint
+demand" or "test this release with five beta users", is not flagged. It is
+flagged again when made-up data follows ("the release email flow with sample
+records") or the audience is qualified after the noun ("with users' sample
+data", "with customers that are fake"); a hyphen or a line break inside the
+phrase does not hide it. Checkpoint
 examples should name the saved business artifact specifically, such as
 `[updated] offer and founder-call research`, instead of broad buckets like
 `[updated] core and research`, `[drafted] files`, or `[ran] changes`.
