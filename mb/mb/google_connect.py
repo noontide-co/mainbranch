@@ -30,7 +30,6 @@ import http.client
 import json
 import os
 import re
-import shlex
 import sys
 import time
 import urllib.parse
@@ -530,7 +529,7 @@ def _recovery_command(writes: _Writes, command: str, *, fresh: bool = False) -> 
         if writes.replaced_access_token:
             command += " --replace-access-token"
     if writes.repo is not None and writes.repo != Path.cwd().resolve():
-        command += f" --repo {shlex.quote(str(writes.repo))}"
+        command += f" --repo {connect_mod._shell_repo_arg(writes.repo)}"
     return command
 
 
@@ -545,7 +544,6 @@ def _partial_message(
     failed: str,
     *,
     retry: str = "once the store is healthy",
-    repair_file_first: bool = False,
 ) -> str:
     if failed == "grant":
         return "Nothing was stored and the repo metadata is unchanged."
@@ -571,11 +569,7 @@ def _partial_message(
         command = _recovery_command(writes, "mb connect google --oauth", fresh=True)
         return lead + f" Re-run `{command}` {retry}, with the same OAuth client and metadata."
     test = _recovery_command(writes, "mb connect test google")
-    next_step = (
-        f"Make that file writable first, then run `{test}`."
-        if repair_file_first
-        else f"Run `{test}`."
-    )
+    next_step = f"Run `{test}`."
     if failed == "token":
         return (
             "The new Google grant is stored and replaced the old one, but the access-token "
@@ -638,9 +632,9 @@ def _store_failure(
 
 
 def _user_scope_record_failed(
-    exc: OSError,
+    exc: OSError | connect_mod.UserScopeReadOnlyError,
     store: SecretStore,
-    snapshots: list[tuple[str, SecretProbe]],
+    snapshots: list[tuple[str, str, SecretProbe]],
     writes: _Writes,
     *,
     reauth: bool,
@@ -649,27 +643,19 @@ def _user_scope_record_failed(
     """Restore what was stored before, then say why the user-scope record failed.
 
     Same restore as ``mb connect --scope user``. Shows the true cause and fix with
-    ``~/`` paths, never backend text or a credential.
+    ``~/`` paths, never backend text or a credential. ``snapshots`` holds
+    ``(label, ref, previous)`` for the grant and the access token.
     """
 
-    shown = connect_mod._shown_user_scope_path(connect_mod._user_scope_path())
-    restore_failed = isinstance(exc, connect_mod.UserScopeRecordRestoreError)
-    if restore_failed:
-        cause = "could not be written, and its previous contents could not be restored"
-        fix = "Inspect and repair that file"
-    else:
-        reason, fix = connect_mod._user_scope_write_failure(exc)
-        cause = f"could not be written: {reason}"
-    # Every slot gets its own attempt: one failed restore must not skip the other.
-    results = [connect_mod._restore_secret(store, ref, prior) for ref, prior in snapshots]
-    restored = all(results)
-    _minted.pop((store.backend, snapshots[0][0]), None)
+    shown, cause, fix = connect_mod._user_scope_record_failure(exc)
+    unrestored = connect_mod._restore_secrets(store, snapshots)
+    _minted.pop((store.backend, snapshots[0][1]), None)
     record_state = (
         "The repo metadata is unchanged, but the user-scope record may have changed."
-        if restore_failed
+        if isinstance(exc, connect_mod.UserScopeRecordRestoreError)
         else "The repo metadata is unchanged."
     )
-    if not restored:
+    if unrestored:
         command = ["mb", "connect", "google", "--oauth"]
         if reauth:
             command.append("--reauth")
@@ -683,7 +669,8 @@ def _user_scope_record_failed(
         command.extend(["--repo", str(repo)])
         return GoogleConnectError(
             f"The Google sign-in was stored but not recorded: the user-scope connect file "
-            f"{shown} {cause}, and the previous credential state could not be restored. "
+            f"{shown} {cause}, and the previous credential state could not be restored "
+            f"({' and '.join(unrestored)} stayed changed). "
             f"{record_state} {fix} first, then rerun "
             f"`{connect_mod._shell_replay_command(command, repo)}` with the same OAuth "
             "client and metadata.",
@@ -886,12 +873,15 @@ def bootstrap(
                         entry=entry,
                     )
                 )
-            except OSError as exc:
+            except (OSError, connect_mod.UserScopeReadOnlyError) as exc:
                 assert previous_grant is not None and previous_token is not None
                 raise _user_scope_record_failed(
                     exc,
                     store,
-                    [(grant_ref, previous_grant), (token_ref, previous_token)],
+                    [
+                        ("the Google grant", grant_ref, previous_grant),
+                        ("the access token", token_ref, previous_token),
+                    ],
                     writes,
                     reauth=reauth,
                     account_label=account_label,
@@ -899,15 +889,6 @@ def bootstrap(
             writes.user_scope = True
         path = connect_mod._write_config(target, config)
         writes.metadata = True
-    except connect_mod.UserScopeReadOnlyError as exc:
-        # The file became read-only after the check above: say which file.
-        raise GoogleConnectError(
-            f"The user-scope connect file {exc.shown} is read-only. "
-            + _partial_message(
-                writes, "metadata", retry="once that file is writable", repair_file_first=True
-            ),
-            state="metadata_write_failed",
-        ) from None
     except (OSError, ValueError):
         raise GoogleConnectError(
             "The repo metadata could not be written. " + _partial_message(writes, "metadata"),
@@ -1228,7 +1209,8 @@ def _record_read_state(target: Path, grant_ref: str, *, reauth_required: bool) -
     metadata could not be written. Only the entry still holding ``grant_ref``
     is touched. When the user-scope file cannot be written (a full disk, an I/O
     error) the repo metadata is put back as it was and this returns a
-    sanitized note saying the state was not recorded; otherwise "".
+    sanitized note saying the state was not recorded (and, if that put-back
+    also fails, that ``.mb/connect.yaml`` still shows the check); otherwise "".
     """
 
     note = ""
@@ -1286,10 +1268,15 @@ def _record_read_state(target: Path, grant_ref: str, *, reauth_required: bool) -
                 )
             except OSError as exc:
                 # All or nothing: the repo metadata goes back as it was.
-                if previous_config is not None:
-                    with suppress(OSError):
-                        atomic_write_text(config_path, previous_config.decode("utf-8"))
                 note = connect_mod._user_scope_not_recorded_detail(exc)
+                if previous_config is not None:
+                    try:
+                        atomic_write_text(config_path, previous_config.decode("utf-8"))
+                    except OSError:
+                        note += (
+                            "; .mb/connect.yaml could not be put back either, so it "
+                            "still shows this check"
+                        )
     return note
 
 
