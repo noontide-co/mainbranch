@@ -632,7 +632,7 @@ def _store_failure(
 
 
 def _user_scope_record_failed(
-    exc: OSError | connect_mod.UserScopeReadOnlyError,
+    exc: OSError | connect_mod.UserScopeReadOnlyError | connect_mod.ConfigCorruptError,
     store: SecretStore,
     snapshots: list[tuple[str, str, SecretProbe]],
     writes: _Writes,
@@ -873,7 +873,11 @@ def bootstrap(
                         entry=entry,
                     )
                 )
-            except (OSError, connect_mod.UserScopeReadOnlyError) as exc:
+            except (
+                OSError,
+                connect_mod.UserScopeReadOnlyError,
+                connect_mod.ConfigCorruptError,
+            ) as exc:
                 assert previous_grant is not None and previous_token is not None
                 raise _user_scope_record_failed(
                     exc,
@@ -1255,9 +1259,9 @@ def _record_read_state(target: Path, grant_ref: str, *, reauth_required: bool) -
             previous_config = config_path.read_bytes() if config_path.exists() else None
             connect_mod._write_config(target, config)
         if entry.get("scope") == "user" or not isinstance(repo_entry, dict):
-            stored = connect_mod._read_user_scope()["repos"].get(repo_id)
-            identity = stored.get("repo_identity") if isinstance(stored, dict) else None
             try:
+                stored = connect_mod._read_user_scope()["repos"].get(repo_id)
+                identity = stored.get("repo_identity") if isinstance(stored, dict) else None
                 connect_mod._write_user_scope_provider(
                     repo_id,
                     repo_identity=identity
@@ -1266,7 +1270,11 @@ def _record_read_state(target: Path, grant_ref: str, *, reauth_required: bool) -
                     provider_id=PROVIDER_ID,
                     entry=entry,
                 )
-            except OSError as exc:
+            except (
+                OSError,
+                connect_mod.UserScopeReadOnlyError,
+                connect_mod.ConfigCorruptError,
+            ) as exc:
                 # All or nothing: the repo metadata goes back as it was.
                 note = connect_mod._user_scope_not_recorded_detail(exc)
                 if previous_config is not None:

@@ -4196,7 +4196,9 @@ def _validate_with_provider(
     }
 
 
-def _user_scope_not_recorded_detail(exc: OSError) -> str:
+def _user_scope_not_recorded_detail(
+    exc: OSError | UserScopeReadOnlyError | ConfigCorruptError,
+) -> str:
     """Why a check could not be written to the user-scope file, for an operator.
 
     Built from the error number only: no backend text, value or absolute home path.

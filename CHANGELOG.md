@@ -29,6 +29,15 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - When a closed folder (not the file) is why the user-scope connect file could
   not be replaced, `mb connect` and `mb connect test` name the folder and say
   to make it writable, instead of calling the file read-only.
+- A read-only or unreadable user-scope connect file no longer leaves things
+  half-changed. When a Google read cannot record an expired sign-in because
+  that file is read-only (or is unreadable or invalid), `.mb/connect.yaml` is
+  now put back as it was and `mb connect token google`, `mb connect exec google`
+  and `mb connect test google` say it was not recorded. A Google sign-in that
+  hits an unreadable user-scope file now removes the new sign-in (or restores
+  the previous one) and names that file, instead of blaming the repo metadata.
+  `mb connect token` now prints its not-recorded note after the error line, as
+  `mb connect exec` does.
 - Saving progress should no longer suggest a save note that
   `mb checkpoint --validate` would turn down. The start and end-of-session
   guidance now says to pick the opening word from the ones `--validate` accepts
