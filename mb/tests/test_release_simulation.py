@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import subprocess
 import time
@@ -1132,7 +1133,18 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 def _rejected_verbs(text: str) -> list[str]:
     result = release_simulation.analyze_checkpoint_verbs(text)
-    return [item["verb"] for item in result["violations"]]
+    return [
+        item["verb"] for item in result["violations"] if item["kind"] == "rejected_checkpoint_verb"
+    ]
+
+
+def _malformed_subjects(text: str) -> list[str]:
+    result = release_simulation.analyze_checkpoint_verbs(text)
+    return [
+        item["subject"]
+        for item in result["violations"]
+        if item["kind"] == "malformed_checkpoint_subject"
+    ]
 
 
 @pytest.mark.parametrize(
@@ -1151,6 +1163,16 @@ def _rejected_verbs(text: str) -> list[str]:
         ('mb checkpoint --message "[Repaired] links"', ["Repaired"]),
         ('mb checkpoint --message "[checkpoint] saved"', ["checkpoint"]),
         ('mb checkpoint --message "[ship] lander"', ["ship"]),
+        ('mb checkpoint \\\r\n  --message "[repaired] links" \\\r\n  --yes', ["repaired"]),
+        ('mb checkpoint\\\n  --message "[repaired] links"', ["repaired"]),
+        ('mb checkpoint --repo "my business" --mode concern --message "[moved] x"', ["moved"]),
+        ('mb checkpoint\t--message "[repaired] links"', ["repaired"]),
+        ("mb checkpoint --message [repaired] offer", ["repaired"]),
+        ('$ mb checkpoint --message "[repaired] x"', ["repaired"]),
+        ("uv run mb checkpoint --message `[repaired] x`", ["repaired"]),
+        ('python -m mb checkpoint -m="[repaired] x"', ["repaired"]),
+        ('mb checkpoint --message "[repaired] a; b && c"', ["repaired"]),
+        (f'mb checkpoint -m "[{"a" * 41}] x"', ["a" * 40]),
         (
             'mb checkpoint --message "[repaired] a"\nmb checkpoint --message "[updated] b"\n'
             'mb checkpoint --message "[migrated] c"',
@@ -1177,11 +1199,71 @@ def test_checkpoint_verbs_flags_a_rejected_verb(text: str, verbs: list[str]) -> 
         'mb checkpoint --validate "[repaired] links" --json',
         'mb checkpoint --plan --json\nthen the next step is -m "[repaired] x"',
         'Use `[repaired]` only as a word, not a command: git commit -m "[repaired] x"',
+        'mb checkpoint --plan --json; git commit -m "[repaired] x"',
+        'mb checkpoint --plan && git commit -m "[repaired] x"',
+        'mb checkpoint --plan || git commit -m "[repaired] x"',
+        'mb checkpoint --plan --json | tee out.txt; git commit -m "[repaired] x"',
+        'Let me save a checkpoint first. git commit -m "[repaired] x"',
+        'Next checkpoint we can run: tool -m "[repaired] y"',
+        'run .checkpoint -m "[repaired] x"',
+        'run src/checkpoint -m "[repaired] x"',
+        'Run `mb checkpoint --plan --json` and then `git commit -m "[repaired] x"`.',
+        'mb checkpoint --message "$MESSAGE" --yes',
+        'mb checkpoint --message "[...] object" --yes',
+        'mb checkpoint --message "Updated the offer" --yes',
     ],
 )
 def test_checkpoint_verbs_allows_valid_or_unrelated_text(text: str) -> None:
     assert _rejected_verbs(text) == []
     assert "checkpoint_verbs" not in release_simulation.score_transcript(text)
+
+
+@pytest.mark.parametrize(
+    "subject",
+    [
+        "[]",
+        "[ fixed] offer page",
+        "[fixed ] offer page",
+        "[fixed][repaired] offer page",
+        "[fixed]offer page",
+        "\u3010fixed\u3011 offer page",
+        "\uff3bfixed\uff3d offer page",
+        "[a; b] offer page",
+    ],
+)
+def test_checkpoint_verbs_reports_a_malformed_bracket_subject(subject: str) -> None:
+    from mb import checkpoint_verbs
+
+    text = f'mb checkpoint --message "{subject}" --yes'
+
+    assert checkpoint_verbs.validate_subject(subject)["ok"] is False
+    assert _malformed_subjects(text) == [subject]
+    assert _rejected_verbs(text) == []
+    finding = release_simulation.score_transcript(text)["checkpoint_verbs"]["violations"][0]
+    assert finding["kind"] == "malformed_checkpoint_subject"
+    assert finding["code"] == "missing_prefix"
+    assert "accepted" not in finding
+
+
+def test_checkpoint_verbs_reports_one_finding_per_subject() -> None:
+    result = release_simulation.analyze_checkpoint_verbs(
+        'mb checkpoint -m "[repaired][fixed] x"\nmb checkpoint -m "[Repaired] x"'
+    )
+
+    assert [item["kind"] for item in result["violations"]] == ["rejected_checkpoint_verb"] * 2
+
+
+def test_checkpoint_verbs_finding_list_is_capped_but_counts_everything() -> None:
+    from mb import checkpoint_verbs
+
+    text = 'mb checkpoint -m "[repaired] x"\n' * 50
+    result = release_simulation.analyze_checkpoint_verbs(text)
+
+    assert result["ok"] is False
+    assert len(result["violations"]) == 20
+    assert result["total_violations"] == 50
+    assert result["accepted"] == list(checkpoint_verbs.registry())
+    assert result["violations"][0]["accepted"] == result["accepted"]
 
 
 def test_checkpoint_verbs_verdict_matches_mb_checkpoint_validate() -> None:
@@ -1224,6 +1306,14 @@ def test_checkpoint_verbs_is_a_warning_not_a_hard_gate() -> None:
         'mb checkpoint -m "[repaired] x"\n' * 5_000,
         "mb checkpoint \\\n" * 5_000,
         'mb checkpoint --message "[' + "a" * 50_000,
+        'mb checkpoint -m "[]"\n' * 5_000,
+        'mb checkpoint -m "[fixed]x"\n' * 5_000,
+        "mb checkpoint\\\r\n" * 5_000,
+        "mb checkpoint\\\n" * 5_000,
+        "mb checkpoint " + "--repo " * 20_000,
+        "mb checkpoint --message " + '"' * 50_000,
+        "mb checkpoint " + "-m " * 20_000,
+        'mb checkpoint --repo "' + "a " * 20_000,
     ],
 )
 def test_checkpoint_verbs_scan_is_linear(text: str) -> None:
@@ -1233,19 +1323,93 @@ def test_checkpoint_verbs_scan_is_linear(text: str) -> None:
     assert time.perf_counter() - started < 1.0
 
 
-def _checkpoint_examples_in_text() -> list[tuple[str, str]]:
+_DRIFT_DOC_ROOTS = (".claude", "docs", "mb/mb/_data", "workflows", "playbooks")
+_DRIFT_DOC_FILES = ("AGENTS.md", "README.md")
+
+
+def _checkpoint_drift_texts(root: Path) -> list[tuple[str, str]]:
+    """Every text a user or agent can be shown: docs, bundled data, and Python string literals.
+
+    Python files are read with ``ast``: each string constant is scanned on its
+    own, so a command shown in generated-repo text counts and code does not. An
+    f-string contributes only its literal parts.
+    """
+    texts: list[tuple[str, str]] = []
+    files = [root / name for name in _DRIFT_DOC_FILES]
+    for name in _DRIFT_DOC_ROOTS:
+        files.extend(path for path in (root / name).rglob("*") if path.is_file())
+    for path in sorted(files):
+        try:
+            texts.append((str(path.relative_to(root)), path.read_text(encoding="utf-8")))
+        except (OSError, UnicodeDecodeError):
+            continue
+    for path in sorted((root / "mb" / "mb").glob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        rel = str(path.relative_to(root))
+        texts.extend(
+            (rel, node.value)
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Constant) and isinstance(node.value, str)
+        )
+    return texts
+
+
+def _checkpoint_examples_in(root: Path) -> list[tuple[str, str]]:
     found: list[tuple[str, str]] = []
-    roots = [REPO_ROOT / ".claude", REPO_ROOT / "docs"]
-    for root in roots:
-        for path in sorted(root.rglob("*.md")):
-            text = path.read_text(encoding="utf-8")
-            for verb in _rejected_verbs(text):
-                found.append((str(path.relative_to(REPO_ROOT)), verb))
+    for name, text in _checkpoint_drift_texts(root):
+        result = release_simulation.analyze_checkpoint_verbs(text)
+        found.extend((name, item.get("verb") or item["subject"]) for item in result["violations"])
     return found
 
 
 def test_bundled_skills_and_docs_only_show_accepted_checkpoint_verbs() -> None:
-    assert _checkpoint_examples_in_text() == []
+    assert _checkpoint_examples_in(REPO_ROOT) == []
+
+
+@pytest.mark.parametrize(
+    "relative",
+    [
+        ".claude/skills/mb-end/references/example.md",
+        "docs/example.md",
+        "mb/mb/_data/templates/example.md",
+        "workflows/mb-ads/example.md",
+        "playbooks/example/example.md",
+        "AGENTS.md",
+        "README.md",
+    ],
+)
+def test_checkpoint_drift_scan_fails_on_a_rejected_example_in_every_area(
+    tmp_path: Path, relative: str
+) -> None:
+    target = tmp_path / relative
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text('Run `mb checkpoint --message "[repaired] links" --yes`.\n', encoding="utf-8")
+    (tmp_path / "AGENTS.md").touch()
+    (tmp_path / "README.md").touch()
+    (tmp_path / "mb" / "mb").mkdir(parents=True, exist_ok=True)
+    for name in _DRIFT_DOC_ROOTS:
+        (tmp_path / name).mkdir(parents=True, exist_ok=True)
+
+    assert _checkpoint_examples_in(tmp_path) == [(relative, "repaired")]
+
+
+def test_checkpoint_drift_scan_fails_on_a_rejected_example_in_a_python_string(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "AGENTS.md").touch()
+    (tmp_path / "README.md").touch()
+    for name in _DRIFT_DOC_ROOTS:
+        (tmp_path / name).mkdir(parents=True, exist_ok=True)
+    (tmp_path / "mb" / "mb").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "mb" / "mb" / "template.py").write_text(
+        "TEXT = (\n"
+        '    "Save with:\\n"\n'
+        '    "mb checkpoint --message \\"[migrated] offers\\" --yes"\n'
+        ")\n",
+        encoding="utf-8",
+    )
+
+    assert _checkpoint_examples_in(tmp_path) == [("mb/mb/template.py", "migrated")]
 
 
 def test_checkpoint_guidance_points_repair_and_migration_at_accepted_verbs() -> None:

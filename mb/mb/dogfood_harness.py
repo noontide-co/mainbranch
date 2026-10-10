@@ -1633,13 +1633,30 @@ def evidence_template(state: HarnessState, *, install_mode: str, mb_version: str
             )
     checkpoint_verbs_line = ""
     if isinstance(rubric, dict) and isinstance(rubric.get("checkpoint_verbs"), dict):
+        findings = rubric["checkpoint_verbs"].get("violations", [])
         rejected = sorted(
-            {str(item.get("verb")) for item in rubric["checkpoint_verbs"].get("violations", [])}
+            {
+                str(item.get("verb"))
+                for item in findings
+                if item.get("kind", "rejected_checkpoint_verb") == "rejected_checkpoint_verb"
+            }
         )
-        checkpoint_verbs_line = (
-            f"- Checkpoint verbs: rejected by `mb checkpoint --validate`: "
-            f"{', '.join(f'[{verb}]' for verb in rejected)}\n"
+        malformed = sorted(
+            {
+                str(item.get("subject"))
+                for item in findings
+                if item.get("kind") == "malformed_checkpoint_subject"
+            }
         )
+        if rejected:
+            checkpoint_verbs_line += (
+                f"- Checkpoint verbs: rejected by `mb checkpoint --validate`: "
+                f"{', '.join(f'[{verb}]' for verb in rejected)}\n"
+            )
+        if malformed:
+            checkpoint_verbs_line += (
+                f"- Checkpoint subjects: not `[verb] object`: {', '.join(malformed)}\n"
+            )
     skill_present = (state.fixture_repo / ".claude" / "skills" / "mb-start" / "SKILL.md").exists()
     status_schema = status_payload.get("schema_version", "unknown")
     status_wiring = nested_get(status_payload, ("runtime", "skill_wiring", "ok"))
