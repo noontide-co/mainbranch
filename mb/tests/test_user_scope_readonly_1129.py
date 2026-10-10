@@ -265,16 +265,16 @@ def test_signin_with_a_user_scope_file_bad_from_the_start_stores_nothing(
 # --- 3b. a check never half-records ----------------------------------------------------
 
 
-def _stub_check(monkeypatch: pytest.MonkeyPatch) -> None:
+def _stub_check(monkeypatch: pytest.MonkeyPatch, ok: bool = True) -> None:
     monkeypatch.setattr(
         connect_mod,
         "_validate_with_provider",
         lambda provider, secret, *a, **k: {
-            "ok": True,
-            "state": "ready",
+            "ok": ok,
+            "state": "ready" if ok else "invalid_credentials",
             "checked_at": "2026-10-10T00:00:00Z",
-            "provider_verified": True,
-            "summary": "stubbed check",
+            "provider_verified": ok,
+            "summary": "stubbed check" if ok else "stubbed check failed",
         },
     )
 
@@ -327,9 +327,8 @@ def test_connect_test_with_a_corrupt_user_scope_file_never_half_records(
 
     result = _connect_test(repo, as_json)
 
-    # The exit follows the status the repo metadata is left with: a check that
-    # was already recorded as ready stays ready; one that never was, needs action.
-    assert result.exit_code == (0 if validated else 1), result.output
+    # A passing check that could not be recorded exits 0 whatever the stored status was.
+    assert result.exit_code == 0, result.output
     _assert_clean(result.output, tmp_path)
     _assert_not_recorded(result, as_json)
     assert config_path.read_bytes() == config_before
@@ -360,7 +359,60 @@ def test_connect_test_with_a_user_scope_file_bad_from_the_start_never_half_recor
 
     _assert_clean(result.output, tmp_path)
     _assert_not_recorded(result, as_json)
+    assert result.exit_code == 0, result.output
+    assert config_path.read_bytes() == config_before
+    assert path.read_bytes() == BAD_FILES[kind]
+    assert dict(_local_secrets()) == secrets
+    assert _tmp_files(tmp_path) == []
+
+
+@pytest.mark.parametrize("validated", [False, True])
+@pytest.mark.parametrize("mid_run", [False, True])
+@pytest.mark.parametrize("as_json", [False, True])
+@pytest.mark.parametrize("kind", list(BAD_FILES))
+def test_failing_check_with_an_unreadable_user_scope_file_never_exits_zero(
+    repo: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    kind: str,
+    as_json: bool,
+    mid_run: bool,
+    validated: bool,
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    _user_scope_cloudflare(repo)
+    path = connect_mod._user_scope_path()
+    config_path = repo / ".mb" / "connect.yaml"
+    if validated:
+        _stub_check(monkeypatch)
+        assert _connect_test(repo, False).exit_code == 0
+    _stub_check(monkeypatch, ok=False)
+    config_before = config_path.read_bytes()
+    secrets = dict(_local_secrets())
+    if mid_run:
+        real = connect_mod._write_config
+
+        def write_then_corrupt(*args: Any, **kwargs: Any) -> Path:
+            out = real(*args, **kwargs)
+            path.write_bytes(BAD_FILES[kind])
+            return out
+
+        monkeypatch.setattr(connect_mod, "_write_config", write_then_corrupt)
+    else:
+        path.write_bytes(BAD_FILES[kind])
+
+    result = _connect_test(repo, as_json)
+
     assert result.exit_code == 1, result.output
+    _assert_clean(result.output, tmp_path)
+    _assert_not_recorded(result, as_json)
+    if as_json:
+        payload = json.loads(result.stdout)
+        assert payload["ok"] is False
+        assert payload["needs_action"] is True
+        assert payload["validation"]["state"] == "invalid_credentials"
+    else:
+        assert "warn (invalid_credentials)" in result.output
     assert config_path.read_bytes() == config_before
     assert path.read_bytes() == BAD_FILES[kind]
     assert dict(_local_secrets()) == secrets

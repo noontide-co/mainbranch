@@ -2477,7 +2477,10 @@ def connect_cmd(
         # `needs_action` is set only by checks that can fail without changing
         # the recorded status (a Google sign-in on a network blip). A check
         # left out of a git-tracked .mb/connect.yaml exits on its own outcome.
-        if result.get("not_recorded_reason") == "connect_yaml_tracked":
+        # A check not recorded because the user-scope file is unreadable does the same.
+        if result.get("not_recorded_reason") == "connect_yaml_tracked" or result.get(
+            "exit_follows_check"
+        ):
             needs_action = bool(result.get("needs_action"))
         else:
             needs_action = connect_mod.provider_needs_action(result["status"]) or bool(

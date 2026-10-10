@@ -4260,6 +4260,7 @@ def _record_validation(
                 "recorded": False,
                 "not_recorded_reason": "user_scope_write_failed",
                 "not_recorded_detail": detail,
+                "exit_follows_check": True,
             }
         except OSError as exc:
             return {
@@ -4415,20 +4416,31 @@ def test_provider(
         "safe_to_share": True,
     }
     result.update(not_recorded)
+    if not_recorded.get("exit_follows_check"):
+        # Nothing was recorded, so the stored status is stale: exit on the check itself.
+        result["needs_action"] = _check_needs_action(validation, status, provider.id)
     if tracked:
         result["recorded"] = False
         result["not_recorded_reason"] = "connect_yaml_tracked"
         # The CLI exits on the check itself, by the same rule as a status item:
         # a probe-less provider left unverified warns without failing.
-        result["needs_action"] = provider_needs_action(
-            {
-                "ok": bool(validation["ok"]),
-                "state": validation["state"],
-                "has_probe": bool(status.get("has_probe")),
-                "provider": provider.id,
-            }
-        )
+        result["needs_action"] = _check_needs_action(validation, status, provider.id)
     return result
+
+
+def _check_needs_action(
+    validation: dict[str, Any], status: dict[str, Any], provider_id: str
+) -> bool:
+    """The exit rule for a check that was not recorded, by the check's own outcome."""
+
+    return provider_needs_action(
+        {
+            "ok": bool(validation["ok"]),
+            "state": validation["state"],
+            "has_probe": bool(status.get("has_probe")),
+            "provider": provider_id,
+        }
+    )
 
 
 def status_all(
