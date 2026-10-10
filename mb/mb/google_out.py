@@ -15,8 +15,8 @@ quota. A path is refused when:
   a file with the same name in another case already exists beside the target;
 - its spelling differs by case from a tracked index path, including one whose
   file is missing from disk; a difference in Unicode normalization alone is
-  that tracked file when git precomposes names (``core.precomposeunicode``), so
-  it is the tracked-path refusal;
+  that tracked file when git precomposes names (``core.precomposeunicode``, on
+  macOS only), so it is the tracked-path refusal;
 - it already exists and ``--force`` was not given, or it exists and is not a
   plain file;
 - its folder does not exist (no folder is created);
@@ -35,6 +35,7 @@ from __future__ import annotations
 import os
 import stat
 import subprocess
+import sys
 import unicodedata
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -262,6 +263,12 @@ def _index_spelling_differs(index: bytes, relative: Path) -> str:
     return found
 
 
+def _git_precomposes_names() -> bool:
+    """Whether git honours ``core.precomposeunicode``: on macOS only."""
+
+    return sys.platform == "darwin"
+
+
 def _index_spelling_refusal(
     kind: str,
     run: Callable[[list[str], Path], subprocess.CompletedProcess[bytes] | None],
@@ -271,8 +278,9 @@ def _index_spelling_refusal(
 ) -> ReadRefusal:
     # With `core.precomposeunicode` git stores a name in NFC that the disk lists in NFD,
     # so the other Unicode form is that same tracked file. Without it the two are not
-    # known to be one file, and the generic spelling refusal stays.
-    if kind == "form":
+    # known to be one file, and the generic spelling refusal stays. Git honours the
+    # setting only on macOS, so elsewhere a copied `true` changes nothing.
+    if kind == "form" and _git_precomposes_names():
         config = run(["config", "--type=bool", "core.precomposeunicode"], root)
         if config is not None and config.returncode == 0 and config.stdout.strip() == b"true":
             return _in_repo_refusal(shown, which)
@@ -483,11 +491,18 @@ def _other_home_shown(raw: str, target: Path) -> str:
         return ""
     try:
         home = Path(os.path.expanduser(user)).resolve()
+        rest = target.parent.resolve().relative_to(home) / target.name
         if _is_own_home(home):
             # Your own home under your own name: shown like ``~/``.
             return ""
-        rest = target.parent.resolve().relative_to(home) / target.name
-    except (OSError, RuntimeError, ValueError):
+    except ValueError:
+        # The path leaves that home (`~sam/../bobhome/...`). Inside your own home it is
+        # shown as `~/...`; anywhere else as typed, as a refusal shows it, so the other
+        # home's folder is never printed in full and no user lookup is needed.
+        if display_path(target).startswith("~/"):
+            return ""
+        return hide_home_name(terminal_safe(raw, len(raw) + 1), target.name)
+    except (OSError, RuntimeError):
         return ""
     return hide_home_name(f"{user}/{rest.as_posix()}", target.name)
 
@@ -516,7 +531,7 @@ def _cut_guarded(text: str, limit: int, file_name: str) -> str:
     """``text`` cut to ``limit``; a cut that leaves a home-named part is guarded again."""
 
     cut = terminal_safe(text, limit)
-    return hide_home_name(cut, file_name) if cut != text else cut
+    return hide_home_name(cut, file_name, limit) if cut != text else cut
 
 
 def _home_relative(raw: str) -> str:
@@ -589,12 +604,13 @@ def _home_names() -> set[str]:
     return {_fold(name) for name in names if name}
 
 
-def hide_home_name(shown: str, file_name: str) -> str:
+def hide_home_name(shown: str, file_name: str, limit: int = 0) -> str:
     """Last guard before a path is printed: never a part that names the home folder.
 
     A short home name counts only where no letter touches it (see ``_holds_home_name``).
 
-    If one is there anyway, only ``~/…/`` or ``…/`` and the file name are shown.
+    If one is there anyway, only ``~/…/`` or ``…/`` and the file name are shown;
+    with ``limit`` the result is also kept within that many characters.
     """
 
     parts = terminal_safe(shown, len(shown) + 1).split("/")
@@ -602,6 +618,10 @@ def hide_home_name(shown: str, file_name: str) -> str:
         return shown
     prefix = "~/…" if shown.startswith("~/") else "…"
     name = terminal_safe(file_name, 120)
+    if limit:
+        # A cut name is judged again: `samples` cut to `sam…` would stand alone.
+        room = limit - len(prefix) - 1
+        name = terminal_safe(name, room) if room > 0 else ""
     if not name or _holds_home_name(name):
         return prefix
     return f"{prefix}/{name}"

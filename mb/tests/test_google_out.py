@@ -2314,3 +2314,120 @@ def test_a_cut_cannot_leave_a_short_home_name_standing_alone(
     assert "sam…" not in text and not _standalone("sam", text), text
     # The part is guarded again after the cut: the folder is shown as `~/…/`, then the name.
     assert "~/…/" + padding[:50] in text, text
+
+
+# --- follow-ups from the #1130 review (#1080) -------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("platform", "wording"),
+    [
+        ("darwin", "out_path_in_repo"),
+        ("linux", "out_path_git_unknown"),
+        ("win32", "out_path_git_unknown"),
+    ],
+)
+def test_the_unicode_form_wording_applies_only_where_git_precomposes(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    platform: str,
+    wording: str,
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    root = _nfd_tracked(tmp_path)
+    monkeypatch.setattr("sys.platform", platform)
+
+    for more in ((), ("--json",)):
+        result = _out(repo, SC_ARGS, root / "private" / "Café.json", "--force", *more)
+
+        _refused(result, wording)
+    assert api.calls == []
+    assert (root / "private" / "Café.json").read_bytes() == b"personal original\n"
+    assert not list((root / "private").glob(".*.mb-out.tmp"))
+
+
+@pytest.mark.parametrize("home_name", ["Sam", "homefolder"])
+@pytest.mark.parametrize("shown_length", [118, 119, 120, 121, 125, 126, 127, 130, 200])
+def test_a_reguarded_path_stays_within_its_limit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, home_name: str, shown_length: int
+) -> None:
+    home = tmp_path / home_name
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    lower = home_name.lower()
+    # Where the display cut lands right after the home name (`...-sam…`), so the cut is
+    # judged again; the old result then ran 2 characters over (`…/` plus a 120-character name).
+    for tail in ("ples.json", "-1.json"):
+        name = "x" * (shown_length - len(tail) - len(lower) - 1) + "-" + lower + tail
+        raw = f"/T/{lower}/{name}"
+
+        shown = go_out._shown(raw)
+
+        assert len(shown) <= 120, (len(shown), shown)
+        assert not go_out._holds_home_name(shown), shown
+        info = {
+            "out": go_out.hide_home_name(raw, name),
+            "mode": "0600",
+            "source_command": "c",
+            "row_count": 0,
+        }
+        info["may_have_more"] = False
+        wrote = go_out.render_summary(info)[0].split(" wrote ", 1)[1].rsplit(" (mode", 1)[0]
+        assert len(wrote) <= 200 and not go_out._holds_home_name(wrote), wrote
+
+
+@pytest.mark.parametrize("prefix_source", ["~/pulls/x/sam", "/T/sam/x"])
+@pytest.mark.parametrize("limit", [4, 5, 6, 10, 120])
+def test_the_last_guard_keeps_its_result_within_a_limit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, prefix_source: str, limit: int
+) -> None:
+    home = tmp_path / "sam"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    name = "abcdefghijklmnopqrstuvwxyz" * 6
+    guarded = go_out.hide_home_name(f"{prefix_source}/{name}", name, limit)
+
+    assert len(guarded) <= limit, guarded
+    # A cut that leaves the name standing alone is hidden, not shown.
+    assert go_out.hide_home_name("/T/sam/x", "samples.json", 6) == "…"
+
+
+def test_another_users_home_reached_through_dotdot_is_shown_as_typed(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    mine = tmp_path / "myhome"
+    mine.mkdir()
+    monkeypatch.setenv("HOME", str(mine))
+    (tmp_path / "samfolder").mkdir()
+    (tmp_path / "bobhome" / "pulls").mkdir(parents=True)
+    _users(monkeypatch, {"sam": tmp_path / "samfolder", "me": mine})
+    typed = "~sam/../bobhome/pulls/a.json"
+
+    written = _out(repo, SC_ARGS, typed)
+    as_json = _out(repo, SC_ARGS, "~sam/../bobhome/pulls/b.json", "--json")
+
+    assert written.exit_code == 0 and (tmp_path / "bobhome" / "pulls" / "a.json").is_file()
+    assert f"wrote {typed} (mode 0600)" in written.stdout
+    assert json.loads(as_json.stdout)["out"] == "~sam/../bobhome/pulls/b.json"
+    for result in (written, as_json):
+        assert str(tmp_path) not in result.stdout + result.stderr
+    # Back into your own home it is still `~/...`.
+    own = _out(repo, SC_ARGS, "~sam/../myhome/x.json", "--json")
+    assert own.exit_code == 0 and json.loads(own.stdout)["out"] == "~/x.json"
+    # Your own user name leaving your home does the same.
+    out = _out(repo, SC_ARGS, "~me/../bobhome/pulls/c.json", "--json")
+    assert out.exit_code == 0, out.stderr
+    assert json.loads(out.stdout)["out"] == "~me/../bobhome/pulls/c.json"
+    # A folder outside every home is shown as typed too.
+    (tmp_path / "plain").mkdir()
+    plain = _out(repo, SC_ARGS, "~sam/../plain/d.json", "--json")
+    assert plain.exit_code == 0
+    assert json.loads(plain.stdout)["out"] == "~sam/../plain/d.json"

@@ -13,6 +13,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- `mb google ... --out` display fixes. The "inside a git checkout" refusal for
+  a tracked file written in the other Unicode spelling now applies only on
+  macOS, where git folds those spellings together; elsewhere it keeps the
+  earlier "spelled differently" refusal (still refused, nothing read or
+  written). A path shortened to hide your home folder's name now also fits the
+  display limit after the cut. A `~name/...` path that leads out of that home
+  (for example `~name/../otherhome/x.json`), and not into yours, is shown as
+  you typed it instead of printing the folder it reaches in full.
 - `mb doctor` no longer warns about the old status line in `CLAUDE.md` when it
   only appears inside a fenced code block (an example you quote). The same line
   as a normal list item is still flagged. The docs now say why
