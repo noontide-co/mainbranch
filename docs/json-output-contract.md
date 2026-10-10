@@ -414,7 +414,7 @@ another:
 | `kind` | `status` | Meaning |
 |--------|----------|---------|
 | `google_ads_plan` | `declared` or `partly_declared` | The repo declares a Google Ads customer and primary conversion plan. Declared only. |
-| `google_ads_plan` | `placeholder` | The customer ID looks like a placeholder (all zeros, all `X`, `TODO`, `TBD`, `PLACEHOLDER`, the same words a placeholder GTM ID uses), so no customer is declared. `state: manual`, `next` asks for the real 10-digit ID, and the other two items are absent. |
+| `google_ads_plan` | `placeholder` | The customer ID is not exactly 10 digits once dashes and spaces are removed (all zeros, all `X`, `TODO`, `TBD`, `N/A`, `none`, `123`, letters), so no customer is declared. `state: manual`, `next` asks for the real 10-digit ID, and the other two items are absent. |
 | `google_ads_connection` | `not_checked` | Main Branch has no Google Ads read, so the account is not checked. `next` names the read paths. A connected `google` provider (Analytics, Search Console) is not a Google Ads connection. |
 | `google_ads_conversion_evidence` | `no_evidence_recorded` | No evidence that the tag fires (`tag_fired`) or that Google Ads attributes a conversion (`attributed_conversion`). `next` names the step. |
 
@@ -429,7 +429,7 @@ from each Google Ads `kind` to its `status`, for example
 "google_ads_conversion_evidence": "no_evidence_recorded"}`. The items whose
 status is `not_checked`, `no_evidence_recorded`, `partly_declared` or
 `placeholder` are manual and are counted in `measurement.manual_count`. The key
-is additive and absent when no Google Ads customer value is recorded.
+is additive and absent when no Google Ads customer value is recorded. When the customer ID is a placeholder and `measurement.facts.primary_conversions` is empty, the human `Google Ads:` line also says the conversion plan is missing.
 
 ### `mb google ... --out --json`
 

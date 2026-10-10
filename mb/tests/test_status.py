@@ -4219,6 +4219,27 @@ def test_status_measurement_names_a_placeholder_google_ads_customer(
     assert "Google Ads: customer ID is a placeholder" in result.stdout
 
 
+def test_status_measurement_placeholder_customer_names_a_missing_conversion_plan(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    monkeypatch.setenv("MB_CONNECT_SECRET_BACKEND", "local-file")
+    monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
+    repo = _measured_repo(tmp_path, customer_id="TODO: add id")
+    (repo / ".mainbranch" / "conversion.json").write_text(
+        json.dumps({"kind": "lead_form", "url": "https://tally.so/r/example"}),
+        encoding="utf-8",
+    )
+
+    measurement = status_mod.run(path=str(repo), update_marker=False)["measurement"]
+
+    assert measurement["google_ads"] == {"google_ads_plan": "placeholder"}
+    result = runner.invoke(app, ["status", str(repo)])
+    assert "Google Ads: customer ID is a placeholder; conversion plan missing" in " ".join(
+        result.stdout.split()
+    )
+
+
 def test_status_measurement_without_google_ads_customer_has_no_google_ads_field(
     tmp_path: Path, monkeypatch
 ) -> None:
