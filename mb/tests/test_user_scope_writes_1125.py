@@ -18,6 +18,7 @@ from typing import Any
 import pytest
 
 from mb import connect as connect_mod
+from mb import durable
 from mb import google_connect as gc
 from mb.cli import app
 from mb.credential_store import SecretStore
@@ -132,7 +133,7 @@ def test_a_failed_restore_of_the_user_scope_file_says_it_may_have_changed(
     _user_scope_cloudflare(repo)
     path = connect_mod._user_scope_path()
 
-    real_atomic = connect_mod.atomic_write_text
+    real_atomic = durable.atomic_write_text
 
     def always_fail(file: Path, *args: Any, **kwargs: Any) -> None:
         if file == path:
