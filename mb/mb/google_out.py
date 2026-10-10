@@ -491,10 +491,10 @@ def _other_home_shown(raw: str, target: Path) -> str:
         return ""
     try:
         home = Path(os.path.expanduser(user)).resolve()
+        rest = target.parent.resolve().relative_to(home) / target.name
         if _is_own_home(home):
             # Your own home under your own name: shown like ``~/``.
             return ""
-        rest = target.parent.resolve().relative_to(home) / target.name
     except ValueError:
         # The path leaves that home (`~sam/../bobhome/...`). Inside your own home it is
         # shown as `~/...`; anywhere else as typed, as a refusal shows it, so the other

@@ -18,8 +18,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   macOS, where git folds those spellings together; elsewhere it keeps the
   earlier "spelled differently" refusal (still refused, nothing read or
   written). A path shortened to hide your home folder's name now also fits the
-  display limit after the cut. `--out ~name/../otherhome/x.json` is shown as
-  you typed it instead of printing that other home folder in full.
+  display limit after the cut. A `~name/...` path that leads out of that home
+  (for example `~name/../otherhome/x.json`), and not into yours, is shown as
+  you typed it instead of printing the folder it reaches in full.
 - `mb status` repair and update suggestions now name your business repo when
   you run it from another folder: the skill-wiring repairs (`mb skill link`,
   `mb skill repair`), the ranked next action and the drift repair, `mb update`

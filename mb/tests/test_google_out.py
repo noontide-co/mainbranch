@@ -2408,7 +2408,7 @@ def test_another_users_home_reached_through_dotdot_is_shown_as_typed(
     monkeypatch.setenv("HOME", str(mine))
     (tmp_path / "samfolder").mkdir()
     (tmp_path / "bobhome" / "pulls").mkdir(parents=True)
-    _users(monkeypatch, {"sam": tmp_path / "samfolder"})
+    _users(monkeypatch, {"sam": tmp_path / "samfolder", "me": mine})
     typed = "~sam/../bobhome/pulls/a.json"
 
     written = _out(repo, SC_ARGS, typed)
@@ -2422,3 +2422,12 @@ def test_another_users_home_reached_through_dotdot_is_shown_as_typed(
     # Back into your own home it is still `~/...`.
     own = _out(repo, SC_ARGS, "~sam/../myhome/x.json", "--json")
     assert own.exit_code == 0 and json.loads(own.stdout)["out"] == "~/x.json"
+    # Your own user name leaving your home does the same.
+    out = _out(repo, SC_ARGS, "~me/../bobhome/pulls/c.json", "--json")
+    assert out.exit_code == 0, out.stderr
+    assert json.loads(out.stdout)["out"] == "~me/../bobhome/pulls/c.json"
+    # A folder outside every home is shown as typed too.
+    (tmp_path / "plain").mkdir()
+    plain = _out(repo, SC_ARGS, "~sam/../plain/d.json", "--json")
+    assert plain.exit_code == 0
+    assert json.loads(plain.stdout)["out"] == "~sam/../plain/d.json"
