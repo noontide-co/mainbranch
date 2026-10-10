@@ -275,8 +275,8 @@ stays bare. The list is empty when there is nothing for a person to run.
 business repo's `CLAUDE.md` still has the pre-#1121 list item "Status field:"
 (or the older "Status enum:") followed by "proposed | running | scaling |
 killed | graduated | died" (#1122); the same text quoted inside a sentence is
-not flagged. It is a warning (`ok: false`, `severity: warn`; the report's overall `ok` and the exit
-code are unchanged) with `path`, `repair` and `detail` text and `suggested_text`,
+not flagged. It is a warning (`ok: false`, `severity: warn`; the report's
+overall `ok` and the exit code are unchanged) with `path`, `repair` and `detail` text and `suggested_text`,
 the replacement conventions. Nothing is written. Repos without the line see no
 new entry. `mb doctor repair --plan --json` lists it as a manual action and
 section named `claude-status-line` (never applied). The `status_enum_mismatch`

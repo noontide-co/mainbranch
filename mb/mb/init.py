@@ -119,6 +119,7 @@ STATUS_CONVENTION_SCHEMAS = (
     ("Decisions", "decisions"),
     ("Offers", "core/offers"),
     ("Pushes", "pushes"),
+    ("Push playbooks", "push-playbooks"),
 )
 
 # Every other schema with a `status:` enum, and why the conventions do not list
@@ -127,7 +128,6 @@ STATUS_CONVENTION_SCHEMAS = (
 # Topology status lives in `validate.TOPOLOGY_STATUS`, outside `SCHEMAS[...]["enums"]`.
 STATUS_CONVENTION_EXCLUDED = {
     "campaigns": "legacy: `pushes/` replaced it and shares the push status values",
-    "push-playbooks": "drafted by the ads skills as plans, not part of the daily vocabulary",
 }
 
 

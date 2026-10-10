@@ -14,8 +14,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 ### Fixed
 
 - `mb init` conventions in `CLAUDE.md` now say plainly which file types the
-  `status:` list covers (bets, decisions, offers and pushes) instead of "each
-  file type".
+  `status:` list covers (bets, decisions, offers, pushes and push playbooks)
+  instead of "each file type".
 - `mb doctor` warns when a business repo's `CLAUDE.md` still has the old
   one-set line "Status field: proposed | running | scaling | killed | graduated |
   died" (made before the conventions were corrected) and prints the replacement

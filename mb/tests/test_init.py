@@ -496,6 +496,7 @@ def test_init_claude_md_status_values_match_mb_validate(
         "Decisions": set(SCHEMAS["decisions"]["enums"]["status"]),
         "Offers": set(SCHEMAS["core/offers"]["enums"]["status"]),
         "Pushes": set(SCHEMAS["pushes"]["enums"]["status"]),
+        "Push playbooks": set(SCHEMAS["push-playbooks"]["enums"]["status"]),
     }
     assert "`mb validate` names the" in text
     # #1122: the lead-in names exactly the types it lists, not "each file type".

@@ -3215,7 +3215,7 @@ def repair_plan(
             title="Replace the old status line in CLAUDE.md",
             state="warn",
             mode="manual",
-            command="mb doctor --json",
+            command="mb doctor",
             safe_to_apply=False,
             reason=(
                 "CLAUDE.md still gives one status set for every file type; `mb doctor` "
@@ -3233,7 +3233,10 @@ def repair_plan(
                     {
                         "name": "claude-status-line",
                         "state": "warn",
-                        "summary": str(status_line_check["detail"]),
+                        "summary": (
+                            "CLAUDE.md gives one status set for every file type; "
+                            "`mb doctor` prints the replacement lines"
+                        ),
                         "path": "CLAUDE.md",
                         "content_included": False,
                     }
