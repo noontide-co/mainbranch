@@ -27,8 +27,22 @@ def _is_symlink_loop(exc: BaseException) -> bool:
     return type(exc) is RuntimeError and str(exc).startswith(SYMLINK_LOOP_PREFIX)
 
 
+def _decode_cause(exc: BaseException) -> BaseException:
+    """The `UnicodeDecodeError` a wrapper error was raised from, else `exc`.
+
+    A reader that turns a non-UTF-8 file into its own error (the connect
+    user-scope file) keeps the decode error as the cause, so it is still
+    named here as a file that is not UTF-8 text.
+    """
+    cause = exc.__cause__
+    if isinstance(cause, UnicodeDecodeError) and not isinstance(exc, (OSError, UnicodeDecodeError)):
+        return cause
+    return exc
+
+
 def is_unreadable_error(exc: BaseException) -> bool:
     """True when `exc` means a file or folder could not be read."""
+    exc = _decode_cause(exc)
     return isinstance(exc, (OSError, UnicodeDecodeError)) or _is_symlink_loop(exc)
 
 
@@ -176,6 +190,7 @@ def _fix(path: str, exc: BaseException, named: str, raw: str) -> str:
 
 def describe(exc: BaseException, repo: Path) -> tuple[str, str, str]:
     """`(path, reason, fix)` for an unreadable-file error; `path` may be empty."""
+    exc = _decode_cause(exc)
     raw = _raw_path(exc)
     named, path = _locate(raw, repo) if raw else ("", "")
     return path, _reason(exc, named, raw), _fix(path, exc, named, raw)

@@ -949,7 +949,8 @@ def _read_user_scope() -> dict[str, Any]:
         return _empty_user_scope()
     try:
         raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    except (OSError, yaml.YAMLError) as exc:
+    except (OSError, ValueError, yaml.YAMLError) as exc:
+        # ValueError covers bytes that are not UTF-8 (UnicodeDecodeError).
         raise ConfigCorruptError(
             "Refusing to update connect user-scope metadata because it is unreadable or "
             "invalid YAML. Fix or move the file, then rerun the command."
@@ -4220,9 +4221,13 @@ def _record_validation(
     A check only needs to read the user-scope file. When it is read-only, or
     cannot be written (a full disk, an I/O error), the repo metadata is still
     written, the file is left as it was, and this returns the result keys
-    that say so (empty when the check was recorded everywhere).
+    that say so (empty when the check was recorded everywhere). A file that
+    cannot be read (unreadable or invalid) is different: nothing is recorded
+    anywhere, so ``.mb/connect.yaml`` is put back as it was.
     """
 
+    config_path = _checked_config_path(target)
+    previous_config = config_path.read_bytes() if config_path.exists() else None
     config["providers"][provider_id] = entry
     _write_config(target, config)
     if entry.get("scope") == "user":
@@ -4240,6 +4245,23 @@ def _record_validation(
             )
         except UserScopeReadOnlyError:
             return {"recorded": False, "not_recorded_reason": "user_scope_read_only"}
+        except ConfigCorruptError as exc:
+            # All or nothing: the repo metadata goes back as it was.
+            detail = _user_scope_not_recorded_detail(exc)
+            if previous_config is not None:
+                try:
+                    atomic_write_text(config_path, previous_config.decode("utf-8"))
+                except OSError:
+                    detail += (
+                        "; .mb/connect.yaml could not be put back either, so it "
+                        "still shows this check"
+                    )
+            return {
+                "recorded": False,
+                "not_recorded_reason": "user_scope_write_failed",
+                "not_recorded_detail": detail,
+                "exit_follows_check": True,
+            }
         except OSError as exc:
             return {
                 "recorded": False,
@@ -4394,20 +4416,31 @@ def test_provider(
         "safe_to_share": True,
     }
     result.update(not_recorded)
+    if not_recorded.get("exit_follows_check"):
+        # Nothing was recorded, so the stored status is stale: exit on the check itself.
+        result["needs_action"] = _check_needs_action(validation, status, provider.id)
     if tracked:
         result["recorded"] = False
         result["not_recorded_reason"] = "connect_yaml_tracked"
         # The CLI exits on the check itself, by the same rule as a status item:
         # a probe-less provider left unverified warns without failing.
-        result["needs_action"] = provider_needs_action(
-            {
-                "ok": bool(validation["ok"]),
-                "state": validation["state"],
-                "has_probe": bool(status.get("has_probe")),
-                "provider": provider.id,
-            }
-        )
+        result["needs_action"] = _check_needs_action(validation, status, provider.id)
     return result
+
+
+def _check_needs_action(
+    validation: dict[str, Any], status: dict[str, Any], provider_id: str
+) -> bool:
+    """The exit rule for a check that was not recorded, by the check's own outcome."""
+
+    return provider_needs_action(
+        {
+            "ok": bool(validation["ok"]),
+            "state": validation["state"],
+            "has_probe": bool(status.get("has_probe")),
+            "provider": provider_id,
+        }
+    )
 
 
 def status_all(
