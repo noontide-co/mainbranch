@@ -17,6 +17,8 @@ from typing import Any
 import pytest
 
 from mb import connect as connect_mod
+from mb import doctor as doctor_mod
+from mb import freshness
 from mb import google_connect as gc
 from mb.cli import app
 from mb.durable import atomic_write_text
@@ -40,6 +42,7 @@ from tests.test_google_connect import (  # noqa: F401 (fixtures are used by name
     repo,
     runner,
 )
+from tests.test_google_hardening3 import _dossier
 from tests.test_google_mint import _mint_with, _signed_in, _token
 
 CORRUPT = ":\n  - [unclosed"
@@ -550,3 +553,183 @@ def test_status_names_a_non_utf8_user_scope_file_as_corrupt(
     assert payload["state"] == "config_corrupt"
     assert "unreadable or invalid YAML" in result.output
     _assert_clean(result.output, tmp_path)
+
+
+# --- 6. mb doctor with a user-scope file that is invalid or not a mapping ----------------
+
+# `yaml.safe_load(...) or {}` reads an empty file, `0` and `[]` as an empty mapping,
+# so the non-mapping cases are a non-empty list and a truthy scalar.
+DOCTOR_BAD_FILES = {
+    "yaml": (CORRUPT.encode(), "it is not valid YAML"),
+    "list": (b"- a\n- b\n", "it does not contain a YAML object"),
+    "scalar": (b"hello\n", "it does not contain a YAML object"),
+    "non_utf8": (NON_UTF8, "it is not UTF-8 text"),
+}
+DOCTOR_COMMANDS = {
+    "doctor": (["doctor", "{repo}"], "mb doctor"),
+    "repair_plan": (["doctor", "repair", "--repo", "{repo}", "--plan"], "mb doctor repair"),
+    "start": (["start", "--repo", "{repo}"], "mb start"),
+}
+
+
+@pytest.fixture()
+def offline_doctor(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No network, no `gh`, no PyPI: the checks around the user-scope read are stubbed."""
+    monkeypatch.setattr(freshness, "latest_pypi_version", lambda *a, **k: None)
+    monkeypatch.setattr(doctor_mod, "_net", lambda: (False, "stubbed"))
+    monkeypatch.setattr(
+        connect_mod,
+        "_run_command",
+        lambda *a, **k: {"ok": False, "returncode": 1, "stdout": "", "stderr": ""},
+    )
+
+
+def _doctor_args(name: str, repo: Path, *, as_json: bool) -> list[str]:
+    args = [part.format(repo=repo) for part in DOCTOR_COMMANDS[name][0]]
+    return [*args, "--json"] if as_json else args
+
+
+@pytest.mark.parametrize("as_json", [False, True])
+@pytest.mark.parametrize("command", list(DOCTOR_COMMANDS))
+@pytest.mark.parametrize("kind", list(DOCTOR_BAD_FILES))
+def test_doctor_names_a_corrupt_user_scope_file_instead_of_a_traceback(
+    repo: Path,
+    offline_doctor: None,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    kind: str,
+    command: str,
+    as_json: bool,
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    _user_scope_cloudflare(repo)
+    path = connect_mod._user_scope_path()
+    content, problem = DOCTOR_BAD_FILES[kind]
+    path.write_bytes(content)
+
+    result = runner.invoke(app, _doctor_args(command, repo, as_json=as_json))
+
+    assert result.exit_code == 1, result.output
+    assert isinstance(result.exception, SystemExit), repr(result.exception)
+    _assert_clean(result.output, tmp_path)
+    assert "~/" in result.output and f"({problem})" in result.output
+    assert "run the command again" in result.output
+    if as_json:
+        error = json.loads(result.stdout)["errors"][0]
+        assert error["code"] == "unreadable_file"
+        assert error["message"].startswith("Main Branch could not read `~/")
+    else:
+        assert result.output.startswith(f"{DOCTOR_COMMANDS[command][1]}: Main Branch could not")
+    if kind != "non_utf8":
+        # The hint is the same one `mb connect` gives for that file.
+        assert "Fix or move `~/" in result.output
+    assert path.read_bytes() == content
+
+
+@pytest.mark.parametrize("command", list(DOCTOR_COMMANDS))
+@pytest.mark.parametrize("how", ["no_permission", "folder"])
+def test_doctor_names_a_user_scope_file_it_cannot_open(
+    repo: Path,
+    offline_doctor: None,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    how: str,
+    command: str,
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    _user_scope_cloudflare(repo)
+    path = connect_mod._user_scope_path()
+    if how == "no_permission":
+        path.chmod(0)
+    else:
+        path.unlink()
+        path.mkdir()
+    try:
+        result = runner.invoke(app, _doctor_args(command, repo, as_json=True))
+    finally:
+        if how == "no_permission":
+            path.chmod(0o600)
+
+    assert result.exit_code == 1 and isinstance(result.exception, SystemExit)
+    _assert_clean(result.output, tmp_path)
+    error = json.loads(result.stdout)["errors"][0]
+    assert error["code"] == "unreadable_file" and "`~/" in error["message"]
+    expected = "permission denied" if how == "no_permission" else "it is a folder, not a file"
+    assert f"({expected})" in error["message"]
+
+
+@pytest.mark.parametrize("as_json", [False, True])
+@pytest.mark.parametrize("command", list(DOCTOR_COMMANDS))
+@pytest.mark.parametrize("kind", ["yaml", "list"])
+def test_a_corrupt_repo_connect_file_is_named_the_same_way(
+    repo: Path,
+    offline_doctor: None,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    kind: str,
+    command: str,
+    as_json: bool,
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    _user_scope_cloudflare(repo)
+    config = repo / ".mb" / "connect.yaml"
+    content, problem = DOCTOR_BAD_FILES[kind]
+    config.write_bytes(content)
+
+    result = runner.invoke(app, _doctor_args(command, repo, as_json=as_json))
+
+    assert result.exit_code == 1 and isinstance(result.exception, SystemExit)
+    _assert_clean(result.output, tmp_path)
+    assert f"could not read `.mb/connect.yaml` ({problem})" in result.output
+    assert "Fix or move `.mb/connect.yaml`" in result.output
+    assert config.read_bytes() == content
+
+
+def test_doctor_does_not_flag_an_empty_user_scope_file(
+    repo: Path, offline_doctor: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    _user_scope_cloudflare(repo)
+    connect_mod._user_scope_path().write_bytes(b"")
+
+    result = runner.invoke(app, ["doctor", str(repo), "--json"])
+
+    assert "unreadable_file" not in result.output and "Traceback" not in result.output
+    assert json.loads(result.stdout)["checks"]
+
+
+# --- 7. doctor's not-recorded tail ------------------------------------------------------
+
+
+@pytest.mark.parametrize("kind", ["yaml", "non_utf8"])
+def test_doctor_tail_calls_a_corrupt_user_scope_file_unreadable_not_unwritable(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, kind: str
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    _user_scope_cloudflare(repo)
+    _stub_check(monkeypatch)
+    connect_mod._user_scope_path().write_bytes(BAD_FILES[kind])
+    _dossier(repo, "Cloudflare", "cloudflare")
+
+    row = doctor_mod._dossier_verify_section(repo)["checks"][0]
+
+    assert row["summary"].endswith(
+        "→ ready (not recorded: the user-scope connect file is unreadable or invalid)"
+    )
+    assert "could not be written" not in row["summary"]
+
+
+def test_doctor_tail_keeps_could_not_be_written_for_a_real_write_failure(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    _user_scope_cloudflare(repo)
+    _stub_check(monkeypatch)
+    _fail_user_write(connect_mod._user_scope_path(), "rename", errno.ENOSPC, monkeypatch)
+    _dossier(repo, "Cloudflare", "cloudflare")
+
+    row = doctor_mod._dossier_verify_section(repo)["checks"][0]
+
+    assert row["summary"].endswith(
+        "(not recorded: the user-scope connect file could not be written)"
+    )

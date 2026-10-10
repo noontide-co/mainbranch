@@ -28,22 +28,41 @@ def _is_symlink_loop(exc: BaseException) -> bool:
 
 
 def _decode_cause(exc: BaseException) -> BaseException:
-    """The `UnicodeDecodeError` a wrapper error was raised from, else `exc`.
+    """The read error a wrapper error was raised from, else `exc`.
 
     A reader that turns a non-UTF-8 file into its own error (the connect
     user-scope file) keeps the decode error as the cause, so it is still
-    named here as a file that is not UTF-8 text.
+    named here as a file that is not UTF-8 text. The same reader, which also
+    sets `file_path`, keeps an `OSError` (no permission, a folder in the
+    file's place) as the cause, so it is named with that reason.
     """
     cause = exc.__cause__
-    if isinstance(cause, UnicodeDecodeError) and not isinstance(exc, (OSError, UnicodeDecodeError)):
+    if isinstance(exc, (OSError, UnicodeDecodeError)):
+        return exc
+    if isinstance(cause, UnicodeDecodeError):
+        return cause
+    if isinstance(cause, OSError) and _corrupt_file(exc) is not None:
         return cause
     return exc
+
+
+def _corrupt_file(exc: BaseException) -> tuple[Path, str] | None:
+    """`(file, problem)` for a file that read fine but holds the wrong thing."""
+    path = getattr(exc, "file_path", None)
+    problem = getattr(exc, "problem", "")
+    if isinstance(path, Path) and isinstance(problem, str) and problem:
+        return path, problem
+    return None
 
 
 def is_unreadable_error(exc: BaseException) -> bool:
     """True when `exc` means a file or folder could not be read."""
     exc = _decode_cause(exc)
-    return isinstance(exc, (OSError, UnicodeDecodeError)) or _is_symlink_loop(exc)
+    return (
+        isinstance(exc, (OSError, UnicodeDecodeError))
+        or _is_symlink_loop(exc)
+        or _corrupt_file(exc) is not None
+    )
 
 
 def _decoded_path(exc: BaseException) -> str:
@@ -191,6 +210,10 @@ def _fix(path: str, exc: BaseException, named: str, raw: str) -> str:
 def describe(exc: BaseException, repo: Path) -> tuple[str, str, str]:
     """`(path, reason, fix)` for an unreadable-file error; `path` may be empty."""
     exc = _decode_cause(exc)
+    corrupt = _corrupt_file(exc)
+    if corrupt is not None:
+        _, path = _locate(str(corrupt[0]), repo)
+        return path, corrupt[1], f"Fix or move `{path}`"
     raw = _raw_path(exc)
     named, path = _locate(raw, repo) if raw else ("", "")
     return path, _reason(exc, named, raw), _fix(path, exc, named, raw)
