@@ -22,9 +22,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   text. It is a warning only: the exit code is unchanged and nothing is rewritten.
   Repos without that line see no change.
 - When a `status:` value is wrong, the summary that `mb validate`, `mb status` and
-  `mb doctor` show now names the allowed values for each file type (for bets:
+  `mb doctor repair --plan` show now names the allowed values for each file type (for bets:
   `canceled | closed | open | paused`) instead of "one of the allowed lifecycle
-  values" with an example that no file type accepts. `mb validate --json` adds
+  values" with an example status that no file type accepts. `mb validate --json` adds
   `allowed_status` beside it.
 - `mb connect <provider> --scope user` and `mb connect rotate` now put your
   previous credential back (or remove the new one) when the user-scope connect

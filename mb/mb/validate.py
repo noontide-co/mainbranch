@@ -179,7 +179,7 @@ VALIDATION_CATEGORY_AUDIENCE: dict[str, str] = {
 VALIDATION_CATEGORY_OPERATOR_SUMMARY: dict[str, str] = {
     "missing_slug": "Name the thing this file is about so other notes can link to it.",
     "missing_required_key": "Fill in the few required fields this kind of file expects.",
-    "status_enum_mismatch": "Pick a recognized status (for example open, accepted, shipped).",
+    "status_enum_mismatch": "Pick a status this kind of file allows.",
     "enum_mismatch": "Pick one of the allowed values for this field.",
     "no_frontmatter": "Add the YAML header at the top of the file.",
     "yaml_error": "Fix the YAML formatting at the top before anything else can be checked.",

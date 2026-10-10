@@ -2450,6 +2450,15 @@ def test_validate_paths_rejects_escapes(tmp_path: Path) -> None:
         run(str(tmp_path), paths=["../outside"])
 
 
+def _valid_bet() -> str:
+    return (
+        "---\nstatus: open\nopened: 2026-10-01\ndeadline: 2026-10-10\nappetite: 2 weeks\n"
+        "hypothesis: h\nmetric: m\ntarget: t\nresult: ''\nlinked_decisions: []\n"
+        "linked_research: []\nlinked_pushes: []\nlinked_outcomes: []\npublic: false\n"
+        "channels: []\ntags: []\n---\n# Bet\n"
+    )
+
+
 def test_validate_names_the_allowed_status_values_in_the_rollup(tmp_path: Path) -> None:
     # #1122: the rollup an agent reads (`repair`, shared with `mb status` and
     # `mb doctor`) named no values, and its example `shipped` is valid nowhere.
@@ -2457,7 +2466,7 @@ def test_validate_names_the_allowed_status_values_in_the_rollup(tmp_path: Path) 
 
     _write(
         tmp_path / "bets" / "2026-10-01-bad.md",
-        "---\nstatus: running\nopened: 2026-10-01\n---\n# Bad\n",
+        _valid_bet().replace("status: open\n", "status: running\n"),
     )
     _write(
         tmp_path / "decisions" / "2026-10-01-bad.md",
@@ -2478,6 +2487,8 @@ def test_validate_names_the_allowed_status_values_in_the_rollup(tmp_path: Path) 
     assert "allowed_status" not in report["validation_categories"]["by_category"].get(
         "missing_required_key", {}
     )
+    assert report["validation_categories"]["top_repair"] == entry["repair"]
+    assert "shipped" not in report["validation_categories"]["top_operator_summary"]
 
 
 def test_validate_leaves_other_status_like_enums_out_of_the_allowed_status_list(
@@ -2492,3 +2503,17 @@ def test_validate_leaves_other_status_like_enums_out_of_the_allowed_status_list(
 
     for entry in report["validation_categories"]["by_category"].values():
         assert "allowed_status" not in entry
+
+
+def test_validate_status_rollup_for_a_topology_status_has_no_stale_example(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "core" / "repo-topology.md",
+        "---\ntype: repo_topology\nstatus: wrong\n---\n# Topology\n",
+    )
+
+    report = run(path=str(tmp_path))
+
+    top = report["validation_categories"]
+    assert "shipped" not in top["top_operator_summary"] + top["top_repair"]

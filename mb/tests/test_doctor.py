@@ -2920,7 +2920,9 @@ _OLD_STATUS_LINES = {
 
 
 @pytest.mark.parametrize("form", sorted(_OLD_STATUS_LINES))
-def test_doctor_flags_the_old_claude_md_status_line(tmp_path: Path, form: str) -> None:
+def test_doctor_flags_the_old_claude_md_status_line(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, form: str
+) -> None:
     # #1122: repos made before #1121 still teach one status set for every file type.
     from mb.init import status_conventions
 
@@ -2932,6 +2934,8 @@ def test_doctor_flags_the_old_claude_md_status_line(tmp_path: Path, form: str) -
     assert "Status field:" in text
     claude_md.write_text(text, encoding="utf-8")
     before = claude_md.read_bytes()
+    # Clear the one hard failure a bare test host has, so ok is True without the line.
+    monkeypatch.setattr(doctor_mod, "_which", lambda name: f"/usr/bin/{name}")
 
     report = doctor_mod.run(path=str(repo))
 
@@ -2946,6 +2950,7 @@ def test_doctor_flags_the_old_claude_md_status_line(tmp_path: Path, form: str) -
     other = tmp_path / "no-line"
     init_run(path=str(other), name="Acme")
     assert report["ok"] == doctor_mod.run(path=str(other))["ok"]
+    assert report["ok"] is True
     # Never rewritten.
     assert claude_md.read_bytes() == before
 
