@@ -49,13 +49,18 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   bundled data, workflows, playbooks, `AGENTS.md`, `README.md` and the text the
   engine writes into business repos.
 - `mb init` conventions in `CLAUDE.md` now say plainly which file types the
-  `status:` list covers (bets, decisions, offers and pushes) instead of "each
-  file type".
+  `status:` list covers (bets, decisions, offers, pushes and push playbooks)
+  instead of "each file type".
 - `mb doctor` warns when a business repo's `CLAUDE.md` still has the old
   one-set line "Status field: proposed | running | scaling | killed | graduated |
   died" (made before the conventions were corrected) and prints the replacement
   text. It is a warning only: the exit code is unchanged and nothing is rewritten.
   Repos without that line see no change.
+- `mb doctor` also catches the oldest wording of that line ("Status enum:", from
+  the first 0.1.x releases), and no longer warns when a `CLAUDE.md` only quotes
+  the old line inside a sentence. The warning now says which line to replace.
+- `mb doctor repair --plan` lists the old status line as a manual step, so the
+  plan matches what `mb doctor` reports. Nothing is applied or rewritten.
 - When a `status:` value is wrong, the summary that `mb validate`, `mb status` and
   `mb doctor repair --plan` show now names the allowed values for each file type (for bets:
   `canceled | closed | open | paused`) instead of "one of the allowed lifecycle

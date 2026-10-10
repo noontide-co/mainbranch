@@ -2916,6 +2916,12 @@ _OLD_STATUS_LINES = {
         "  `draft | planned | active | paused | completed | canceled | archived`).\n"
     ),
     "fallback": "- Status field: proposed | running | scaling | killed | graduated | died.\n",
+    # 0.1.x releases (#1133): "Status enum:" in the same two shapes.
+    "template-0.1": (
+        "- Status enum: `proposed | running | scaling | killed | graduated | died`\n"
+        "  (with `accepted | rejected | superseded` for decisions).\n"
+    ),
+    "fallback-0.1": "- Status enum: proposed | running | scaling | killed | graduated | died.\n",
 }
 
 
@@ -2931,7 +2937,7 @@ def test_doctor_flags_the_old_claude_md_status_line(
     claude_md = repo / "CLAUDE.md"
     text = claude_md.read_text(encoding="utf-8")
     text = text.replace(status_conventions() + "\n", _OLD_STATUS_LINES[form])
-    assert "Status field:" in text
+    assert _OLD_STATUS_LINES[form] in text
     claude_md.write_text(text, encoding="utf-8")
     before = claude_md.read_bytes()
     # Clear the one hard failure a bare test host has, so ok is True without the line.
@@ -2946,6 +2952,9 @@ def test_doctor_flags_the_old_claude_md_status_line(
     assert check["suggested_text"] == status_conventions()
     assert status_conventions() in check["detail"]
     assert "`running` on a bet" in check["detail"]
+    # The text names the line this repo actually has.
+    word = "enum" if "enum" in form or "0.1" in form else "field"
+    assert f"Replace the `Status {word}:` line" in check["detail"]
     # A warning only: the report's overall verdict matches a repo without the line.
     other = tmp_path / "no-line"
     init_run(path=str(other), name="Acme")
@@ -2965,3 +2974,76 @@ def test_doctor_has_no_status_line_finding_without_the_old_line(tmp_path: Path) 
     (repo / "CLAUDE.md").unlink()
     again = doctor_mod.run(path=str(repo))
     assert "claude-status-line" not in {c["name"] for c in again["checks"]}
+
+
+_OLD_STATUS_SEQUENCE = "proposed | running | scaling | killed | graduated | died"
+
+
+@pytest.mark.parametrize("word", ["field", "enum"])
+def test_doctor_does_not_flag_the_old_status_line_quoted_in_prose(
+    tmp_path: Path, word: str
+) -> None:
+    # #1133: only a list item is the old convention; a sentence that quotes it is not.
+    repo = tmp_path / "prose"
+    init_run(path=str(repo), name="Acme")
+    claude_md = repo / "CLAUDE.md"
+    claude_md.write_text(
+        claude_md.read_text(encoding="utf-8")
+        + f"\nNote: we replaced the line Status {word}: {_OLD_STATUS_SEQUENCE} last month,\n"
+        f"and an old copy said `- Status {word}: {_OLD_STATUS_SEQUENCE}` in a code span.\n",
+        encoding="utf-8",
+    )
+
+    report = doctor_mod.run(path=str(repo))
+
+    assert "claude-status-line" not in {c["name"] for c in report["checks"]}
+
+
+def test_doctor_flags_the_old_status_line_as_an_indented_star_item(tmp_path: Path) -> None:
+    repo = tmp_path / "star"
+    init_run(path=str(repo), name="Acme")
+    claude_md = repo / "CLAUDE.md"
+    claude_md.write_text(
+        claude_md.read_text(encoding="utf-8") + f"\n  * Status field: {_OLD_STATUS_SEQUENCE}\n",
+        encoding="utf-8",
+    )
+
+    report = doctor_mod.run(path=str(repo))
+
+    assert "claude-status-line" in {c["name"] for c in report["checks"]}
+
+
+@pytest.mark.parametrize("form", ["template", "fallback-0.1"])
+def test_repair_plan_lists_the_old_status_line_as_a_manual_action(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, form: str
+) -> None:
+    # #1133: the plan names the finding; it is never an apply step.
+    from mb.init import status_conventions
+
+    monkeypatch.setattr(doctor_mod, "_which", lambda name: f"/usr/bin/{name}")
+    repo = tmp_path / "plan"
+    init_run(path=str(repo), name="Acme")
+    clean = doctor_mod.repair_plan(repo)
+    assert "claude-status-line" not in {a["id"] for a in clean["actions"]}
+    assert "claude-status-line" not in {s["id"] for s in clean["sections"]}
+
+    claude_md = repo / "CLAUDE.md"
+    text = claude_md.read_text(encoding="utf-8")
+    claude_md.write_text(
+        text.replace(status_conventions() + "\n", _OLD_STATUS_LINES[form]), encoding="utf-8"
+    )
+    before = claude_md.read_bytes()
+
+    plan = doctor_mod.repair_plan(repo)
+
+    action = next(a for a in plan["actions"] if a["id"] == "claude-status-line")
+    assert (action["mode"], action["safe_to_apply"], action["writes"]) == ("manual", False, [])
+    section = next(s for s in plan["sections"] if s["id"] == "claude-status-line")
+    assert section["state"] == "warn" and section["actions"] == [action]
+    assert plan["ok"] == clean["ok"]
+    assert plan["summary"]["write_actions"] == clean["summary"]["write_actions"]
+    # --only scopes leave it out, and apply never touches CLAUDE.md.
+    scoped = doctor_mod.repair_plan(repo, only="claude")
+    assert "claude-status-line" not in {a["id"] for a in scoped["actions"]}
+    doctor_mod.repair_apply(repo)
+    assert claude_md.read_bytes() == before
