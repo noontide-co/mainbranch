@@ -17,9 +17,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   back (or removes the new one) when the user-scope connect file turns
   read-only part way through, as it does for any other write failure. Before,
   the new sign-in stayed stored. Recovery commands in these messages show your
-  repo as `~/...` instead of the full home path. When a restore itself fails,
-  the message now says whether the Google grant, the access token or both
-  stayed changed.
+  repo as `~/...` instead of the full home path. When a restore itself fails
+  (here and in `mb connect <provider> --scope user`), the message now says
+  which part stayed changed: the Google grant, the access token or both, or the
+  provider's credential.
 - `mb connect token google` and `mb connect exec google` now say on stderr
   when they could not record that the sign-in expired
   (`recorded: no (...)`, as `mb connect test google` does). The token and the

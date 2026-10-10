@@ -2021,7 +2021,13 @@ def connect_provider(
             # the record (a full disk, an I/O error, a failed rename, a file
             # that no longer parses) gets the same restore of the credential.
             shown, cause, fix = _user_scope_record_failure(exc)
-            if previous_secret is not None and not _restore_secret(store, ref, previous_secret):
+            unrestored = (
+                _restore_secrets(store, [(f"the {provider.name} credential", ref, previous_secret)])
+                if previous_secret is not None
+                else []
+            )
+            if unrestored:
+                assert previous_secret is not None
                 command = [
                     "mb",
                     "connect",
@@ -2047,7 +2053,8 @@ def connect_provider(
                 raise MetadataWriteError(
                     f"The {provider.name} credential was {action} but not recorded: "
                     f"the user-scope connect file {shown} {cause}, and the "
-                    f"previous credential state could not be restored. {record_state} "
+                    f"previous credential state could not be restored "
+                    f"({' and '.join(unrestored)} stayed changed). {record_state} "
                     f"{fix} first, then rerun "
                     f"`{_shell_replay_command(command, target)}` with the credential again."
                 ) from None
@@ -4195,18 +4202,9 @@ def _user_scope_not_recorded_detail(exc: OSError) -> str:
     Built from the error number only: no backend text, value or absolute home path.
     """
 
-    shown = _shown_user_scope_path(_user_scope_path())
-    if isinstance(exc, UserScopeRecordRestoreError):
-        return (
-            f"the user-scope connect file {shown} could not be written, and its previous "
-            "contents could not be restored, so it may have changed. Inspect and repair "
-            "that file, then rerun the check"
-        )
-    cause, fix = _user_scope_write_failure(exc)
-    return (
-        f"the user-scope connect file {shown} could not be written: {cause}. "
-        f"{fix}, then rerun the check"
-    )
+    shown, cause, fix = _user_scope_record_failure(exc)
+    changed = ", so it may have changed" if isinstance(exc, UserScopeRecordRestoreError) else ""
+    return f"the user-scope connect file {shown} {cause}{changed}. {fix}, then rerun the check"
 
 
 def _record_validation(

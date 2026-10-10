@@ -1088,7 +1088,7 @@ failure to write the file, including a file that turns read-only after the
 check, restores the previous sign-in (or removes the new one) and exits 1 with
 `metadata_write_failed`, like the other providers. If a restore fails, the
 message says which part stayed changed (the Google grant, the access token, or
-both). Fresh sign-in retries keep `--scope user`, the selected repo and any
+both; for other providers, that provider's credential). Fresh sign-in retries keep `--scope user`, the selected repo and any
 access-token replacement flag; use the same OAuth client and metadata again.
 When the folder is what refuses a write (permission denied on the folder, not on
 the file), the message names that folder, not a read-only file.

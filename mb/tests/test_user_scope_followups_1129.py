@@ -124,6 +124,32 @@ def test_a_failed_google_restore_names_the_slot_that_stayed_changed(
     assert str(tmp_path) not in summary
 
 
+@pytest.mark.parametrize("as_json", [False, True])
+def test_a_failed_provider_secret_restore_names_it(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, as_json: bool
+) -> None:
+    _user_scope_cloudflare(repo)
+    real_set = SecretStore.set
+    writes = 0
+
+    def set_(self: SecretStore, *args: Any, **kwargs: Any) -> None:
+        nonlocal writes
+        writes += 1
+        if writes > 1:  # the connect's own write lands, the restore fails
+            raise OSError(DETAIL)
+        real_set(self, *args, **kwargs)
+
+    monkeypatch.setattr(SecretStore, "set", set_)
+    _fail_user_write(connect_mod._user_scope_path(), "write", errno.ENOSPC, monkeypatch)
+
+    result = _run(repo, "reconnect", as_json)
+
+    assert result.exit_code == 1, result.output
+    text = json.loads(result.stdout)["summary"] if as_json else result.output
+    assert "could not be restored (the Cloudflare credential stayed changed)" in text
+    assert DETAIL not in result.output
+
+
 # --- 1 (late read-only). the sign-in is restored, with a `~/` path -----------------------
 
 
@@ -262,6 +288,25 @@ def test_a_failed_config_put_back_is_reported_in_the_read_note(
     assert "the disk is full" in note
     assert ".mb/connect.yaml could not be put back either" in note
     assert DETAIL not in note
+    # The note is true: the repo metadata still records the check.
+    assert _config(repo)["providers"]["google"]["validation"]["state"] == "reauth_required"
+
+
+def test_mb_connect_test_google_reports_the_failed_config_put_back(
+    repo: Path, client_file: Path, google: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _expire_and_fail_write(repo, client_file, google, monkeypatch)
+
+    def refuse(*args: Any, **kwargs: Any) -> None:
+        raise OSError(errno.EIO, DETAIL)
+
+    monkeypatch.setattr(gc, "atomic_write_text", refuse)
+
+    result = runner.invoke(app, ["connect", "test", "google", "--repo", str(repo), "--json"])
+
+    detail = json.loads(result.stdout)["not_recorded_detail"]
+    assert ".mb/connect.yaml could not be put back either" in detail
+    assert DETAIL not in result.output
 
 
 def test_a_successful_config_put_back_adds_nothing_to_the_note(
