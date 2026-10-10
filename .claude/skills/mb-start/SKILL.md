@@ -91,8 +91,8 @@ GitHub activity, and `checkpoint` from status to explain "where we left off."
 Do not run raw `git log` unless status says journal facts are unavailable.
 If `core/operations/pulse/` exists, read today's `log/<date>-*-pulse.md` and
 carry its ONE action into the session open (offer the pulse skill if missing).
-Saving progress: `mb checkpoint --plan --json`, validate, then after approval
-`mb checkpoint --message "..." --yes`.
+Saving progress: `mb checkpoint --plan --json`, validate the subject (verb from
+`references/router-and-language.md`), then after approval `mb checkpoint --message "..." --yes`.
 
 **Provider facts first:** When setup or routing depends on GitHub, Cloudflare,
 Google/Workspace, Meta Ads, or Apify, read the status `integrations` facts

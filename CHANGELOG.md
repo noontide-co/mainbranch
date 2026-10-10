@@ -13,6 +13,15 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- Saving progress should no longer suggest a save note that
+  `mb checkpoint --validate` would turn down. The start and end-of-session
+  guidance now says to pick the opening word from the ones `--validate` accepts
+  (a repair is `[fixed]`, a migration or update run is `[ran]`, a move or rename
+  is `[updated]`) and to validate the note before showing it, instead of
+  suggesting `[repaired]`, `[migrated]` or `[moved]`, which fail. Release simulations
+  now flag any suggested `mb checkpoint --message` whose opening word is not
+  accepted, and a test keeps every save example in the bundled skills and docs
+  on accepted words.
 - `mb init` conventions in `CLAUDE.md` now say plainly which file types the
   `status:` list covers (bets, decisions, offers and pushes) instead of "each
   file type".

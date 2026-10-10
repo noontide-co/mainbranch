@@ -1631,6 +1631,15 @@ def evidence_template(state: HarnessState, *, install_mode: str, mb_version: str
             operator_language_summary = (
                 f"technical leakage {leakage_severity}; checkpoint note specificity {checkpoint_ok}"
             )
+    checkpoint_verbs_line = ""
+    if isinstance(rubric, dict) and isinstance(rubric.get("checkpoint_verbs"), dict):
+        rejected = sorted(
+            {str(item.get("verb")) for item in rubric["checkpoint_verbs"].get("violations", [])}
+        )
+        checkpoint_verbs_line = (
+            f"- Checkpoint verbs: rejected by `mb checkpoint --validate`: "
+            f"{', '.join(f'[{verb}]' for verb in rejected)}\n"
+        )
     skill_present = (state.fixture_repo / ".claude" / "skills" / "mb-start" / "SKILL.md").exists()
     status_schema = status_payload.get("schema_version", "unknown")
     status_wiring = nested_get(status_payload, ("runtime", "skill_wiring", "ok"))
@@ -1718,7 +1727,7 @@ Evidence folder: local artifact; see harness output and summary.json
 - Session ID captured: {claude_session}
 - Rubric: {rubric_summary}
 - Operator language: {operator_language_summary}
-- Manual transcript review: docs/release-simulations.md#transcript-review
+{checkpoint_verbs_line}- Manual transcript review: docs/release-simulations.md#transcript-review
 - Transcript excerpts: {claude_transcript}
 
 ### Fixture Profiles

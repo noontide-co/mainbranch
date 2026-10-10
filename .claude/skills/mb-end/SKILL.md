@@ -382,7 +382,8 @@ merge, and working-tree detail second unless the user asks for plumbing.
 > Want me to save a checkpoint before we close?"
 
 If yes:
-- Validate the intended subject with `mb checkpoint --validate "..." --json`.
+- Validate the intended subject with `mb checkpoint --validate "..." --json`; use
+  a verb it lists (repair `[fixed]`, migration or update `[ran]`, move `[updated]`), not a coined one.
 - After approval, save with `mb checkpoint --message "..." --yes`.
 - Use beginner-safe language: "saved checkpoint," not "ran git commit."
 - Include the crystallize research file in the checkpoint if the operator
