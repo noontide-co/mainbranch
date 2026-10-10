@@ -2154,10 +2154,12 @@ def test_a_form_and_case_difference_stays_the_spelling_refusal(
 # The rule: a home name of five letters or more is hidden wherever a path part contains
 # it (as before). A name of four or fewer is hidden only where no letter touches it, so
 # `sam.json`, `.sam`, `sam-report.json`, `sam2.json` and `sam_x.json` are hidden but
-# `samples.json` and `mysam.json` still show. Why this is safe: the home name is the
-# only thing the guard protects, and a part with a letter against the name is a different
-# word, so printing it does not print the name by itself; the temporary file's fixed
-# `.mb-out.tmp` frame is not part of the name that is checked.
+# `samples.json` and `mysam.json` still show. Why this is still safe: the guard exists so
+# the home name is not printed as a name, and a part with a letter against it reads as a
+# longer word; every #1097/#1107 case is either a long name (still hidden by containment)
+# or a name standing alone (still hidden). The fixed `.mb-out.tmp` frame is not checked.
+# Known residual: names are compared folded, so a camelCase part (`reportForSam.json`)
+# prints `Sam`, which a letter touches on one side; it is display-only.
 
 # Test ids stay neutral on purpose: pytest puts them into the temp folder's name.
 SHORT_HOMES = {"h3": "sam", "h4": "alex", "h8": "homefolder"}
