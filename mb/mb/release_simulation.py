@@ -421,64 +421,168 @@ def analyze_credential_safety(text: str) -> dict[str, Any]:
 
 
 # `mb checkpoint ... --message "[verb] ..."` (or `-m`, `=`, either quote). The
-# verb is read in a bounded window after each `checkpoint`, so one long line
-# cannot make the scan super-linear.
-_CHECKPOINT_COMMAND = re.compile(r"(?<![\w-])checkpoint(?=\s)")
-_CHECKPOINT_MESSAGE = re.compile(
-    r"(?:^|\s)(?:--message|-m)(?:=|\s+)[\"'`]?\s*\[(?P<verb>[A-Za-z][\w-]{0,39})\]"
-)
+# subject is read in a bounded window after each `checkpoint`, so one long line
+# cannot make the scan super-linear. Between `checkpoint` and the message flag
+# only options (and the values of the options that take one) may appear: a
+# word, `;`, `&&`, `|`, a closing backtick or any other command in between
+# means the `-m` belongs to something else.
+_CHECKPOINT_COMMAND = re.compile(r"(?<![\w./~@%+=:-])checkpoint(?=[\s\\])")
 _CHECKPOINT_WINDOW = 400
+_CHECKPOINT_FINDING_LIMIT = 20
 _CHECKPOINT_PLACEHOLDER_VERBS = frozenset({"verb"})
+_CHECKPOINT_VALUE_OPTIONS = frozenset({"--repo", "--validate", "--mode"})
+_CHECKPOINT_MESSAGE_OPTIONS = frozenset({"--message", "-m"})
+_CHECKPOINT_PREFIX_ERRORS = frozenset(
+    {"missing_prefix", "unknown_prefix", "generic_checkpoint_prefix", "loop_prefix"}
+)
+_CHECKPOINT_CONTINUATION = re.compile(r"\\\r?\n")
+_CHECKPOINT_OPTION = re.compile(r"(?P<name>--?[A-Za-z][\w-]*)(?P<assign>=)?")
+_CHECKPOINT_TOKEN = re.compile(r"\"(?:\\.|[^\"\\])*\"?|'[^']*'?|\S+")
+_CHECKPOINT_VERB = re.compile(r"\[(?P<verb>[A-Za-z][\w-]*)\]")
+_CHECKPOINT_UNQUOTED_END = re.compile(r"[;|&`]|\s-{1,2}[A-Za-z]")
+_CHECKPOINT_BRACKET_OPENERS = "[\u3010\uff3b\u3014"
+_CHECKPOINT_PLACEHOLDER_BRACKET = re.compile(
+    r"[\[\u3010\uff3b\u3014]\s*(?:\.{2,}|\u2026|<[^>]*>|verb|\$\w+|\{\w*\})\s*[\]\u3011\uff3d\u3015]",
+    re.IGNORECASE,
+)
 
 
 def _checkpoint_command_window(text: str, start: int, limit: int) -> str:
-    """Return the command text after ``checkpoint``: one line, or a backslash-continued one."""
+    """Return the command text after ``checkpoint``: one line, or a backslash-continued one.
+
+    A backslash right before the line break continues the command, with or
+    without a space before the backslash, and with ``\\r\\n`` line endings.
+    """
     end = min(len(text), start + _CHECKPOINT_WINDOW, limit)
     cursor = start
     while True:
         newline = text.find("\n", cursor, end)
         if newline == -1:
-            return text[start:end]
-        if text[max(start, newline - 1) : newline] != "\\":
-            return text[start:newline]
-        cursor = newline + 1
+            window = text[start:end]
+            break
+        before = text[max(start, newline - 2) : newline]
+        if before.endswith("\\") or before.endswith("\\\r"):
+            cursor = newline + 1
+            continue
+        window = text[start:newline]
+        break
+    return _CHECKPOINT_CONTINUATION.sub(" ", window)
+
+
+def _checkpoint_message_start(window: str) -> tuple[int, int] | None:
+    """Return the start and end of the checkpoint's own message flag, if it has one."""
+    cursor = 0
+    while True:
+        while cursor < len(window) and window[cursor].isspace():
+            cursor += 1
+        option = _CHECKPOINT_OPTION.match(window, cursor)
+        if option is None:
+            return None
+        name = option.group("name")
+        cursor = option.end()
+        if name in _CHECKPOINT_MESSAGE_OPTIONS:
+            if option.group("assign"):
+                return option.start(), cursor
+            if cursor < len(window) and window[cursor].isspace():
+                return option.start(), cursor
+            return None
+        if option.group("assign"):
+            token = _CHECKPOINT_TOKEN.match(window, cursor)
+            cursor = token.end() if token else cursor
+        elif name in _CHECKPOINT_VALUE_OPTIONS:
+            while cursor < len(window) and window[cursor].isspace():
+                cursor += 1
+            token = _CHECKPOINT_TOKEN.match(window, cursor)
+            if token is None:
+                return None
+            cursor = token.end()
+        elif cursor < len(window) and not window[cursor].isspace():
+            return None
+
+
+def _checkpoint_subject(window: str, cursor: int) -> tuple[str, int]:
+    """Read the message after its flag: up to the closing quote, or to the next flag."""
+    while cursor < len(window) and window[cursor].isspace():
+        cursor += 1
+    quote = window[cursor] if cursor < len(window) and window[cursor] in "\"'`" else ""
+    if quote:
+        cursor += 1
+        pattern = re.compile(r"(?<!\\)" + re.escape(quote))
+        closing = pattern.search(window, cursor)
+        end = closing.start() if closing else len(window)
+    else:
+        stop = _CHECKPOINT_UNQUOTED_END.search(window, cursor)
+        end = stop.start() if stop else len(window)
+    return window[cursor:end].strip(), cursor
+
+
+def _checkpoint_finding(window: str, accepted: list[str]) -> dict[str, Any] | None:
+    flag = _checkpoint_message_start(window)
+    if flag is None:
+        return None
+    flag_start, after_flag = flag
+    subject, subject_start = _checkpoint_subject(window, after_flag)
+    verb_match = _CHECKPOINT_VERB.match(subject)
+    excerpt_end = subject_start + len(subject) + 1
+    if verb_match is not None:
+        verb = verb_match.group("verb")
+        if verb in _CHECKPOINT_PLACEHOLDER_VERBS:
+            return None
+        if not checkpoint_verbs.parse_subject(f"[{verb}] x")["recognized"]:
+            return {
+                "kind": "rejected_checkpoint_verb",
+                "verb": verb[:40],
+                "accepted": accepted,
+                "excerpt": _short_excerpt(window, flag_start, excerpt_end),
+            }
+    if not subject.startswith(tuple(_CHECKPOINT_BRACKET_OPENERS)):
+        return None
+    if _CHECKPOINT_PLACEHOLDER_BRACKET.match(subject):
+        return None
+    errors = checkpoint_verbs.validate_subject(subject)["errors"]
+    code = next((e["code"] for e in errors if e["code"] in _CHECKPOINT_PREFIX_ERRORS), None)
+    if code is None:
+        return None
+    return {
+        "kind": "malformed_checkpoint_subject",
+        "code": code,
+        "subject": subject[:60],
+        "excerpt": _short_excerpt(window, flag_start, excerpt_end),
+    }
 
 
 def analyze_checkpoint_verbs(text: str) -> dict[str, Any]:
-    """Flag a proposed ``mb checkpoint --message "[verb] ..."`` whose verb is rejected.
+    """Flag a proposed ``mb checkpoint --message`` subject that ``--validate`` would turn down.
 
     Scans the whole transcript, fenced code included, because suggested commands
     usually sit in code blocks. Accepted verbs come from the packaged registry
-    that ``mb checkpoint --validate`` reads; nothing is copied here.
+    that ``mb checkpoint --validate`` reads; nothing is copied here. A rejected
+    verb (``[repaired] x``) is reported as ``rejected_checkpoint_verb``; a subject
+    that opens a bracket but is not ``[verb] object`` (``[]``, ``[fixed]offer``,
+    ``[fixed][repaired] x``) as ``malformed_checkpoint_subject``. Subjects with
+    no bracket at all, and placeholders, are skipped. The findings list is capped.
     """
     accepted = [entry.verb for entry in checkpoint_verbs.registry().values()]
     violations: list[dict[str, Any]] = []
+    total = 0
     starts = [match.end() for match in _CHECKPOINT_COMMAND.finditer(text)]
     for index, start in enumerate(starts):
         limit = starts[index + 1] if index + 1 < len(starts) else len(text)
-        window = _checkpoint_command_window(text, start, limit)
-        match = _CHECKPOINT_MESSAGE.search(window)
-        if match is None:
+        finding = _checkpoint_finding(_checkpoint_command_window(text, start, limit), accepted)
+        if finding is None:
             continue
-        verb = match.group("verb")
-        if verb in _CHECKPOINT_PLACEHOLDER_VERBS:
-            continue
-        if checkpoint_verbs.parse_subject(f"[{verb}] x")["recognized"]:
-            continue
-        violations.append(
-            {
-                "kind": "rejected_checkpoint_verb",
-                "verb": verb,
-                "accepted": accepted,
-                "excerpt": _short_excerpt(window, match.start("verb") - 1, match.end()),
-            }
-        )
+        total += 1
+        if len(violations) < _CHECKPOINT_FINDING_LIMIT:
+            violations.append(finding)
     return {
-        "ok": not violations,
+        "ok": total == 0,
         "violations": violations,
+        "total_violations": total,
+        "accepted": accepted,
         "scope": (
             "Lexical check over proposed `mb checkpoint --message` subjects: the "
-            "verb must be one `mb checkpoint --validate` accepts. A warning for "
+            "verb must be one `mb checkpoint --validate` accepts, and a subject "
+            "that opens a bracket must be `[verb] object`. A warning for "
             "transcript review, not a hard gate."
         ),
     }

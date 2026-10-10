@@ -74,13 +74,8 @@ Required fact paths:
 - `brain.bets.exit_criteria.triggered_failure_signals`
 - `brain.bets.exit_criteria.triggered_double_down_signals`
 - `vocabulary`
-Approval gates: `updates_repairs_migrations`, `file_writes`, `checkpoint`,
-`provider_mutation`, `publishing_or_spend`, `customer_contact`, `private_data`,
-`destructive_operations`, and `status_marker`.
-
-Public/private boundaries: `no_secrets`, `no_raw_provider_exports`,
-`no_customer_member_data`, `no_private_runtime_settings`, and
-`no_raw_finance_legal_records`.
+Approval gates and public/private boundaries: the status fact names; see
+`references/router-and-language.md` (Approval Gates and Public/Private Boundaries).
 
 Core route: status facts first, runtime mismatch gates before business routing,
 one owner-facing recommendation, business language first, and explicit approval

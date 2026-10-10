@@ -326,3 +326,15 @@ Signals and routes:
   summaries and file/topic names.
 - Do not blindly catch up the business repo from the shared remote. First
   explain the sync state and ask before changing local saved work.
+
+---
+
+## Approval Gates and Public/Private Boundaries
+
+Approval gates: `updates_repairs_migrations`, `file_writes`, `checkpoint`,
+`provider_mutation`, `publishing_or_spend`, `customer_contact`, `private_data`,
+`destructive_operations`, and `status_marker`.
+
+Public/private boundaries: `no_secrets`, `no_raw_provider_exports`,
+`no_customer_member_data`, `no_private_runtime_settings`, and
+`no_raw_finance_legal_records`.
