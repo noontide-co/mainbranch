@@ -13,6 +13,21 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- `mb connect google --oauth --scope user` now puts the previous Google sign-in
+  back (or removes the new one) when the user-scope connect file turns
+  read-only part way through, as it does for any other write failure. Before,
+  the new sign-in stayed stored. Recovery commands in these messages show your
+  repo as `~/...` instead of the full home path. When a restore itself fails,
+  the message now says whether the Google grant, the access token or both
+  stayed changed.
+- `mb connect token google` and `mb connect exec google` now say on stderr
+  when they could not record that the sign-in expired
+  (`recorded: no (...)`, as `mb connect test google` does). The token and the
+  command's own output are not touched. If the repo metadata could not be put
+  back either, the note says that too, and so does `mb connect test google`.
+- When a closed folder (not the file) is why the user-scope connect file could
+  not be replaced, `mb connect` and `mb connect test` name the folder and say
+  to make it writable, instead of calling the file read-only.
 - `mb site check` only counts a Google Ads customer ID as declared when it is
   exactly 10 digits (dashes and spaces ignored). Values such as `TODO: add id`,
   `N/A`, `none`, `123` or letters now read as a placeholder, with the same

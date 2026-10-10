@@ -218,7 +218,7 @@ def test_check_names_the_file_when_its_result_cannot_be_recorded(
 
 @pytest.mark.parametrize("reauth", [False, True])
 @pytest.mark.parametrize("cause", ["mode", "permission", "atomic"])
-def test_google_mid_write_recovery_keeps_destination_and_repairs_file_first(
+def test_google_mid_write_read_only_restores_and_repairs_file_first(
     repo: Path,
     client_file: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -229,6 +229,8 @@ def test_google_mid_write_recovery_keeps_destination_and_repairs_file_first(
     if reauth:
         assert _oauth(repo, *_signin_args(client_file), "--scope", "user").exit_code == 0
     path = connect_mod._user_scope_path()
+    store_before = _store_snapshot()
+    config_before = (repo / ".mb/connect.yaml").read_bytes()
     real_write = connect_mod._write_user_scope_provider
 
     def race(*args: Any, **kwargs: Any) -> Path:
@@ -258,15 +260,15 @@ def test_google_mid_write_recovery_keeps_destination_and_repairs_file_first(
     assert path.name in summary
     assert "read-only" in summary
     assert "writable" in summary
-    commands = [shlex.split(part) for part in summary.split("`")[1::2]]
-    command = next(cmd for cmd in commands if cmd[:2] == ["mb", "connect"])
-    assert command[command.index("--repo") + 1] == str(repo)
-    if reauth:
-        assert command[:4] == ["mb", "connect", "test", "google"]
-        assert summary.index("writable") < summary.index("mb connect test google")
-    else:
-        assert command[:4] == ["mb", "connect", "google", "--oauth"]
-        assert command[command.index("--scope") + 1] == "user"
+    # The sign-in is not kept: what was stored before is put back (#1129).
+    assert (
+        "The previous Google credentials were restored." in summary
+        if reauth
+        else "The new sign-in was removed, so nothing was stored." in summary
+    )
+    assert "The repo metadata is unchanged." in summary
+    assert bool(_store_snapshot() == store_before)
+    assert (repo / ".mb/connect.yaml").read_bytes() == config_before
     assert_no_sentinel(result.output)
 
 

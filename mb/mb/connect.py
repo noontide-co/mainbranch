@@ -188,14 +188,20 @@ def _shown_user_scope_path(path: Path) -> str:
     return str(path)
 
 
+def _shell_repo_arg(repo: Path) -> str:
+    """A ``--repo`` value to paste into a shell: ``~/...`` under the home folder."""
+
+    with suppress(ValueError, RuntimeError):
+        relative = repo.relative_to(Path.home())
+        return "~" if relative == Path(".") else f"~/{shlex.quote(str(relative))}"
+    return shlex.quote(str(repo))
+
+
 def _shell_replay_command(command: list[str], repo: Path) -> str:
     """Show a replayable command without exposing an absolute home path."""
 
     parts = [shlex.quote(part) for part in command]
-    repo_index = command.index("--repo") + 1
-    with suppress(ValueError, RuntimeError):
-        relative = repo.relative_to(Path.home())
-        parts[repo_index] = "~" if relative == Path(".") else f"~/{shlex.quote(str(relative))}"
+    parts[command.index("--repo") + 1] = _shell_repo_arg(repo)
     return " ".join(parts)
 
 
@@ -1020,7 +1026,13 @@ def _write_user_scope(data: dict[str, Any]) -> Path:
                     atomic_write_text(path, previous.decode("utf-8"), mode=previous_mode)
         except OSError:
             raise UserScopeRecordRestoreError("user-scope record restore failed") from None
-        if isinstance(exc, PermissionError) and previous is not None:
+        if (
+            isinstance(exc, PermissionError)
+            and previous is not None
+            and os.access(path.parent, os.W_OK | os.X_OK)
+        ):
+            # The folder lets us in, so the file is what refused. A closed folder
+            # re-raises, and `_user_scope_write_failure` names it.
             raise UserScopeReadOnlyError(path) from None
         raise
     return path
@@ -1074,6 +1086,43 @@ def _restore_secret(store: SecretStore, ref: str, previous: SecretProbe) -> bool
     except Exception:
         return False
     return True
+
+
+def _restore_secrets(
+    store: SecretStore, snapshots: list[tuple[str, str, SecretProbe]]
+) -> list[str]:
+    """Put each ``(label, ref, previous)`` credential back; return the labels that stayed changed.
+
+    Every slot gets its own attempt: one failed restore must not skip the next.
+    """
+
+    return [
+        label for label, ref, previous in snapshots if not _restore_secret(store, ref, previous)
+    ]
+
+
+def _user_scope_record_failure(exc: Exception) -> tuple[str, str, str]:
+    """The file as shown, what went wrong with it, and what to fix first.
+
+    Shared by every command that stores a credential and then records it in
+    the user-scope file. Built from the error number only: no path, backend
+    text or value from the exception reaches the operator.
+    """
+
+    if isinstance(exc, UserScopeReadOnlyError):
+        return exc.shown, "is read-only", "Make that file writable"
+    shown = _shown_user_scope_path(_user_scope_path())
+    if isinstance(exc, ConfigCorruptError):
+        return shown, "is unreadable or invalid YAML", "Fix or move that file"
+    if isinstance(exc, UserScopeRecordRestoreError):
+        return (
+            shown,
+            "could not be written, and its previous contents could not be restored",
+            "Inspect and repair that file",
+        )
+    assert isinstance(exc, OSError)
+    reason, fix = _user_scope_write_failure(exc)
+    return shown, f"could not be written: {reason}", fix
 
 
 def _drop_user_scope_metadata_only(repo_id: str, provider_id: str) -> bool:
@@ -1971,20 +2020,7 @@ def connect_provider(
             # A read-only file is the expected case; any other failure to write
             # the record (a full disk, an I/O error, a failed rename, a file
             # that no longer parses) gets the same restore of the credential.
-            if isinstance(exc, UserScopeReadOnlyError):
-                shown = exc.shown
-                cause, fix = "is read-only", "Make that file writable"
-            elif isinstance(exc, ConfigCorruptError):
-                shown = _shown_user_scope_path(_user_scope_path())
-                cause, fix = "is unreadable or invalid YAML", "Fix or move that file"
-            else:
-                shown = _shown_user_scope_path(_user_scope_path())
-                if isinstance(exc, UserScopeRecordRestoreError):
-                    cause = "could not be written, and its previous contents could not be restored"
-                    fix = "Inspect and repair that file"
-                else:
-                    reason, fix = _user_scope_write_failure(exc)
-                    cause = f"could not be written: {reason}"
+            shown, cause, fix = _user_scope_record_failure(exc)
             if previous_secret is not None and not _restore_secret(store, ref, previous_secret):
                 command = [
                     "mb",
@@ -3190,6 +3226,9 @@ def exec_with_secret(
         "error": "",
         "repair_command": "",
     }
+    if result.get("not_recorded_note"):
+        # Shown on stderr by the CLI; never part of the child's output.
+        outcome["not_recorded_note"] = str(result["not_recorded_note"])
     if not result["ok"]:
         outcome["error"] = result["error"]
         outcome["repair_command"] = result["repair_command"]
@@ -5407,9 +5446,15 @@ def render_user_scope_not_recorded() -> None:
     print(f"recorded: no (the user-scope connect file {shown} is read-only)")
 
 
+def not_recorded_line(detail: str) -> str:
+    """The ``recorded: no (...)`` line, as ``mb connect test`` shows it."""
+
+    return f"recorded: no ({detail})"
+
+
 def render_user_scope_write_failed(result: dict[str, Any]) -> None:
     detail = result.get("not_recorded_detail") or "the user-scope file was not written"
-    print(f"recorded: no ({detail})")
+    print(not_recorded_line(str(detail)))
 
 
 def render_rotate_result(result: dict[str, Any]) -> None:
