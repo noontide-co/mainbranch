@@ -2586,6 +2586,7 @@ def status_cmd(
         else:
             typer.echo(f"mb status: {message}", err=True)
         raise typer.Exit(1) from exc
+    status_mod.qualify_commands(report, Path(path))
     if json_out:
         try:
             typer.echo(_json_payload(report, command="mb status", schema_name="mainbranch.status"))

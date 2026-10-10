@@ -24,7 +24,7 @@ from mb import ranker as ranker_mod
 from mb import site as site_mod
 from mb import topology as topology_mod
 from mb import validate as validate_mod
-from mb.engine import install_mode, link_status
+from mb.engine import install_mode, link_status, repo_flag
 from mb.freshness import (
     MODE_NEUTRAL_UPDATE_TEXT,
     REQUIRED_UPDATE_COMMANDS,
@@ -4650,6 +4650,62 @@ def run(
             "path": LAST_STATUS_SEEN_RELATIVE_PATH.as_posix(),
         }
     )
+    return report
+
+
+_QUALIFY_COMMAND_KEYS = {"command", "repair_command", "update_check_command"}
+_QUALIFY_PROSE_KEYS = {"repair", "operator_summary", "top_repair", "top_operator_summary"}
+_QUALIFY_LIST_KEYS = {"next_steps"}
+# Diagnostic copies, the command that was run, and Codex guidance keep their text.
+_QUALIFY_SKIP_KEYS = {
+    "raw",
+    "result",
+    "mb_command",
+    "workflow_inventory",
+    "fact_commands",
+    "missing_markers",
+    "smoke_command",
+}
+
+
+def _qualify_text(value: str, repo: Path) -> str:
+    """A command line or a sentence with backticked `mb` commands, naming the repo."""
+    from mb import doctor  # doctor imports onboard and codex, which status also imports
+
+    qualified = doctor._qualify_field(value, repo)
+    return qualified if qualified != value else doctor._qualify_prose(value, repo)
+
+
+def qualify_commands(report: dict[str, Any], repo: Path) -> dict[str, Any]:
+    """Name the business repo in the suggested commands `mb status` prints (#1083).
+
+    Run from another folder, a bare `mb skill link --repo .` would act on that
+    folder. The same words `mb doctor` uses are rewritten here, at output time,
+    so `mb start` and the dashboard keep reading the source text. Inside the
+    repo nothing changes.
+    """
+    if not repo_flag(repo):
+        return report
+
+    def walk(node: Any) -> None:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                if key in _QUALIFY_SKIP_KEYS:
+                    continue
+                if key in _QUALIFY_COMMAND_KEYS | _QUALIFY_PROSE_KEYS and isinstance(value, str):
+                    node[key] = _qualify_text(value, repo)
+                elif key in _QUALIFY_LIST_KEYS and isinstance(value, list):
+                    node[key] = [
+                        _qualify_text(item, repo) if isinstance(item, str) else item
+                        for item in value
+                    ]
+                else:
+                    walk(value)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(report)
     return report
 
 

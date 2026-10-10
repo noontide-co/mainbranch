@@ -271,6 +271,23 @@ diagnostic copies and are never rewritten; the
 same finding is offered named under `sections[]` and `actions[]`. The workflow inventory's `install_hint` describes no repo and
 stays bare. The list is empty when there is nothing for a person to run.
 
+`mb status` names the repo in the same way (#1083), from another folder, for
+exactly these fields: `update.command` and `update.update_check_command`;
+`command` and `repair_command` anywhere in the report (including
+`runtime.skill_wiring`, its `mb_installs` and `shadow_report`,
+`ranked_actions[].command` and the connect providers); the `repair` text
+anywhere in the report (`drift.items[]`, `readiness.checks[]`,
+`runtime.skill_wiring`); `operator_summary`, `top_repair` and
+`top_operator_summary` in `validation.validation_categories`; and
+`validation.legacy_repair.next_steps[]`. `mb spine show` and `mb spine init`
+name it in their `summary` (`mb spine declare --repo <path> --store <provider>`).
+Inside the repo these keep their existing spelling, including `--repo .`.
+Left as written: `mb_command` (the command that ran), the Codex guidance
+(`workflow_inventory`, `fact_commands`, `missing_markers`, `smoke_command`),
+placeholder commands such as `mb onboard --path <repo>`, and `raw.*` and
+`result` copies. `mb status` and `mb graph` take no `--repo` flag; their
+path argument is the supported form.
+
 `mb doctor --json` adds a `claude-status-line` entry to `checks[]` only when the
 business repo's `CLAUDE.md` still has the pre-#1121 list item "Status field:"
 (or the older "Status enum:") followed by "proposed | running | scaling |

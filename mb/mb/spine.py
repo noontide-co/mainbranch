@@ -15,6 +15,8 @@ from typing import Any
 
 import yaml
 
+from mb.engine import repo_flag
+
 SPINE_RELATIVE_PATH = Path("core") / "operations" / "spine.md"
 
 
@@ -119,7 +121,8 @@ def show(repo: str | Path = ".") -> dict[str, Any]:
             "repo": str(root),
             "path": str(SPINE_RELATIVE_PATH),
             "summary": (
-                "no spine declaration — run `mb spine declare --store <provider>` "
+                "no spine declaration — run "
+                f"`mb spine declare{repo_flag(root)} --store <provider>` "
                 "(or `--store none --intentional`)"
             ),
         }
@@ -297,6 +300,6 @@ def init_owned(repo: str | Path = ".", *, force: bool = False) -> dict[str, Any]
         "summary": (
             "owned spine scaffolded — apply spine/schema.sql to your store "
             "(D1 commands in spine/README.md), then update the declaration "
-            "with `mb spine declare --force`"
+            f"with `mb spine declare{repo_flag(root)} --force`"
         ),
     }

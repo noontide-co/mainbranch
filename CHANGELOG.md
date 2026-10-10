@@ -13,6 +13,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- `mb status` repair and update suggestions now name your business repo when
+  you run it from another folder: the skill-wiring repairs (`mb skill link`,
+  `mb skill repair`), the ranked next action and the drift repair, `mb update`
+  and `mb update --check`, and the validation repair text. Before, a pasted
+  `mb skill link --repo .` acted on the folder you were standing in. `mb spine
+  show` and `mb spine init` name the repo in the `mb spine declare` they
+  suggest. Output inside the business repo is unchanged.
 - `mb connect google --oauth --scope user` now puts the previous Google sign-in
   back (or removes the new one) when the user-scope connect file turns
   read-only part way through, as it does for any other write failure. Before,
