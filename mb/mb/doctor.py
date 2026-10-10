@@ -2359,17 +2359,23 @@ def _qualify_segment(text: str, repo_arg: str, repo_text: str) -> str:
         return text
     values = [value for _, _, value in words]
     for index, value in enumerate(values):
-        if value == "--repo":
+        if value in {"--repo", "--business-repo"}:
             if index + 1 >= len(values):
-                return text  # dangling: never a second --repo
+                return text  # dangling: never a second flag
             if values[index + 1] != ".":
                 return text  # already names a repo
+            if value == "--business-repo" and not repo_arg:
+                return text  # the repo is the current folder: `.` already names it
             start = words[index - 1][1]
             end = words[index + 1][1]
-            return text[:start] + (f" {repo_arg}" if repo_arg else "") + text[end:]
-        if value.startswith("--repo="):
+            flag = repo_arg.replace("--repo", value, 1).strip() if repo_arg else ""
+            return text[:start] + (f" {flag}" if flag else "") + text[end:]
+        if value.startswith(("--repo=", "--business-repo=")):
             return text
-    if values[:2] in (["mb", "status"], ["mb", "graph"]):
+    if values[:2] in (["mb", "status"], ["mb", "graph"]) or values[:3] in (
+        ["mb", "books", "status"],
+        ["mb", "books", "doctor"],
+    ):
         if not repo_arg or repo_text in values:
             return text
         quoted = shlex.quote(repo_text)
@@ -2462,6 +2468,12 @@ def _qualify_validation_report(report: dict[str, Any], repo: Path) -> dict[str, 
     never edits it in place.
     """
     qualified = copy.deepcopy(report)
+    legacy = qualified.get("legacy_repair")
+    if isinstance(legacy, dict) and isinstance(legacy.get("next_steps"), list):
+        legacy["next_steps"] = [
+            _qualify_prose(step, repo) if isinstance(step, str) else step
+            for step in legacy["next_steps"]
+        ]
     categories = qualified.get("validation_categories")
     if not isinstance(categories, dict):
         return qualified

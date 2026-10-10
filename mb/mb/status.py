@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
 import shutil
 import subprocess
 from datetime import date, datetime, timezone
@@ -3713,6 +3714,14 @@ def _measurement_payload(result: dict[str, Any], *, repair_command: str) -> dict
     return payload
 
 
+def _shell_arg(path: Path) -> str:
+    """A path as one shell word: double quotes when those are safe, else shell-quoted."""
+    text = str(path)
+    if any(char in text for char in '$`\\"!'):
+        return shlex.quote(text)
+    return f'"{text}"'
+
+
 def _measurement(repo: Path) -> dict[str, Any]:
     """Return a compact paid-traffic measurement summary for status consumers."""
 
@@ -3727,7 +3736,7 @@ def _measurement(repo: Path) -> dict[str, Any]:
         result = site_mod.check(site_repo, business_repo=repo)
         payload = _measurement_payload(
             result,
-            repair_command=f'mb site check "{site_repo}" --business-repo .',
+            repair_command=f"mb site check {_shell_arg(site_repo)} --business-repo .",
         )
         payload["source_record"] = site_records[0]["source"]
         return payload
@@ -4653,7 +4662,7 @@ def run(
     return report
 
 
-_QUALIFY_COMMAND_KEYS = {"command", "repair_command", "update_check_command"}
+_QUALIFY_COMMAND_KEYS = {"command", "repair_command", "update_check_command", "next_command"}
 _QUALIFY_PROSE_KEYS = {"repair", "operator_summary", "top_repair", "top_operator_summary"}
 _QUALIFY_LIST_KEYS = {"next_steps"}
 # Diagnostic copies, the command that was run, and Codex guidance keep their text.
@@ -4706,7 +4715,32 @@ def qualify_commands(report: dict[str, Any], repo: Path) -> dict[str, Any]:
                 walk(item)
 
     walk(report)
+    qualify_action_list(report.get("readiness"), repo)
     return report
+
+
+def qualify_start_commands(report: dict[str, Any], repo: Path) -> dict[str, Any]:
+    """The same rule for `mb start`: its command fields and its own `next_actions`.
+
+    Applied after the report is built (and after any launch), so what ran is
+    never rewritten.
+    """
+    qualify_commands(report, repo)
+    qualify_action_list(report, repo)
+    return report
+
+
+def qualify_action_list(owner: Any, repo: Path, key: str = "next_actions") -> None:
+    """Name the repo in one owned list of next actions, leaving other `next_actions` alone.
+
+    `ads`, `launch`, `update` and Codex guidance carry their own `next_actions`
+    (some with `<site-repo>` placeholders), so the list is named by its owner.
+    """
+    if not repo_flag(repo) or not isinstance(owner, dict) or not isinstance(owner.get(key), list):
+        return
+    owner[key] = [
+        _qualify_text(item, repo) if isinstance(item, str) else item for item in owner[key]
+    ]
 
 
 def render_human(

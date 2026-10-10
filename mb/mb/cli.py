@@ -2646,10 +2646,12 @@ def start_cmd(
         report["launch"]["safe"] = False
         report["launch"]["attempted"] = False
         report["launch"]["blocked_reason"] = message
+        status_mod.qualify_start_commands(report, Path(repo).expanduser())
         typer.echo(_json_payload(report, command="mb start", schema_name="mainbranch.start.result"))
         raise typer.Exit(2)
 
     report = read_report(launching=launch)
+    status_mod.qualify_start_commands(report, Path(repo).expanduser())
     if json_out:
         typer.echo(_json_payload(report, command="mb start", schema_name="mainbranch.start.result"))
     else:
