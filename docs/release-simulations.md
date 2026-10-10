@@ -258,7 +258,7 @@ finding is one of two kinds:
 
 - `rejected_checkpoint_verb`: the opening word is not accepted, such as
   `[repaired]`. It names the verb and the accepted ones.
-- `malformed_checkpoint_subject`: the note opens a bracket (`[`, `【`, `［`) but
+- `malformed_checkpoint_subject`: the note opens a bracket (`[`, `【`, `［`, `〔`) but
   is not `[verb] object`, such as `[]`, `[fixed]offer` or `[fixed][repaired] ...`.
   It carries the validator's code (`missing_prefix`) and the subject. Placeholders
   (`"..."`, `"<subject>"`, `[verb]`, `[...]`) and notes with no bracket at all

@@ -439,6 +439,7 @@ _CHECKPOINT_CONTINUATION = re.compile(r"\\\r?\n")
 _CHECKPOINT_OPTION = re.compile(r"(?P<name>--?[A-Za-z][\w-]*)(?P<assign>=)?")
 _CHECKPOINT_TOKEN = re.compile(r"\"(?:\\.|[^\"\\])*\"?|'[^']*'?|\S+")
 _CHECKPOINT_VERB = re.compile(r"\[(?P<verb>[A-Za-z][\w-]*)\]")
+_CHECKPOINT_CLOSING_QUOTE = {quote: re.compile(r"(?<!\\)" + quote) for quote in "\"'`"}
 _CHECKPOINT_UNQUOTED_END = re.compile(r"[;|&`]|\s-{1,2}[A-Za-z]")
 _CHECKPOINT_BRACKET_OPENERS = "[\u3010\uff3b\u3014"
 _CHECKPOINT_PLACEHOLDER_BRACKET = re.compile(
@@ -507,13 +508,13 @@ def _checkpoint_subject(window: str, cursor: int) -> tuple[str, int]:
     quote = window[cursor] if cursor < len(window) and window[cursor] in "\"'`" else ""
     if quote:
         cursor += 1
-        pattern = re.compile(r"(?<!\\)" + re.escape(quote))
-        closing = pattern.search(window, cursor)
+        closing = _CHECKPOINT_CLOSING_QUOTE[quote].search(window, cursor)
         end = closing.start() if closing else len(window)
     else:
         stop = _CHECKPOINT_UNQUOTED_END.search(window, cursor)
         end = stop.start() if stop else len(window)
-    return window[cursor:end].strip(), cursor
+    raw = window[cursor:end]
+    return raw.strip(), cursor + len(raw) - len(raw.lstrip())
 
 
 def _checkpoint_finding(window: str, accepted: list[str]) -> dict[str, Any] | None:
@@ -533,7 +534,9 @@ def _checkpoint_finding(window: str, accepted: list[str]) -> dict[str, Any] | No
                 "kind": "rejected_checkpoint_verb",
                 "verb": verb[:40],
                 "accepted": accepted,
-                "excerpt": _short_excerpt(window, flag_start, excerpt_end),
+                "excerpt": _short_excerpt(
+                    window, subject_start + verb_match.start(), subject_start + verb_match.end()
+                ),
             }
     if not subject.startswith(tuple(_CHECKPOINT_BRACKET_OPENERS)):
         return None
