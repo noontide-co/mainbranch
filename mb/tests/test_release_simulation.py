@@ -1503,37 +1503,61 @@ def test_checkpoint_verbs_is_a_warning_not_a_hard_gate() -> None:
     assert {key for key in flagged if key != "checkpoint_verbs"} == set(clean)
 
 
-@pytest.mark.parametrize(
-    "text",
-    [
-        "mb checkpoint " + "-m '" * 20_000,
-        "checkpoint " * 20_000,
-        "mb checkpoint " + "x" * 50_000,
-        'mb checkpoint -m "[updated] x"\n' * 5_000,
-        'mb checkpoint -m "[repaired] x"\n' * 5_000,
-        "mb checkpoint \\\n" * 5_000,
-        "mb checkpoint save " * 20_000,
-        "mb checkpoint save -m " * 20_000,
-        'mb checkpoint save -m "[repaired] x"\n' * 5_000,
-        'mb checkpoint -m "[${VERB}] x"\n' * 5_000,
-        "mb checkpoint save \\\n" * 5_000,
-        "mb " * 20_000 + "checkpoint save -m",
-        'mb checkpoint --message "[' + "a" * 50_000,
-        'mb checkpoint -m "[]"\n' * 5_000,
-        'mb checkpoint -m "[fixed]x"\n' * 5_000,
-        "mb checkpoint\\\r\n" * 5_000,
-        "mb checkpoint\\\n" * 5_000,
-        "mb checkpoint " + "--repo " * 20_000,
-        "mb checkpoint --message " + '"' * 50_000,
-        "mb checkpoint " + "-m " * 20_000,
-        'mb checkpoint --repo "' + "a " * 20_000,
-    ],
-)
-def test_checkpoint_verbs_scan_is_linear(text: str) -> None:
-    started = time.perf_counter()
-    release_simulation.analyze_checkpoint_verbs(text)
+_LINEAR_SCAN_CASES = {
+    "quote-flags": (lambda n: "mb checkpoint " + "-m '" * n, 5_000),
+    "bare-word": (lambda n: "checkpoint " * n, 5_000),
+    "long-word": (lambda n: "mb checkpoint " + "x" * n, 12_500),
+    "updated-verb": (lambda n: 'mb checkpoint -m "[updated] x"\n' * n, 1_250),
+    "repaired-verb": (lambda n: 'mb checkpoint -m "[repaired] x"\n' * n, 1_250),
+    "continuation": (lambda n: "mb checkpoint \\\n" * n, 1_250),
+    "save": (lambda n: "mb checkpoint save " * n, 5_000),
+    "save-flag": (lambda n: "mb checkpoint save -m " * n, 5_000),
+    "save-repaired": (lambda n: 'mb checkpoint save -m "[repaired] x"\n' * n, 1_250),
+    "placeholder": (lambda n: 'mb checkpoint -m "[${VERB}] x"\n' * n, 1_250),
+    "save-continuation": (lambda n: "mb checkpoint save \\\n" * n, 1_250),
+    "mb-prefix": (lambda n: "mb " * n + "checkpoint save -m", 5_000),
+    "open-bracket": (lambda n: 'mb checkpoint --message "[' + "a" * n, 12_500),
+    "empty-bracket": (lambda n: 'mb checkpoint -m "[]"\n' * n, 1_250),
+    "glued-object": (lambda n: 'mb checkpoint -m "[fixed]x"\n' * n, 1_250),
+    "crlf-continuation": (lambda n: "mb checkpoint\\\r\n" * n, 1_250),
+    "lf-continuation": (lambda n: "mb checkpoint\\\n" * n, 1_250),
+    "repo-flags": (lambda n: "mb checkpoint " + "--repo " * n, 5_000),
+    "quotes": (lambda n: "mb checkpoint --message " + '"' * n, 12_500),
+    "message-flags": (lambda n: "mb checkpoint " + "-m " * n, 5_000),
+    "repo-words": (lambda n: 'mb checkpoint --repo "' + "a " * n, 5_000),
+}
+_LINEAR_SCAN_RATIO = 8.0  # linear work grows 4x for 4x the input; a quadratic scan, 16x
+_LINEAR_SCAN_FLOOR = 0.01  # seconds: grow the input until one scan takes at least this long
 
-    assert time.perf_counter() - started < 1.0
+
+def _best_scan_time(text: str) -> float:
+    best = float("inf")
+    for _ in range(5):
+        started = time.perf_counter()
+        release_simulation.analyze_checkpoint_verbs(text)
+        best = min(best, time.perf_counter() - started)
+    return best
+
+
+@pytest.mark.parametrize("name", sorted(_LINEAR_SCAN_CASES))
+def test_checkpoint_verbs_scan_is_linear(name: str) -> None:
+    """Four times the input takes about four times as long, not sixteen.
+
+    A ratio of two timings on the same machine, not a wall-clock budget, so a
+    slow or loaded runner (xdist, coverage) does not fail a linear scan while a
+    quadratic or backtracking one still does.
+    """
+    make, size = _LINEAR_SCAN_CASES[name]
+    release_simulation.analyze_checkpoint_verbs(make(size))  # warm up imports and the registry
+    small = _best_scan_time(make(size))
+    while small < _LINEAR_SCAN_FLOOR and size < 256 * _LINEAR_SCAN_CASES[name][1]:
+        size *= 2
+        small = _best_scan_time(make(size))
+    large = _best_scan_time(make(4 * size))
+
+    assert large <= _LINEAR_SCAN_RATIO * small + 0.002, (
+        f"{name}: {size} -> {4 * size} units took {small * 1000:.1f} ms -> {large * 1000:.1f} ms"
+    )
 
 
 _DRIFT_DOC_ROOTS = (".claude", "docs", "mb/mb/_data", "workflows", "playbooks")
