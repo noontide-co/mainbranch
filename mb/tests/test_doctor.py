@@ -2907,3 +2907,61 @@ def test_agent_surface_planned_actions_order_does_not_follow_the_hash_seed() -> 
     for surface in surfaces:
         assert surface["planned_actions"] == sorted(surface["planned_actions"])
         assert surface["touched_files"] == surface["planned_actions"]
+
+
+_OLD_STATUS_LINES = {
+    "template": (
+        "- Status field: `proposed | running | scaling | killed | graduated | died`\n"
+        "  (decisions use `accepted | rejected | superseded`; pushes use\n"
+        "  `draft | planned | active | paused | completed | canceled | archived`).\n"
+    ),
+    "fallback": "- Status field: proposed | running | scaling | killed | graduated | died.\n",
+}
+
+
+@pytest.mark.parametrize("form", sorted(_OLD_STATUS_LINES))
+def test_doctor_flags_the_old_claude_md_status_line(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, form: str
+) -> None:
+    # #1122: repos made before #1121 still teach one status set for every file type.
+    from mb.init import status_conventions
+
+    repo = tmp_path / "old-line"
+    init_run(path=str(repo), name="Acme")
+    claude_md = repo / "CLAUDE.md"
+    text = claude_md.read_text(encoding="utf-8")
+    text = text.replace(status_conventions() + "\n", _OLD_STATUS_LINES[form])
+    assert "Status field:" in text
+    claude_md.write_text(text, encoding="utf-8")
+    before = claude_md.read_bytes()
+    # Clear the one hard failure a bare test host has, so ok is True without the line.
+    monkeypatch.setattr(doctor_mod, "_which", lambda name: f"/usr/bin/{name}")
+
+    report = doctor_mod.run(path=str(repo))
+
+    check = next(c for c in report["checks"] if c["name"] == "claude-status-line")
+    assert check["ok"] is False
+    assert check["severity"] == "warn"
+    assert check["path"] == "CLAUDE.md"
+    assert check["suggested_text"] == status_conventions()
+    assert status_conventions() in check["detail"]
+    assert "`running` on a bet" in check["detail"]
+    # A warning only: the report's overall verdict matches a repo without the line.
+    other = tmp_path / "no-line"
+    init_run(path=str(other), name="Acme")
+    assert report["ok"] == doctor_mod.run(path=str(other))["ok"]
+    assert report["ok"] is True
+    # Never rewritten.
+    assert claude_md.read_bytes() == before
+
+
+def test_doctor_has_no_status_line_finding_without_the_old_line(tmp_path: Path) -> None:
+    repo = tmp_path / "fresh"
+    init_run(path=str(repo), name="Acme")
+
+    report = doctor_mod.run(path=str(repo))
+
+    assert "claude-status-line" not in {c["name"] for c in report["checks"]}
+    (repo / "CLAUDE.md").unlink()
+    again = doctor_mod.run(path=str(repo))
+    assert "claude-status-line" not in {c["name"] for c in again["checks"]}
