@@ -447,9 +447,11 @@ message naming it. A refusal (exit 2, `rule: out_*`) shows an `--out` that leads
 folder (absolute or relative, with links followed and then `.` and `..`
 collapsed) as `~/...` in
 `summary` and `errors`, and any other `--out` as typed (`~name/...` for another
-user stays `~name/...`, in the summary's `out` too). If a part that contains
-the home folder's name would still be printed, only `…/` and the file name are
-shown; a temporary file's name that contains it is shown as `.….mb-out.tmp`,
+user stays `~name/...`, in the summary's `out` too; `~you/...` for your own user
+name is `~/...`). If a part that contains the home folder's name would still be
+printed, only `…/` and the file name are shown (a home name of four letters or
+fewer counts only where no letter touches it, so `samples.json` still shows); a
+temporary file's name that contains it is shown as `.….mb-out.tmp`,
 so neither a refusal nor the summary has the home folder's name under
 `safe_to_share: true`. See [google.md](google.md#--out-keep-a-large-pull-in-a-private-file).
 

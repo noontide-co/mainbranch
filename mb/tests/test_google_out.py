@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import stat
 import subprocess
 from pathlib import Path
@@ -1415,6 +1416,7 @@ def test_unicode_variant_out_refuses_an_index_only_tracked_file(
 
     result = _out(repo, SC_ARGS, root / "private" / "Caf\u00e9.json", "--force")
 
+    # Without `core.precomposeunicode` the two forms are not known to be one file.
     _refused(result, "out_path_git_unknown")
     assert api.calls == [] and not tracked.exists()
     assert not list((root / "private").glob(".*.mb-out.tmp"))
@@ -1606,6 +1608,27 @@ def test_the_last_guard_hides_any_part_named_like_home(
     assert guard("/T/homefolder2/x.json", "x.json") == "…/x.json"
     assert guard("~/pulls/my-homefolder.json", "my-homefolder.json") == "~/…"
     assert guard("/T/home-folder/x.json", "x.json") == "/T/home-folder/x.json"
+
+
+def test_the_last_guard_for_a_short_home_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = tmp_path / "Sam"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+
+    guard = go_out.hide_home_name
+    # Standing alone (a letter touches neither side): hidden, in any case.
+    for hidden in ("sam", ".sam", "SAM.json", "sam-report.json", "sam2.json", "sam_x.json"):
+        assert guard(f"~/pulls/{hidden}", hidden) == "~/…", hidden
+    assert guard("/T/sam/x.json", "x.json") == "…/x.json"
+    # Inside a longer word: shown.
+    for shown in ("samples.json", "mysam.json", "wisam", "usam.json"):
+        assert guard(f"~/pulls/{shown}", shown) == f"~/pulls/{shown}", shown
+    # The fixed frame of a temporary name is not the name.
+    assert go_out.show_temp(".samples.json.mb-out.tmp") == ".samples.json.mb-out.tmp"
+    assert go_out.show_temp(".sam.json.mb-out.tmp") == ".….mb-out.tmp"
+    assert go_out.show_temp(".x.mb-out.tmp") == ".x.mb-out.tmp"
 
 
 # Ways to name the home folder: (shell folder, prefix) with `H` home as given, `R` its
@@ -1934,3 +1957,358 @@ def test_another_users_home_is_shown_as_typed(
     assert "--out ~alex/nope/x.json" in refused.stderr
     for result in (written, as_json, refused):
         assert "alexhome" not in result.stdout + result.stderr
+
+
+# --- follow-ups from the #1107 and #1115 reviews (#1080) --------------------------------
+
+
+def test_your_own_user_name_is_shown_like_a_tilde(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    home = tmp_path / "alexhome"
+    (home / "pulls").mkdir(parents=True)
+    (tmp_path / "samehome").symlink_to(home)
+    monkeypatch.setenv("HOME", str(home))
+    # `alex` is you; `kim` is another user name for the same folder; `eve` is someone else.
+    other = tmp_path / "evehome"
+    (other / "pulls").mkdir(parents=True)
+    _users(monkeypatch, {"alex": home, "kim": tmp_path / "samehome", "eve": other})
+
+    for user in ("alex", "kim"):
+        written = _out(repo, SC_ARGS, f"~{user}/pulls/x.json")
+        as_json = _out(repo, SC_ARGS, f"~{user}/pulls/y.json", "--json")
+        refused = _out(repo, SC_ARGS, f"~{user}/nope/x.json", "--json")
+        exists = _out(repo, SC_ARGS, f"~{user}/pulls/x.json")
+
+        assert "wrote ~/pulls/x.json (mode 0600)" in written.stdout
+        assert as_json.exit_code == 0 and json.loads(as_json.stdout)["out"] == "~/pulls/y.json"
+        _refused(refused, "out_parent_missing")
+        assert "--out ~/nope/x.json" in json.loads(refused.stdout)["summary"]
+        _refused(exists, "out_path_exists")
+        assert "--out ~/pulls/x.json already exists" in exists.stderr
+        for result in (written, as_json, refused, exists):
+            assert "…" not in result.stdout + result.stderr
+            assert "alexhome" not in result.stdout + result.stderr
+        for name in ("x.json", "y.json"):
+            (home / "pulls" / name).unlink()
+    # Another user's home is still never shown as a path.
+    elsewhere = _out(repo, SC_ARGS, "~eve/pulls/x.json")
+    assert "wrote ~eve/pulls/x.json (mode 0600)" in elsewhere.stdout
+    assert "evehome" not in elsewhere.stdout + elsewhere.stderr
+
+
+def test_a_home_folder_that_cannot_be_found_is_refused_clearly(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    import pwd
+
+    api = _signed(repo, client_file, google, monkeypatch)
+    monkeypatch.delenv("HOME", raising=False)
+
+    def no_entry(_: int) -> Any:
+        raise KeyError("no passwd entry")
+
+    monkeypatch.setattr(pwd, "getpwuid", no_entry)
+    here = tmp_path / "here"
+    here.mkdir()
+    monkeypatch.chdir(here)
+
+    human = _out(repo, SC_ARGS, "~/x.json")
+    as_json = _out(repo, SC_ARGS, "~/x.json", "--json")
+    bare = _out(repo, SC_ARGS, "~")
+
+    for result in (human, as_json, bare):
+        _refused(result, "out_home_not_found")
+        text = result.stdout + result.stderr
+        assert "unexpected error" not in text and "does not know" not in text
+        assert "the home folder cannot be found" in result.stderr
+    payload = json.loads(as_json.stdout)
+    assert payload["rule"] == "out_home_not_found" and payload["exit_code"] == 2
+    assert payload["safe_to_share"] is True and "--out ~/x.json" in payload["summary"]
+    assert api.calls == [] and not list(here.iterdir())
+
+
+def test_a_user_name_is_still_unknown_when_home_is_missing(
+    repo: Path, client_file: Path, google: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    _users(monkeypatch, {})
+
+    result = _out(repo, SC_ARGS, "~nobody/x.json")
+
+    _refused(result, "out_user_unknown")
+    assert api.calls == []
+
+
+def _nfd_tracked(tmp_path: Path) -> Path:
+    """A checkout whose index holds ``Café.json`` in NFC while the disk lists it in NFD."""
+
+    root = _checkout_with(tmp_path / "form-only", "private/\n")
+    _git(root, "config", "core.precomposeunicode", "true")
+    (root / "private").mkdir()
+    tracked = root / "private" / "Cafe\u0301.json"
+    tracked.write_bytes(b"personal original\n")
+    _git(root, "add", "-f", "private/Cafe\u0301.json")
+    _git(root, "commit", "-q", "-m", "tracked report")
+    listed = subprocess.run(
+        ["git", "ls-files", "-z", "private"], cwd=root, capture_output=True, check=True
+    ).stdout
+    if listed != "private/Caf\u00e9.json\0".encode() or "Cafe\u0301.json" not in os.listdir(
+        root / "private"
+    ):
+        pytest.skip("this git and disk do not store the index name in NFC while listing NFD")
+    return root
+
+
+@pytest.mark.parametrize("force", [False, True])
+def test_a_tracked_file_in_another_unicode_form_is_the_tracked_path_refusal(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    force: bool,
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    root = _nfd_tracked(tmp_path)
+    name = "Cafe\u0301.json"
+    extra = ("--force",) if force else ()
+
+    for more in ((), ("--json",)):
+        result = _out(repo, SC_ARGS, root / "private" / name, *extra, *more)
+
+        _refused(result, "out_path_in_repo")
+        assert "git does not ignore it" in result.stderr
+        assert "spelled differently" not in result.stdout + result.stderr
+    assert api.calls == []
+    assert (root / "private" / "Cafe\u0301.json").read_bytes() == b"personal original\n"
+    assert not list((root / "private").glob(".*.mb-out.tmp"))
+    status = subprocess.run(
+        ["git", "status", "--short"], cwd=root, capture_output=True, check=True
+    ).stdout
+    assert status == b""
+
+
+def test_a_form_difference_with_a_missing_folder_is_the_tracked_path_refusal(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    root = _nfd_tracked(tmp_path)
+    shutil.rmtree(root / "private")
+
+    result = _out(repo, SC_ARGS, root / "private" / "Cafe\u0301.json")
+
+    _refused(result, "out_path_in_repo")
+    assert api.calls == [] and not (root / "private").exists()
+
+
+def test_the_index_spelling_against_the_disk_spelling_keeps_its_advice(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    # The name as git stores it (NFC) is not how the disk lists the file (NFD): the
+    # advice "spell it exactly as on disk" is the one that helps.
+    api = _signed(repo, client_file, google, monkeypatch)
+    root = _nfd_tracked(tmp_path)
+
+    result = _out(repo, SC_ARGS, root / "private" / "Caf\u00e9.json")
+
+    _refused(result, "out_path_git_unknown")
+    assert api.calls == []
+
+
+def test_a_form_and_case_difference_stays_the_spelling_refusal(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    api = _signed(repo, client_file, google, monkeypatch)
+    root = _nfd_tracked(tmp_path)
+
+    result = _out(repo, SC_ARGS, root / "private" / "CAFE\u0301.json")
+
+    _refused(result, "out_path_git_unknown")
+    assert api.calls == []
+
+
+# --- short home names: hidden only where they stand alone (#1080) ------------------------
+#
+# The rule: a home name of five letters or more is hidden wherever a path part contains
+# it (as before). A name of four or fewer is hidden only where no letter touches it, so
+# `sam.json`, `.sam`, `sam-report.json`, `sam2.json` and `sam_x.json` are hidden but
+# `samples.json` and `mysam.json` still show. Why this is safe: the home name is the
+# only thing the guard protects, and a part with a letter against the name is a different
+# word, so printing it does not print the name by itself; the temporary file's fixed
+# `.mb-out.tmp` frame is not part of the name that is checked.
+
+# Test ids stay neutral on purpose: pytest puts them into the temp folder's name.
+SHORT_HOMES = {"h3": "sam", "h4": "alex", "h8": "homefolder"}
+# (file name template, hidden for a short home, hidden for a long home); `{h}` home name.
+SHORT_NAMES = {
+    "exact": ("{h}", True, True),
+    "dot": (".{h}", True, True),
+    "json": ("{h}.json", True, True),
+    "report": ("{h}-report.json", True, True),
+    "case": ("{U}.json", True, True),
+    "digit": ("{h}2.json", True, True),
+    "tail": ("{h}ples.json", False, True),
+    "head": ("my{h}.json", False, True),
+}
+SHORT_MESSAGES = {
+    "summary": 0,
+    "exists": 2,
+    "temp-not-ignored": 2,
+    "leftover-after-write": 0,
+    "existing-temp": 1,
+    "leftover-after-failure": 1,
+}
+
+
+def _standalone(name: str, text: str) -> bool:
+    """Whether ``name`` stands in ``text`` with no letter against it."""
+
+    return re.search(rf"(?<![^\W\d_]){re.escape(name)}(?![^\W\d_])", text.lower()) is not None
+
+
+# The upper-case spelling of the home folder runs for three file names only.
+SHORT_CASES = [
+    (home_id, kind, message, spelling)
+    for spelling in ("as-is", "upper")
+    for message in SHORT_MESSAGES
+    for kind in SHORT_NAMES
+    for home_id in SHORT_HOMES
+    if spelling == "as-is" or kind in {"exact", "report", "tail"}
+]
+
+
+@pytest.mark.parametrize(("home_id", "kind", "message", "home_spelling"), SHORT_CASES)
+def test_a_short_home_name_is_hidden_only_where_it_stands_alone(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    home_id: str,
+    kind: str,
+    message: str,
+    home_spelling: str,
+) -> None:
+    if home_spelling == "upper" and not _case_insensitive(tmp_path):
+        pytest.skip("this disk tells apart folder names that differ only in case")
+    api = _signed(repo, client_file, google, monkeypatch)
+    real_unlink = os.unlink
+    home_name = SHORT_HOMES[home_id]
+    template, hidden_short, hidden_long = SHORT_NAMES[kind]
+    name = template.format(h=home_name, U=home_name.upper())
+    hidden = hidden_short if len(home_name) <= 4 else hidden_long
+    home = tmp_path / home_name
+    home.mkdir()
+    monkeypatch.setenv(
+        "HOME", str(tmp_path / (home_name.upper() if home_spelling == "upper" else home_name))
+    )
+    if message == "temp-not-ignored":
+        folder = _checkout_with(home / "checkout", "pulls/*\n!pulls/.*.tmp\n") / "pulls"
+        base = "~/checkout/pulls/"
+    else:
+        folder = home / "pulls"
+        base = "~/pulls/"
+    folder.mkdir()
+    if message.startswith("leftover"):
+        _stuck_unlink(monkeypatch, PermissionError)
+    if message in {"existing-temp", "leftover-after-failure"}:
+        _failing_link(monkeypatch)
+    target = folder / name
+    temp = folder / go_out.temp_name(name)
+    where = base + name if not hidden else "~/…"
+    temp_shown = go_out.temp_name(name) if not hidden else ".….mb-out.tmp"
+    expected_text = {
+        "summary": f"wrote {where} (mode 0600)",
+        "exists": f"--out {where} already exists",
+        "temp-not-ignored": f"--out {where}: inside a git checkout git must ignore both the file "
+        f"and its temporary file {temp_shown}",
+        "leftover-after-write": f"the temporary file {temp_shown} could not be removed",
+        "existing-temp": f"{temp_shown} is already there",
+        "leftover-after-failure": f"the temporary file {temp_shown} could not be removed",
+    }[message]
+
+    for extra in ((), ("--json",)):
+        if message == "exists":
+            target.write_text("{}", encoding="utf-8")
+        if message == "existing-temp":
+            temp.write_text("an earlier run", encoding="utf-8")
+        result = _out(repo, SC_ARGS, target, *extra)
+        text = result.stdout + result.stderr
+        assert result.exit_code == SHORT_MESSAGES[message], text
+        if extra:
+            payload = json.loads(result.stdout)
+            assert payload["safe_to_share"] is True
+            text = json.dumps(payload, ensure_ascii=False) + result.stderr
+            if message in {"summary", "leftover-after-write"}:
+                assert payload["out"] == where, text
+        folded = text.lower()
+        # Exactly what is hidden: the expected text is there, no full home path is,
+        # and the home name never stands alone.
+        expected = expected_text if not extra or message not in {"summary"} else where
+        assert expected in text, (expected, text)
+        assert str(home).lower() not in folded and str(home.resolve()).lower() not in folded
+        assert not _standalone(home_name, text), text
+        if hidden:
+            assert name.lower() not in folded or kind in {"exact", "dot"}, text
+            if len(home_name) > 4:
+                assert home_name not in folded, text
+        else:
+            assert name in text, text
+        for left in (temp, target):
+            if left.exists():
+                real_unlink(left)
+    if message == "temp-not-ignored":
+        assert api.calls == []
+
+
+@pytest.mark.parametrize("cut", ["refusal-120", "summary-200"])
+def test_a_cut_cannot_leave_a_short_home_name_standing_alone(
+    repo: Path,
+    client_file: Path,
+    google: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    cut: str,
+) -> None:
+    _signed(repo, client_file, google, monkeypatch)
+    home = tmp_path / "sam"
+    (home / "pulls").mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(home))
+    # `samples.json` is shown whole, but the display cut lands right after `sam`.
+    width = 120 if cut == "refusal-120" else 200
+    prefix = "~/pulls/"
+    padding = "x" * (width - 1 - len(prefix) - len("sam") - 1)
+    name = f"{padding}-samples.json"
+    assert (prefix + name)[: width - 1].endswith("-sam")
+    if cut == "refusal-120":
+        (home / "pulls" / name).write_text("{}", encoding="utf-8")
+
+    result = _out(repo, SC_ARGS, home / "pulls" / name)
+    text = result.stdout + result.stderr
+
+    assert result.exit_code == (2 if cut == "refusal-120" else 0), text
+    assert "sam…" not in text and not _standalone("sam", text), text
+    # The part is guarded again after the cut: the folder is shown as `~/…/`, then the name.
+    assert "~/…/" + padding[:50] in text, text
