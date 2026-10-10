@@ -437,6 +437,39 @@ def test_evidence_template_labels_print_mode_as_proxy(tmp_path: Path) -> None:
     assert "- Checkpoint verbs: rejected by `mb checkpoint --validate`: [repaired]\n" in mixed
     assert "- Checkpoint subjects: not `[verb] object`: []\n" in mixed
     assert "[None]" not in mixed
+    assert "Checkpoint findings:" not in mixed
+
+    state.claude["rubric"]["checkpoint_verbs"] = {
+        "ok": False,
+        "violations": [{"kind": "unknown_checkpoint_argument", "argument": "save"}],
+        "total_violations": 1,
+    }
+    unknown = harness.evidence_template(state, install_mode="editable", mb_version="mb 0.3.6")
+
+    assert "- Checkpoint commands: `mb checkpoint` takes no argument: save\n" in unknown
+    assert "Checkpoint verbs:" not in unknown
+    assert "Checkpoint findings:" not in unknown
+
+    state.claude["rubric"]["checkpoint_verbs"] = {
+        "ok": False,
+        "violations": [{"kind": "rejected_checkpoint_verb", "verb": "repaired"}] * 20,
+        "total_violations": 20,
+    }
+    at_cap = harness.evidence_template(state, install_mode="editable", mb_version="mb 0.3.6")
+
+    assert "Checkpoint findings:" not in at_cap
+
+    state.claude["rubric"]["checkpoint_verbs"]["total_violations"] = 26
+    capped = harness.evidence_template(state, install_mode="editable", mb_version="mb 0.3.6")
+
+    assert "- Checkpoint verbs: rejected by `mb checkpoint --validate`: [repaired]\n" in capped
+    assert "- Checkpoint findings: 26 in all; the lines above cover only the first 20\n" in capped
+    assert (
+        capped.replace(
+            "- Checkpoint findings: 26 in all; the lines above cover only the first 20\n", ""
+        )
+        == at_cap
+    )
 
 
 def test_materialize_fixture_profiles_create_observable_repo_states(

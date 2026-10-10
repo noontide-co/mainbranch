@@ -254,19 +254,26 @@ of `--repo`, `--validate` and `--mode`) may sit between `checkpoint` and the
 message flag, so an unrelated `git commit -m` after `;`, `&&`, `|`, a closing
 backtick or a sentence does not count; a backslash continuation (with `\n` or
 `\r\n` endings, with or without a space before the backslash) is followed. A
-finding is one of two kinds:
+finding is one of three kinds:
 
 - `rejected_checkpoint_verb`: the opening word is not accepted, such as
   `[repaired]`. It names the verb and the accepted ones.
 - `malformed_checkpoint_subject`: the note opens a bracket (`[`, `【`, `［`, `〔`) but
   is not `[verb] object`, such as `[]`, `[fixed]offer` or `[fixed][repaired] ...`.
   It carries the validator's code (`missing_prefix`) and the subject. Placeholders
-  (`"..."`, `"<subject>"`, `[verb]`, `[...]`) and notes with no bracket at all
-  are skipped; other `--validate` errors (vague object, future tense, length) are
+  (`"..."`, `"<subject>"`, `[verb]`, `[...]`, and template variables such as
+  `[$VERB]`, `[${VERB}]` and `[{verb}]`) and notes with no bracket at all are
+  skipped; other `--validate` errors (vague object, future tense, length) are
   not reported here.
+- `unknown_checkpoint_argument`: one bare word sits between `mb checkpoint` and the
+  message flag. `mb checkpoint` takes no positional argument, so the command is
+  not valid whatever the note says; the finding names the word (`argument`) and
+  the note is not read as a subject. Only a command that starts with `mb` counts,
+  so prose about a checkpoint is left alone.
 
-`violations` lists at most 20 findings; `total_violations` counts them all and
-`accepted` lists the accepted verbs once. It is a warning for transcript review,
+`violations` lists at most 20 findings; `total_violations` counts them all (the
+harness summary then says how many there were in all and that its lines cover
+only the first 20) and `accepted` lists the accepted verbs once. It is a warning for transcript review,
 not a hard gate.
 
 The rubric's `credential_safety` result is a hard gate: the harness fails the
