@@ -569,6 +569,7 @@ def test_google(
 
     recorded = False
     not_recorded_reason = ""
+    not_recorded_detail = ""
     validation: dict[str, Any]
     # Recording writes .mb/connect.yaml; a tracked one is left as it is.
     tracked = not record_in_tracked_config and connect_mod.config_tracked_by_git(target)
@@ -584,15 +585,21 @@ def test_google(
         validation = _validation_record(overall, products, previous, checked_at)
         live["validation"] = validation
         live["last_checked_at"] = checked_at
-        recorded = connect_mod._record_validation(target, config, provider.id, live)
-        if not recorded:
-            not_recorded_reason = "user_scope_read_only"
+        not_recorded = connect_mod._record_validation(target, config, provider.id, live)
+        recorded = not not_recorded
+        not_recorded_reason = str(not_recorded.get("not_recorded_reason") or "")
+        not_recorded_detail = str(not_recorded.get("not_recorded_detail") or "")
     else:
         validation = _validation_record(overall, products, {}, checked_at)
         # `read_minted_token` has already recorded this one for status.
         recorded = overall["state"] == gc.STATE_REAUTH_REQUIRED and not tracked
+        if minted.get("not_recorded_note"):
+            # `read_minted_token` could not write the user-scope file.
+            recorded = False
+            not_recorded_reason = "user_scope_write_failed"
+            not_recorded_detail = str(minted["not_recorded_note"])
     status = status_again()
-    return {
+    result = {
         "ok": bool(overall["ok"]),
         "provider": provider.id,
         "stored": bool(status.get("stored", before.get("stored"))),
@@ -615,6 +622,9 @@ def test_google(
         "status": status,
         "safe_to_share": True,
     }
+    if not_recorded_detail:
+        result["not_recorded_detail"] = not_recorded_detail
+    return result
 
 
 def render_products(products: dict[str, dict[str, Any]], indent: str = "  ") -> None:
@@ -644,6 +654,8 @@ def render_test_result(result: dict[str, Any]) -> None:
         )
     elif result.get("not_recorded_reason") == "user_scope_read_only":
         connect_mod.render_user_scope_not_recorded()
+    elif result.get("not_recorded_reason") == "user_scope_write_failed":
+        connect_mod.render_user_scope_write_failed(result)
     elif not result["ok"] and not result.get("recorded"):
         print(
             "recorded: no (this says nothing about the sign-in itself; "

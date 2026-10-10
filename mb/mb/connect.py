@@ -1058,6 +1058,24 @@ def _write_user_scope_provider(
     return _write_user_scope(data)
 
 
+def _restore_secret(store: SecretStore, ref: str, previous: SecretProbe) -> bool:
+    """Put a credential back as it was (or remove the one just created).
+
+    Recovery gets its own bounded attempt even if the original command has
+    exhausted its credential deadline. Never exposes backend exception text or
+    credential values: it only says whether the restore worked.
+    """
+
+    try:
+        if previous.present:
+            store.set(ref, previous.value, deadline=new_credential_deadline())
+        else:
+            store.delete(ref)
+    except Exception:
+        return False
+    return True
+
+
 def _drop_user_scope_metadata_only(repo_id: str, provider_id: str) -> bool:
     """Remove this repo's user-scope entry for a provider when it holds no credential.
 
@@ -1967,46 +1985,36 @@ def connect_provider(
                 else:
                     reason, fix = _user_scope_write_failure(exc)
                     cause = f"could not be written: {reason}"
-            if previous_secret is not None:
-                try:
-                    # Recovery gets its own bounded attempt even if the original
-                    # command has exhausted its credential deadline.
-                    if previous_secret.present:
-                        store.set(ref, previous_secret.value, deadline=new_credential_deadline())
-                    else:
-                        store.delete(ref)
-                except Exception:
-                    # Never expose backend exception text or credential values.
-                    command = [
-                        "mb",
-                        "connect",
-                        provider.id,
-                        "--token-stdin",
-                        "--scope",
-                        "user",
-                        "--repo",
-                        str(target),
-                    ]
-                    if provider.category == "custom":
-                        command.append("--custom")
-                    if account_label:
-                        command.extend(["--account", account_label])
-                    for key, value in metadata.items():
-                        command.extend(["--metadata", f"{key}={value}"])
-                    action = "replaced" if previous_secret.present else "stored"
-                    record_state = (
-                        "The repo metadata is unchanged, but the user-scope record "
-                        "may have changed."
-                        if isinstance(exc, UserScopeRecordRestoreError)
-                        else "The repo metadata is unchanged."
-                    )
-                    raise MetadataWriteError(
-                        f"The {provider.name} credential was {action} but not recorded: "
-                        f"the user-scope connect file {shown} {cause}, and the "
-                        f"previous credential state could not be restored. {record_state} "
-                        f"{fix} first, then rerun "
-                        f"`{_shell_replay_command(command, target)}` with the credential again."
-                    ) from None
+            if previous_secret is not None and not _restore_secret(store, ref, previous_secret):
+                command = [
+                    "mb",
+                    "connect",
+                    provider.id,
+                    "--token-stdin",
+                    "--scope",
+                    "user",
+                    "--repo",
+                    str(target),
+                ]
+                if provider.category == "custom":
+                    command.append("--custom")
+                if account_label:
+                    command.extend(["--account", account_label])
+                for key, value in metadata.items():
+                    command.extend(["--metadata", f"{key}={value}"])
+                action = "replaced" if previous_secret.present else "stored"
+                record_state = (
+                    "The repo metadata is unchanged, but the user-scope record may have changed."
+                    if isinstance(exc, UserScopeRecordRestoreError)
+                    else "The repo metadata is unchanged."
+                )
+                raise MetadataWriteError(
+                    f"The {provider.name} credential was {action} but not recorded: "
+                    f"the user-scope connect file {shown} {cause}, and the "
+                    f"previous credential state could not be restored. {record_state} "
+                    f"{fix} first, then rerun "
+                    f"`{_shell_replay_command(command, target)}` with the credential again."
+                ) from None
             if isinstance(exc, OSError):
                 if previous_secret is None:
                     undone = "No credential was changed."
@@ -4142,17 +4150,38 @@ def _validate_with_provider(
     }
 
 
+def _user_scope_not_recorded_detail(exc: OSError) -> str:
+    """Why a check could not be written to the user-scope file, for an operator.
+
+    Built from the error number only: no backend text, value or absolute home path.
+    """
+
+    shown = _shown_user_scope_path(_user_scope_path())
+    if isinstance(exc, UserScopeRecordRestoreError):
+        return (
+            f"the user-scope connect file {shown} could not be written, and its previous "
+            "contents could not be restored, so it may have changed. Inspect and repair "
+            "that file, then rerun the check"
+        )
+    cause, fix = _user_scope_write_failure(exc)
+    return (
+        f"the user-scope connect file {shown} could not be written: {cause}. "
+        f"{fix}, then rerun the check"
+    )
+
+
 def _record_validation(
     target: Path,
     config: dict[str, Any],
     provider_id: str,
     entry: dict[str, Any],
-) -> bool:
+) -> dict[str, Any]:
     """Write a tested entry back: repo metadata, and user scope for a user-scope entry.
 
-    A check only needs to read the user-scope file. When it is read-only the
-    repo metadata is still written, the file is left as it is, and this
-    returns False (the check was not recorded in user scope).
+    A check only needs to read the user-scope file. When it is read-only, or
+    cannot be written (a full disk, an I/O error), the repo metadata is still
+    written, the file is left as it was, and this returns the result keys
+    that say so (empty when the check was recorded everywhere).
     """
 
     config["providers"][provider_id] = entry
@@ -4171,8 +4200,14 @@ def _record_validation(
                 entry=entry,
             )
         except UserScopeReadOnlyError:
-            return False
-    return True
+            return {"recorded": False, "not_recorded_reason": "user_scope_read_only"}
+        except OSError as exc:
+            return {
+                "recorded": False,
+                "not_recorded_reason": "user_scope_write_failed",
+                "not_recorded_detail": _user_scope_not_recorded_detail(exc),
+            }
+    return {}
 
 
 def test_provider(
@@ -4298,9 +4333,9 @@ def test_provider(
     entry["last_checked_at"] = validation["checked_at"]
     # Recording writes .mb/connect.yaml; a tracked one is left as it is.
     tracked = not record_in_tracked_config and config_tracked_by_git(target)
-    user_scope_read_only = False
+    not_recorded: dict[str, Any] = {}
     if not tracked:
-        user_scope_read_only = not _record_validation(target, config, provider.id, entry)
+        not_recorded = _record_validation(target, config, provider.id, entry)
     status = status_provider(
         provider.id,
         target,
@@ -4319,9 +4354,7 @@ def test_provider(
         "status": status,
         "safe_to_share": True,
     }
-    if user_scope_read_only:
-        result["recorded"] = False
-        result["not_recorded_reason"] = "user_scope_read_only"
+    result.update(not_recorded)
     if tracked:
         result["recorded"] = False
         result["not_recorded_reason"] = "connect_yaml_tracked"
@@ -5363,6 +5396,8 @@ def render_test_result(result: dict[str, Any]) -> None:
         next_command = str(status.get("repair_command") or "")
     if result.get("not_recorded_reason") == "user_scope_read_only":
         render_user_scope_not_recorded()
+    elif result.get("not_recorded_reason") == "user_scope_write_failed":
+        render_user_scope_write_failed(result)
     if next_command:
         print(f"next: {next_command}")
 
@@ -5370,6 +5405,11 @@ def render_test_result(result: dict[str, Any]) -> None:
 def render_user_scope_not_recorded() -> None:
     shown = UserScopeReadOnlyError(_user_scope_path()).shown
     print(f"recorded: no (the user-scope connect file {shown} is read-only)")
+
+
+def render_user_scope_write_failed(result: dict[str, Any]) -> None:
+    detail = result.get("not_recorded_detail") or "the user-scope file was not written"
+    print(f"recorded: no ({detail})")
 
 
 def render_rotate_result(result: dict[str, Any]) -> None:
