@@ -23,6 +23,12 @@ from mb.durable import atomic_write_text
 from tests.test_connect_followups_1076 import _user_scope_cloudflare
 from tests.test_connect_followups_1116 import _fail_user_write
 from tests.test_google_connect import (  # noqa: F401 (fixtures are used by name)
+    ACCESS,
+    CLIENT_SECRET,
+    LEGACY_TOKEN,
+    MINTED,
+    REFRESH,
+    REFRESH_2,
     _config,
     _local_secrets,
     _oauth,
@@ -110,11 +116,14 @@ def _corrupt_before_write(
     monkeypatch.setattr(connect_mod, "_write_user_scope_provider", corrupt)
 
 
-def _assert_clean(output: str, tmp_path: Path, secrets: dict[str, Any]) -> None:
+SENTINELS = (CLIENT_SECRET, REFRESH, REFRESH_2, ACCESS, MINTED, LEGACY_TOKEN, "cf-old-token-1076")
+
+
+def _assert_clean(output: str, tmp_path: Path) -> None:
     assert str(tmp_path) not in output and "Traceback" not in output
     assert "UnicodeDecodeError" not in output and "codec" not in output
-    for value in secrets.values():
-        assert not isinstance(value, str) or value not in output
+    for value in SENTINELS:
+        assert value not in output
 
 
 @pytest.mark.parametrize("kind", list(BAD_FILES))
@@ -156,7 +165,7 @@ def test_signin_with_an_unreadable_user_scope_file_restores_both_slots(
     assert config_path.read_bytes() == config_before
     assert connect_mod._user_scope_path().read_bytes() == BAD_FILES[kind]
     assert _tmp_files(tmp_path) == []
-    _assert_clean(result.output, tmp_path, dict(secrets_before))
+    _assert_clean(result.output, tmp_path)
 
 
 # --- 3. corrupt user-scope file read after the repo metadata was written ------------------
@@ -186,7 +195,7 @@ def test_corrupt_user_scope_file_after_the_repo_write_leaves_no_half_update(
 
     assert result["ok"] is False and result["rule"] == "reauth_required"
     assert "unreadable or invalid YAML" in result["not_recorded_note"]
-    _assert_clean(result["not_recorded_note"], tmp_path, {})
+    _assert_clean(result["not_recorded_note"], tmp_path)
     assert config_path.read_bytes() == config_before
     assert path.read_bytes() == BAD_FILES[kind]
     assert _tmp_files(tmp_path) == []
@@ -213,7 +222,7 @@ def test_read_with_a_user_scope_file_bad_from_the_start_is_not_recorded(
     assert result["not_recorded_reason"] == "user_scope_write_failed"
     assert "unreadable or invalid YAML" in result["not_recorded_note"]
     assert "could not be put back" not in result["not_recorded_note"]
-    _assert_clean(json.dumps(result), tmp_path, secrets)
+    _assert_clean(json.dumps(result), tmp_path)
     assert config_path.read_bytes() == config_before
     assert path.read_bytes() == BAD_FILES[kind]
     assert dict(_local_secrets()) == secrets
@@ -239,9 +248,9 @@ def test_signin_with_a_user_scope_file_bad_from_the_start_stores_nothing(
     for kind, content in BAD_FILES.items():
         path.write_bytes(content)
         result = _oauth(repo, *args)
-        assert result.exit_code != 0, result.output
+        assert result.exit_code == 2, result.output
         messages[kind] = json.loads(result.stdout)
-        _assert_clean(result.output, tmp_path, secrets_before)
+        _assert_clean(result.output, tmp_path)
         assert dict(_local_secrets()) == secrets_before
         assert config_path.read_bytes() == config_before
         assert path.read_bytes() == content
@@ -249,27 +258,14 @@ def test_signin_with_a_user_scope_file_bad_from_the_start_stores_nothing(
 
     # A file that is not UTF-8 gets the message invalid YAML gets.
     assert messages["non_utf8"] == messages["yaml"]
+    assert messages["yaml"]["state"] == "config_corrupt"
     assert "unreadable or invalid YAML" in json.dumps(messages["yaml"])
 
 
 # --- 3b. a check never half-records ----------------------------------------------------
 
 
-@pytest.mark.parametrize("as_json", [False, True])
-@pytest.mark.parametrize("kind", list(BAD_FILES))
-def test_connect_test_with_a_corrupt_user_scope_file_never_half_records(
-    repo: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-    kind: str,
-    as_json: bool,
-) -> None:
-    monkeypatch.setenv("HOME", str(tmp_path))
-    _user_scope_cloudflare(repo)
-    path = connect_mod._user_scope_path()
-    config_path = repo / ".mb" / "connect.yaml"
-    config_before = config_path.read_bytes()
-    secrets = dict(_local_secrets())
+def _stub_check(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         connect_mod,
         "_validate_with_provider",
@@ -281,6 +277,45 @@ def test_connect_test_with_a_corrupt_user_scope_file_never_half_records(
             "summary": "stubbed check",
         },
     )
+
+
+def _connect_test(repo: Path, as_json: bool) -> Any:
+    args = ["connect", "test", "cloudflare", "--repo", str(repo), *(["--json"] if as_json else [])]
+    return runner.invoke(app, args)
+
+
+def _assert_not_recorded(result: Any, as_json: bool) -> None:
+    assert "unreadable or invalid YAML" in result.output
+    assert "put back" not in result.output
+    if as_json:
+        payload = json.loads(result.stdout)
+        assert payload["recorded"] is False
+        assert payload["not_recorded_reason"] == "user_scope_write_failed"
+    else:
+        assert "recorded: no (the user-scope connect file ~/" in result.output
+
+
+@pytest.mark.parametrize("validated", [False, True])
+@pytest.mark.parametrize("as_json", [False, True])
+@pytest.mark.parametrize("kind", list(BAD_FILES))
+def test_connect_test_with_a_corrupt_user_scope_file_never_half_records(
+    repo: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    kind: str,
+    as_json: bool,
+    validated: bool,
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    _user_scope_cloudflare(repo)
+    path = connect_mod._user_scope_path()
+    config_path = repo / ".mb" / "connect.yaml"
+    _stub_check(monkeypatch)
+    if validated:
+        assert _connect_test(repo, False).exit_code == 0
+    config_before = config_path.read_bytes()
+    user_before = path.read_bytes()
+    secrets = dict(_local_secrets())
     real = connect_mod._write_config
 
     def write_then_corrupt(*args: Any, **kwargs: Any) -> Path:
@@ -289,18 +324,43 @@ def test_connect_test_with_a_corrupt_user_scope_file_never_half_records(
         return out
 
     monkeypatch.setattr(connect_mod, "_write_config", write_then_corrupt)
-    cli = ["connect", "test", "cloudflare", "--repo", str(repo), *(["--json"] if as_json else [])]
 
-    result = runner.invoke(app, cli)
+    result = _connect_test(repo, as_json)
 
-    _assert_clean(result.output, tmp_path, secrets)
-    assert "unreadable or invalid YAML" in result.output
-    assert "recorded: no" in result.output or '"recorded": false' in result.output
-    if as_json:
-        payload = json.loads(result.stdout)
-        assert payload["recorded"] is False
-        assert payload["not_recorded_reason"] == "user_scope_write_failed"
-        assert "put back" not in payload["not_recorded_detail"]
+    # The exit follows the status the repo metadata is left with: a check that
+    # was already recorded as ready stays ready; one that never was, needs action.
+    assert result.exit_code == (0 if validated else 1), result.output
+    _assert_clean(result.output, tmp_path)
+    _assert_not_recorded(result, as_json)
+    assert config_path.read_bytes() == config_before
+    assert path.read_bytes() == BAD_FILES[kind] != user_before
+    assert dict(_local_secrets()) == secrets
+    assert _tmp_files(tmp_path) == []
+
+
+@pytest.mark.parametrize("as_json", [False, True])
+@pytest.mark.parametrize("kind", list(BAD_FILES))
+def test_connect_test_with_a_user_scope_file_bad_from_the_start_never_half_records(
+    repo: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    kind: str,
+    as_json: bool,
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    _user_scope_cloudflare(repo)
+    path = connect_mod._user_scope_path()
+    config_path = repo / ".mb" / "connect.yaml"
+    _stub_check(monkeypatch)
+    path.write_bytes(BAD_FILES[kind])
+    config_before = config_path.read_bytes()
+    secrets = dict(_local_secrets())
+
+    result = _connect_test(repo, as_json)
+
+    _assert_clean(result.output, tmp_path)
+    _assert_not_recorded(result, as_json)
+    assert result.exit_code == 1, result.output
     assert config_path.read_bytes() == config_before
     assert path.read_bytes() == BAD_FILES[kind]
     assert dict(_local_secrets()) == secrets
@@ -313,17 +373,7 @@ def test_connect_test_says_so_when_the_repo_metadata_cannot_be_put_back(
     monkeypatch.setenv("HOME", str(tmp_path))
     _user_scope_cloudflare(repo)
     path = connect_mod._user_scope_path()
-    monkeypatch.setattr(
-        connect_mod,
-        "_validate_with_provider",
-        lambda provider, secret, *a, **k: {
-            "ok": True,
-            "state": "ready",
-            "checked_at": "2026-10-10T00:00:00Z",
-            "provider_verified": True,
-            "summary": "stubbed check",
-        },
-    )
+    _stub_check(monkeypatch)
     real_write = connect_mod._write_config
     real_atomic = atomic_write_text
     broken = {"on": False}
@@ -347,7 +397,7 @@ def test_connect_test_says_so_when_the_repo_metadata_cannot_be_put_back(
     payload = json.loads(result.stdout)
     assert payload["recorded"] is False
     assert "could not be put back either" in payload["not_recorded_detail"]
-    _assert_clean(result.output, tmp_path, {})
+    _assert_clean(result.output, tmp_path)
     assert "synthetic" not in result.output
 
 
@@ -409,3 +459,42 @@ def test_connect_test_google_calls_a_read_only_file_read_only(
     assert "is read-only" in human.output
     assert str(tmp_path) not in as_json.output + human.output
     assert (repo / ".mb" / "connect.yaml").read_bytes() == config_before
+
+
+# --- 5. other readers of the user-scope file ---------------------------------------------
+
+
+def test_doctor_still_names_a_non_utf8_user_scope_file_without_a_traceback(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    _user_scope_cloudflare(repo)
+    path = connect_mod._user_scope_path()
+    path.write_bytes(NON_UTF8)
+
+    human = runner.invoke(app, ["doctor", str(repo)])
+    as_json = runner.invoke(app, ["doctor", str(repo), "--json"])
+
+    assert human.exit_code == 1 and as_json.exit_code == 1
+    assert "could not read `~/" in human.output and "it is not UTF-8 text" in human.output
+    error = json.loads(as_json.stdout)["errors"][0]
+    assert error["code"] == "unreadable_file" and "~/" in error["message"]
+    for out in (human.output, as_json.output):
+        assert str(tmp_path) not in out and "Traceback" not in out
+    assert path.read_bytes() == NON_UTF8
+
+
+def test_status_names_a_non_utf8_user_scope_file_as_corrupt(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    _user_scope_cloudflare(repo)
+    connect_mod._user_scope_path().write_bytes(NON_UTF8)
+
+    result = runner.invoke(app, ["connect", "status", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["state"] == "config_corrupt"
+    assert "unreadable or invalid YAML" in result.output
+    _assert_clean(result.output, tmp_path)
