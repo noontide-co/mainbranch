@@ -23,8 +23,8 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   hidden only where it stands alone (`sam.json`, `sam-report.json`), so
   `samples.json` and similar report names show again; longer names are hidden
   as before, and a cut to fit the terminal can no longer leave a short name
-  standing alone. A tracked file named in another Unicode form (git stores `é`
-  as one character, the disk lists it as two) is refused as a tracked path
+  standing alone. With `core.precomposeunicode=true`, a tracked file named in another
+  Unicode form (git stores `é` as one character, the disk lists it as two) is refused as a tracked path
   (`out_path_in_repo`) instead of the generic spelling message. Nothing is read
   or written in any refusal, and no JSON key changed.
 - `mb connect <provider> --scope user` and `mb connect rotate` now put your
