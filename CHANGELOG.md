@@ -13,6 +13,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Fixed
 
+- A user-scope connect file that is not valid UTF-8 now counts as unreadable,
+  like one that is not valid YAML. Before, a Google read left
+  `.mb/connect.yaml` saying the sign-in expired with no note, a Google sign-in
+  kept the new grant and blamed the repo metadata (or stopped on
+  "unexpected error"), and the file was never named. And `mb connect test`
+  with an unreadable user-scope file no longer records the check in
+  `.mb/connect.yaml` alone: it puts the file back as it was and says the check
+  was not recorded.
 - `mb status` repair and update suggestions now name your business repo when
   you run it from another folder: the skill-wiring repairs (`mb skill link`,
   `mb skill repair`), the ranked next action and the drift repair, `mb update`

@@ -1090,7 +1090,9 @@ check, restores the previous sign-in (or removes the new one) and exits 1 with
 `metadata_write_failed`, like the other providers. If a restore fails, the
 message says which part stayed changed (the Google grant, the access token, or
 both; for other providers, that provider's credential). A user-scope file that
-cannot be read or parsed does the same, and the message says to fix or move it.
+cannot be read or parsed (including one that is not valid UTF-8) does the same,
+and the message says to fix or move it. `mb connect test` with such a file
+puts `.mb/connect.yaml` back as it was and says the check was not recorded.
 Fresh sign-in retries keep `--scope user`, the selected repo and any
 access-token replacement flag; use the same OAuth client and metadata again.
 When the folder is what refuses a write (permission denied on the folder, not on
