@@ -122,11 +122,16 @@ STATUS_CONVENTION_SCHEMAS = (
 )
 
 
+def _join_labels(labels: list[str]) -> str:
+    return ", ".join(labels[:-1]) + f" and {labels[-1]}" if len(labels) > 1 else labels[0]
+
+
 def status_conventions() -> str:
     """The CLAUDE.md conventions lines for `status:` values, one set per file type."""
+    labels = [label.lower() for label, _ in STATUS_CONVENTION_SCHEMAS]
     lines = [
-        "- Each file type has its own `status:` values; `mb validate` names the",
-        "  allowed values when one is wrong:",
+        f"- {_join_labels(labels).capitalize()} each have their own `status:` values;",
+        "  `mb validate` names the allowed values when one is wrong:",
     ]
     for label, schema in STATUS_CONVENTION_SCHEMAS:
         allowed = validate_mod.SCHEMAS[schema]["enums"]["status"]

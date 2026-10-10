@@ -839,6 +839,46 @@ def _repo_layout_check(repo: Path) -> dict[str, Any]:
     }
 
 
+# The one-set status line `mb init` wrote into CLAUDE.md before #1121, in both
+# shipped forms (bundled template with backticks, embedded fallback without).
+_OLD_STATUS_LINE_RE = re.compile(
+    r"Status field:[ \t]*`?proposed \| running \| scaling \| killed \| graduated \| died`?"
+)
+
+
+def _old_status_line_check(repo: Path) -> dict[str, Any] | None:
+    """Warn when CLAUDE.md still teaches one status set for every file type (#1122).
+
+    Returns None when the line is absent, so repos without it see no new check.
+    The check only suggests the replacement; it never rewrites CLAUDE.md.
+    """
+    path = repo / "CLAUDE.md"
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    if _OLD_STATUS_LINE_RE.search(text) is None:
+        return None
+    from mb import init as init_mod
+
+    suggested = init_mod.status_conventions()
+    repair = (
+        "CLAUDE.md still says every file type uses `proposed | running | scaling | killed | "
+        "graduated | died`; `mb validate` rejects `running` on a bet. Replace the "
+        "`Status field:` line (and any lines continuing it) with:\n" + suggested
+    )
+    return {
+        "name": "claude-status-line",
+        "ok": False,
+        "detail": repair,
+        "severity": "warn",
+        "path": "CLAUDE.md",
+        "repair": repair,
+        "suggested_text": suggested,
+        "safe_to_share": True,
+    }
+
+
 def _legacy_campaigns_check(repo: Path) -> dict[str, Any]:
     """Detect legacy `campaigns/` records as drift from the canonical `pushes/` shape.
 
@@ -1970,6 +2010,9 @@ def run(path: str, *, qualify: bool = True) -> dict[str, Any]:
             "safe_to_share": True,
         }
     )
+    old_status_line = _old_status_line_check(repo)
+    if old_status_line is not None:
+        checks.append(old_status_line)
     checkpoint_hook = checkpoint_mod.hook_status(repo)
     hook_state = str(checkpoint_hook.get("state"))
     checks.append(

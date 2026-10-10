@@ -2448,3 +2448,47 @@ def test_validate_paths_rejects_escapes(tmp_path: Path) -> None:
 
     with pytest_mod.raises(ValueError):
         run(str(tmp_path), paths=["../outside"])
+
+
+def test_validate_names_the_allowed_status_values_in_the_rollup(tmp_path: Path) -> None:
+    # #1122: the rollup an agent reads (`repair`, shared with `mb status` and
+    # `mb doctor`) named no values, and its example `shipped` is valid nowhere.
+    from mb.validate import SCHEMAS
+
+    _write(
+        tmp_path / "bets" / "2026-10-01-bad.md",
+        "---\nstatus: running\nopened: 2026-10-01\n---\n# Bad\n",
+    )
+    _write(
+        tmp_path / "decisions" / "2026-10-01-bad.md",
+        "---\ndate: 2026-10-01\nstatus: pending\n---\n# Bad\n",
+    )
+
+    report = run(path=str(tmp_path))
+
+    entry = report["validation_categories"]["by_category"]["status_enum_mismatch"]
+    assert entry["allowed_status"] == {
+        "bets": sorted(SCHEMAS["bets"]["enums"]["status"]),
+        "decisions": sorted(SCHEMAS["decisions"]["enums"]["status"]),
+    }
+    for text in (entry["repair"], entry["operator_summary"]):
+        assert "bets: canceled | closed | open | paused" in text
+        assert "decisions: accepted | proposed | rejected | running | superseded" in text
+        assert "shipped" not in text
+    assert "allowed_status" not in report["validation_categories"]["by_category"].get(
+        "missing_required_key", {}
+    )
+
+
+def test_validate_leaves_other_status_like_enums_out_of_the_allowed_status_list(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "core" / "repo-topology.md",
+        "---\ntype: repo_topology\nstatus: wrong\n---\n# Topology\n",
+    )
+
+    report = run(path=str(tmp_path))
+
+    for entry in report["validation_categories"]["by_category"].values():
+        assert "allowed_status" not in entry
