@@ -274,9 +274,10 @@ stays bare. The list is empty when there is nothing for a person to run.
 `mb status` names the repo in the same way (#1083), from another folder, for
 exactly these fields: `update.command` and `update.update_check_command`;
 `command` and `repair_command` anywhere in the report (including
-`runtime.skill_wiring`, its `mb_installs` and `shadow_report`, and
-`ranked_actions[].command`); the `repair` text of `drift.items[]`,
-`readiness.checks[]` and `runtime`; `operator_summary`, `top_repair` and
+`runtime.skill_wiring`, its `mb_installs` and `shadow_report`,
+`ranked_actions[].command` and the connect providers); the `repair` text
+anywhere in the report (`drift.items[]`, `readiness.checks[]`,
+`runtime.skill_wiring`); `operator_summary`, `top_repair` and
 `top_operator_summary` in `validation.validation_categories`; and
 `validation.legacy_repair.next_steps[]`. `mb spine show` and `mb spine init`
 name it in their `summary` (`mb spine declare --repo <path> --store <provider>`).

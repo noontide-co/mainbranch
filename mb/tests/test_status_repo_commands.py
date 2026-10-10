@@ -71,6 +71,8 @@ def test_status_wiring_repairs_name_the_business_from_another_folder(business: P
     assert not wiring["ok"]
     _names_the_business_once(wiring["repair_command"], business)
     assert wiring["repair_command"].startswith("mb skill link --repo ")
+    _names_the_business_once(wiring["mb_installs"]["repair_command"], business)
+    _names_the_business_once(wiring["shadow_report"]["repair_command"], business)
     for item in report["drift"]["items"]:
         if item["id"] == "broken_skill_wiring":
             _names_the_business_once(item["repair"], business)
@@ -139,3 +141,39 @@ def test_spine_init_summary_names_the_business(business: Path) -> None:
     assert result.exit_code == 0, result.output
     summary = json.loads(result.stdout)["summary"]
     _names_the_business_once(summary.split("`")[1], business)
+
+
+def test_status_validation_repairs_name_the_business(business: Path) -> None:
+    campaign = business / "campaigns" / "spring" / "campaign.md"
+    campaign.parent.mkdir(parents=True)
+    campaign.write_text("---\ntype: campaign\nstatus: draft\n---\n# Spring\n")
+    result = runner.invoke(app, ["status", str(business), "--json"])
+    assert result.exit_code in {0, 1}, result.output
+    validation = json.loads(result.stdout)["validation"]
+    drift = validation["validation_categories"]["by_category"]["migration_drift"]
+    _names_the_business_once(drift["repair"], business)
+    _names_the_business_once(drift["operator_summary"], business)
+    steps = [s for s in validation["legacy_repair"]["next_steps"] if "`mb " in s]
+    assert steps
+    for step in steps:
+        _names_the_business_once(step, business)
+
+
+def test_status_qualifies_any_provider_repair_command_in_its_own_report(business: Path) -> None:
+    """The walker covers `repair_command` and `repair` everywhere, connect providers included."""
+    report: dict[str, Any] = {
+        "integrations": {
+            "providers": [
+                {"repair_command": "mb connect hydrate --repo ."},
+                {"repair": "Run `mb connect hydrate --repo .` from this workspace."},
+            ]
+        },
+        "mb_command": "mb status",
+        "runtime": {"codex_cli": {"fact_commands": ["mb status --json --peek"]}},
+    }
+    status.qualify_commands(report, business)
+    providers = report["integrations"]["providers"]
+    _names_the_business_once(providers[0]["repair_command"], business)
+    _names_the_business_once(providers[1]["repair"], business)
+    assert report["mb_command"] == "mb status"
+    assert report["runtime"]["codex_cli"]["fact_commands"] == ["mb status --json --peek"]
