@@ -269,13 +269,16 @@ finding is one of three kinds:
 - `unknown_checkpoint_argument`: one bare word sits between `mb checkpoint` and the
   message flag. `mb checkpoint` takes no positional argument, so the command is
   not valid whatever the note says; the finding names the word (`argument`) and
-  the note is not read as a subject. Only a command that starts with `mb` counts,
-  so prose about a checkpoint is left alone.
+  the note is not read as a subject. Only `checkpoint` right after the word `mb`
+  counts (`uv run mb checkpoint ...` does, a path to the binary does not), and a
+  small prose word there (`with`, `then`, `and`, `to`, `using`, `via` and the
+  like) is left alone, so a sentence such as "mb checkpoint with --message ..."
+  is not reported.
 
 `violations` lists at most 20 findings; `total_violations` counts them all (the
 harness summary then says how many there were in all and that its lines cover
-only the first 20) and `accepted` lists the accepted verbs once. It is a warning for transcript review,
-not a hard gate.
+only the first 20) and `accepted` lists the accepted verbs once. It is a warning
+for transcript review, not a hard gate.
 
 The rubric's `credential_safety` result is a hard gate: the harness fails the
 run when visible Claude text reads, prints, or asks for a credential, puts a

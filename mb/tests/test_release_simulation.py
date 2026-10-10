@@ -1143,6 +1143,28 @@ def test_release_framing_wrapped_one_word_per_line_matches_the_single_line_count
     assert len(_release_framing_examples(wrapped)) == len(_release_framing_examples(answer))
 
 
+def test_release_framing_window_is_bounded_by_characters() -> None:
+    lines = ["x" * 200] * 50
+    joinable = [True] * 50
+    window = release_simulation._wrapped_text(lines, joinable, [1] * 50, 0)
+
+    # The first line, then lines until 240 characters follow.
+    assert window.count("\n") + 1 <= 4
+
+
+def test_release_framing_longest_owner_lookahead_wraps_like_one_line() -> None:
+    answer = (
+        "test the release with a handful of real beta customers "
+        "who happened-to-sign-up-yesterday and others wrote-back-today"
+    )
+    wrapped = "\n".join(answer.split())
+
+    assert _release_framing_examples(answer) == _release_framing_examples(wrapped) == []
+    made_up = answer.replace("wrote-back-today", "don't exist")
+    assert len(_release_framing_examples(made_up)) == 1
+    assert len(_release_framing_examples("\n".join(made_up.split()))) == 1
+
+
 _TIMING_LIMIT_SECONDS = 1.0
 
 
@@ -1359,6 +1381,34 @@ def test_checkpoint_verbs_reports_an_unknown_argument_once(text: str, argument: 
 @pytest.mark.parametrize(
     "text",
     [
+        'mb checkpoint with --message "[repaired] x"',
+        'Run mb checkpoint then -m "[repaired] x"',
+        'mb checkpoint and then -m "[repaired] x"',
+        'mb checkpoint using --message "[fixed] x"',
+        'mb checkpoint via -m "[repaired] x"',
+        'mb checkpoint With -m "[repaired] x"',
+        'the mb checkpoint to -m "[repaired] x"',
+        'mb checkpoint later -m "[repaired] x"',
+    ],
+)
+def test_checkpoint_verbs_leaves_prose_after_the_command_alone(text: str) -> None:
+    result = release_simulation.analyze_checkpoint_verbs(text)
+
+    assert result["total_violations"] == 0
+    assert "checkpoint_verbs" not in release_simulation.score_transcript(text)
+
+
+@pytest.mark.parametrize("word", ["save", "run", "commit", "now", "push", "sync", "withx"])
+def test_checkpoint_verbs_still_reports_a_command_like_word(word: str) -> None:
+    result = release_simulation.analyze_checkpoint_verbs(f'mb checkpoint {word} -m "[fixed] x"')
+
+    assert result["total_violations"] == 1
+    assert result["violations"][0]["argument"] == word
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
         'mb checkpoint --message "[repaired] x" --yes',
         'mb checkpoint --repo "my biz" --yes -m "[repaired] x"',
         'mb checkpoint --message "[fixed][repaired] x"',
@@ -1492,7 +1542,8 @@ _DRIFT_DOC_FILES = ("AGENTS.md", "README.md")
 def _checkpoint_drift_texts(root: Path) -> list[tuple[str, str]]:
     """Every text a user or agent can be shown: docs, bundled data, and Python string literals.
 
-    Python files are read with ``ast``: each string constant is scanned on its
+    Python files are read as bytes with ``ast`` (a coding declaration is honoured;
+    only the top-level ``mb/mb/_data`` is skipped): each string constant is scanned on its
     own, so a command shown in generated-repo text counts and code does not. An
     f-string contributes only its literal parts.
     """
@@ -1507,11 +1558,11 @@ def _checkpoint_drift_texts(root: Path) -> list[tuple[str, str]]:
             continue
     package = root / "mb" / "mb"
     for path in sorted(package.rglob("*.py")):
-        if "_data" in path.relative_to(package).parts:
+        if path.relative_to(package).parts[0] == "_data":
             continue
         try:
-            tree = ast.parse(path.read_text(encoding="utf-8"))
-        except (OSError, UnicodeDecodeError, SyntaxError, ValueError):
+            tree = ast.parse(path.read_bytes())
+        except (OSError, SyntaxError, ValueError):
             continue
         rel = str(path.relative_to(root))
         texts.extend(
@@ -1607,11 +1658,25 @@ def test_checkpoint_drift_scan_reads_python_strings_in_nested_packages(tmp_path:
     (package / "_data" / "skipped.py").write_text(
         'NOTE = "mb checkpoint --message \\"[repaired] x\\""\n', encoding="utf-8"
     )
+    (package / "sub" / "_data").mkdir(parents=True)
+    (package / "sub" / "_data" / "nested.py").write_text(
+        'NOTE = "mb checkpoint --message \\"[nested] x\\""\n', encoding="utf-8"
+    )
 
     assert _checkpoint_examples_in(tmp_path) == [
         ("mb/mb/a/b/deep.py", "moved"),
         ("mb/mb/migrations/step.py", "migrated"),
+        ("mb/mb/sub/_data/nested.py", "nested"),
     ]
+
+
+def test_checkpoint_drift_scan_honours_a_coding_declaration(tmp_path: Path) -> None:
+    package = _bare_package(tmp_path)
+    (package / "legacy.py").write_bytes(
+        b'# -*- coding: latin-1 -*-\nNOTE = "caf\xe9: mb checkpoint --message \\"[moved] x\\""\n'
+    )
+
+    assert _checkpoint_examples_in(tmp_path) == [("mb/mb/legacy.py", "moved")]
 
 
 def test_checkpoint_drift_scan_survives_files_it_cannot_parse(tmp_path: Path) -> None:
