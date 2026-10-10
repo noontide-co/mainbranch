@@ -99,7 +99,7 @@ Common shipped automation-safe commands include:
 | Runtime handoff metadata | `mb start --repo "$repo" --json` |
 | Repo health | `mb doctor "$repo" --json` |
 | Repair preview | `mb doctor repair --repo "$repo" --plan --json` |
-| Agent-surface repair preview | `mb doctor repair --repo "$repo" --plan --only claude`, `--only codex`, or `--all-agents` |
+| Agent-surface repair preview | `mb doctor repair --repo "$repo" --plan --only claude`, `--only codex`, or `--all-agents`; `--only claude` leaves out the CLAUDE.md status-line finding (business conventions, not agent wiring) |
 | Frontmatter/schema validation | `mb validate "$repo" --json` |
 | Graph/index facts | `mb graph "$repo" --json` |
 | Provider readiness | `mb connect status --repo "$repo" --json` |
