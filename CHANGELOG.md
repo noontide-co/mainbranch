@@ -19,7 +19,7 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   next step: record the 10-digit ID from the top of the Google Ads account.
   `mb status` now names both problems on its Google Ads line when the customer
   ID is a placeholder and the primary conversion plan is also missing, as
-  `mb site check` does. `GTM-` followed by nothing is already treated as a
+  `mb site check` does. `GTM-` followed by nothing has been treated as a
   placeholder GTM ID since 0.6.5; the GTM rule is otherwise unchanged.
 - `mb connect <provider> --scope user` and `mb connect rotate` now put your
   previous credential back (or remove the new one) when the user-scope connect

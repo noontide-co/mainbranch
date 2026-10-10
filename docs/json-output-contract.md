@@ -429,7 +429,7 @@ from each Google Ads `kind` to its `status`, for example
 "google_ads_conversion_evidence": "no_evidence_recorded"}`. The items whose
 status is `not_checked`, `no_evidence_recorded`, `partly_declared` or
 `placeholder` are manual and are counted in `measurement.manual_count`. The key
-is additive and absent when no Google Ads customer value is recorded. For a placeholder customer ID with no primary conversion plan it also carries `"google_ads_conversion_plan": "missing"`, so the human `Google Ads:` line names both.
+is additive and absent when no Google Ads customer value is recorded. When the customer ID is a placeholder and `measurement.facts.primary_conversions` is empty, the human `Google Ads:` line also says the conversion plan is missing.
 
 ### `mb google ... --out --json`
 

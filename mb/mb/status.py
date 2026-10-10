@@ -56,7 +56,6 @@ GOOGLE_ADS_STATUS_WORDS = {
     "placeholder": "customer ID is a placeholder",
     "not_checked": "account connection not checked",
     "no_evidence_recorded": "no conversion evidence recorded",
-    "missing": "conversion plan missing",
 }
 STALE_RESEARCH_DAYS = 45
 ACTIVE_BET_STATUSES = {"open", "paused"}
@@ -3679,18 +3678,11 @@ def _candidate_site_repo_records(repo: Path) -> list[dict[str, Any]]:
 def _google_ads_statuses(result: dict[str, Any]) -> dict[str, str]:
     """Map each Google Ads evidence kind to its status, so manual_count is explained."""
 
-    statuses = {
+    return {
         str(item["kind"]): str(item["status"])
         for item in result.get("evidence") or []
         if str(item.get("kind") or "").startswith("google_ads_") and item.get("status")
     }
-    # A placeholder customer hides the plan check, so name a missing plan too,
-    # as mb site check does.
-    if statuses.get("google_ads_plan") == "placeholder" and not (
-        result["facts"].get("primary_conversions")
-    ):
-        statuses["google_ads_conversion_plan"] = "missing"
-    return statuses
 
 
 def _measurement_payload(result: dict[str, Any], *, repair_command: str) -> dict[str, Any]:
@@ -4881,6 +4873,12 @@ def render_human(
                 GOOGLE_ADS_STATUS_WORDS.get(str(value), str(value).replace("_", " "))
                 for value in google_ads.values()
             ]
+            facts = measurement.get("facts") or {}
+            if google_ads.get("google_ads_plan") == "placeholder" and not facts.get(
+                "primary_conversions"
+            ):
+                # A placeholder id hides the plan check; name the missing plan too.
+                words.append("conversion plan missing")
             console.print(f"  Google Ads: {'; '.join(words)}")
         if verbose and measurement.get("repair"):
             console.print(f"  next: {measurement['repair']}")

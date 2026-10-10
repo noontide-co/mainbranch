@@ -4233,10 +4233,7 @@ def test_status_measurement_placeholder_customer_names_a_missing_conversion_plan
 
     measurement = status_mod.run(path=str(repo), update_marker=False)["measurement"]
 
-    assert measurement["google_ads"] == {
-        "google_ads_plan": "placeholder",
-        "google_ads_conversion_plan": "missing",
-    }
+    assert measurement["google_ads"] == {"google_ads_plan": "placeholder"}
     result = runner.invoke(app, ["status", str(repo)])
     assert "Google Ads: customer ID is a placeholder; conversion plan missing" in " ".join(
         result.stdout.split()
