@@ -658,28 +658,31 @@ def test_doctor_names_a_user_scope_file_it_cannot_open(
     assert f"({expected})" in error["message"]
 
 
-@pytest.mark.parametrize("command", list(DOCTOR_COMMANDS))
 @pytest.mark.parametrize("as_json", [False, True])
+@pytest.mark.parametrize("command", list(DOCTOR_COMMANDS))
+@pytest.mark.parametrize("kind", ["yaml", "list"])
 def test_a_corrupt_repo_connect_file_is_named_the_same_way(
     repo: Path,
     offline_doctor: None,
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
+    kind: str,
     command: str,
     as_json: bool,
 ) -> None:
     monkeypatch.setenv("HOME", str(tmp_path))
     _user_scope_cloudflare(repo)
     config = repo / ".mb" / "connect.yaml"
-    config.write_bytes(CORRUPT.encode())
+    content, problem = DOCTOR_BAD_FILES[kind]
+    config.write_bytes(content)
 
     result = runner.invoke(app, _doctor_args(command, repo, as_json=as_json))
 
     assert result.exit_code == 1 and isinstance(result.exception, SystemExit)
     _assert_clean(result.output, tmp_path)
-    assert "could not read `.mb/connect.yaml` (it is not valid YAML)" in result.output
+    assert f"could not read `.mb/connect.yaml` ({problem})" in result.output
     assert "Fix or move `.mb/connect.yaml`" in result.output
-    assert config.read_bytes() == CORRUPT.encode()
+    assert config.read_bytes() == content
 
 
 def test_doctor_does_not_flag_an_empty_user_scope_file(

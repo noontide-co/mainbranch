@@ -507,7 +507,7 @@ otherwise:
   is stale and the exit code follows `needs_action` (a failed check exits 1; a
   passing check exits 0 with `recorded: false`). Consumers can ignore the key;
   `mb doctor` uses it to say the file is "unreadable or invalid" rather than
-  "could not be written". It was added after `oe-v0.6.5` and is not in a release yet.
+  "could not be written".
 
 ## First Migrated Surfaces
 

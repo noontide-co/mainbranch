@@ -1075,10 +1075,12 @@ cannot be written for another reason (a full disk, an I/O error), the check
 still runs, the exit code is the one a successful check would give, and the file
 is left as it was. `--json` then says `recorded: false` with
 `not_recorded_reason: user_scope_write_failed` and a sanitized
-`not_recorded_detail` sentence naming the file and the cause; `mb doctor` shows
-"not recorded: the user-scope connect file could not be written", or, when the
-file cannot be read or parsed, "not recorded: the user-scope connect file is
-unreadable or invalid". The same
+`not_recorded_detail` sentence naming the file and the cause; the agent-access
+check in `mb doctor repair --plan` shows "not recorded: the user-scope connect
+file could not be written", or, when the file cannot be read or parsed,
+"not recorded: the user-scope connect file is unreadable or invalid" (for a
+non-Google provider; a Google row keeps the first wording, and a file that is
+already bad when doctor starts is reported as `unreadable_file`, below, instead). The same
 applies to a Google read that cannot record an expired sign-in in the
 user-scope file, whether it is full, read-only, unreadable or invalid: the repo
 metadata is put back as it was, and the read result carries a

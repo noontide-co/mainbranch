@@ -2624,13 +2624,17 @@ def start_cmd(
     """Check runtime handoff readiness and print or launch the Claude Code command."""
 
     def read_report(*, launching: bool) -> dict[str, Any]:
+        if launching:
+            # The guard names a file that could not be read; a launch error
+            # (claude not executable) is not one, so a launch is left as it was.
+            return start_mod.run(repo=repo, launch=True)
         # A connect file it cannot read is named, not a traceback (#1129).
         return _unreadable_guard(
             repo,
             command="mb start",
             schema_name="mainbranch.start.result",
             json_out=json_out,
-            read=lambda: start_mod.run(repo=repo, launch=launching),
+            read=lambda: start_mod.run(repo=repo, launch=False),
         )
 
     if json_out and launch:
