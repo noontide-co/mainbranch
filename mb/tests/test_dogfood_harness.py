@@ -415,6 +415,15 @@ def test_evidence_template_labels_print_mode_as_proxy(tmp_path: Path) -> None:
     assert str(tmp_path / "transcript.md") not in template
     assert "Transcript excerpts: local artifact; see harness output and summary.json" in template
     assert "`mb start --json`: follow-up /mb-start" in template
+    assert "Checkpoint verbs:" not in template
+
+    state.claude["rubric"]["checkpoint_verbs"] = {
+        "ok": False,
+        "violations": [{"kind": "rejected_checkpoint_verb", "verb": "repaired"}],
+    }
+    flagged = harness.evidence_template(state, install_mode="editable", mb_version="mb 0.3.6")
+
+    assert "- Checkpoint verbs: rejected by `mb checkpoint --validate`: [repaired]" in flagged
 
 
 def test_materialize_fixture_profiles_create_observable_repo_states(

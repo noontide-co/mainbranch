@@ -29,6 +29,44 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - When a closed folder (not the file) is why the user-scope connect file could
   not be replaced, `mb connect` and `mb connect test` name the folder and say
   to make it writable, instead of calling the file read-only.
+=======
+- Saving progress should no longer suggest a save note that
+  `mb checkpoint --validate` would turn down. The start and end-of-session
+  guidance now says to pick the opening word from the ones `--validate` accepts
+  (a repair is `[fixed]`, a migration or update run is `[ran]`, a move or rename
+  is `[updated]`) and to validate the note before showing it, instead of
+  suggesting `[repaired]`, `[migrated]` or `[moved]`, which fail. Release simulations
+  now flag any suggested `mb checkpoint --message` whose opening word is not
+  accepted, and a test keeps every save example in the bundled skills and docs
+  on accepted words.
+- `mb init` conventions in `CLAUDE.md` now say plainly which file types the
+  `status:` list covers (bets, decisions, offers and pushes) instead of "each
+  file type".
+- `mb doctor` warns when a business repo's `CLAUDE.md` still has the old
+  one-set line "Status field: proposed | running | scaling | killed | graduated |
+  died" (made before the conventions were corrected) and prints the replacement
+  text. It is a warning only: the exit code is unchanged and nothing is rewritten.
+  Repos without that line see no change.
+- When a `status:` value is wrong, the summary that `mb validate`, `mb status` and
+  `mb doctor repair --plan` show now names the allowed values for each file type (for bets:
+  `canceled | closed | open | paused`) instead of "one of the allowed lifecycle
+  values" with an example status that no file type accepts. `mb validate --json` adds
+  `allowed_status` beside it.
+- `mb google ... --out` display and wording follow-ups. Typing your own user
+  (`--out ~you/pulls/x.json`) now shows `~/pulls/x.json` in the summary and in
+  every message, like `~/`; another user's home still never shows as a full
+  path. With `HOME` unset and no home folder on record for you, `--out ~/x.json`
+  is refused before anything is read or written with a message that says the
+  home folder cannot be found (`out_home_not_found`), not the "unknown user"
+  one. A short home folder name (four letters or fewer, such as `sam`) is
+  hidden only where it stands alone (`sam.json`, `sam-report.json`), so
+  `samples.json` and similar report names show again; longer names are hidden
+  as before, and a cut to fit the terminal can no longer leave a short name
+  standing alone. With `core.precomposeunicode=true`, a tracked file named in another
+  Unicode form (git stores `é` as one character, the disk lists it as two) is refused as a tracked path
+  (`out_path_in_repo`) instead of the generic spelling message. Nothing is read
+  or written in any refusal, and no JSON key changed.
+>>>>>>> origin/main
 - `mb site check` only counts a Google Ads customer ID as declared when it is
   exactly 10 digits (dashes and spaces ignored). Values such as `TODO: add id`,
   `N/A`, `none`, `123` or letters now read as a placeholder, with the same
